@@ -1,0 +1,42 @@
+﻿Name,Official Documentation,Protocol Compatibility,Purpose,Status,Tags,Use for
+https://react.dev/,,N/A,Frontend framework,Not recommended,"Framework, Frontend",
+https://thegraph.com/,https://thegraph.com/docs/en/,EVM,Decentralized indexing protocol for querying blockchain data,Official,"Backend, Blockchain data",
+https://swagger.io/specification/,https://swagger.io/docs/,N/A,API documentation and design standards,Official,"Backend, Documentation",
+https://filecoin.io/,https://docs.filecoin.io/,Multi-Chain,Optional decentralized storage (if needed for asset handling),To be confirmed,"Hosting / Deployment, Storage",
+https://tailwindcss.com/,https://tailwindcss.com/docs/installation/using-vite,N/A,CSS utility framework for styling frontend,Official,Frontend,
+https://clickhouse.com/,https://clickhouse.com/docs,N/A,Analyzing large quantities of historical blockchain data,Official,"Backend, Database, Hosting / Deployment",(C) Analytics
+https://vercel.com/,https://vercel.com/docs,N/A,Web hosting for frontend deployments,Official,Hosting / Deployment,
+https://getfoundry.sh/,https://getfoundry.sh/introduction/getting-started,EVM,Local blockchain testing and contract deployment tools,Recommended,Smart-contract,
+https://nextjs.org/,https://nextjs.org/docs,N/A,Web application framework,Official,"Framework, Frontend",
+https://app.web3fast.dev/,,EVM,"Toolbox for smart contract testing, ABI reading, and transactions",To be confirmed,Smart-contract,
+https://soliditylang.org/,https://docs.soliditylang.org/en/v0.8.30/,EVM,Smart contract language for EVM-compatible chains,Official,"Language, Smart-contract",
+https://hardhat.org/,https://hardhat.org/docs/getting-started,EVM,Local blockchain testing and contract deployment tools,Recommended,Smart-contract,
+https://www.postgresql.org/,https://www.postgresql.org/docs/,N/A,Options for backend data querying and storage,Official,"Backend, Database",(C) Database
+https://expressjs.com/,https://expressjs.com/en/starter/installing.html,N/A,Backend framework for APIs,Official,"Backend, Framework",
+https://www.typescriptlang.org/,https://www.typescriptlang.org/docs/,N/A,Strongly-typed JavaScript for frontend/backend development,Official,"Backend, Frontend, Language",
+https://metamask.io/en-GB,https://docs.metamask.io/,EVM,Wallet for interacting with smart contracts during local or testnet use,Official,"Auth, Framework, Wallet",
+https://ui.shadcn.com/,https://ui.shadcn.com/docs/installation,N/A,Component library built on Radix and Tailwind,Official,Frontend,
+https://www.openzeppelin.com/,https://docs.openzeppelin.com/,EVM,Reusable Solidity contract libraries for DeFi logic and security,Official,"Library, Smart-contract",
+https://ipfs.tech/,https://docs.ipfs.tech/,Multi-Chain,Decentralized content-addressed storage protocol used for storing off-chain data,To be confirmed,"Backend, Hosting / Deployment, Storage",
+https://www.docker.com/,https://docs.docker.com/,N/A,Local containerized dev environment setup,Official,"Backend, Hosting / Deployment",(C/D) Containers
+https://graphql.org/,https://graphql.org/learn/,N/A,Options for backend data querying and storage,To be confirmed,"Backend, Database",
+https://ethers.org/,,N/A,Deprecated: Use Viem.,Deprecate,"Blockchain data, Library",
+https://supabase.com/,https://supabase.com/docs,N/A,Hosted development platform.,Official,"Auth, Backend, CRON, Database, Hosting / Deployment, Storage","(C) Auth, (C) Database, (C) Hosting, (C) Storage"
+https://web3js.org/,,N/A,Deprecated: Use Viem.,Deprecate,"Blockchain data, Library",
+https://wagmi.sh/,https://wagmi.sh/react/getting-started,EVM,Reactive blockchain frontend library,Official,Library,
+https://tenderly.co/,https://docs.tenderly.co/,EVM,"Use for Virtual Testnets, Alerts & Web3 Actions",Recommended,Virtual Network,(D) Blockchain
+https://midnight.network/,https://docs.midnight.network/,N/A,"Zero-knowledge trustless protocol ",To be confirmed,ZK,
+https://render.com/,https://docs.railway.com/,N/A,Docker supported deployment,Official,"Backend, CRON, Database, Hosting / Deployment, Storage",(C) Hosting
+https://www.netlify.com/,,N/A,Alternative: Vercel,Use Alternative,"Frontend, Hosting / Deployment",
+https://auth0.com/,,N/A,Alternative: Use Supabase,Use Alternative,Auth,
+https://pinax.network/,https://www.youtube.com/@pinaxnetwork,Multi-Chain,"Use for JSON RPCs, Substreams, Token APIs",Official,"Blockchain data, RPC, Substreams, Token API",(D) Blockchain
+https://walletconnect.network/,https://docs.walletconnect.network/,EVM,Wallet for interacting with smart contracts during local or testnet use,To be confirmed,"Auth, Framework, Wallet",
+https://www.zksync.io/,https://docs.zksync.io/zk-stack,N/A,"Zero-knowledge trustless protocol ",To be confirmed,ZK,
+https://sentry.io/,https://docs.sentry.io/,N/A,Application monitoring & logging software,Official,Logging,
+https://trustwallet.com/,https://developer.trustwallet.com/developer/,EVM,Wallet for interacting with smart contracts during local or testnet use,To be confirmed,"Auth, Framework, Wallet",
+https://remix-project.org,https://remix-ide.readthedocs.io/en/latest/,N/A,Online Web3 IDE,To be confirmed,"IDE, Smart-contract",
+https://viem.sh/,https://viem.sh/docs/getting-started,EVM,Typescript Interface for Ethereum,Official,Blockchain data,
+https://metamask.io/en-GB/developer/embedded-wallets,https://docs.metamask.io/embedded-wallets/authentication,EVM,MetaMask embedded-wallets lets users log in with email or socials while a blockchain wallet is created in the background.,Official,"Auth, Wallet",
+https://sentry.io/welcome/,https://docs.sentry.io/,N/A,"Logging, Error tracking, Key performance metrics",Recommended,"Backend, Frontend, Logging",
+https://redis.io/,,N/A,"In-memory data store (often used as a cache, message broker, or key-value database).",Recommended,"Frontend, Library",
+https://www.prisma.io/orm,https://www.prisma.io/docs/getting-started/quickstart-prismaPostgres,N/A,"Prisma ORM streamlines databases with models, migrations, type-safety, and auto-completion.",Recommended,"Backend, Library",
