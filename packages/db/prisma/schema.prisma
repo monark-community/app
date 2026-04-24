@@ -16,6 +16,34 @@ datasource db {
 //
 // Keep the banner comments in sync with the module manifest.
 
+// ── MODULE: users ─────────────────────────────────────────
+// The User.id is owned externally (Supabase Auth UUID); we never generate it.
+// See docs/features-planning/phase-1/user-management.md.
+model User {
+  id               String    @id
+  email            String    @unique
+  emailVerifiedAt  DateTime?
+  displayName      String?
+  avatarUrl        String?
+  localePreference String    @default("en")
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  deletedAt        DateTime? // self-initiated, grace period applies
+  disabledAt       DateTime? // admin-initiated, indefinite
+
+  pendingEmailChange PendingEmailChange?
+}
+
+model PendingEmailChange {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  newEmail    String
+  tokenHash   String   @unique
+  requestedAt DateTime @default(now())
+  expiresAt   DateTime
+}
+
 // ── MODULE: feature-flags ────────────────────────────────
 model FeatureFlag {
   key         String                @id

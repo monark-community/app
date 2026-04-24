@@ -9,6 +9,8 @@ No versioned releases have been cut yet. The app is pre-release; this file will 
 
 ## [Unreleased]
 
+- 2026-04-24: Added user-management MVP (`@monark/users`); `User` + `PendingEmailChange` Prisma models, read-interface (`getById`, `getByIdOrThrow`, `getByEmail`, `getCurrent`), `users.me` tRPC query, `UserProfileUpdatedEvent` type. Profile-edit, admin ops, account deletion, and avatar upload deferred until auth + rbac land.
+- 2026-04-24: Dev overlay gained a "current user" panel pulling `trpc.users.me`.
 - 2026-04-23: Added feature flags (`@monark/feature-flags`); in-code flag definitions + DB overrides scoped by global/org/user/role, tRPC router, React hooks + `FlagsProvider`, audit event on flip.
 - 2026-04-23: Added togglable dev overlay (Alt+D) with API health + feature-flag smoke-test panels; production-stripped.
 - 2026-04-23: Switched the codebase to extensionless TypeScript relative imports (`moduleResolution: "Bundler"`), eliminating repeated Next-bundler breakage around `.js` suffixes.
