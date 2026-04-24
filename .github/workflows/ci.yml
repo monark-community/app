@@ -10,6 +10,12 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  # Opt every JavaScript action into Node 24. Drop this once
+  # actions/checkout, actions/setup-node, and pnpm/action-setup publish
+  # v5 tags that default to Node 24 natively.
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 jobs:
   verify:
     runs-on: ubuntu-latest
