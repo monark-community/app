@@ -1,0 +1,30 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "lib": ["ES2022"],
+    "strict": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedIndexedAccess": true,
+    "useUnknownInCatchVariables": true,
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "isolatedModules": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "declaration": false,
+    "sourceMap": true,
+    "incremental": true,
+    "baseUrl": ".",
+    "paths": {
+      "@monark/*/server": ["./packages/*/src/server/index.ts"],
+      "@monark/*/client": ["./packages/*/src/client/index.ts"],
+      "@monark/*/contracts": ["./packages/*/src/contracts/index.ts"],
+      "@monark/*/contracts/events": ["./packages/*/src/contracts/events.ts"]
+    }
+  },
+  "exclude": ["node_modules", "dist", "build", ".next", ".turbo"]
+}

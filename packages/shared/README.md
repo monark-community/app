@@ -1,16 +1,7 @@
-# /packages/shared
+# @monark/shared
 
-> Think: “general-purpose, portable modules.”
+Portable utilities that could be published outside this repo. Nothing in here depends on Monark-specific state, framework, or schema; if it does, it belongs elsewhere (`@monark/common` for app-internal runtime, a business module for domain-specific code).
 
-- **Scope**: Code intended to be reusable across multiple projects or repos.
-- **Purpose**: Functions, components, or clients that are general enough to be published or imported elsewhere.
-- **Examples**:
-    - API client modules that can talk to your backend across projects
-    - UI components library
-    - Generic validation functions or formatters
+Empty today. Add per-capability modules (for example `src/date.ts`, `src/string.ts`) as concrete needs appear, then re-export them from [`src/index.ts`](src/index.ts).
 
-## Content
-
-- Content of your shared package
-- Content of your shared package
-- Content of your shared package
+When something in here becomes broadly useful across Scintillar projects, extract it to a dedicated npm package under `@sntlr/*` rather than letting it solidify as a Monark private.

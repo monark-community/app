@@ -1,0 +1,38 @@
+{
+  "name": "monark-app",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Monark App monorepo root.",
+  "type": "module",
+  "packageManager": "pnpm@10.13.1",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "test:e2e": "pnpm --filter web test:e2e",
+    "db:migrate": "pnpm --filter @monark/db db:migrate",
+    "db:reset": "pnpm --filter @monark/db db:reset",
+    "check:tiers": "tsx tools/check-tiers.ts",
+    "gen": "pnpm gen:events && pnpm gen:routers",
+    "gen:module": "tsx tools/gen-module.ts",
+    "gen:events": "tsx tools/gen-events.ts",
+    "gen:routers": "tsx tools/gen-routers.ts",
+    "prebuild": "pnpm gen",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "eslint": "^9.20.0",
+    "prettier": "^3.4.0",
+    "tsx": "^4.21.0",
+    "turbo": "^2.5.0",
+    "typescript": "^5.7.0",
+    "typescript-eslint": "^8.24.0"
+  }
+}

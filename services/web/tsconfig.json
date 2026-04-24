@@ -1,0 +1,25 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "jsx": "preserve",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "allowJs": true,
+    "noEmit": true,
+    "incremental": true,
+    "composite": false,
+    "plugins": [{ "name": "next" }],
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"],
+      "@monark/*/server": ["../../packages/*/src/server/index.ts"],
+      "@monark/*/client": ["../../packages/*/src/client/index.ts"],
+      "@monark/*/contracts": ["../../packages/*/src/contracts/index.ts"],
+      "@monark/*/contracts/events": ["../../packages/*/src/contracts/events.ts"]
+    }
+  },
+  "include": ["src/**/*", "next-env.d.ts", ".next/types/**/*.ts"],
+  "exclude": ["node_modules", ".next"]
+}

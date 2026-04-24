@@ -1,0 +1,15 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg-base: oklch(0.12 0.02 260);
+  --color-bg-elevated: oklch(0.16 0.02 260);
+  --color-surface-stroke: oklch(0.3 0.02 260 / 0.3);
+  --color-text-primary: oklch(0.98 0 0);
+  --color-text-muted: oklch(0.72 0.02 260);
+}
+
+html,
+body {
+  background: var(--color-bg-base);
+  color: var(--color-text-primary);
+}

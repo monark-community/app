@@ -1,0 +1,17 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// Modules own logical slices of this schema. Add new tables under
+// a section banner so tooling can detect out-of-module edits, e.g.:
+//
+// // ── MODULE: auth ──────────────────────────────────────────
+// model User { ... }
+//
+// Keep the banner comments in sync with the module manifest.

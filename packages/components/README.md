@@ -1,16 +1,19 @@
-# /packages/components
+# @monark/components
 
-> Think: “reusable UI pieces that make development faster and consistent within this project.”
+App-specific UI compositions built on top of [`@monark/ui`](https://github.com/scintillar-com/registry-shell) (the Scintillar shadcn-compatible registry).
 
-- **Scope**: Project-wide, reusable UI components.
-- **Purpose**: Provides building blocks for the frontend or app services in this repository. Components are designed to be used across multiple parts of the project, but are typically not meant to be published as a standalone library (unless you later decide to extract them).
-- **Examples**:
-    - Buttons, inputs, forms, and other UI elements
-    - Layout components (headers, footers, grids)
-    - Small interactive widgets (modals, tooltips, accordions)
+## What lives here
 
-# Content
+- **Primitives** installed via shadcn CLI into [`src/ui/`](src/ui/) from the `@monark/ui` registry declared in [`components.json`](components.json).
+- **Compositions** in [`src/compositions/`](src/compositions/); app-specific multi-primitive patterns (app shell, org switcher, role-specific layouts) that don't belong in `@monark/ui`.
+- **`cn` helper** ([`src/lib/cn.ts`](src/lib/cn.ts)); `clsx` + `tailwind-merge` wrapper.
 
-- Content of your components package
-- Content of your components package
-- Content of your components package
+Individual business components (e.g. `<VoteBallot>`) live in the owning module's `/client`, not here. When a composition in here feels generic enough to belong in `@monark/ui`, promote it upstream.
+
+## Adding a new shadcn component
+
+```bash
+pnpm --filter @monark/components exec shadcn add <name>
+```
+
+Resolves against the `@monark` registry mapped in `components.json`.

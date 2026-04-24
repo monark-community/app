@@ -1,8 +1,6 @@
-# Contributing to {{PROJECT_NAME}}
+# Contributing to Monark App
 
-
-
-Thank you for your interest in contributing to **{{PROJECT_NAME}}**! We welcome contributions of all kinds: bug reports, feature requests, documentation improvements, and code.
+Thank you for your interest in contributing to **Monark App**! We welcome contributions of all kinds: bug reports, feature requests, documentation improvements, and code.
 
 By contributing, you agree to the following terms:
 
@@ -34,11 +32,32 @@ git push origin feature/my-feature
 
 ---
 
-## 2. Code Style
+## 2. Code Style & Development Workflow
 
-- Follow the existing project code style.
-- Include comments where necessary to explain complex logic.
-- Run tests locally before submitting.
+- Follow the existing project code style; Prettier and ESLint are configured at the repo root.
+- Prefer clear identifiers and minimal comments; add a comment only when the *why* is non-obvious.
+- This repo is a pnpm monorepo orchestrated by Turbo. Requires **Node 22** (see `.nvmrc`) and **pnpm 10**.
+
+Before opening a PR, run the same checks CI runs:
+
+```bash
+pnpm install              # installs workspace deps
+pnpm gen                  # regenerate codegen outputs (events + routers)
+pnpm typecheck            # tsc --noEmit across every package
+pnpm lint                 # eslint across every package
+pnpm test                 # vitest across every package
+pnpm check:tiers          # enforce no extended-to-extended module deps
+```
+
+If you added or changed events or tRPC procedures inside a module, re-run `pnpm gen` and **commit the regenerated files**. CI fails on codegen drift.
+
+To scaffold a new module package:
+
+```bash
+pnpm gen:module <name> --tier core|extended
+```
+
+See [docs/features-planning/](./docs/features-planning/) for the per-feature specifications that should inform larger changes.
 
 ---
 
@@ -57,7 +76,7 @@ git push origin feature/my-feature
 > Example copyright notice for contributions:
 >
 > ```text
-> Copyright \[Year] \[Contributor Name]
+> Copyright [Year] [Contributor Name]
 > Licensed under the Apache License, Version 2.0
 > ```
 
@@ -69,9 +88,9 @@ git push origin feature/my-feature
 
 ## 5. Code of Conduct
 
-We expect all contributors to follow a respectful and collaborative approach. Please see `CODE\_OF\_CONDUCT.md` for details.
+We expect all contributors to follow a respectful and collaborative approach. Please see [CODE_OF_CONDUCT.md](./CODE_OF_CONDUCT.md) for details.
 
 ---
 
-Thank you for helping improve **{{PROJECT_NAME}}**! Your contributions are highly appreciated.
+Thank you for helping improve **Monark App**! Your contributions are highly appreciated.
 

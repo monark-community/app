@@ -37,6 +37,11 @@ Thumbs.db
 dist/
 build/
 coverage/
+*.tsbuildinfo
+
+# Tooling caches
+.turbo/
+.pnpm-store/
 
 # Environment
 .env.*
