@@ -1,10 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server"
-import { markEmailVerified } from "@monark/auth/server"
 import { createSupabaseServerClient } from "@/lib/supabase/server"
+import { createServerTrpcClient } from "@/lib/trpc-server"
 
 // Two possible arrival shapes:
-//   1. `?token_hash=...&type=...` — direct link from a custom email template.
-//   2. No token_hash — Supabase's default template sent the user through
+//   1. `?token_hash=...&type=...` ; direct link from a custom email template.
+//   2. No token_hash ; Supabase's default template sent the user through
 //      `/auth/v1/verify` first, which already set the session cookie and 302'd here.
 export async function GET(request: NextRequest) {
   const url = new URL(request.url)
@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
       errorMessage: error?.message ?? null,
       userId: data.user?.id ?? null,
     })
-    if (error || !data.user) {
+    if (error || !data.user || !data.session) {
       return NextResponse.redirect(
         new URL(
           `/auth/confirm-error?reason=${encodeURIComponent(error?.code ?? "invalid")}`,
@@ -51,23 +51,29 @@ export async function GET(request: NextRequest) {
         { headers: noReferrer },
       )
     }
-    await markEmailVerified(data.user.id)
+    const api = createServerTrpcClient(data.session.access_token)
+    await api.auth.markOwnEmailVerified.mutate().catch(() => {
+      // Best-effort shadow-table update.
+    })
     return NextResponse.redirect(new URL("/", url.origin), { headers: noReferrer })
   }
 
   // No token in the URL; Supabase already verified server-side and set the
-  // session cookie. Trust the cookie-backed user + mirror the state.
-  const { data: userData, error: userError } = await supabase.auth.getUser()
-  console.log("[/auth/confirm] no-token path getUser", {
-    errorMessage: userError?.message ?? null,
-    userId: userData.user?.id ?? null,
-    email_confirmed_at: userData.user?.email_confirmed_at ?? null,
+  // session cookie. Trust the cookie-backed session + mirror the state.
+  const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
+  const user = sessionData.session?.user ?? null
+  const accessToken = sessionData.session?.access_token
+  console.log("[/auth/confirm] no-token path getSession", {
+    errorMessage: sessionError?.message ?? null,
+    userId: user?.id ?? null,
+    email_confirmed_at: user?.email_confirmed_at ?? null,
   })
-  if (userError || !userData.user || !userData.user.email_confirmed_at) {
+  if (sessionError || !user || !user.email_confirmed_at || !accessToken) {
     return NextResponse.redirect(new URL("/auth/confirm-error?reason=missing", url.origin), {
       headers: noReferrer,
     })
   }
-  await markEmailVerified(userData.user.id)
+  const api = createServerTrpcClient(accessToken)
+  await api.auth.markOwnEmailVerified.mutate().catch(() => {})
   return NextResponse.redirect(new URL("/", url.origin), { headers: noReferrer })
 }

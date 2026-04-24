@@ -10,8 +10,11 @@ const schema = z.object({
     .string()
     .default("http://localhost:3000,http://127.0.0.1:3000")
     .transform((raw) => raw.split(",").map((s) => s.trim()).filter(Boolean)),
+  // Canonical web origin used when we mint user-facing URLs (e.g. email links).
+  APP_URL: z.string().url().default("http://localhost:3000"),
   LOG_LEVEL: z.string().default("info"),
   SUPABASE_URL: z.string().url(),
+  SUPABASE_PUBLISHABLE_KEY: z.string().min(1),
   SUPABASE_SECRET_KEY: z.string().min(1),
 })
 

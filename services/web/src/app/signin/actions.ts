@@ -1,8 +1,8 @@
 "use server"
 
 import { redirect } from "next/navigation"
-import { emitSignedIn, emitSignedOut } from "@monark/auth/server"
 import { createSupabaseServerClient } from "@/lib/supabase/server"
+import { createServerTrpcClient } from "@/lib/trpc-server"
 
 export type SignInErrorCode = "invalidCredentials"
 
@@ -25,7 +25,7 @@ export async function signInAction(input: {
     redirect(`/signup/check-email?email=${encoded}`)
   }
 
-  if (error || !data.user) {
+  if (error || !data.user || !data.session) {
     return { ok: false, errorCode: "invalidCredentials" }
   }
 
@@ -35,16 +35,24 @@ export async function signInAction(input: {
     redirect(`/signup/check-email?email=${encoded}`)
   }
 
-  await emitSignedIn({ userId: data.user.id })
+  const api = createServerTrpcClient(data.session.access_token)
+  await api.auth.notifySignedIn.mutate().catch(() => {
+    // Event emission is best-effort; the session cookie is already set.
+  })
   redirect("/")
 }
 
 export async function signOutAction(scope: "local" | "global" = "local"): Promise<void> {
   const supabase = await createSupabaseServerClient()
-  const { data } = await supabase.auth.getUser()
-  await supabase.auth.signOut({ scope })
-  if (data.user) {
-    await emitSignedOut({ userId: data.user.id, scope })
+  const { data: sessionData } = await supabase.auth.getSession()
+  const accessToken = sessionData.session?.access_token
+
+  if (accessToken) {
+    const api = createServerTrpcClient(accessToken)
+    await api.auth.notifySignedOut.mutate({ scope }).catch(() => {
+      // Best-effort; proceed with local cookie clear regardless.
+    })
   }
+  await supabase.auth.signOut({ scope })
   redirect("/signin")
 }
