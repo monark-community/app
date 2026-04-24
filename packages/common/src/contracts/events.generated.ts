@@ -2,6 +2,8 @@
 // Regenerate after changing any module's /contracts/events.ts or modules.manifest.ts.
 
 import type { AuthEvents } from "@monark/auth/contracts"
+import type { FeatureFlagsEvents } from "@monark/feature-flags/contracts"
 
 export type DomainEvent =
   | AuthEvents
+  | FeatureFlagsEvents

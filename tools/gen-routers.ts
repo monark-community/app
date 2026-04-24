@@ -1,8 +1,8 @@
 import { readFile, writeFile, access } from "node:fs/promises"
 import { resolve, dirname } from "node:path"
 import { fileURLToPath } from "node:url"
-import { MODULES } from "../modules.manifest.js"
-import { packageDirName, moduleRouterName, routerKey } from "./lib/names.js"
+import { MODULES } from "../modules.manifest"
+import { packageDirName, moduleRouterName, routerKey } from "./lib/names"
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const APP_ROOT = resolve(__dirname, "..")

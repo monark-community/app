@@ -15,3 +15,33 @@ datasource db {
 // model User { ... }
 //
 // Keep the banner comments in sync with the module manifest.
+
+// ── MODULE: feature-flags ────────────────────────────────
+model FeatureFlag {
+  key         String                @id
+  description String
+  defaultOn   Boolean               @default(false)
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+  overrides   FeatureFlagOverride[]
+}
+
+model FeatureFlagOverride {
+  id      String      @id @default(cuid())
+  flagKey String
+  flag    FeatureFlag @relation(fields: [flagKey], references: [key], onDelete: Cascade)
+
+  // Exactly one of these three is non-null; enforced at the app layer.
+  // Role stays a String until @monark/rbac lands and exports the canonical enum.
+  organizationId String?
+  userId         String?
+  role           String?
+
+  enabled Boolean
+  setById String
+  setAt   DateTime @default(now())
+  note    String?
+
+  @@unique([flagKey, organizationId, userId, role])
+  @@index([flagKey])
+}

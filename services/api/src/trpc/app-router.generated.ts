@@ -4,9 +4,11 @@
 import { router } from "@monark/common/trpc"
 
 import { authRouter } from "@monark/auth/server"
+import { featureFlagsRouter } from "@monark/feature-flags/server"
 
 export const appRouter = router({
-  auth: authRouter,
+  auth        : authRouter,
+  featureFlags: featureFlagsRouter,
 })
 
 export type AppRouter = typeof appRouter

@@ -1,7 +1,7 @@
 import { readFile, writeFile, mkdir, access } from "node:fs/promises"
 import { resolve, dirname } from "node:path"
 import { fileURLToPath } from "node:url"
-import { packageDirName, pascalCase, moduleEventsTypeName, moduleRouterName } from "./lib/names.js"
+import { packageDirName, pascalCase, moduleEventsTypeName, moduleRouterName } from "./lib/names"
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const APP_ROOT = resolve(__dirname, "..")
@@ -137,7 +137,7 @@ export {}
 }
 
 function renderContractsIndex(): string {
-  return `export * from "./events.js"
+  return `export * from "./events"
 `
 }
 

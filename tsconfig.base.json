@@ -1,8 +1,8 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
     "lib": ["ES2022"],
     "strict": true,
     "noImplicitReturns": true,
@@ -18,7 +18,7 @@
     "declaration": false,
     "sourceMap": true,
     "incremental": true,
-    "baseUrl": ".",
+    "ignoreDeprecations": "5.0",
     "paths": {
       "@monark/*/server": ["./packages/*/src/server/index.ts"],
       "@monark/*/client": ["./packages/*/src/client/index.ts"],

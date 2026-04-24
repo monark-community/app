@@ -1,5 +1,5 @@
-import type { DomainEvent } from "./contracts/events.js"
-import { logger } from "./log.js"
+import type { DomainEvent } from "./contracts/events"
+import { logger } from "./log"
 
 type Handler<E extends DomainEvent> = (event: E) => Promise<void> | void
 

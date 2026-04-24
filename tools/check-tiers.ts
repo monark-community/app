@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises"
 import { resolve, dirname } from "node:path"
 import { fileURLToPath } from "node:url"
-import { MODULES } from "../modules.manifest.js"
+import { MODULES } from "../modules.manifest"
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const APP_ROOT = resolve(__dirname, "..")

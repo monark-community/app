@@ -1,4 +1,4 @@
-import { getDb } from "./index.js"
+import { getDb } from "./index"
 
 async function main() {
   const db = getDb()

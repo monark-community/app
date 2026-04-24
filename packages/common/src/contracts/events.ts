@@ -4,4 +4,4 @@ export interface DomainEventBase {
   correlationId?: string
 }
 
-export type { DomainEvent } from "./events.generated.js"
+export type { DomainEvent } from "./events.generated"

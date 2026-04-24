@@ -3,9 +3,9 @@ import cors from "cors"
 import { pinoHttp } from "pino-http"
 import { createExpressMiddleware } from "@trpc/server/adapters/express"
 import { logger } from "@monark/common"
-import { env } from "./lib/env.js"
-import { appRouter } from "./trpc/router.js"
-import { createContext } from "./trpc/context.js"
+import { env } from "./lib/env"
+import { appRouter } from "./trpc/router"
+import { createContext } from "./trpc/context"
 
 const app = express()
 

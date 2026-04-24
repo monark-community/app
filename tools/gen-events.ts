@@ -1,8 +1,8 @@
 import { readFile, writeFile, access } from "node:fs/promises"
 import { resolve, dirname } from "node:path"
 import { fileURLToPath } from "node:url"
-import { MODULES } from "../modules.manifest.js"
-import { packageDirName, moduleEventsTypeName } from "./lib/names.js"
+import { MODULES } from "../modules.manifest"
+import { packageDirName, moduleEventsTypeName } from "./lib/names"
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const APP_ROOT = resolve(__dirname, "..")
@@ -29,7 +29,7 @@ async function renderGeneratedFile(): Promise<string> {
   const names = Object.keys(MODULES).sort()
 
   if (names.length === 0) {
-    return `${HEADER}import type { DomainEventBase } from "./events.js"
+    return `${HEADER}import type { DomainEventBase } from "./events"
 
 // No modules registered yet. Once modules exist, this union is widened
 // to the sum of every registered module's <Module>Events union.
