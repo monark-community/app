@@ -17,16 +17,23 @@ export type SignUpInput = z.infer<typeof signUpInputSchema>
 export type SignUpResult = {
   userId: string
   email: string
+  needsEmailVerification: boolean
 }
 
 export type SignUpDeps = {
   supabaseUrl: string
+  supabasePublishableKey: string
   supabaseSecretKey: string
+  appUrl: string
 }
 
-// Creates a Supabase Auth user + shadow `User` row in a compensating transaction.
-// If the DB insert fails, the Supabase user is deleted so we don't leave an
-// orphan account that nobody can ever clean up.
+// Creates a Supabase Auth user via the public `auth.signUp` path (which triggers
+// the verification email through Supabase's SMTP; Mailpit catches it locally)
+// then mirrors the user into our own `User` table with `emailVerifiedAt: null`.
+// `/auth/confirm` flips `emailVerifiedAt` once the recipient clicks the link.
+//
+// Compensating transaction: if the DB insert throws, we delete the Supabase
+// user via the admin client so we don't leave orphans.
 export async function signUpUser(
   input: SignUpInput,
   deps: SignUpDeps,
@@ -41,45 +48,65 @@ export async function signUpUser(
     displayName: parsed.data.displayName,
   })
   if (!strength.ok) {
-    throw new ValidationError("Password does not meet requirements.", strength.reasons)
+    // Deliberately generic client-facing message; the specific reasons are
+    // logged for debugging but never returned to the client.
+    logger.info({ reasons: strength.reasons }, "signup rejected by password check")
+    throw new ValidationError("Please choose a stronger password.")
   }
 
-  const admin: SupabaseClient = createClient(deps.supabaseUrl, deps.supabaseSecretKey, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  })
+  const publicClient: SupabaseClient = createClient(
+    deps.supabaseUrl,
+    deps.supabasePublishableKey,
+    { auth: { autoRefreshToken: false, persistSession: false } },
+  )
 
-  const created = await admin.auth.admin.createUser({
+  const signUp = await publicClient.auth.signUp({
     email: parsed.data.email,
     password: parsed.data.password,
-    email_confirm: true,
-    user_metadata: parsed.data.displayName
-      ? { display_name: parsed.data.displayName }
-      : undefined,
+    options: {
+      emailRedirectTo: `${deps.appUrl}/auth/confirm`,
+      data: parsed.data.displayName
+        ? { display_name: parsed.data.displayName }
+        : undefined,
+    },
   })
 
-  if (created.error || !created.data.user) {
-    if (created.error?.status === 422 || created.error?.code === "email_exists") {
+  if (signUp.error || !signUp.data.user) {
+    if (signUp.error?.status === 422 || signUp.error?.code === "user_already_exists") {
       throw new ConflictError("An account with that email already exists.")
     }
-    throw new Error(created.error?.message ?? "Failed to create auth user")
+    throw new Error(signUp.error?.message ?? "Failed to create auth user")
   }
 
-  const authUser = created.data.user
+  const authUser = signUp.data.user
   const db = getDb()
+  const alreadyVerified =
+    typeof authUser.email_confirmed_at === "string" && authUser.email_confirmed_at !== ""
 
   try {
     await db.user.create({
       data: {
         id: authUser.id,
         email: parsed.data.email,
-        emailVerifiedAt: new Date(),
+        emailVerifiedAt: alreadyVerified ? new Date(authUser.email_confirmed_at!) : null,
         displayName: parsed.data.displayName ?? null,
       },
     })
   } catch (error) {
-    logger.error({ err: error, userId: authUser.id }, "signup db insert failed; rolling back auth user")
-    await admin.auth.admin.deleteUser(authUser.id).catch((cleanup) => {
-      logger.error({ err: cleanup, userId: authUser.id }, "rollback failed; orphan auth user")
+    logger.error(
+      { err: error, userId: authUser.id },
+      "signup db insert failed; rolling back auth user",
+    )
+    const adminClient: SupabaseClient = createClient(
+      deps.supabaseUrl,
+      deps.supabaseSecretKey,
+      { auth: { autoRefreshToken: false, persistSession: false } },
+    )
+    await adminClient.auth.admin.deleteUser(authUser.id).catch((cleanup) => {
+      logger.error(
+        { err: cleanup, userId: authUser.id },
+        "rollback failed; orphan auth user",
+      )
     })
     throw new Error("Signup failed.")
   }
@@ -93,5 +120,9 @@ export async function signUpUser(
   }
   await emit(event)
 
-  return { userId: authUser.id, email: parsed.data.email }
+  return {
+    userId: authUser.id,
+    email: parsed.data.email,
+    needsEmailVerification: !alreadyVerified,
+  }
 }

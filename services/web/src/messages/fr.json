@@ -1,0 +1,142 @@
+{
+  "common": {
+    "appName": "Monark",
+    "tagline": "Au service de la collaboration au sein de la communauté Web3.",
+    "cancel": "Annuler",
+    "continue": "Continuer",
+    "loading": "Chargement…"
+  },
+  "auth": {
+    "signUp": {
+      "title": "Créez votre compte",
+      "subtitle": "Rejoignez la communauté Monark en moins d'une minute.",
+      "labels": {
+        "email": "Courriel",
+        "password": "Mot de passe",
+        "displayName": "Nom affiché (optionnel)"
+      },
+      "submit": "Créer le compte",
+      "submitting": "Création du compte…",
+      "alreadyHaveAccount": "Vous avez déjà un compte ?",
+      "signInLink": "Se connecter",
+      "errors": {
+        "fallback": "Erreur inattendue lors de l'inscription.",
+        "weakPassword": "Veuillez choisir un mot de passe plus robuste.",
+        "emailInUse": "Un compte existe déjà avec ce courriel."
+      }
+    },
+    "signIn": {
+      "title": "Bon retour",
+      "subtitle": "Connectez-vous pour accéder à Monark.",
+      "labels": {
+        "email": "Courriel",
+        "password": "Mot de passe"
+      },
+      "submit": "Se connecter",
+      "submitting": "Connexion…",
+      "noAccount": "Pas encore de compte ?",
+      "signUpLink": "Créez-en un",
+      "errors": {
+        "invalidCredentials": "Courriel ou mot de passe incorrect."
+      }
+    },
+    "checkEmail": {
+      "title": "Vérifiez votre boîte courriel",
+      "subtitleWithEmail": "Nous avons envoyé un lien et un code de confirmation à <em>{email}</em>.",
+      "subtitleNoEmail": "Nous avons envoyé un lien et un code de confirmation à votre courriel.",
+      "otpPrompt": "Entrez le code reçu par courriel",
+      "verify": "Vérifier",
+      "verifying": "Vérification…",
+      "resend": "Renvoyer le courriel",
+      "resending": "Envoi…",
+      "resendSuccess": "Envoyé. {remaining} renvois restants cette heure.",
+      "resendExhausted": "Vous avez atteint la limite de renvois pour cette heure. Réessayez plus tard.",
+      "or": "ou",
+      "wrongEmail": "Mauvais courriel ?",
+      "signUpAgain": "Recommencer l'inscription",
+      "errors": {
+        "invalidCode": "Ce code est invalide ou a expiré."
+      }
+    },
+    "confirmError": {
+      "title": "Lien expiré",
+      "reasonMissing": "Le lien de confirmation est invalide.",
+      "reasonExpired": "Ce lien de confirmation a expiré.",
+      "reasonInvalid": "Ce lien de confirmation n'est plus valide.",
+      "retry": "Connectez-vous pour en demander un nouveau"
+    },
+    "passwordStrength": {
+      "label": "Solidité : <strong>{level}</strong>",
+      "levels": {
+        "0": "Très faible",
+        "1": "Faible",
+        "2": "Moyen",
+        "3": "Bon",
+        "4": "Fort"
+      }
+    }
+  },
+  "home": {
+    "heading": "Monark",
+    "subheading": "Au service de la collaboration au sein de la communauté Web3."
+  },
+  "devOverlay": {
+    "title": "Outils dev",
+    "toggleHint": "Alt+D pour basculer",
+    "themeSwitchTo": "Passer au thème {theme}",
+    "theme": { "light": "clair", "dark": "sombre" },
+    "refetch": "Recharger",
+    "signUp": "Inscription",
+    "signIn": "Connexion",
+    "signOut": "Déconnexion",
+    "sections": {
+      "session": "session",
+      "apiHealth": "santé api",
+      "currentOrg": "org active",
+      "rbac": "rbac",
+      "featureFlags": "feature flags"
+    },
+    "badges": {
+      "signedIn": "connecté",
+      "anon": "anonyme",
+      "up": "actif",
+      "down": "inactif",
+      "flagsOn": "{on}/{total} actifs"
+    },
+    "session": {
+      "notSignedIn": "Non connecté.",
+      "resolving": "résolution…",
+      "fields": {
+        "id": "id",
+        "email": "courriel",
+        "name": "nom",
+        "locale": "langue",
+        "verified": "vérifié"
+      },
+      "verifiedNo": "pas encore"
+    },
+    "apiHealth": {
+      "pinging": "ping…",
+      "fields": { "pong": "pong", "at": "à" }
+    },
+    "currentOrg": {
+      "none": "Aucune organisation active.",
+      "resolving": "résolution…",
+      "fields": { "slug": "slug", "name": "nom", "id": "id" },
+      "memberships": "appartenances ({count})"
+    },
+    "rbac": {
+      "fields": { "primary": "principal", "roles": "rôles" },
+      "permissions": "permissions ({count})",
+      "noneGranted": "Aucune accordée.",
+      "dash": "—"
+    },
+    "featureFlags": {
+      "resolving": "résolution…",
+      "on": "actif",
+      "off": "inactif",
+      "scopeNote": "Résolu avec une portée vide (aucun userId / orgId / rôle)."
+    },
+    "errorPrefix": "erreur :"
+  }
+}

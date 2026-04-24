@@ -46,3 +46,7 @@ coverage/
 # Environment
 .env.*
 !.env.example
+
+# Supabase local state
+supabase/.branches/
+supabase/.temp/

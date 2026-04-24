@@ -1,15 +1,20 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { useTranslations } from "next-intl"
+import { Wrench, X } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import { ApiHealthPanel } from "./panels/api-health"
-import { AuthActionsPanel } from "./panels/auth-actions"
 import { CurrentOrgPanel } from "./panels/current-org"
-import { CurrentUserPanel } from "./panels/current-user"
 import { FeatureFlagsPanel } from "./panels/feature-flags"
 import { RbacPanel } from "./panels/rbac"
+import { SessionPanel } from "./panels/session"
+import { ThemeToggle } from "./theme-toggle"
+import { LocaleToggle } from "./locale-toggle"
 
 export function DevOverlay() {
   const [open, setOpen] = useState(false)
+  const t = useTranslations("devOverlay")
 
   useEffect(() => {
     // Alt+D toggles the overlay. Alt is chosen to avoid common editor / browser
@@ -29,36 +34,39 @@ export function DevOverlay() {
 
   return (
     <>
-      <button
-        type="button"
+      <Button
+        variant="outline"
+        size="icon"
         onClick={() => setOpen((v) => !v)}
-        className="fixed bottom-4 right-4 z-50 flex h-10 w-10 items-center justify-center rounded-full border border-surface-stroke bg-bg-elevated font-mono text-xs text-text-muted shadow-lg transition hover:text-text-primary"
-        aria-label={open ? "Close dev overlay" : "Open dev overlay"}
+        className="fixed bottom-4 right-4 z-50 h-10 w-10 rounded-full text-muted-foreground shadow-lg hover:text-foreground"
+        aria-label={t("title")}
         aria-expanded={open}
-        title="Alt+D"
+        title={t("toggleHint")}
       >
-        {open ? "×" : "dev"}
-      </button>
+        {open ? <X /> : <Wrench />}
+      </Button>
 
       {open && (
         <aside
           role="dialog"
-          aria-label="Dev overlay"
-          className="fixed bottom-16 right-4 z-50 flex max-h-[70vh] w-96 flex-col overflow-hidden rounded-lg border border-surface-stroke bg-bg-elevated shadow-2xl"
+          aria-label={t("title")}
+          className="fixed bottom-16 right-4 z-50 flex max-h-[70vh] w-96 flex-col overflow-hidden rounded-lg border border-border bg-card shadow-2xl"
         >
-          <header className="flex items-center justify-between border-b border-surface-stroke px-4 py-2">
-            <h2 className="text-xs uppercase tracking-wider text-text-muted">
-              dev overlay
+          <header className="flex items-center justify-between gap-2 border-b border-border py-2 pl-4 pr-3">
+            <h2 className="text-xs uppercase tracking-wider text-muted-foreground">
+              {t("title")}
             </h2>
-            <span className="text-[10px] text-text-muted">Alt+D to toggle</span>
+            <div className="flex items-center gap-2">
+              <LocaleToggle />
+              <ThemeToggle />
+            </div>
           </header>
           <div className="flex-1 overflow-y-auto">
+            <FeatureFlagsPanel />
             <ApiHealthPanel />
-            <CurrentUserPanel />
+            <SessionPanel />
             <CurrentOrgPanel />
             <RbacPanel />
-            <FeatureFlagsPanel />
-            <AuthActionsPanel />
           </div>
         </aside>
       )}

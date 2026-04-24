@@ -1,0 +1,8 @@
+<h2>Confirm your Monark account</h2>
+<p>Click the link below to verify your email:</p>
+<p><a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=signup">Confirm your email</a></p>
+<p>Or enter this 6-digit code on the verification page:</p>
+<p style="font-family: monospace; font-size: 1.4em; letter-spacing: 0.25em;">{{ .Token }}</p>
+<p style="color: #888; font-size: 0.85em;">
+  If you didn't try to sign up for Monark, you can ignore this email.
+</p>

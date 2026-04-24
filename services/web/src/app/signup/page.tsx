@@ -1,18 +1,22 @@
+import { getTranslations } from "next-intl/server"
+import { MonarkLogo } from "@/components/monark-logo"
 import { SignUpForm } from "./signup-form"
 
-export default function SignUpPage() {
+export default async function SignUpPage() {
+  const t = await getTranslations("auth.signUp")
   return (
     <main className="flex min-h-screen items-center justify-center p-8">
       <div className="w-full max-w-sm">
-        <h1 className="mb-2 text-2xl font-medium">Create your Monark account</h1>
-        <p className="mb-6 text-sm text-text-muted">
-          Join the Monark community in under a minute.
-        </p>
+        <div className="mb-8 flex flex-col items-center text-center">
+          <MonarkLogo size={56} className="mb-4" />
+          <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
+          <p className="mt-1 text-sm text-muted-foreground">{t("subtitle")}</p>
+        </div>
         <SignUpForm />
-        <p className="mt-6 text-center text-xs text-text-muted">
-          Already have an account?{" "}
-          <a href="/signin" className="underline">
-            Sign in
+        <p className="mt-6 text-center text-sm text-muted-foreground">
+          {t("alreadyHaveAccount")}{" "}
+          <a href="/signin" className="font-medium text-primary hover:underline">
+            {t("signInLink")}
           </a>
         </p>
       </div>

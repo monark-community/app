@@ -31,13 +31,14 @@ model User {
   deletedAt        DateTime? // self-initiated, grace period applies
   disabledAt       DateTime? // admin-initiated, indefinite
 
-  pendingEmailChange PendingEmailChange?
-  memberships        OrganizationMembership[]
-  sentInvites        Invite[]                 @relation("InviteSender")
-  acceptedInvites    Invite[]                 @relation("InviteAcceptor")
-  roleAssignments    RoleAssignment[]
-  rolesGranted       RoleAssignment[]         @relation("RoleGranter")
-  rolesRevoked       RoleAssignment[]         @relation("RoleRevoker")
+  pendingEmailChange  PendingEmailChange?
+  emailResendAttempts EmailResendAttempt[]
+  memberships         OrganizationMembership[]
+  sentInvites         Invite[]                 @relation("InviteSender")
+  acceptedInvites     Invite[]                 @relation("InviteAcceptor")
+  roleAssignments     RoleAssignment[]
+  rolesGranted        RoleAssignment[]         @relation("RoleGranter")
+  rolesRevoked        RoleAssignment[]         @relation("RoleRevoker")
 }
 
 model PendingEmailChange {
@@ -48,6 +49,17 @@ model PendingEmailChange {
   tokenHash   String   @unique
   requestedAt DateTime @default(now())
   expiresAt   DateTime
+}
+
+// Tracks resend attempts for the signup confirmation email so we can enforce
+// a 5-per-hour cap without building a separate rate-limit system.
+model EmailResendAttempt {
+  id     String   @id @default(cuid())
+  userId String
+  user   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  at     DateTime @default(now())
+
+  @@index([userId, at])
 }
 
 // ── MODULE: rbac ─────────────────────────────────────────

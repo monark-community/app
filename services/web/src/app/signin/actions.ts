@@ -4,9 +4,11 @@ import { redirect } from "next/navigation"
 import { emitSignedIn, emitSignedOut } from "@monark/auth/server"
 import { createSupabaseServerClient } from "@/lib/supabase/server"
 
+export type SignInErrorCode = "invalidCredentials"
+
 export type SignInActionResult =
   | { ok: true }
-  | { ok: false; error: string }
+  | { ok: false; errorCode: SignInErrorCode }
 
 export async function signInAction(input: {
   email: string
@@ -18,8 +20,19 @@ export async function signInAction(input: {
     password: input.password,
   })
 
+  if (error?.code === "email_not_confirmed") {
+    const encoded = encodeURIComponent(input.email)
+    redirect(`/signup/check-email?email=${encoded}`)
+  }
+
   if (error || !data.user) {
-    return { ok: false, error: "Email or password is incorrect." }
+    return { ok: false, errorCode: "invalidCredentials" }
+  }
+
+  if (!data.user.email_confirmed_at) {
+    await supabase.auth.signOut({ scope: "local" })
+    const encoded = encodeURIComponent(data.user.email ?? input.email)
+    redirect(`/signup/check-email?email=${encoded}`)
   }
 
   await emitSignedIn({ userId: data.user.id })

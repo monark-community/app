@@ -25,8 +25,15 @@ export type PasswordChangedEvent = DomainEventBase & {
   triggeredBy: "user" | "reset"
 }
 
+export type EmailVerifiedEvent = DomainEventBase & {
+  type: "user.email-verified"
+  userId: string
+  email: string
+}
+
 export type AuthEvents =
   | UserSignedUpEvent
   | UserSignedInEvent
   | UserSignedOutEvent
   | PasswordChangedEvent
+  | EmailVerifiedEvent

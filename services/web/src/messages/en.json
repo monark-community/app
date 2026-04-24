@@ -1,0 +1,142 @@
+{
+  "common": {
+    "appName": "Monark",
+    "tagline": "Fostering collaboration within the Web3 community.",
+    "cancel": "Cancel",
+    "continue": "Continue",
+    "loading": "Loading…"
+  },
+  "auth": {
+    "signUp": {
+      "title": "Create your account",
+      "subtitle": "Join the Monark community in under a minute.",
+      "labels": {
+        "email": "Email",
+        "password": "Password",
+        "displayName": "Display name (optional)"
+      },
+      "submit": "Create account",
+      "submitting": "Creating account…",
+      "alreadyHaveAccount": "Already have an account?",
+      "signInLink": "Sign in",
+      "errors": {
+        "fallback": "Unexpected error during signup.",
+        "weakPassword": "Please choose a stronger password.",
+        "emailInUse": "An account with that email already exists."
+      }
+    },
+    "signIn": {
+      "title": "Welcome back",
+      "subtitle": "Sign in to continue to Monark.",
+      "labels": {
+        "email": "Email",
+        "password": "Password"
+      },
+      "submit": "Sign in",
+      "submitting": "Signing in…",
+      "noAccount": "Don't have an account?",
+      "signUpLink": "Create one",
+      "errors": {
+        "invalidCredentials": "Email or password is incorrect."
+      }
+    },
+    "checkEmail": {
+      "title": "Check your email",
+      "subtitleWithEmail": "We sent a confirmation link and code to <em>{email}</em>.",
+      "subtitleNoEmail": "We sent a confirmation link and code to your email.",
+      "otpPrompt": "Enter the code from the email",
+      "verify": "Verify",
+      "verifying": "Verifying…",
+      "resend": "Resend email",
+      "resending": "Sending…",
+      "resendSuccess": "Sent. {remaining} resends left this hour.",
+      "resendExhausted": "You've hit the resend limit for this hour. Try again later.",
+      "or": "or",
+      "wrongEmail": "Wrong email?",
+      "signUpAgain": "Sign up again",
+      "errors": {
+        "invalidCode": "That code is invalid or has expired."
+      }
+    },
+    "confirmError": {
+      "title": "Link expired",
+      "reasonMissing": "The confirmation link was malformed.",
+      "reasonExpired": "That confirmation link has expired.",
+      "reasonInvalid": "That confirmation link is no longer valid.",
+      "retry": "Sign in to request a new one"
+    },
+    "passwordStrength": {
+      "label": "Strength: <strong>{level}</strong>",
+      "levels": {
+        "0": "Very weak",
+        "1": "Weak",
+        "2": "Fair",
+        "3": "Good",
+        "4": "Strong"
+      }
+    }
+  },
+  "home": {
+    "heading": "Monark",
+    "subheading": "Fostering collaboration within the Web3 community."
+  },
+  "devOverlay": {
+    "title": "Dev overlay",
+    "toggleHint": "Alt+D to toggle",
+    "themeSwitchTo": "Switch to {theme} theme",
+    "theme": { "light": "light", "dark": "dark" },
+    "refetch": "Refetch",
+    "signUp": "Sign up",
+    "signIn": "Sign in",
+    "signOut": "Sign out",
+    "sections": {
+      "session": "session",
+      "apiHealth": "api health",
+      "currentOrg": "current org",
+      "rbac": "rbac",
+      "featureFlags": "feature flags"
+    },
+    "badges": {
+      "signedIn": "signed in",
+      "anon": "anon",
+      "up": "up",
+      "down": "down",
+      "flagsOn": "{on}/{total} on"
+    },
+    "session": {
+      "notSignedIn": "Not signed in.",
+      "resolving": "resolving…",
+      "fields": {
+        "id": "id",
+        "email": "email",
+        "name": "name",
+        "locale": "locale",
+        "verified": "verified"
+      },
+      "verifiedNo": "not yet"
+    },
+    "apiHealth": {
+      "pinging": "pinging…",
+      "fields": { "pong": "pong", "at": "at" }
+    },
+    "currentOrg": {
+      "none": "No active org.",
+      "resolving": "resolving…",
+      "fields": { "slug": "slug", "name": "name", "id": "id" },
+      "memberships": "memberships ({count})"
+    },
+    "rbac": {
+      "fields": { "primary": "primary", "roles": "roles" },
+      "permissions": "permissions ({count})",
+      "noneGranted": "None granted.",
+      "dash": "—"
+    },
+    "featureFlags": {
+      "resolving": "resolving…",
+      "on": "on",
+      "off": "off",
+      "scopeNote": "Resolved against an empty scope (no userId / orgId / role)."
+    },
+    "errorPrefix": "error:"
+  }
+}

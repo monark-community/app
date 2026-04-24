@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, type ReactNode } from "react"
+import { useEffect, useState, type ReactNode } from "react"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { httpBatchLink } from "@trpc/client"
 import { createSupabaseBrowserClient } from "./supabase/browser"
@@ -28,6 +28,24 @@ export function TrpcProvider({ children }: { children: ReactNode }) {
       ],
     }),
   )
+
+  // Server-action sign-in / sign-out uses redirect(), which is a soft
+  // navigation in Next App Router; the QueryClient survives, so anything
+  // that depended on the previous auth state (users.me, rbac, etc.) stays
+  // cached with the stale result. Invalidate on auth transitions.
+  useEffect(() => {
+    const { data: sub } = supabase.auth.onAuthStateChange((event) => {
+      if (
+        event === "SIGNED_IN" ||
+        event === "SIGNED_OUT" ||
+        event === "TOKEN_REFRESHED" ||
+        event === "USER_UPDATED"
+      ) {
+        queryClient.invalidateQueries()
+      }
+    })
+    return () => sub.subscription.unsubscribe()
+  }, [supabase, queryClient])
 
   return (
     <trpc.Provider client={trpcClient} queryClient={queryClient}>

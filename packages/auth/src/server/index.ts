@@ -38,6 +38,14 @@ export { signUpUser, signUpInputSchema } from "./signup"
 export type { SignUpInput, SignUpResult, SignUpDeps } from "./signup"
 export { emitSignedIn, emitSignedOut, emitPasswordChanged } from "./events"
 export { checkPassword } from "./password"
+export {
+  markEmailVerified,
+  recordResendAttempt,
+  requireVerifiedEmail,
+  RESEND_MAX_PER_WINDOW,
+  RESEND_WINDOW_MS,
+  type ResendResult,
+} from "./email-verification"
 
 // Read interface. Takes an explicit ctx so callers can use this from either
 // tRPC procedures or Next server components.

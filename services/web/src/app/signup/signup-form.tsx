@@ -1,25 +1,21 @@
 "use client"
 
 import { useMemo, useState, useTransition } from "react"
-import {
-  checkPasswordOffline,
-  PASSWORD_RULE_HINTS,
-  type PasswordFailureReason,
-} from "@monark/auth/contracts"
-import { signUpAction } from "./actions"
-
-const OFFLINE_HINT_ORDER: Array<Exclude<PasswordFailureReason, "breached">> = [
-  "too-short",
-  "not-enough-char-classes",
-  "contains-email",
-  "contains-display-name",
-]
+import { useTranslations } from "next-intl"
+import { checkPasswordOffline } from "@monark/auth/contracts"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Card, CardContent } from "@/components/ui/card"
+import { PasswordStrengthMeter } from "@/components/password-strength-meter"
+import { signUpAction, type SignUpErrorCode } from "./actions"
 
 export function SignUpForm() {
+  const t = useTranslations("auth.signUp")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [displayName, setDisplayName] = useState("")
-  const [error, setError] = useState<string | null>(null)
+  const [errorCode, setErrorCode] = useState<SignUpErrorCode | null>(null)
   const [isPending, startTransition] = useTransition()
 
   const strength = useMemo(
@@ -30,98 +26,71 @@ export function SignUpForm() {
       }),
     [password, email, displayName],
   )
-  const failing = strength.ok ? new Set<PasswordFailureReason>() : new Set(strength.reasons)
-  const showHints = password.length > 0
 
   function onSubmit(formData: FormData) {
-    setError(null)
+    setErrorCode(null)
     startTransition(async () => {
       const result = await signUpAction({
         email: String(formData.get("email") ?? ""),
         password: String(formData.get("password") ?? ""),
         displayName: String(formData.get("displayName") ?? "") || undefined,
       })
-      if (result && !result.ok) setError(result.error)
+      if (result && !result.ok) setErrorCode(result.errorCode)
     })
   }
 
   return (
-    <form
-      action={onSubmit}
-      className="space-y-3 rounded-lg border border-surface-stroke bg-bg-elevated p-5"
-    >
-      <label className="block">
-        <span className="mb-1 block text-xs uppercase tracking-wider text-text-muted">
-          email
-        </span>
-        <input
-          name="email"
-          type="email"
-          required
-          autoComplete="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className="h-10 w-full rounded-md border border-surface-stroke bg-transparent px-3 text-sm outline-none focus:border-text-muted"
-        />
-      </label>
-      <label className="block">
-        <span className="mb-1 block text-xs uppercase tracking-wider text-text-muted">
-          password
-        </span>
-        <input
-          name="password"
-          type="password"
-          required
-          autoComplete="new-password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="h-10 w-full rounded-md border border-surface-stroke bg-transparent px-3 text-sm outline-none focus:border-text-muted"
-        />
-      </label>
-      <label className="block">
-        <span className="mb-1 block text-xs uppercase tracking-wider text-text-muted">
-          display name (optional)
-        </span>
-        <input
-          name="displayName"
-          type="text"
-          maxLength={80}
-          value={displayName}
-          onChange={(e) => setDisplayName(e.target.value)}
-          className="h-10 w-full rounded-md border border-surface-stroke bg-transparent px-3 text-sm outline-none focus:border-text-muted"
-        />
-      </label>
+    <Card className="shadow-none border-border">
+      <CardContent className="pt-6">
+        <form action={onSubmit} className="flex flex-col gap-4">
+          <div className="grid gap-2">
+            <Label htmlFor="email">{t("labels.email")}</Label>
+            <Input
+              id="email"
+              name="email"
+              type="email"
+              required
+              autoComplete="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+          </div>
 
-      {showHints && (
-        <ul className="space-y-1 text-[11px]">
-          {OFFLINE_HINT_ORDER.map((reason) => {
-            const missing = failing.has(reason)
-            return (
-              <li
-                key={reason}
-                className={missing ? "text-text-muted" : "text-emerald-400"}
-              >
-                <span className="mr-1.5 inline-block w-3 font-mono">
-                  {missing ? "·" : "✓"}
-                </span>
-                {PASSWORD_RULE_HINTS[reason]}
-              </li>
-            )
-          })}
-          <li className="text-[10px] text-text-muted">
-            Also checked on submit: your password isn&apos;t on a public breach list.
-          </li>
-        </ul>
-      )}
+          <div className="grid gap-2">
+            <Label htmlFor="password">{t("labels.password")}</Label>
+            <Input
+              id="password"
+              name="password"
+              type="password"
+              required
+              autoComplete="new-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+            <PasswordStrengthMeter score={strength.score} visible={password.length > 0} />
+          </div>
 
-      {error && <p className="text-xs text-red-400">{error}</p>}
-      <button
-        type="submit"
-        disabled={isPending || !strength.ok}
-        className="h-11 w-full rounded-md border border-surface-stroke bg-text-primary text-sm font-medium text-bg-base transition hover:opacity-90 disabled:opacity-50"
-      >
-        {isPending ? "creating account…" : "Create account"}
-      </button>
-    </form>
+          <div className="grid gap-2">
+            <Label htmlFor="displayName">{t("labels.displayName")}</Label>
+            <Input
+              id="displayName"
+              name="displayName"
+              type="text"
+              maxLength={80}
+              value={displayName}
+              onChange={(e) => setDisplayName(e.target.value)}
+            />
+          </div>
+
+          {errorCode && (
+            <p className="text-sm text-destructive">{t(`errors.${errorCode}`)}</p>
+          )}
+
+          <Button type="submit" disabled={isPending || !strength.ok} className="w-full">
+            {isPending ? t("submitting") : t("submit")}
+          </Button>
+        </form>
+      </CardContent>
+    </Card>
   )
 }

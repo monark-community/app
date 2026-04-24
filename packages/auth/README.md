@@ -6,9 +6,9 @@ Spec: [docs/features-planning/phase-1/auth-login-password.md](../../docs/feature
 
 ## What's here (Phase 1 MVP)
 
-- `/server` — `authRouter` (tRPC) with `ping`, `session`, and `checkPassword`; `signUpUser` orchestrator; `checkPassword` (offline rules + HIBP k-anonymity); event emitters; `getCurrentUser` / `requireUser` read interface.
-- `/contracts` — event types, `PASSWORD_RULES` constants, `PasswordCheckResult` + `PasswordFailureReason` types, `checkPasswordOffline` pure function (safe for browser + server), `PASSWORD_RULE_HINTS` map for UI.
-- `/client` — placeholder. The web's signin/signup pages live under [`services/web/src/app/signin`](../../services/web/src/app/signin) / [`signup`](../../services/web/src/app/signup) directly, because they rely on Next-specific primitives (server actions, `redirect()`, `cookies()`).
+- `/server` — `authRouter` (tRPC) with `ping`, `session`, and `checkPassword`; `signUpUser` orchestrator (public `auth.signUp`, triggers verification email); `checkPassword` (offline rules + HIBP k-anonymity); email-verification helpers (`markEmailVerified`, `recordResendAttempt`, `requireVerifiedEmail`); event emitters; `getCurrentUser` / `requireUser` read interface.
+- `/contracts` — event types (including `EmailVerifiedEvent`), `PASSWORD_RULES` constants, `PasswordCheckResult` + `PasswordFailureReason` types, `checkPasswordOffline` pure function (safe for browser + server), `PASSWORD_RULE_HINTS` map for UI.
+- `/client` — placeholder. The web's signup/signin/verification pages live under [`services/web/src/app/signin`](../../services/web/src/app/signin) / [`signup`](../../services/web/src/app/signup) / [`auth/confirm`](../../services/web/src/app/auth/confirm) directly, because they rely on Next-specific primitives (server actions, `redirect()`, `cookies()`).
 
 ## Key concepts
 
@@ -17,6 +17,7 @@ Spec: [docs/features-planning/phase-1/auth-login-password.md](../../docs/feature
 - **Session hydration is split across services.** The web's Supabase SSR helpers set cookies; the api receives the access token via `Authorization: Bearer <token>` on every tRPC call and verifies it through Supabase's admin API (`getUser(token)`) to populate `ctx.userId` + `ctx.activeOrganizationId`.
 - **Active org lives in user metadata.** `user_metadata.active_organization_id` on the Supabase user is the source; the JWT claim flows through to `ctx.activeOrganizationId`. Setting it is the org-switcher flow's job (not yet built).
 - **Password rules are one source of truth.** `checkPasswordOffline` runs both in the browser (live rule-by-rule hints on the signup form) and on the server (inside `signUpUser`, before any Supabase call). The server additionally runs `isPasswordBreached` against [haveibeenpwned](https://haveibeenpwned.com/API/v3#PwnedPasswords) using the k-anonymity API so the plaintext never leaves the process. HIBP failures degrade open (log + accept) so a transient outage doesn't block signups.
+- **Email verification uses Supabase's public `auth.signUp`.** The SMTP flow (dev: Mailpit; prod: Supabase SMTP or SendGrid) sends the link; the user clicks it, lands at `/auth/confirm?token_hash=...&type=signup`, Supabase verifies the OTP, and we mirror the confirmation into our shadow `User.emailVerifiedAt` via `markEmailVerified`. Resends are rate-limited to 5 per hour per user through the `EmailResendAttempt` table. Other modules opt into verification gating via `requireVerifiedEmail(ctx)`; a failed check surfaces a `ForbiddenError` callers can redirect-on.
 
 ## Usage
 
@@ -67,6 +68,9 @@ const result = checkPasswordOffline(password, { email, displayName })
 | `@monark/auth/server`      | `emitSignedIn` / `emitSignedOut` / `emitPasswordChanged` | event helpers for the web-side server actions |
 | `@monark/auth/server`      | `getCurrentUser(ctx)`   | resolves `ctx.userId` → `User \| null` via `@monark/users` |
 | `@monark/auth/server`      | `requireUser(ctx)`      | throws `UnauthorizedError` if unauthenticated |
+| `@monark/auth/server`      | `requireVerifiedEmail(ctx)` | throws `ForbiddenError` if `User.emailVerifiedAt` is null |
+| `@monark/auth/server`      | `markEmailVerified(userId)` | flips shadow `User.emailVerifiedAt` + emits `user.email-verified` |
+| `@monark/auth/server`      | `recordResendAttempt(userId)` | rate-limit gate; returns `{ sent, remainingInWindow, retryAfterSeconds? }` |
 | `@monark/auth/contracts`   | `checkPasswordOffline`, `PASSWORD_RULES`, `PASSWORD_RULE_HINTS`, `PasswordCheckResult`, event types | pure; safe for browser |
 
 tRPC procedures under `auth.*`:
@@ -137,6 +141,7 @@ await assignRole({
 | `user.signed-in`       | after `signInWithPassword` succeeds             | emitted (via `emitSignedIn` from the web server action) |
 | `user.signed-out`      | `signOutAction`                                 | emitted |
 | `user.password-changed`| password reset / account page password change   | type declared, not yet emitted |
+| `user.email-verified`  | `/auth/confirm` successfully verified            | emitted via `markEmailVerified` |
 
 ## Deferred
 
@@ -144,8 +149,9 @@ await assignRole({
 - **`PasswordInput` shadcn primitive.** Today's signup form renders the rule hints inline; the canonical `<PasswordInput showStrengthMeter showHints />` lands with the component library pass.
 - **Blur-time HIBP via `auth.checkPassword` mutation.** Wire exists; the signup form currently relies on the server-side check at submit instead of live "this password appears in a breach" feedback.
 - **`auth.hibp-check` feature flag.** The spec calls for a kill-switch if HIBP misbehaves; for now the in-code `isPasswordBreached` already degrades open on failure, so the risk is low.
-- **Password reset** (`requestPasswordReset`, `completePasswordReset`). Token flow shared with `auth-email-validation`; both land together.
-- **Email verification UX** (`/signup/check-email`, "resend confirmation" CTA). Local Supabase auto-confirms today; production flow ships with `@monark/auth-email-validation`.
+- **Password reset** (`requestPasswordReset`, `completePasswordReset`). Token flow re-uses Supabase's `resetPasswordForEmail` + `updateUser` hooks; lands alongside a /forgot-password page in a later pass.
+- **Invite bypass for verification.** Accepting an invite proves email ownership, so `emailVerifiedAt` should be stamped immediately. Ships with the org invite flow.
+- **`auth.require-verified-email` feature flag.** Spec calls for a soft-gate vs hard-block toggle; defer to when we actually have verification-gated surfaces.
 - **Referral code wiring.** `signUpInputSchema` accepts `referralCode` but `@monark/referral` doesn't consume it yet (Phase 2).
 - **TOTP challenge step** (`/signin/totp`). Gated on `@monark/auth-totp`.
 - **Trusted-device skip logic.** Gated on `@monark/auth-trusted-devices`.

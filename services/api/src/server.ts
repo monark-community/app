@@ -10,7 +10,17 @@ import { createContext } from "./trpc/context"
 const app = express()
 
 app.use(pinoHttp({ logger }))
-app.use(cors({ origin: env.WEB_ORIGIN, credentials: true }))
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // allow tools / server-to-server calls with no Origin header
+      if (!origin) return callback(null, true)
+      if (env.WEB_ORIGIN.includes(origin)) return callback(null, true)
+      return callback(new Error(`CORS: origin not allowed: ${origin}`))
+    },
+    credentials: true,
+  }),
+)
 app.use(express.json())
 
 app.get("/health", (_req, res) => {
