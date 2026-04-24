@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { ApiHealthPanel } from "./panels/api-health"
+import { CurrentOrgPanel } from "./panels/current-org"
 import { CurrentUserPanel } from "./panels/current-user"
 import { FeatureFlagsPanel } from "./panels/feature-flags"
 
@@ -52,6 +53,7 @@ export function DevOverlay() {
           <div className="flex-1 overflow-y-auto">
             <ApiHealthPanel />
             <CurrentUserPanel />
+            <CurrentOrgPanel />
             <FeatureFlagsPanel />
           </div>
         </aside>
