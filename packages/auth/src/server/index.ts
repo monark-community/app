@@ -1,6 +1,8 @@
+import { z } from "zod"
 import { router, publicProcedure } from "@monark/common/trpc"
 import { UnauthorizedError } from "@monark/common"
 import { getById } from "@monark/users/server"
+import { checkPassword } from "./password"
 
 export const authRouter = router({
   ping: publicProcedure.query(() => ({
@@ -13,6 +15,21 @@ export const authRouter = router({
     activeOrganizationId: ctx.activeOrganizationId,
     signedIn: ctx.userId !== null,
   })),
+
+  checkPassword: publicProcedure
+    .input(
+      z.object({
+        password: z.string(),
+        email: z.string().email().optional(),
+        displayName: z.string().optional(),
+      }),
+    )
+    .mutation(({ input }) =>
+      checkPassword(input.password, {
+        email: input.email,
+        displayName: input.displayName,
+      }),
+    ),
 })
 
 // Reusable helpers used by server actions in services/web + by any future
@@ -20,6 +37,7 @@ export const authRouter = router({
 export { signUpUser, signUpInputSchema } from "./signup"
 export type { SignUpInput, SignUpResult, SignUpDeps } from "./signup"
 export { emitSignedIn, emitSignedOut, emitPasswordChanged } from "./events"
+export { checkPassword } from "./password"
 
 // Read interface. Takes an explicit ctx so callers can use this from either
 // tRPC procedures or Next server components.

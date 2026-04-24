@@ -6,8 +6,8 @@ Spec: [docs/features-planning/phase-1/auth-login-password.md](../../docs/feature
 
 ## What's here (Phase 1 MVP)
 
-- `/server` — `authRouter` (tRPC) with `ping` and `session` queries, `signUpUser` orchestrator, event emitters, `getCurrentUser` / `requireUser` read interface.
-- `/contracts` — event types for the auth lifecycle (`UserSignedUpEvent`, `UserSignedInEvent`, `UserSignedOutEvent`, `PasswordChangedEvent`).
+- `/server` — `authRouter` (tRPC) with `ping`, `session`, and `checkPassword`; `signUpUser` orchestrator; `checkPassword` (offline rules + HIBP k-anonymity); event emitters; `getCurrentUser` / `requireUser` read interface.
+- `/contracts` — event types, `PASSWORD_RULES` constants, `PasswordCheckResult` + `PasswordFailureReason` types, `checkPasswordOffline` pure function (safe for browser + server), `PASSWORD_RULE_HINTS` map for UI.
 - `/client` — placeholder. The web's signin/signup pages live under [`services/web/src/app/signin`](../../services/web/src/app/signin) / [`signup`](../../services/web/src/app/signup) directly, because they rely on Next-specific primitives (server actions, `redirect()`, `cookies()`).
 
 ## Key concepts
@@ -16,6 +16,7 @@ Spec: [docs/features-planning/phase-1/auth-login-password.md](../../docs/feature
 - **Two compensating writes on signup.** `signUpUser` creates the Supabase Auth user, then inserts the shadow `User` row. If the DB insert throws, we delete the Supabase user so nothing orphans. Logged loudly on either failure.
 - **Session hydration is split across services.** The web's Supabase SSR helpers set cookies; the api receives the access token via `Authorization: Bearer <token>` on every tRPC call and verifies it through Supabase's admin API (`getUser(token)`) to populate `ctx.userId` + `ctx.activeOrganizationId`.
 - **Active org lives in user metadata.** `user_metadata.active_organization_id` on the Supabase user is the source; the JWT claim flows through to `ctx.activeOrganizationId`. Setting it is the org-switcher flow's job (not yet built).
+- **Password rules are one source of truth.** `checkPasswordOffline` runs both in the browser (live rule-by-rule hints on the signup form) and on the server (inside `signUpUser`, before any Supabase call). The server additionally runs `isPasswordBreached` against [haveibeenpwned](https://haveibeenpwned.com/API/v3#PwnedPasswords) using the k-anonymity API so the plaintext never leaves the process. HIBP failures degrade open (log + accept) so a transient outage doesn't block signups.
 
 ## Usage
 
@@ -46,24 +47,35 @@ const session = trpc.auth.session.useQuery()
 // { userId, activeOrganizationId, signedIn }
 ```
 
+```tsx
+// Live password-rule hints on a form (pure; no network):
+import { checkPasswordOffline, PASSWORD_RULE_HINTS } from "@monark/auth/contracts"
+
+const result = checkPasswordOffline(password, { email, displayName })
+// result: { ok: true, score } | { ok: false, reasons, score }
+// Render PASSWORD_RULE_HINTS[reason] with a checkmark per rule.
+```
+
 ## Public API
 
 | Import path                | Export                  | Kind |
 |----------------------------|-------------------------|------|
 | `@monark/auth/server`      | `authRouter`            | tRPC sub-router mounted under `auth.*` |
-| `@monark/auth/server`      | `signUpUser(input, deps)` | admin-path user creation + shadow User insert |
+| `@monark/auth/server`      | `signUpUser(input, deps)` | admin-path user creation + shadow User insert; runs `checkPassword` before admin call |
 | `@monark/auth/server`      | `signUpInputSchema`     | Zod validator shared between server + forms |
+| `@monark/auth/server`      | `checkPassword(pw, ctx)` | full rules + HIBP k-anonymity; returns `PasswordCheckResult` |
 | `@monark/auth/server`      | `emitSignedIn` / `emitSignedOut` / `emitPasswordChanged` | event helpers for the web-side server actions |
 | `@monark/auth/server`      | `getCurrentUser(ctx)`   | resolves `ctx.userId` → `User \| null` via `@monark/users` |
 | `@monark/auth/server`      | `requireUser(ctx)`      | throws `UnauthorizedError` if unauthenticated |
-| `@monark/auth/contracts`   | event types, `AuthEvents` | |
+| `@monark/auth/contracts`   | `checkPasswordOffline`, `PASSWORD_RULES`, `PASSWORD_RULE_HINTS`, `PasswordCheckResult`, event types | pure; safe for browser |
 
 tRPC procedures under `auth.*`:
 
 | Procedure         | Input | Output |
 |-------------------|-------|--------|
-| `auth.ping`       | —     | `{ pong: true, at: string }` |
-| `auth.session`    | —     | `{ userId, activeOrganizationId, signedIn }` |
+| `auth.ping`           | —     | `{ pong: true, at: string }` |
+| `auth.session`        | —     | `{ userId, activeOrganizationId, signedIn }` |
+| `auth.checkPassword`  | `{ password, email?, displayName? }` | `PasswordCheckResult` (mutation; blur-time HIBP check) |
 
 ## Dependencies
 
@@ -128,6 +140,10 @@ await assignRole({
 
 ## Deferred
 
+- **zxcvbn scoring.** `PasswordCheckResult.score` currently uses a simple length+class heuristic (0-4). Swap in `@zxcvbn-ts/core` when we pull in the auth-aesthetics strength-bar component.
+- **`PasswordInput` shadcn primitive.** Today's signup form renders the rule hints inline; the canonical `<PasswordInput showStrengthMeter showHints />` lands with the component library pass.
+- **Blur-time HIBP via `auth.checkPassword` mutation.** Wire exists; the signup form currently relies on the server-side check at submit instead of live "this password appears in a breach" feedback.
+- **`auth.hibp-check` feature flag.** The spec calls for a kill-switch if HIBP misbehaves; for now the in-code `isPasswordBreached` already degrades open on failure, so the risk is low.
 - **Password reset** (`requestPasswordReset`, `completePasswordReset`). Token flow shared with `auth-email-validation`; both land together.
 - **Email verification UX** (`/signup/check-email`, "resend confirmation" CTA). Local Supabase auto-confirms today; production flow ships with `@monark/auth-email-validation`.
 - **Referral code wiring.** `signUpInputSchema` accepts `referralCode` but `@monark/referral` doesn't consume it yet (Phase 2).

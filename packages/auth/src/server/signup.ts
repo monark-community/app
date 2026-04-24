@@ -3,6 +3,7 @@ import { z } from "zod"
 import { emit, logger, ConflictError, ValidationError } from "@monark/common"
 import { getDb } from "@monark/db"
 import type { UserSignedUpEvent } from "../contracts/events"
+import { checkPassword } from "./password"
 
 export const signUpInputSchema = z.object({
   email: z.string().email(),
@@ -33,6 +34,14 @@ export async function signUpUser(
   const parsed = signUpInputSchema.safeParse(input)
   if (!parsed.success) {
     throw new ValidationError("Invalid signup input", parsed.error.flatten())
+  }
+
+  const strength = await checkPassword(parsed.data.password, {
+    email: parsed.data.email,
+    displayName: parsed.data.displayName,
+  })
+  if (!strength.ok) {
+    throw new ValidationError("Password does not meet requirements.", strength.reasons)
   }
 
   const admin: SupabaseClient = createClient(deps.supabaseUrl, deps.supabaseSecretKey, {
