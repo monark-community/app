@@ -9,6 +9,11 @@ No versioned releases have been cut yet. The app is pre-release; this file will 
 
 ## [Unreleased]
 
+- 2026-04-24: Added rbac (`@monark/rbac`); canonical `Role` Prisma enum (MONARK_ADMIN, ADMIN, DEVELOPER, AMBASSADOR, STUDENT), `RoleAssignment` table, `PERMISSIONS` matrix + `Permission` type, read-interface (`hasRole`, `hasPermission`, `getUserRoles`, `primaryRole`, `isLastAdmin`), guards (`requireRole`, `requirePermission`), write path (`assignRole`, `revokeRole`) emitting `rbac.role-assigned` / `rbac.role-revoked`, three `rbac.*` tRPC queries (`myRoles`, `myPrimaryRole`, `myPermissions`). Migration also flipped `Invite.role` and `FeatureFlagOverride.role` from `String` to the enum. Admin role-management UI deferred until auth lands.
+- 2026-04-24: Dev overlay gained an "rbac" panel pulling current roles + resolved permissions.
+- 2026-04-24: Added organization-management MVP (`@monark/organizations`); `Organization`, `OrganizationMembership`, `Invite`, `OrgSlugRedirect` Prisma models + User back-refs, read-interface (`getById`, `getBySlug`, `getUserOrgs`, `getCurrentOrg`, `requireOrg`), `organizations.current` + `organizations.mine` tRPC queries, five lifecycle event types. CRUD, invites, switcher, and white-label deferred until auth + rbac land.
+- 2026-04-24: Added `activeOrganizationId` to `TrpcContext`; null until auth wires the session claim.
+- 2026-04-24: Dev overlay gained a "current org" panel pulling `trpc.organizations.current` + `trpc.organizations.mine`.
 - 2026-04-24: Added user-management MVP (`@monark/users`); `User` + `PendingEmailChange` Prisma models, read-interface (`getById`, `getByIdOrThrow`, `getByEmail`, `getCurrent`), `users.me` tRPC query, `UserProfileUpdatedEvent` type. Profile-edit, admin ops, account deletion, and avatar upload deferred until auth + rbac land.
 - 2026-04-24: Dev overlay gained a "current user" panel pulling `trpc.users.me`.
 - 2026-04-23: Added feature flags (`@monark/feature-flags`); in-code flag definitions + DB overrides scoped by global/org/user/role, tRPC router, React hooks + `FlagsProvider`, audit event on flip.

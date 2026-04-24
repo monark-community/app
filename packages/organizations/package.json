@@ -1,0 +1,23 @@
+{
+  "name": "@monark/organizations",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./server": "./src/server/index.ts",
+    "./client": "./src/client/index.ts",
+    "./contracts": "./src/contracts/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@monark/db": "workspace:*",
+    "@monark/common": "workspace:*"
+  },
+  "devDependencies": {
+    "vitest": "^3.0.0"
+  }
+}

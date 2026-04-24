@@ -32,6 +32,12 @@ model User {
   disabledAt       DateTime? // admin-initiated, indefinite
 
   pendingEmailChange PendingEmailChange?
+  memberships        OrganizationMembership[]
+  sentInvites        Invite[]                 @relation("InviteSender")
+  acceptedInvites    Invite[]                 @relation("InviteAcceptor")
+  roleAssignments    RoleAssignment[]
+  rolesGranted       RoleAssignment[]         @relation("RoleGranter")
+  rolesRevoked       RoleAssignment[]         @relation("RoleRevoker")
 }
 
 model PendingEmailChange {
@@ -42,6 +48,99 @@ model PendingEmailChange {
   tokenHash   String   @unique
   requestedAt DateTime @default(now())
   expiresAt   DateTime
+}
+
+// ── MODULE: rbac ─────────────────────────────────────────
+// See docs/features-planning/phase-1/rbac-system.md.
+// MONARK_ADMIN is platform-level (organizationId null); the four others are per-org.
+enum Role {
+  MONARK_ADMIN
+  ADMIN
+  DEVELOPER
+  AMBASSADOR
+  STUDENT
+}
+
+model RoleAssignment {
+  id             String        @id @default(cuid())
+  userId         String
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  role           Role
+  grantedById    String
+  granter        User          @relation("RoleGranter", fields: [grantedById], references: [id])
+  grantedAt      DateTime      @default(now())
+  revokedAt      DateTime?
+  revokedById    String?
+  revoker        User?         @relation("RoleRevoker", fields: [revokedById], references: [id])
+  reason         String?
+
+  @@unique([userId, organizationId, role])
+  @@index([userId])
+  @@index([organizationId])
+}
+
+// ── MODULE: organizations ────────────────────────────────
+// See docs/features-planning/phase-1/organization-management.md.
+model Organization {
+  id           String    @id @default(cuid())
+  slug         String    @unique
+  displayName  String
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  deletedAt    DateTime?
+
+  logoUrl      String?
+  primaryColor String?
+
+  memberships     OrganizationMembership[]
+  invites         Invite[]
+  slugRedirects   OrgSlugRedirect[]
+  roleAssignments RoleAssignment[]
+}
+
+model OrganizationMembership {
+  id             String       @id @default(cuid())
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  joinedAt DateTime  @default(now())
+  leftAt   DateTime?
+
+  @@unique([userId, organizationId])
+  @@index([organizationId])
+}
+
+model Invite {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  email       String
+  role        Role
+  invitedById String
+  invitedBy   User         @relation("InviteSender", fields: [invitedById], references: [id])
+  tokenHash   String       @unique
+  expiresAt   DateTime
+  acceptedAt  DateTime?
+  acceptedById String?
+  acceptedBy  User?        @relation("InviteAcceptor", fields: [acceptedById], references: [id])
+
+  @@index([organizationId])
+  @@index([email])
+}
+
+model OrgSlugRedirect {
+  id             String       @id @default(cuid())
+  oldSlug        String       @unique
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  expiresAt      DateTime
+
+  @@index([organizationId])
 }
 
 // ── MODULE: feature-flags ────────────────────────────────
@@ -60,10 +159,9 @@ model FeatureFlagOverride {
   flag    FeatureFlag @relation(fields: [flagKey], references: [key], onDelete: Cascade)
 
   // Exactly one of these three is non-null; enforced at the app layer.
-  // Role stays a String until @monark/rbac lands and exports the canonical enum.
   organizationId String?
   userId         String?
-  role           String?
+  role           Role?
 
   enabled Boolean
   setById String

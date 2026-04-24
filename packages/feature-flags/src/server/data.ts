@@ -1,4 +1,4 @@
-import { getDb, type Prisma } from "@monark/db"
+import { getDb, type Prisma, type Role } from "@monark/db"
 import type { FlagKey, FlagScope } from "../contracts/index"
 
 export type OverrideRow = {
@@ -6,7 +6,7 @@ export type OverrideRow = {
   flagKey: string
   organizationId: string | null
   userId: string | null
-  role: string | null
+  role: Role | null
   enabled: boolean
   setById: string
   setAt: Date

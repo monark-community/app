@@ -2,6 +2,8 @@ export const MODULES = {
   "@monark/auth": { tier: "core" },
   "@monark/feature-flags": { tier: "core" },
   "@monark/users": { tier: "core" },
+  "@monark/organizations": { tier: "core" },
+  "@monark/rbac": { tier: "core" },
 } as const satisfies Record<string, { tier: "core" | "extended" }>
 
 export type ModuleName = keyof typeof MODULES

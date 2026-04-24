@@ -2,6 +2,7 @@ import { initTRPC } from "@trpc/server"
 
 export interface TrpcContext {
   userId: string | null
+  activeOrganizationId: string | null
   requestId: string
 }
 

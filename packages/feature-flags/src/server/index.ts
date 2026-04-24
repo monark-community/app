@@ -1,5 +1,6 @@
 import { z } from "zod"
 import { router, publicProcedure } from "@monark/common/trpc"
+import { Role } from "@monark/db"
 import { isKnownFlag, listFlagKeys, type FlagKey } from "../contracts/index"
 import { getFlags, isEnabled } from "./resolve"
 import { readOverridesForFlag } from "./data"
@@ -11,7 +12,7 @@ const scopeSchema = z
   .object({
     organizationId: z.string().optional(),
     userId: z.string().optional(),
-    role: z.string().optional(),
+    role: z.nativeEnum(Role).optional(),
   })
   .default({})
 

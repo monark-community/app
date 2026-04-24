@@ -5,6 +5,7 @@ import { ApiHealthPanel } from "./panels/api-health"
 import { CurrentOrgPanel } from "./panels/current-org"
 import { CurrentUserPanel } from "./panels/current-user"
 import { FeatureFlagsPanel } from "./panels/feature-flags"
+import { RbacPanel } from "./panels/rbac"
 
 export function DevOverlay() {
   const [open, setOpen] = useState(false)
@@ -54,6 +55,7 @@ export function DevOverlay() {
             <ApiHealthPanel />
             <CurrentUserPanel />
             <CurrentOrgPanel />
+            <RbacPanel />
             <FeatureFlagsPanel />
           </div>
         </aside>

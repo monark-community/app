@@ -6,6 +6,7 @@ export function createContext({ req }: { req: Request; res: Response }): TrpcCon
   const requestId = (req.headers["x-request-id"] as string) ?? randomUUID()
   return {
     userId: null,
+    activeOrganizationId: null,
     requestId,
   }
 }
