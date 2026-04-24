@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { ApiHealthPanel } from "./panels/api-health"
+import { AuthActionsPanel } from "./panels/auth-actions"
 import { CurrentOrgPanel } from "./panels/current-org"
 import { CurrentUserPanel } from "./panels/current-user"
 import { FeatureFlagsPanel } from "./panels/feature-flags"
@@ -57,6 +58,7 @@ export function DevOverlay() {
             <CurrentOrgPanel />
             <RbacPanel />
             <FeatureFlagsPanel />
+            <AuthActionsPanel />
           </div>
         </aside>
       )}

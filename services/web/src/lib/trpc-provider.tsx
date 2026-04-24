@@ -3,6 +3,7 @@
 import { useState, type ReactNode } from "react"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { httpBatchLink } from "@trpc/client"
+import { createSupabaseBrowserClient } from "./supabase/browser"
 import { trpc } from "./trpc"
 
 const API_URL =
@@ -12,9 +13,19 @@ const API_URL =
 
 export function TrpcProvider({ children }: { children: ReactNode }) {
   const [queryClient] = useState(() => new QueryClient())
+  const [supabase] = useState(() => createSupabaseBrowserClient())
   const [trpcClient] = useState(() =>
     trpc.createClient({
-      links: [httpBatchLink({ url: `${API_URL}/trpc` })],
+      links: [
+        httpBatchLink({
+          url: `${API_URL}/trpc`,
+          async headers() {
+            const { data } = await supabase.auth.getSession()
+            const token = data.session?.access_token
+            return token ? { authorization: `Bearer ${token}` } : {}
+          },
+        }),
+      ],
     }),
   )
 

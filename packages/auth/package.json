@@ -14,8 +14,11 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@monark/common": "workspace:*",
     "@monark/db": "workspace:*",
-    "@monark/common": "workspace:*"
+    "@monark/users": "workspace:*",
+    "@supabase/supabase-js": "^2.47.0",
+    "zod": "^3.23.0"
   },
   "devDependencies": {
     "vitest": "^3.0.0"

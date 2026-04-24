@@ -6,6 +6,8 @@ const schema = z.object({
   DATABASE_URL: z.string().url().optional(),
   WEB_ORIGIN: z.string().url().default("http://localhost:3000"),
   LOG_LEVEL: z.string().default("info"),
+  SUPABASE_URL: z.string().url(),
+  SUPABASE_SECRET_KEY: z.string().min(1),
 })
 
 const parsed = schema.safeParse(process.env)

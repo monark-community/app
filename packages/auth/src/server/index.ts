@@ -1,10 +1,36 @@
 import { router, publicProcedure } from "@monark/common/trpc"
+import { UnauthorizedError } from "@monark/common"
+import { getById } from "@monark/users/server"
 
-// Public surface of @monark/auth/server.
-// Export the tRPC sub-router as `authRouter` so gen:routers picks it up.
 export const authRouter = router({
   ping: publicProcedure.query(() => ({
     pong: true,
     at: new Date().toISOString(),
   })),
+
+  session: publicProcedure.query(({ ctx }) => ({
+    userId: ctx.userId,
+    activeOrganizationId: ctx.activeOrganizationId,
+    signedIn: ctx.userId !== null,
+  })),
 })
+
+// Reusable helpers used by server actions in services/web + by any future
+// server-side auth orchestration.
+export { signUpUser, signUpInputSchema } from "./signup"
+export type { SignUpInput, SignUpResult, SignUpDeps } from "./signup"
+export { emitSignedIn, emitSignedOut, emitPasswordChanged } from "./events"
+
+// Read interface. Takes an explicit ctx so callers can use this from either
+// tRPC procedures or Next server components.
+export async function getCurrentUser(ctx: { userId: string | null }) {
+  if (!ctx.userId) return null
+  return getById(ctx.userId)
+}
+
+export async function requireUser(ctx: { userId: string | null }) {
+  if (!ctx.userId) throw new UnauthorizedError()
+  const user = await getById(ctx.userId)
+  if (!user) throw new UnauthorizedError()
+  return user
+}

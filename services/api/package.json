@@ -4,8 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "tsx watch src/server.ts",
-    "start": "tsx src/server.ts",
+    "dev": "tsx watch --env-file=.env src/server.ts",
+    "start": "tsx --env-file=.env src/server.ts",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src",
     "test": "vitest run --passWithNoTests"
@@ -13,6 +13,7 @@
   "dependencies": {
     "@monark/common": "workspace:*",
     "@monark/db": "workspace:*",
+    "@supabase/supabase-js": "^2.47.0",
     "@trpc/server": "^11.0.0",
     "cors": "^2.8.5",
     "express": "^5.0.0",
