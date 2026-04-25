@@ -6,6 +6,7 @@ import { getLocale, getMessages, getTranslations } from "next-intl/server"
 import { ThemeProvider } from "@/lib/theme-provider"
 import { TrpcProvider } from "@/lib/trpc-provider"
 import { DevOverlay } from "@/components/dev-overlay/dev-overlay"
+import { Toaster } from "@/components/ui/sonner"
 import "./globals.css"
 
 const nunitoSans = Nunito_Sans({
@@ -34,6 +35,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
             <TrpcProvider>
               {children}
               <DevOverlay />
+              <Toaster position="bottom-right" />
             </TrpcProvider>
           </ThemeProvider>
         </NextIntlClientProvider>

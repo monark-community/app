@@ -23,3 +23,16 @@ export async function updateProfileData(
   const db = getDb()
   return db.user.update({ where: { id }, data: patch })
 }
+
+export async function updateEmail(id: string, email: string): Promise<UserRow> {
+  const db = getDb()
+  return db.user.update({ where: { id }, data: { email } })
+}
+
+export async function setDeletedAt(
+  id: string,
+  deletedAt: Date | null,
+): Promise<UserRow> {
+  const db = getDb()
+  return db.user.update({ where: { id }, data: { deletedAt } })
+}

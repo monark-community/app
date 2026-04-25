@@ -4,6 +4,7 @@ import { redirect } from "next/navigation"
 import { TRPCClientError } from "@trpc/client"
 import { createSupabaseServerClient } from "@/lib/supabase/server"
 import { createServerTrpcClient } from "@/lib/trpc-server"
+import { recognizeDeviceAfterAuth } from "@/lib/trusted-device-cookie"
 
 export type SignUpErrorCode = "weakPassword" | "emailInUse" | "fallback"
 
@@ -37,14 +38,18 @@ export async function signUpAction(input: {
     password: input.password,
   })
   if (!signIn.error && signIn.data.session) {
-    const authed = createServerTrpcClient(signIn.data.session.access_token)
-    await authed.auth.notifySignedIn.mutate().catch(() => {
-      // Event emission is best-effort; signup itself already succeeded.
-    })
+    const accessToken = signIn.data.session.access_token
+    const trustedDeviceId = await recognizeDeviceAfterAuth(accessToken)
+    const authed = createServerTrpcClient(accessToken)
+    await authed.auth.notifySignedIn
+      .mutate(trustedDeviceId ? { trustedDeviceId } : undefined)
+      .catch(() => {
+        // Event emission is best-effort; signup itself already succeeded.
+      })
   }
 
   if (!result.needsEmailVerification) {
-    redirect("/")
+    redirect("/account")
   }
   const encoded = encodeURIComponent(result.email)
   redirect(`/signup/check-email?email=${encoded}`)

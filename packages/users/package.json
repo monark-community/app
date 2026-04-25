@@ -14,8 +14,9 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@monark/common": "workspace:*",
     "@monark/db": "workspace:*",
-    "@monark/common": "workspace:*"
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "vitest": "^3.0.0"

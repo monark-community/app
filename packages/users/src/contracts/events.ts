@@ -6,8 +6,28 @@ export type UserProfileUpdatedEvent = DomainEventBase & {
   changed: Array<"displayName" | "avatarUrl" | "localePreference">
 }
 
-// Additional event types (USER_EMAIL_CHANGED, USER_DELETION_REQUESTED, etc.)
-// land when their corresponding flows ship. See
-// docs/features-planning/phase-1/user-management.md.
+export type UserEmailChangedEvent = DomainEventBase & {
+  type: "user.email-changed"
+  userId: string
+  previousEmail: string
+  newEmail: string
+}
 
-export type UsersEvents = UserProfileUpdatedEvent
+// Stamped when a user requests account deletion; hard-delete runs after
+// the grace window. `deletionCompletesAt` is `deletedAt + 14d`.
+export type UserDeletionRequestedEvent = DomainEventBase & {
+  type: "user.deletion-requested"
+  userId: string
+  deletionCompletesAt: Date
+}
+
+export type UserDeletionCanceledEvent = DomainEventBase & {
+  type: "user.deletion-canceled"
+  userId: string
+}
+
+export type UsersEvents =
+  | UserProfileUpdatedEvent
+  | UserEmailChangedEvent
+  | UserDeletionRequestedEvent
+  | UserDeletionCanceledEvent

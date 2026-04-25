@@ -16,6 +16,9 @@ const schema = z.object({
   SUPABASE_URL: z.string().url(),
   SUPABASE_PUBLISHABLE_KEY: z.string().min(1),
   SUPABASE_SECRET_KEY: z.string().min(1),
+  // 32 bytes, hex-encoded (64 chars). Validated lazily by the TOTP module
+  // so environments without TOTP configured (e.g. CI) don't need to set it.
+  TOTP_ENCRYPTION_KEY: z.string().optional(),
 })
 
 const parsed = schema.safeParse(process.env)

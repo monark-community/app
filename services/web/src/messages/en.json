@@ -74,11 +74,196 @@
         "3": "Good",
         "4": "Strong"
       }
+    },
+    "totpChallenge": {
+      "title": "Two-factor authentication",
+      "subtitle": "Enter the 6-digit code from your authenticator app.",
+      "labels": {
+        "code": "Code",
+        "recoveryCode": "Recovery code"
+      },
+      "submit": "Verify",
+      "submitting": "Verifying…",
+      "or": "or",
+      "useRecoveryCode": "Use a recovery code",
+      "useTotp": "Use authenticator code",
+      "cancel": "Cancel and sign out",
+      "errors": {
+        "invalidCode": "That code is incorrect or has expired.",
+        "expired": "Your challenge has expired. Sign in again."
+      }
     }
   },
   "home": {
     "heading": "Monark",
     "subheading": "Fostering collaboration within the Web3 community."
+  },
+  "account": {
+    "title": "Account",
+    "subtitle": "Profile and security",
+    "signOut": "Sign out",
+    "tabs": {
+      "profile": "Profile & preferences",
+      "security": "Account & security",
+      "danger": "Danger zone"
+    },
+    "profile": {
+      "title": "Profile",
+      "subtitle": "Your public-facing display info.",
+      "labels": {
+        "avatar": "Avatar",
+        "displayName": "Display name",
+        "locale": "Language",
+        "theme": "Theme"
+      },
+      "themes": {
+        "light": "Light",
+        "dark": "Dark"
+      },
+      "placeholders": {
+        "displayName": "How your name appears in the app"
+      },
+      "avatarUpload": "Upload",
+      "avatarReplace": "Replace",
+      "avatarRemove": "Remove",
+      "avatarUploading": "Uploading…",
+      "avatarHint": "JPEG, PNG, or WebP. Up to 2 MB.",
+      "avatarErrors": {
+        "invalidType": "Please pick a JPEG, PNG, or WebP image.",
+        "tooLarge": "That image is over 2 MB.",
+        "notAuthenticated": "Sign in again and retry.",
+        "upstream": "Upload failed. Try again."
+      },
+      "avatarUpdated": "Avatar updated.",
+      "avatarRemoved": "Avatar removed.",
+      "saved": "Saved.",
+      "locales": {
+        "en": "English",
+        "fr": "Français"
+      }
+    },
+    "email": {
+      "title": "Email",
+      "subtitle": "The address you sign in with and where we send notifications.",
+      "currentLabel": "Current email"
+    },
+    "emailChange": {
+      "change": "Change email",
+      "labels": {
+        "newEmail": "New email",
+        "currentPassword": "Current password"
+      },
+      "submit": "Send confirmation",
+      "submitting": "Sending…",
+      "cancel": "Cancel",
+      "sent": "Check your new inbox.",
+      "sentHint": "We also notified {email}. The change takes effect once you click the link in the new inbox.",
+      "close": "Done",
+      "errors": {
+        "invalidCurrentPassword": "Current password is incorrect.",
+        "emailInUse": "That email is already in use.",
+        "sameEmail": "That's already your email.",
+        "upstream": "Could not send the confirmation. Try again."
+      }
+    },
+    "password": {
+      "title": "Password",
+      "subtitle": "Change the password used to sign in.",
+      "change": "Change password",
+      "labels": {
+        "current": "Current password",
+        "new": "New password",
+        "confirm": "Confirm new password"
+      },
+      "minLengthHint": "At least 12 characters.",
+      "submit": "Update password",
+      "submitting": "Updating…",
+      "cancel": "Cancel",
+      "success": "Password updated.",
+      "errors": {
+        "invalidCurrentPassword": "Current password is incorrect.",
+        "weakPassword": "New password is too short.",
+        "upstream": "Could not update password. Try again.",
+        "mismatch": "New password and confirmation do not match."
+      }
+    },
+    "totp": {
+      "title": "Two-factor authentication",
+      "subtitleActive": "Enabled. You'll be prompted for a code on new devices.",
+      "subtitleInactive": "Protect your account with an authenticator app.",
+      "enroll": "Enable TOTP",
+      "enrolling": "Preparing…",
+      "scanQr": "Scan this QR with your authenticator app (Google Authenticator, 1Password, Authy, etc.).",
+      "cantScan": "Can't scan? Show the secret.",
+      "enrollCodePrompt": "Enter the 6-digit code from your app",
+      "confirm": "Confirm",
+      "confirming": "Confirming…",
+      "cancel": "Cancel",
+      "saveRecovery": "Save these recovery codes",
+      "saveRecoveryHint": "Each code works once. Keep them somewhere you can reach if you lose your authenticator.",
+      "ack": "I saved them",
+      "fields": {
+        "recoveryRemaining": "Recovery codes remaining"
+      },
+      "regenerate": "Regenerate recovery codes",
+      "disable": "Disable TOTP",
+      "disablePrompt": "Enter your current TOTP code to confirm disable",
+      "regeneratePrompt": "Enter your current TOTP code to rotate recovery codes",
+      "enrolledSuccess": "Two-factor authentication enabled.",
+      "disabledSuccess": "Two-factor authentication disabled.",
+      "regeneratedSuccess": "Recovery codes rotated.",
+      "errors": {
+        "confirm": "That code is invalid or expired.",
+        "disable": "Could not disable TOTP.",
+        "regenerate": "Could not rotate recovery codes."
+      }
+    },
+    "trustedDevices": {
+      "title": "Trusted devices",
+      "subtitle": "Devices that can sign in without re-challenging TOTP.",
+      "resolving": "Loading…",
+      "none": "No devices recognized yet.",
+      "revoke": "Revoke",
+      "refresh": "Refresh",
+      "current": "This device",
+      "fields": {
+        "firstSeen": "First seen",
+        "lastSeen": "Last seen",
+        "ip": "Location",
+        "totpVerified": "TOTP verified"
+      }
+    },
+    "danger": {
+      "title": "Danger zone",
+      "subtitle": "Irreversible actions.",
+      "deleteAccount": "Delete account",
+      "graceTitle": "Deletion scheduled",
+      "graceSubtitle": "Your account will be permanently removed on {date}. Cancel any time before then.",
+      "cancelDeletion": "Cancel deletion",
+      "cancelSuccess": "Deletion canceled.",
+      "cancelError": "Could not cancel. Try again."
+    },
+    "delete": {
+      "title": "Delete account",
+      "subtitle": "We'll hold your data for 14 days before hard-deleting.",
+      "heading": "This will delete your account",
+      "lead": "Take a moment to read what this does and what it doesn't do.",
+      "bullets": {
+        "memberships": "Your memberships and role assignments are removed.",
+        "content": "Contributions, votes, and comments are anonymized, not deleted.",
+        "retained": "Audit-log entries keep a reference to your (now-anonymized) id.",
+        "grace": "You have 14 days to cancel by signing back in and pressing \"Cancel deletion\"."
+      },
+      "confirmPrompt": "Type {email} to confirm",
+      "submit": "Delete my account",
+      "submitting": "Scheduling…",
+      "cancel": "Go back",
+      "errors": {
+        "invalidConfirmation": "That doesn't match your email.",
+        "notAuthenticated": "Sign in again and retry.",
+        "upstream": "Could not schedule deletion. Try again."
+      }
+    }
   },
   "devOverlay": {
     "title": "Dev overlay",
@@ -93,6 +278,8 @@
       "session": "session",
       "apiHealth": "api health",
       "currentOrg": "current org",
+      "trustedDevices": "trusted devices",
+      "totp": "totp",
       "rbac": "rbac",
       "featureFlags": "feature flags"
     },
@@ -130,6 +317,36 @@
       "permissions": "permissions ({count})",
       "noneGranted": "None granted.",
       "dash": "—"
+    },
+    "trustedDevices": {
+      "count": "{count, plural, =0 {none} one {# device} other {# devices}}",
+      "resolving": "resolving…",
+      "none": "No trusted devices yet.",
+      "revoke": "revoke",
+      "fields": {
+        "firstSeen": "first",
+        "lastSeen": "last",
+        "ip": "ip"
+      }
+    },
+    "totp": {
+      "active": "active",
+      "inactive": "inactive",
+      "resolving": "resolving…",
+      "notEnrolled": "Two-factor authentication is not enabled.",
+      "enroll": "Enable TOTP",
+      "scanQr": "Scan the QR with your authenticator app",
+      "confirm": "Confirm",
+      "cancel": "Cancel",
+      "saveRecovery": "Save these recovery codes somewhere safe",
+      "ack": "I saved them",
+      "disable": "disable",
+      "fields": {
+        "recoveryRemaining": "recovery codes"
+      },
+      "errors": {
+        "disable": "Could not disable TOTP."
+      }
     },
     "featureFlags": {
       "resolving": "resolving…",

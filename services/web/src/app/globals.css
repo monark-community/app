@@ -71,15 +71,19 @@ body {
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
+/* Monark design tokens. Mirrors monark/ui/styles/theme.css — the published
+ * registry's theme.json lags this source-of-truth, so we copy the values in
+ * locally. Keep the two in sync; when the registry republishes, reconcile. */
 :root {
+  /* Base: zinc / Theme: orange — LIGHT */
   --background: oklch(1 0 0);
   --foreground: oklch(0.141 0.005 285.823);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.141 0.005 285.823);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.141 0.005 285.823);
-  --primary: oklch(0.705 0.213 47.604);
-  --primary-foreground: oklch(0.98 0.016 73.684);
+  --primary: oklch(0.723 0.168 59.48); /* #F0870C brand orange */
+  --primary-foreground: oklch(0.141 0.005 285.823);
   --secondary: oklch(0.967 0.001 286.375);
   --secondary-foreground: oklch(0.21 0.006 285.885);
   --muted: oklch(0.967 0.001 286.375);
@@ -89,31 +93,36 @@ body {
   --destructive: oklch(0.577 0.245 27.325);
   --border: oklch(0.92 0.004 286.32);
   --input: oklch(0.92 0.004 286.32);
-  --ring: oklch(0.705 0.213 47.604);
-  --chart-1: oklch(0.705 0.213 47.604);
-  --chart-2: oklch(0.646 0.222 41.116);
-  --chart-3: oklch(0.828 0.189 84.429);
-  --chart-4: oklch(0.769 0.188 70.08);
-  --chart-5: oklch(0.6 0.118 184.714);
+  --ring: oklch(0.723 0.168 59.48);
+
+  /* Chart palette: brand orange + coral + gold + teal + indigo */
+  --chart-1: oklch(0.723 0.168 59.48);
+  --chart-2: oklch(0.66 0.18 30);
+  --chart-3: oklch(0.78 0.15 95);
+  --chart-4: oklch(0.63 0.12 200);
+  --chart-5: oklch(0.55 0.14 275);
+
+  /* Sidebar — translucent, subtle accent */
   --sidebar: oklch(0.985 0 0 / 0.85);
   --sidebar-foreground: oklch(0.141 0.005 285.823);
-  --sidebar-primary: oklch(0.705 0.213 47.604);
-  --sidebar-primary-foreground: oklch(0.98 0.016 73.684);
+  --sidebar-primary: oklch(0.723 0.168 59.48);
+  --sidebar-primary-foreground: oklch(0.141 0.005 285.823);
   --sidebar-accent: oklch(0.967 0.001 286.375);
   --sidebar-accent-foreground: oklch(0.21 0.006 285.885);
   --sidebar-border: oklch(0.92 0.004 286.32);
-  --sidebar-ring: oklch(0.705 0.213 47.604);
+  --sidebar-ring: oklch(0.723 0.168 59.48);
 }
 
 .dark {
+  /* Base: zinc / Theme: orange — DARK */
   --background: oklch(0.141 0.005 285.823);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.21 0.006 285.885);
   --card-foreground: oklch(0.985 0 0);
   --popover: oklch(0.21 0.006 285.885);
   --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.646 0.222 41.116);
-  --primary-foreground: oklch(0.98 0.016 73.684);
+  --primary: oklch(0.723 0.168 59.48);
+  --primary-foreground: oklch(0.141 0.005 285.823);
   --secondary: oklch(0.274 0.006 286.033);
   --secondary-foreground: oklch(0.985 0 0);
   --muted: oklch(0.274 0.006 286.033);
@@ -123,18 +132,26 @@ body {
   --destructive: oklch(0.704 0.191 22.216);
   --border: oklch(1 0 0 / 0.1);
   --input: oklch(1 0 0 / 0.15);
-  --ring: oklch(0.646 0.222 41.116);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.705 0.213 47.604);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.6 0.118 184.714);
+  --ring: oklch(0.723 0.168 59.48);
+
+  --chart-1: oklch(0.723 0.168 59.48);
+  --chart-2: oklch(0.66 0.18 30);
+  --chart-3: oklch(0.78 0.15 95);
+  --chart-4: oklch(0.63 0.12 200);
+  --chart-5: oklch(0.55 0.14 275);
+
   --sidebar: oklch(0.21 0.006 285.885 / 0.85);
   --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.646 0.222 41.116);
-  --sidebar-primary-foreground: oklch(0.98 0.016 73.684);
+  --sidebar-primary: oklch(0.723 0.168 59.48);
+  --sidebar-primary-foreground: oklch(0.141 0.005 285.823);
   --sidebar-accent: oklch(0.274 0.006 286.033);
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 0.1);
-  --sidebar-ring: oklch(0.646 0.222 41.116);
+  --sidebar-ring: oklch(0.723 0.168 59.48);
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-sans);
+  font-weight: 700;
+  letter-spacing: -0.02em;
 }

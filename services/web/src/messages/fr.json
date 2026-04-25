@@ -74,11 +74,196 @@
         "3": "Bon",
         "4": "Fort"
       }
+    },
+    "totpChallenge": {
+      "title": "Authentification à deux facteurs",
+      "subtitle": "Entrez le code à 6 chiffres généré par votre application d'authentification.",
+      "labels": {
+        "code": "Code",
+        "recoveryCode": "Code de récupération"
+      },
+      "submit": "Vérifier",
+      "submitting": "Vérification…",
+      "or": "ou",
+      "useRecoveryCode": "Utiliser un code de récupération",
+      "useTotp": "Utiliser le code authentificateur",
+      "cancel": "Annuler et se déconnecter",
+      "errors": {
+        "invalidCode": "Ce code est incorrect ou a expiré.",
+        "expired": "Votre défi a expiré. Reconnectez-vous."
+      }
     }
   },
   "home": {
     "heading": "Monark",
     "subheading": "Au service de la collaboration au sein de la communauté Web3."
+  },
+  "account": {
+    "title": "Compte",
+    "subtitle": "Profil et sécurité",
+    "signOut": "Se déconnecter",
+    "tabs": {
+      "profile": "Profil et préférences",
+      "security": "Compte et sécurité",
+      "danger": "Zone sensible"
+    },
+    "profile": {
+      "title": "Profil",
+      "subtitle": "Vos informations publiques.",
+      "labels": {
+        "avatar": "Avatar",
+        "displayName": "Nom affiché",
+        "locale": "Langue",
+        "theme": "Thème"
+      },
+      "themes": {
+        "light": "Clair",
+        "dark": "Sombre"
+      },
+      "placeholders": {
+        "displayName": "Le nom affiché dans l'application"
+      },
+      "avatarUpload": "Téléverser",
+      "avatarReplace": "Remplacer",
+      "avatarRemove": "Retirer",
+      "avatarUploading": "Téléversement…",
+      "avatarHint": "JPEG, PNG ou WebP. Jusqu'à 2 Mo.",
+      "avatarErrors": {
+        "invalidType": "Choisissez une image JPEG, PNG ou WebP.",
+        "tooLarge": "Cette image dépasse 2 Mo.",
+        "notAuthenticated": "Reconnectez-vous puis réessayez.",
+        "upstream": "Le téléversement a échoué. Réessayez."
+      },
+      "avatarUpdated": "Avatar mis à jour.",
+      "avatarRemoved": "Avatar retiré.",
+      "saved": "Enregistré.",
+      "locales": {
+        "en": "English",
+        "fr": "Français"
+      }
+    },
+    "email": {
+      "title": "Courriel",
+      "subtitle": "L'adresse utilisée pour vous connecter et recevoir nos notifications.",
+      "currentLabel": "Courriel actuel"
+    },
+    "emailChange": {
+      "change": "Modifier le courriel",
+      "labels": {
+        "newEmail": "Nouveau courriel",
+        "currentPassword": "Mot de passe actuel"
+      },
+      "submit": "Envoyer la confirmation",
+      "submitting": "Envoi…",
+      "cancel": "Annuler",
+      "sent": "Consultez votre nouvelle boîte courriel.",
+      "sentHint": "Nous avons également averti {email}. Le changement prend effet dès que vous cliquez sur le lien reçu à la nouvelle adresse.",
+      "close": "Terminé",
+      "errors": {
+        "invalidCurrentPassword": "Le mot de passe actuel est incorrect.",
+        "emailInUse": "Ce courriel est déjà utilisé.",
+        "sameEmail": "C'est déjà votre courriel.",
+        "upstream": "Impossible d'envoyer la confirmation. Réessayez."
+      }
+    },
+    "password": {
+      "title": "Mot de passe",
+      "subtitle": "Modifier le mot de passe utilisé pour se connecter.",
+      "change": "Modifier le mot de passe",
+      "labels": {
+        "current": "Mot de passe actuel",
+        "new": "Nouveau mot de passe",
+        "confirm": "Confirmer le nouveau mot de passe"
+      },
+      "minLengthHint": "Au moins 12 caractères.",
+      "submit": "Mettre à jour",
+      "submitting": "Mise à jour…",
+      "cancel": "Annuler",
+      "success": "Mot de passe mis à jour.",
+      "errors": {
+        "invalidCurrentPassword": "Le mot de passe actuel est incorrect.",
+        "weakPassword": "Le nouveau mot de passe est trop court.",
+        "upstream": "Impossible de mettre à jour. Réessayez.",
+        "mismatch": "Le nouveau mot de passe et la confirmation ne correspondent pas."
+      }
+    },
+    "totp": {
+      "title": "Authentification à deux facteurs",
+      "subtitleActive": "Activée. Un code vous sera demandé sur les nouveaux appareils.",
+      "subtitleInactive": "Protégez votre compte avec une application d'authentification.",
+      "enroll": "Activer TOTP",
+      "enrolling": "Préparation…",
+      "scanQr": "Scannez ce QR avec votre application d'authentification (Google Authenticator, 1Password, Authy, etc.).",
+      "cantScan": "Impossible de scanner ? Afficher le secret.",
+      "enrollCodePrompt": "Entrez le code à 6 chiffres généré par votre application",
+      "confirm": "Confirmer",
+      "confirming": "Confirmation…",
+      "cancel": "Annuler",
+      "saveRecovery": "Conservez ces codes de récupération",
+      "saveRecoveryHint": "Chaque code fonctionne une seule fois. Gardez-les dans un endroit accessible si vous perdez votre authentificateur.",
+      "ack": "Je les ai sauvegardés",
+      "fields": {
+        "recoveryRemaining": "Codes de récupération restants"
+      },
+      "regenerate": "Régénérer les codes de récupération",
+      "disable": "Désactiver TOTP",
+      "disablePrompt": "Entrez votre code TOTP actuel pour confirmer la désactivation",
+      "regeneratePrompt": "Entrez votre code TOTP actuel pour renouveler les codes",
+      "enrolledSuccess": "Authentification à deux facteurs activée.",
+      "disabledSuccess": "Authentification à deux facteurs désactivée.",
+      "regeneratedSuccess": "Codes de récupération renouvelés.",
+      "errors": {
+        "confirm": "Ce code est invalide ou a expiré.",
+        "disable": "Impossible de désactiver TOTP.",
+        "regenerate": "Impossible de renouveler les codes."
+      }
+    },
+    "trustedDevices": {
+      "title": "Appareils de confiance",
+      "subtitle": "Appareils qui peuvent se connecter sans revérifier TOTP.",
+      "resolving": "Chargement…",
+      "none": "Aucun appareil reconnu pour le moment.",
+      "revoke": "Révoquer",
+      "refresh": "Rafraîchir",
+      "current": "Cet appareil",
+      "fields": {
+        "firstSeen": "Vu pour la première fois",
+        "lastSeen": "Vu récemment",
+        "ip": "Localisation",
+        "totpVerified": "TOTP vérifié"
+      }
+    },
+    "danger": {
+      "title": "Zone sensible",
+      "subtitle": "Actions irréversibles.",
+      "deleteAccount": "Supprimer le compte",
+      "graceTitle": "Suppression planifiée",
+      "graceSubtitle": "Votre compte sera supprimé définitivement le {date}. Vous pouvez annuler jusque-là.",
+      "cancelDeletion": "Annuler la suppression",
+      "cancelSuccess": "Suppression annulée.",
+      "cancelError": "Impossible d'annuler. Réessayez."
+    },
+    "delete": {
+      "title": "Supprimer le compte",
+      "subtitle": "Nous conservons vos données 14 jours avant la suppression définitive.",
+      "heading": "Ceci va supprimer votre compte",
+      "lead": "Prenez un instant pour comprendre ce que cela implique (et ne implique pas).",
+      "bullets": {
+        "memberships": "Vos appartenances et rôles sont retirés.",
+        "content": "Contributions, votes et commentaires sont anonymisés, pas supprimés.",
+        "retained": "Les journaux d'audit conservent une référence à votre identifiant (désormais anonymisé).",
+        "grace": "Vous avez 14 jours pour annuler en vous reconnectant et en cliquant sur « Annuler la suppression »."
+      },
+      "confirmPrompt": "Tapez {email} pour confirmer",
+      "submit": "Supprimer mon compte",
+      "submitting": "Planification…",
+      "cancel": "Retour",
+      "errors": {
+        "invalidConfirmation": "Cela ne correspond pas à votre courriel.",
+        "notAuthenticated": "Reconnectez-vous et réessayez.",
+        "upstream": "Impossible de planifier la suppression. Réessayez."
+      }
+    }
   },
   "devOverlay": {
     "title": "Outils dev",
@@ -93,6 +278,8 @@
       "session": "session",
       "apiHealth": "santé api",
       "currentOrg": "org active",
+      "trustedDevices": "appareils de confiance",
+      "totp": "totp",
       "rbac": "rbac",
       "featureFlags": "feature flags"
     },
@@ -130,6 +317,36 @@
       "permissions": "permissions ({count})",
       "noneGranted": "Aucune accordée.",
       "dash": "—"
+    },
+    "trustedDevices": {
+      "count": "{count, plural, =0 {aucun} one {# appareil} other {# appareils}}",
+      "resolving": "résolution…",
+      "none": "Aucun appareil de confiance.",
+      "revoke": "révoquer",
+      "fields": {
+        "firstSeen": "premier",
+        "lastSeen": "dernier",
+        "ip": "ip"
+      }
+    },
+    "totp": {
+      "active": "actif",
+      "inactive": "inactif",
+      "resolving": "résolution…",
+      "notEnrolled": "L'authentification à deux facteurs n'est pas activée.",
+      "enroll": "Activer TOTP",
+      "scanQr": "Scannez le QR avec votre application d'authentification",
+      "confirm": "Confirmer",
+      "cancel": "Annuler",
+      "saveRecovery": "Conservez ces codes de récupération en lieu sûr",
+      "ack": "Je les ai sauvegardés",
+      "disable": "désactiver",
+      "fields": {
+        "recoveryRemaining": "codes de récupération"
+      },
+      "errors": {
+        "disable": "Impossible de désactiver TOTP."
+      }
     },
     "featureFlags": {
       "resolving": "résolution…",

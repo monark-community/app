@@ -3,6 +3,8 @@
 import { redirect } from "next/navigation"
 import { createSupabaseServerClient } from "@/lib/supabase/server"
 import { createServerTrpcClient } from "@/lib/trpc-server"
+import { recognizeDeviceAfterAuth } from "@/lib/trusted-device-cookie"
+import { clearTotpPending, setTotpPending } from "@/lib/totp-pending-cookie"
 
 export type SignInErrorCode = "invalidCredentials"
 
@@ -35,11 +37,30 @@ export async function signInAction(input: {
     redirect(`/signup/check-email?email=${encoded}`)
   }
 
-  const api = createServerTrpcClient(data.session.access_token)
-  await api.auth.notifySignedIn.mutate().catch(() => {
-    // Event emission is best-effort; the session cookie is already set.
-  })
-  redirect("/")
+  const accessToken = data.session.access_token
+  const trustedDeviceId = await recognizeDeviceAfterAuth(accessToken)
+  const api = createServerTrpcClient(accessToken)
+
+  // TOTP-gated sign-ins land at /signin/totp; the session cookie is live but
+  // the middleware pending-gate keeps the user from reaching protected
+  // routes until a code is verified. notifySignedIn waits until then so the
+  // event fires once the sign-in is fully complete.
+  const challengeRequired = await api.auth.totp.isChallengeRequired
+    .query({ trustedDeviceId })
+    .catch(() => false)
+
+  if (challengeRequired) {
+    await setTotpPending(trustedDeviceId)
+    redirect("/signin/totp")
+  }
+
+  await clearTotpPending()
+  await api.auth.notifySignedIn
+    .mutate(trustedDeviceId ? { trustedDeviceId } : undefined)
+    .catch(() => {
+      // Event emission is best-effort; the session cookie is already set.
+    })
+  redirect("/account")
 }
 
 export async function signOutAction(scope: "local" | "global" = "local"): Promise<void> {
@@ -53,6 +74,7 @@ export async function signOutAction(scope: "local" | "global" = "local"): Promis
       // Best-effort; proceed with local cookie clear regardless.
     })
   }
+  await clearTotpPending()
   await supabase.auth.signOut({ scope })
   redirect("/signin")
 }

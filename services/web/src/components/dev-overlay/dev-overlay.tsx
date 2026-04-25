@@ -9,6 +9,8 @@ import { CurrentOrgPanel } from "./panels/current-org"
 import { FeatureFlagsPanel } from "./panels/feature-flags"
 import { RbacPanel } from "./panels/rbac"
 import { SessionPanel } from "./panels/session"
+import { TotpPanel } from "./panels/totp"
+import { TrustedDevicesPanel } from "./panels/trusted-devices"
 import { ThemeToggle } from "./theme-toggle"
 import { LocaleToggle } from "./locale-toggle"
 
@@ -65,6 +67,8 @@ export function DevOverlay() {
             <FeatureFlagsPanel />
             <ApiHealthPanel />
             <SessionPanel />
+            <TrustedDevicesPanel />
+            <TotpPanel />
             <CurrentOrgPanel />
             <RbacPanel />
           </div>

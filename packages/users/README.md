@@ -6,9 +6,9 @@ Spec: [docs/features-planning/phase-1/user-management.md](../../docs/features-pl
 
 ## What's here (Phase 1 MVP)
 
-- `/server` — `usersRouter` tRPC sub-router, read-interface functions (`getById`, `getByIdOrThrow`, `getByEmail`, `getCurrent`).
-- `/contracts` — `UserProfileUpdatedEvent` type; re-exported from `UsersEvents` for the domain-event union.
-- `/client` — placeholder; no UI components yet.
+- `/server` — `usersRouter` tRPC sub-router with `me` (query), `updateProfile`, `syncEmail`, `requestAccountDeletion`, and `cancelAccountDeletion` (mutations); plus read-interface functions (`getById`, `getByIdOrThrow`, `getByEmail`, `getCurrent`).
+- `/contracts` — `UserProfileUpdatedEvent`, `UserEmailChangedEvent`, `UserDeletionRequestedEvent`, `UserDeletionCanceledEvent` types unioned into `UsersEvents`.
+- `/client` — placeholder; no UI components yet. The `/account` page that consumes this module lives in [`services/web/src/app/account`](../../services/web/src/app/account).
 
 The Prisma schema has `User` and `PendingEmailChange` models under the `// ── MODULE: users ──` banner in [packages/db/prisma/schema.prisma](../db/prisma/schema.prisma).
 
@@ -48,14 +48,19 @@ const { data } = trpc.users.me.useQuery()
 
 tRPC procedures exposed under `users.*` (from the app router):
 
-| Procedure    | Input | Output          |
-|--------------|-------|-----------------|
-| `users.me`   | —     | `User \| null`  |
+| Procedure                        | Input | Output          |
+|----------------------------------|-------|-----------------|
+| `users.me`                       | —     | `User \| null`  |
+| `users.updateProfile`            | `{ displayName?, avatarUrl?, localePreference? }` | `User` (mutation; pass `null` to clear a field) |
+| `users.syncEmail`                | `{ email }` | `User` (mutation; called from `/auth/confirm` after Supabase rotates `auth.users.email` on a `type=email_change` OTP) |
+| `users.requestAccountDeletion`   | — | `{ deletionCompletesAt: Date }` (mutation; stamps `deletedAt = now`, 14-day grace) |
+| `users.cancelAccountDeletion`    | — | void (mutation; clears `deletedAt` during grace) |
 
 ## Dependencies
 
 - `@monark/db` (Prisma)
-- `@monark/common` (tRPC primitives, `NotFoundError`)
+- `@monark/common` (tRPC primitives, event emitter, `NotFoundError`, `UnauthorizedError`)
+- `zod` (input validation on `updateProfile`)
 
 ## Operational
 
@@ -65,9 +70,12 @@ Prisma migration `20260424025927_add_users` creates the `User` and `PendingEmail
 
 ## Events emitted
 
-| Event                       | When                                                | Status |
-|-----------------------------|-----------------------------------------------------|--------|
-| `user.profile-updated`      | Any profile patch via `updateProfile`               | type declared, not yet emitted (profile-edit ships with auth) |
+| Event                         | When                                                | Status |
+|-------------------------------|-----------------------------------------------------|--------|
+| `user.profile-updated`        | Any profile patch via `updateProfile`               | emitted; `changed` array lists the touched fields |
+| `user.email-changed`          | `syncEmail` flips the shadow `User.email`           | emitted; carries `previousEmail` + `newEmail` |
+| `user.deletion-requested`     | `requestAccountDeletion` stamps `deletedAt`         | emitted; carries `deletionCompletesAt` (= deletedAt + 14d) |
+| `user.deletion-canceled`      | `cancelAccountDeletion` clears `deletedAt`          | emitted |
 
 Additional events (`user.email-changed`, `user.deletion-*`, `user.disabled`, `user.enabled`) are specified in the planning doc and will be added to the `UsersEvents` union as their flows ship.
 
@@ -79,9 +87,7 @@ None yet.
 
 All of these are spec'd but intentionally deferred to keep Phase 1's first pass buildable without `@monark/auth` or `@monark/rbac`:
 
-- **Profile edit** (`updateProfile`, `uploadAvatar`). Requires an authenticated session context. Lands when `@monark/auth` wires JWT verification into tRPC context.
-- **Email change flow** (`requestEmailChange`, `confirmEmailChange`). Shares the token-email pattern with `@monark/auth`'s email-validation feature; will be built together.
-- **Account deletion** (`requestAccountDeletion`, `cancelAccountDeletion`, hard-delete cron). Grace-period semantics + anonymization logic ship in their own pass.
 - **Admin operations** (`listOrgMembers`, `disableUser`, `enableUser`). Every one requires `@monark/rbac`'s `requireRole("admin")` guard; ships after rbac.
-- **Avatar upload** (`uploadAvatar`). Needs Supabase Storage bucket configured + `sharp` image processing. Off the critical path.
-- **Profile UI page** (`/account/profile`). The feature-planning spec describes this; the `@monark/components` surface it depends on (shadcn form primitives, avatar control) hasn't been pulled in yet.
+- **Hard-delete cron.** 14-day grace window runs now (deletedAt is stamped + surfaced), but the cron that anonymizes email/displayName/avatar + calls `supabase.auth.admin.deleteUser` isn't wired yet. Needs an ops-side scheduler pass (Vercel Cron / Supabase pg_cron / GitHub Actions).
+- **Server-side avatar processing.** The Storage bucket + RLS policies are live, but crop-to-1:1 + resize-to-512 + WebP conversion via `sharp` are skipped for now. Images upload as-is (max 2 MB; JPEG / PNG / WebP); `object-fit: cover` in the UI handles non-square images gracefully. Revisit when Storage costs or thumbnail needs warrant it.
+- **`PendingEmailChange` table.** Schema exists but unused in the current flow; email change goes through Supabase's native `auth.updateUser({ email })` and the `/auth/confirm?type=email_change` route. Kept for future admin-initiated change flows.

@@ -38,7 +38,7 @@ export default async function CheckEmailPage({ searchParams }: Props) {
               ? t.rich("subtitleWithEmail", {
                   email: redactEmail(email),
                   em: (chunks) => (
-                    <span className="font-mono text-foreground">{chunks}</span>
+                    <span className="font-medium text-foreground">{chunks}</span>
                   ),
                 })
               : t("subtitleNoEmail")}

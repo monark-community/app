@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation"
 import { createSupabaseServerClient } from "@/lib/supabase/server"
 import { createServerTrpcClient } from "@/lib/trpc-server"
+import { recognizeDeviceAfterAuth } from "@/lib/trusted-device-cookie"
 
 export type ResendErrorCode = "missingEmail" | "alreadyVerified" | "exhausted" | "upstream"
 
@@ -45,9 +46,11 @@ export async function verifyOtpAction(input: {
     return { ok: false, errorCode: "invalidCode" }
   }
 
-  const api = createServerTrpcClient(data.session.access_token)
+  const accessToken = data.session.access_token
+  const api = createServerTrpcClient(accessToken)
   await api.auth.markOwnEmailVerified.mutate().catch(() => {
     // Shadow-table write is best-effort; auth.users is the source of truth.
   })
-  redirect("/")
+  await recognizeDeviceAfterAuth(accessToken)
+  redirect("/account")
 }
