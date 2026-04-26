@@ -3,9 +3,14 @@ import cors from "cors"
 import { pinoHttp } from "pino-http"
 import { createExpressMiddleware } from "@trpc/server/adapters/express"
 import { logger } from "@monark/common"
+import { registerNewDeviceEmailListener } from "@monark/auth/server"
 import { env } from "./lib/env"
 import { appRouter } from "./trpc/router"
 import { createContext } from "./trpc/context"
+
+// Domain event listeners are registered once at process boot. Add new ones
+// here as more event-driven side-effects come online.
+registerNewDeviceEmailListener()
 
 const app = express()
 

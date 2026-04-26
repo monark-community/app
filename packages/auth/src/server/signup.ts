@@ -10,6 +10,9 @@ export const signUpInputSchema = z.object({
   password: z.string().min(12),
   displayName: z.string().min(1).max(80).optional(),
   referralCode: z.string().optional(),
+  // IETF tag (`en`, `fr`). Caller passes whatever the browser's
+  // Accept-Language header resolves to; we fall back to `en` if unsupported.
+  localePreference: z.enum(["en", "fr"]).optional(),
 })
 
 export type SignUpInput = z.infer<typeof signUpInputSchema>
@@ -90,6 +93,12 @@ export async function signUpUser(
         email: parsed.data.email,
         emailVerifiedAt: alreadyVerified ? new Date(authUser.email_confirmed_at!) : null,
         displayName: parsed.data.displayName ?? null,
+        // Schema default is "en"; only override when the caller passed a
+        // supported tag picked from Accept-Language so we don't accidentally
+        // store something unsupported.
+        ...(parsed.data.localePreference
+          ? { localePreference: parsed.data.localePreference }
+          : {}),
       },
     })
   } catch (error) {

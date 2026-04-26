@@ -26,8 +26,20 @@ export type UserDeletionCanceledEvent = DomainEventBase & {
   userId: string
 }
 
+// Emitted by the hard-delete worker after the 14-day grace window. By the
+// time consumers see this, the email/displayName/avatar fields have been
+// anonymized and the Supabase auth row has been removed; the userId itself
+// stays valid so foreign-key references (votes, contributions) can be
+// rewritten to "Deleted User" rather than cascade-deleted.
+export type UserDeletedEvent = DomainEventBase & {
+  type: "user.deleted"
+  userId: string
+  previousEmail: string
+}
+
 export type UsersEvents =
   | UserProfileUpdatedEvent
   | UserEmailChangedEvent
   | UserDeletionRequestedEvent
   | UserDeletionCanceledEvent
+  | UserDeletedEvent

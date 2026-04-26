@@ -95,3 +95,26 @@ export async function countActiveOrgAdmins(orgId: string): Promise<number> {
     where: { organizationId: orgId, role: "ADMIN", revokedAt: null },
   })
 }
+
+// True if the user holds any admin-tier role anywhere (platform MONARK_ADMIN
+// or org-scoped ADMIN). Used by enforcement gates that don't care which org
+// the role is in.
+export async function hasAnyAdminAssignment(userId: string): Promise<{
+  hasAdmin: boolean
+  earliestGrantedAt: Date | null
+}> {
+  const db = getDb()
+  const earliest = await db.roleAssignment.findFirst({
+    where: {
+      userId,
+      revokedAt: null,
+      role: { in: ["MONARK_ADMIN", "ADMIN"] },
+    },
+    orderBy: { grantedAt: "asc" },
+    select: { grantedAt: true },
+  })
+  return {
+    hasAdmin: earliest !== null,
+    earliestGrantedAt: earliest?.grantedAt ?? null,
+  }
+}

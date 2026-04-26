@@ -1,5 +1,6 @@
 "use server"
 
+import sharp from "sharp"
 import { createClient } from "@supabase/supabase-js"
 import { setLocaleAction } from "@/i18n/set-locale-action"
 import { createSupabaseServerClient } from "@/lib/supabase/server"
@@ -215,18 +216,17 @@ export type UploadAvatarResult =
 
 const AVATAR_ALLOWED_MIME = new Set(["image/jpeg", "image/png", "image/webp"])
 const AVATAR_MAX_BYTES = 2 * 1024 * 1024
-
-function extFromMime(mime: string): string {
-  if (mime === "image/jpeg") return "jpg"
-  if (mime === "image/png") return "png"
-  return "webp"
-}
+// Square crop + downscale; 512px matches the spec and keeps Storage costs
+// bounded regardless of what the user uploads.
+const AVATAR_TARGET_PX = 512
 
 // Uploads the picked File to the `avatars` bucket under the user's folder.
 // Writes go through the cookie-authenticated SSR Supabase client, which RLS
-// scopes to `avatars/<auth.uid()>/*` ; no admin key is ever reached for.
-// The returned URL carries a `?v=<timestamp>` so the browser doesn't serve
-// a stale cached copy when the user replaces their avatar.
+// scopes to `avatars/<auth.uid()>/*` ; no admin key is ever reached for. The
+// image is normalized server-side (1:1 cover crop, 512px, WebP at q80) so
+// every avatar in Storage has a uniform shape. The returned URL carries a
+// `?v=<timestamp>` so the browser doesn't serve a stale cached copy when
+// the user replaces their avatar.
 export async function uploadAvatarAction(formData: FormData): Promise<UploadAvatarResult> {
   const file = formData.get("file")
   if (!(file instanceof File)) {
@@ -244,12 +244,24 @@ export async function uploadAvatarAction(formData: FormData): Promise<UploadAvat
   const userId = userData.user?.id
   if (!userId) return { ok: false, errorCode: "notAuthenticated" }
 
+  let processed: Buffer
+  try {
+    const inputBuffer = Buffer.from(await file.arrayBuffer())
+    processed = await sharp(inputBuffer)
+      .rotate() // honors EXIF orientation; without this iPhone uploads land sideways
+      .resize(AVATAR_TARGET_PX, AVATAR_TARGET_PX, { fit: "cover", position: "centre" })
+      .webp({ quality: 80 })
+      .toBuffer()
+  } catch {
+    return { ok: false, errorCode: "invalidType" }
+  }
+
   const timestamp = Date.now()
-  const path = `${userId}/${timestamp}.${extFromMime(file.type)}`
+  const path = `${userId}/${timestamp}.webp`
   const { error: uploadError } = await supabase.storage
     .from("avatars")
-    .upload(path, file, {
-      contentType: file.type,
+    .upload(path, processed, {
+      contentType: "image/webp",
       cacheControl: "3600",
       upsert: false,
     })

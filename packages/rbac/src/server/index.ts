@@ -1,6 +1,11 @@
 import { router, publicProcedure } from "@monark/common/trpc"
 import { listPermissions, type Permission } from "../contracts/permissions"
-import { getUserRoles, hasPermission, primaryRole } from "./read"
+import {
+  adminAssignmentSummary,
+  getUserRoles,
+  hasPermission,
+  primaryRole,
+} from "./read"
 
 export const rbacRouter = router({
   myRoles: publicProcedure.query(async ({ ctx }) => {
@@ -23,8 +28,24 @@ export const rbacRouter = router({
     )
     return checks.filter((p): p is Permission => p !== null)
   }),
+
+  // True when the caller holds any admin-tier role (MONARK_ADMIN platform
+  // or org-scoped ADMIN). Used by /admin route guards to bounce non-admins
+  // before they see staff-only surfaces.
+  isAdmin: publicProcedure.query(async ({ ctx }) => {
+    if (!ctx.userId) return false
+    const summary = await adminAssignmentSummary(ctx.userId)
+    return summary.hasAdmin
+  }),
 })
 
-export { hasRole, hasPermission, getUserRoles, primaryRole, isLastAdmin } from "./read"
+export {
+  hasRole,
+  hasPermission,
+  getUserRoles,
+  primaryRole,
+  isLastAdmin,
+  adminAssignmentSummary,
+} from "./read"
 export { requireRole, requirePermission, type RbacContext } from "./guards"
 export { assignRole, revokeRole } from "./write"

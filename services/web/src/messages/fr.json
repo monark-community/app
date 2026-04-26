@@ -38,6 +38,16 @@
       "signUpLink": "Créez-en un",
       "errors": {
         "invalidCredentials": "Courriel ou mot de passe incorrect."
+      },
+      "banners": {
+        "emailChanged": {
+          "title": "Courriel mis à jour",
+          "subtitle": "Connectez-vous avec votre nouveau courriel pour continuer."
+        },
+        "deletionScheduled": {
+          "title": "Suppression planifiée",
+          "subtitle": "Votre compte sera supprimé le {date}. Reconnectez-vous à tout moment d'ici-là pour annuler."
+        }
       }
     },
     "checkEmail": {
@@ -98,10 +108,27 @@
     "heading": "Monark",
     "subheading": "Au service de la collaboration au sein de la communauté Web3."
   },
+  "notFound": {
+    "eyebrow": "Erreur 404",
+    "title": "Page introuvable",
+    "subtitle": "La page que vous cherchez n'existe pas ou a été déplacée.",
+    "home": "Accueil",
+    "account": "Compte"
+  },
+  "admin": {
+    "title": "Admin",
+    "placeholder": "Les surfaces admin seront ajoutées ici à mesure qu'elles seront livrées."
+  },
   "account": {
     "title": "Compte",
     "subtitle": "Profil et sécurité",
     "signOut": "Se déconnecter",
+    "adminTotp": {
+      "softTitle": "L'authentification à deux facteurs est requise",
+      "softSubtitle": "Activez TOTP ci-dessous pour conserver l'accès admin. Toutes les routes hors /account seront bloquées 7 jours après le délai accordé.",
+      "hardTitle": "Inscription TOTP en retard",
+      "hardSubtitle": "Votre compte admin est en retard depuis {days, plural, =0 {moins d'un jour} one {# jour} other {# jours}}. L'accès est limité à /account jusqu'à l'activation de TOTP."
+    },
     "tabs": {
       "profile": "Profil et préférences",
       "security": "Compte et sécurité",

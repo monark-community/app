@@ -18,7 +18,11 @@ function parseTab(raw: string | null): TabValue {
   return "profile"
 }
 
-export function AccountShell() {
+export function AccountShell({
+  currentDeviceId,
+}: {
+  currentDeviceId: string | null
+}) {
   const t = useTranslations("account.tabs")
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -73,7 +77,7 @@ export function AccountShell() {
           <EmailSection />
           <PasswordSection />
           <TotpSection />
-          <TrustedDevicesSection />
+          <TrustedDevicesSection currentDeviceId={currentDeviceId} />
         </TabsContent>
         <TabsContent value="danger" className="mt-0 space-y-6">
           <DangerZoneSection />

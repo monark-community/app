@@ -3,10 +3,15 @@
 import { useTranslations } from "next-intl"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Skeleton } from "@/components/ui/skeleton"
 import { TrustedDeviceCard } from "@/components/trusted-device-card"
 import { trpc } from "@/lib/trpc"
 
-export function TrustedDevicesSection() {
+export function TrustedDevicesSection({
+  currentDeviceId,
+}: {
+  currentDeviceId: string | null
+}) {
   const t = useTranslations("account.trustedDevices")
   const utils = trpc.useUtils()
   const query = trpc.auth.trustedDevices.mine.useQuery(undefined, {
@@ -33,7 +38,21 @@ export function TrustedDevicesSection() {
       </CardHeader>
       <CardContent className="space-y-3">
         {query.isLoading && (
-          <p className="text-sm text-muted-foreground">{t("resolving")}</p>
+          <div className="space-y-2" aria-busy="true" aria-label={t("resolving")}>
+            {[0, 1].map((i) => (
+              <div
+                key={i}
+                className="flex items-start gap-3 rounded-lg border border-border p-4"
+              >
+                <Skeleton className="h-9 w-9 shrink-0 rounded-md" />
+                <div className="flex-1 space-y-2">
+                  <Skeleton className="h-4 w-40" />
+                  <Skeleton className="h-3 w-56" />
+                  <Skeleton className="h-3 w-32" />
+                </div>
+              </div>
+            ))}
+          </div>
         )}
         {!query.isLoading && list.length === 0 && (
           <p className="text-sm text-muted-foreground">{t("none")}</p>
@@ -50,6 +69,7 @@ export function TrustedDevicesSection() {
                 lastSeenIp={device.lastSeenIp}
                 country={device.country}
                 totpVerifiedAt={device.totpVerifiedAt}
+                isCurrent={device.id === currentDeviceId}
                 onRevoke={() => revoke.mutate({ deviceId: device.id })}
                 revokePending={revoke.isPending}
                 revokeLabel={t("revoke")}

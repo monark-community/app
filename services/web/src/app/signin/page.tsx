@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server"
 import { MonarkLogo } from "@/components/monark-logo"
 import { SignInForm } from "./signin-form"
+import { SignInStatusBanner } from "./signin-status-banner"
 
 export default async function SignInPage() {
   const t = await getTranslations("auth.signIn")
@@ -12,6 +13,7 @@ export default async function SignInPage() {
           <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
           <p className="mt-1 text-sm text-muted-foreground">{t("subtitle")}</p>
         </div>
+        <SignInStatusBanner />
         <SignInForm />
         <p className="mt-6 text-center text-sm text-muted-foreground">
           {t("noAccount")}{" "}

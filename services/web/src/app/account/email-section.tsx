@@ -4,6 +4,7 @@ import { useTranslations } from "next-intl"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Skeleton } from "@/components/ui/skeleton"
 import { trpc } from "@/lib/trpc"
 import { EmailChangeForm } from "./email-change-form"
 
@@ -21,13 +22,17 @@ export function EmailSection() {
       <CardContent className="space-y-4">
         <div className="grid gap-2">
           <Label htmlFor="emailReadonly">{t("currentLabel")}</Label>
-          <Input
-            id="emailReadonly"
-            value={email}
-            readOnly
-            disabled
-            className="bg-muted"
-          />
+          {me.isLoading ? (
+            <Skeleton className="h-9 w-full" />
+          ) : (
+            <Input
+              id="emailReadonly"
+              value={email}
+              readOnly
+              disabled
+              className="bg-muted"
+            />
+          )}
         </div>
         {email && <EmailChangeForm currentEmail={email} />}
       </CardContent>

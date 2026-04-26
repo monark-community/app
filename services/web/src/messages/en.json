@@ -38,6 +38,16 @@
       "signUpLink": "Create one",
       "errors": {
         "invalidCredentials": "Email or password is incorrect."
+      },
+      "banners": {
+        "emailChanged": {
+          "title": "Email updated",
+          "subtitle": "Sign in with your new email to continue."
+        },
+        "deletionScheduled": {
+          "title": "Deletion scheduled",
+          "subtitle": "Your account is set to be removed on {date}. Sign back in any time before then to cancel."
+        }
       }
     },
     "checkEmail": {
@@ -98,10 +108,27 @@
     "heading": "Monark",
     "subheading": "Fostering collaboration within the Web3 community."
   },
+  "notFound": {
+    "eyebrow": "Error 404",
+    "title": "Page not found",
+    "subtitle": "The page you're looking for doesn't exist or has moved.",
+    "home": "Home",
+    "account": "Account"
+  },
+  "admin": {
+    "title": "Admin",
+    "placeholder": "Admin surfaces land here as they ship."
+  },
   "account": {
     "title": "Account",
     "subtitle": "Profile and security",
     "signOut": "Sign out",
+    "adminTotp": {
+      "softTitle": "Two-factor required for admin access",
+      "softSubtitle": "Enable TOTP below to keep your admin access. We'll hard-block routes outside of /account once you're 7 days overdue.",
+      "hardTitle": "Two-factor enrollment overdue",
+      "hardSubtitle": "Your admin account has been overdue for {days, plural, =0 {less than a day} one {# day} other {# days}}. Sign-in is restricted to /account until you enroll TOTP."
+    },
     "tabs": {
       "profile": "Profile & preferences",
       "security": "Account & security",

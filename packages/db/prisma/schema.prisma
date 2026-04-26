@@ -84,8 +84,23 @@ model TrustedDevice {
   // Stamped when the user clears a TOTP challenge on this device; the
   // sign-in gate checks this to decide whether to re-challenge.
   totpVerifiedAt  DateTime?
+  sessions        DeviceSession[]
 
   @@index([userId])
+}
+
+// Maps Supabase session ids to the trusted device they were issued from,
+// so revoking a device can target only its own sessions instead of the
+// blunt global signOut. Created on every recognize-or-register; cleared
+// when the device is revoked.
+model DeviceSession {
+  id                 String        @id @default(cuid())
+  deviceId           String
+  device             TrustedDevice @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  supabaseSessionId  String        @unique
+  createdAt          DateTime      @default(now())
+
+  @@index([deviceId])
 }
 
 // TOTP enrollment; `activatedAt` is null while the user has started

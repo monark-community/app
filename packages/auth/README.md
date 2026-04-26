@@ -6,7 +6,7 @@ Spec: [docs/features-planning/phase-1/auth-login-password.md](../../docs/feature
 
 ## What's here (Phase 1 MVP)
 
-- `/server` — `authRouter` (tRPC) with `ping`, `session`, `checkPassword`, `signUp`, `notifySignedIn` / `notifySignedOut`, `markOwnEmailVerified`, `requestConfirmationResend`, plus the `trustedDevices` sub-router (`mine`, `recognize`, `revoke`) and the `totp` sub-router (`status`, `beginEnrollment`, `confirmEnrollment`, `verifyCode`, `verifyRecoveryCode`, `regenerateRecoveryCodes`, `disable`, `isChallengeRequired`); `signUpUser` orchestrator (public `auth.signUp`, triggers verification email); `checkPassword` (offline rules + HIBP k-anonymity); email-verification helpers (`markEmailVerified`, `recordResendAttempt`, `requireVerifiedEmail`); trusted-device helpers (`recognizeOrRegister`, `listTrustedDevices`, `revokeTrustedDevice`, `DEVICE_COOKIE_NAME`); TOTP helpers (`beginTotpEnrollment`, `confirmTotpEnrollment`, `verifyTotpCode`, `verifyRecoveryCode`, `regenerateRecoveryCodes`, `disableTotp`, `getTotpStatus`, `isTotpActive`, `requiresTotpChallenge`, `markDeviceTotpVerified`); AES-256-GCM crypto (`encryptSecret` / `decryptSecret`); event emitters; `getCurrentUser` / `requireUser` read interface.
+- `/server` — `authRouter` (tRPC) with `ping`, `session`, `checkPassword`, `signUp`, `notifySignedIn` / `notifySignedOut` / `notifyPasswordChanged`, `markOwnEmailVerified`, `requestConfirmationResend`, plus the `trustedDevices` sub-router (`mine`, `recognize`, `revoke`) and the `totp` sub-router (`status`, `beginEnrollment`, `confirmEnrollment`, `verifyCode`, `verifyRecoveryCode`, `regenerateRecoveryCodes`, `disable`, `isChallengeRequired`, `adminEnforcement`); `signUpUser` orchestrator (public `auth.signUp`, triggers verification email); `checkPassword` (offline rules + HIBP k-anonymity); email-verification helpers (`markEmailVerified`, `recordResendAttempt`, `requireVerifiedEmail`); trusted-device helpers (`recognizeOrRegister`, `listTrustedDevices`, `revokeTrustedDevice`, `DEVICE_COOKIE_NAME`) with per-device Supabase session revocation via the `DeviceSession` join table; TOTP helpers (`beginTotpEnrollment`, `confirmTotpEnrollment`, `verifyTotpCode`, `verifyRecoveryCode`, `regenerateRecoveryCodes`, `disableTotp`, `getTotpStatus`, `isTotpActive`, `requiresTotpChallenge`, `markDeviceTotpVerified`, `adminTotpEnforcement`, `cleanupStaleTotpEnrollments`, `TotpRateLimitError`); account lifecycle (`hardDeleteUser`, `processExpiredDeletions`); AES-256-GCM crypto (`encryptSecret` / `decryptSecret`); SMTP outbound (`sendMail`, `registerNewDeviceEmailListener`); admin client (`getSupabaseAdmin`); event emitters; `getCurrentUser` / `requireUser` read interface.
 - `/contracts` — event types (including `EmailVerifiedEvent`, `TrustedDeviceAddedEvent`, `TrustedDeviceRevokedEvent`, `TotpEnabledEvent`, `TotpDisabledEvent`, `TotpRecoveryCodeUsedEvent`), `PASSWORD_RULES` constants, `PasswordCheckResult` + `PasswordFailureReason` types, `checkPasswordOffline` pure function (safe for browser + server), `PASSWORD_RULE_HINTS` map for UI.
 - `/client` — placeholder. The web's signup/signin/verification/totp pages live under [`services/web/src/app/signin`](../../services/web/src/app/signin) / [`signup`](../../services/web/src/app/signup) / [`auth/confirm`](../../services/web/src/app/auth/confirm) directly, because they rely on Next-specific primitives (server actions, `redirect()`, `cookies()`).
 
@@ -106,11 +106,13 @@ tRPC procedures under `auth.*`:
 - `@monark/common` (event bus, errors, tRPC primitives)
 - `@monark/users` (User read interface for `getCurrentUser` / `requireUser`)
 - `@monark/feature-flags` (gates the trusted-devices recognition path)
+- `@monark/rbac` (admin TOTP enforcement reads role assignments via `adminAssignmentSummary`)
 - `@supabase/supabase-js` (admin client)
 - `ua-parser-js` (derives human-readable device labels like "Chrome on macOS")
 - `otplib` (TOTP generation + validation, ±1 window)
 - `qrcode` (PNG data URL for the enrollment QR)
 - `bcryptjs` (recovery code hashing; pure JS so Windows dev works)
+- `nodemailer` (transactional outbound for new-device alerts; falls back to log-only when `SMTP_URL` is unset)
 
 ## Operational
 
@@ -126,6 +128,11 @@ APP_URL=http://localhost:3000
 # 32 bytes hex; generate with:
 #   node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"
 TOTP_ENCRYPTION_KEY=...
+# Outbound mail (new-device alerts, future transactional). Mailpit on the
+# default `supabase start` listens on smtp://localhost:1025. Leave unset to
+# log instead of send.
+SMTP_URL=smtp://localhost:1025
+SMTP_FROM=Monark <noreply@monark.io>
 ```
 
 **web** (`services/web/.env`):
@@ -208,18 +215,12 @@ The first two compose:
 - **Invite bypass for verification.** Accepting an invite proves email ownership, so `emailVerifiedAt` should be stamped immediately. Ships with the org invite flow.
 - **`auth.require-verified-email` feature flag.** Spec calls for a soft-gate vs hard-block toggle; defer to when we actually have verification-gated surfaces.
 - **Referral code wiring.** `signUpInputSchema` accepts `referralCode` but `@monark/referral` doesn't consume it yet (Phase 2).
-- **`/account/security/totp` settings page.** User-facing enroll / disable / regenerate flow; MVP only exposes the enrollment primitives through the dev overlay.
-- **Admin TOTP enforcement.** The `auth.totp-required-admin` flag is wired in the registry (default off) but `rbac`-aware soft-wall (day 1) + hard-wall (day 7) redirects land with the admin onboarding pass.
-- **Rate limiting** (`verifyTotpCode`). Spec calls for 5/min per user; MVP accepts any cadence and relies on otplib's ±1 window for baseline safety.
 - **Admin override: `resetTotpForUser`.** Support runbook escape hatch when a user loses both authenticator and recovery codes.
-- **Stale-enrollment cleanup.** Spec calls for a cron that drops un-activated enrollments > 24h old; MVP skips (`beginEnrollment` already replaces any prior un-activated row).
-- **`/account/security/devices` page.** User-facing list + per-device rename + revoke + bulk "revoke all others"; MVP only exposes the list / revoke through the dev overlay.
-- **New-device notification email.** Planned transactional send ("New sign-in from Chrome on macOS…") linking back to the security page; needs email provider wiring.
-- **Per-device Supabase session revocation.** Today, `revokeTrustedDevice` marks `revokedAt` but does not revoke the associated Supabase sessions (we'd need a `DeviceSession(deviceId, supabaseSessionId)` join table). Phase 1.1.
-- **IP country resolution.** `country` column exists but isn't populated; needs a geo provider.
-- **Trusted-device-aware TOTP skip.** Will consume `auth.trustedDevices.mine` / the cookie at sign-in time once the TOTP module lands.
+- **Cron schedulers.** Functions are ready (`cleanupStaleTotpEnrollments`, `processExpiredDeletions`); only the scheduler glue (Vercel Cron / Supabase pg_cron / GitHub Actions) needs wiring.
+- **Distributed-safe rate limit.** `verifyTotpCode`'s in-memory cap is single-process. Multi-instance deployments need Redis (or equivalent) backing.
+- **Mailpit-driven E2E happy path.** Playwright smoke is routing-only today; the full signup → verify-email → TOTP-enroll round-trip ships with a Mailpit HTTP polling helper in a follow-up.
+- **IP-to-country geo lookup.** `TrustedDevice.country` exists but stays null; needs Vercel edge-geo or an ip-to-country dataset.
 - **180-day stale-device GC.** Background job to auto-revoke devices inactive beyond the window.
-- **Rate limiting.** Supabase's default applies; an app-level layer lands if the default is too loose.
 - **Full auth-aesthetics styling.** The current forms are functional-minimum; the [`auth-aesthetics.md`](../../docs/features-planning/phase-1/auth-aesthetics.md) spec (two-column layout, ambient gradient, forced dark palette, polished typography) lands as a later pass.
 - **Active-org selection flow.** `user_metadata.active_organization_id` is the channel; the org switcher UI writes to it.
 - **OAuth / social login, passwordless / magic links, SSO, biometrics.** Not in Phase 1 scope.

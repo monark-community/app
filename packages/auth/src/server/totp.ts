@@ -5,6 +5,7 @@ import qrcode from "qrcode"
 import { emit, ConflictError, ValidationError } from "@monark/common"
 import { getDb } from "@monark/db"
 import { isEnabled } from "@monark/feature-flags/server"
+import { adminAssignmentSummary } from "@monark/rbac/server"
 import type {
   TotpDisabledEvent,
   TotpEnabledEvent,
@@ -138,10 +139,40 @@ export async function confirmTotpEnrollment(input: {
   return { recoveryCodes }
 }
 
+// Per-user, per-minute cap on `verifyTotpCode`. In-memory by design ; we'd
+// use Redis in a multi-instance deployment, but for single-process Phase 1
+// MVP this is the right size of solution. Resets on process restart, which
+// is acceptable: the 6-digit TOTP space is small enough that any reasonable
+// cap is meaningful.
+const TOTP_VERIFY_MAX_PER_MINUTE = 5
+const verifyAttempts = new Map<string, number[]>()
+
+function recordVerifyAttempt(userId: string): { allowed: boolean; remaining: number } {
+  const now = Date.now()
+  const cutoff = now - 60_000
+  const history = (verifyAttempts.get(userId) ?? []).filter((ts) => ts > cutoff)
+  if (history.length >= TOTP_VERIFY_MAX_PER_MINUTE) {
+    verifyAttempts.set(userId, history)
+    return { allowed: false, remaining: 0 }
+  }
+  history.push(now)
+  verifyAttempts.set(userId, history)
+  return { allowed: true, remaining: TOTP_VERIFY_MAX_PER_MINUTE - history.length }
+}
+
+export class TotpRateLimitError extends Error {
+  constructor() {
+    super("Too many TOTP attempts. Wait a minute and try again.")
+    this.name = "TotpRateLimitError"
+  }
+}
+
 export async function verifyTotpCode(input: {
   userId: string
   code: string
 }): Promise<boolean> {
+  const limit = recordVerifyAttempt(input.userId)
+  if (!limit.allowed) throw new TotpRateLimitError()
   const db = getDb()
   const secret = await db.totpSecret.findUnique({ where: { userId: input.userId } })
   if (!secret?.activatedAt) return false
@@ -272,4 +303,60 @@ export async function markDeviceTotpVerified(input: {
     },
     data: { totpVerifiedAt: new Date() },
   })
+}
+
+// Hours after which an unactivated TOTP enrollment is considered stale and
+// safe to drop. Lets the user start enrollment, walk away for a coffee, and
+// pick up where they left off; anything beyond a day is almost certainly
+// abandoned.
+const STALE_ENROLLMENT_HOURS = 24
+
+// Drops `TotpSecret` rows where `activatedAt` is null and `enrolledAt` is
+// older than `STALE_ENROLLMENT_HOURS`. Idempotent; intended to be called
+// from a daily cron once one is wired. Returns the number of rows dropped
+// so the caller can log + alert if a sudden spike appears.
+export async function cleanupStaleTotpEnrollments(): Promise<{ dropped: number }> {
+  const db = getDb()
+  const cutoff = new Date(Date.now() - STALE_ENROLLMENT_HOURS * 60 * 60 * 1000)
+  const result = await db.totpSecret.deleteMany({
+    where: {
+      activatedAt: null,
+      enrolledAt: { lt: cutoff },
+    },
+  })
+  return { dropped: result.count }
+}
+
+// Days from first admin assignment after which the soft-wall escalates to
+// a hard-wall covering all routes (not just /admin/**). Per spec.
+const ADMIN_TOTP_HARDWALL_DAYS = 7
+
+export type AdminTotpEnforcement =
+  | { required: false }
+  | { required: true; mode: "soft" | "hard"; daysOverdue: number }
+
+// Decides whether an admin user must enroll TOTP and at what enforcement
+// strength. Used by the /admin route guard and the /account banner.
+//
+// - "soft": redirect from /admin/** to /account?totpRequired=1 with a banner.
+//   Other routes still work.
+// - "hard": redirect from EVERY route except /account, /signin, /signout to
+//   the same place. Triggered after `ADMIN_TOTP_HARDWALL_DAYS` from the
+//   earliest admin grant.
+export async function adminTotpEnforcement(
+  userId: string,
+): Promise<AdminTotpEnforcement> {
+  const flagOn = await isEnabled("auth.totp-required-admin", { userId })
+  if (!flagOn) return { required: false }
+  const summary = await adminAssignmentSummary(userId)
+  if (!summary.hasAdmin) return { required: false }
+  const totpOn = await isTotpActive(userId)
+  if (totpOn) return { required: false }
+  const grantedAt = summary.earliestGrantedAt ?? new Date()
+  const ageMs = Date.now() - grantedAt.getTime()
+  const daysSince = Math.floor(ageMs / (24 * 60 * 60 * 1000))
+  const mode: "soft" | "hard" =
+    daysSince >= ADMIN_TOTP_HARDWALL_DAYS ? "hard" : "soft"
+  const daysOverdue = Math.max(0, daysSince - ADMIN_TOTP_HARDWALL_DAYS)
+  return { required: true, mode, daysOverdue }
 }

@@ -71,9 +71,6 @@ body {
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-/* Monark design tokens. Mirrors monark/ui/styles/theme.css — the published
- * registry's theme.json lags this source-of-truth, so we copy the values in
- * locally. Keep the two in sync; when the registry republishes, reconcile. */
 :root {
   /* Base: zinc / Theme: orange — LIGHT */
   --background: oklch(1 0 0);

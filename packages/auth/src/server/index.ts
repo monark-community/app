@@ -13,6 +13,7 @@ import {
 import { emitPasswordChanged, emitSignedIn, emitSignedOut } from "./events"
 import { signUpUser, signUpInputSchema } from "./signup"
 import {
+  findCurrentDeviceId,
   listTrustedDevices,
   recognizeOrRegister,
   revokeTrustedDevice,
@@ -28,6 +29,7 @@ import {
   verifyTotpCode,
   markDeviceTotpVerified,
   requiresTotpChallenge,
+  adminTotpEnforcement,
 } from "./totp"
 
 // Exposed to clients; strips the cookie hash (treat it as a server secret).
@@ -140,6 +142,13 @@ const totpRouter = router({
         trustedDeviceId: input?.trustedDeviceId ?? null,
       })
     }),
+
+  // Read by /admin route guards + the /account banner. Returns enforcement
+  // mode (soft/hard) when the signed-in admin must enroll TOTP.
+  adminEnforcement: publicProcedure.query(async ({ ctx }) => {
+    if (!ctx.userId) return { required: false } as const
+    return adminTotpEnforcement(ctx.userId)
+  }),
 })
 
 const trustedDevicesRouter = router({
@@ -161,6 +170,7 @@ const trustedDevicesRouter = router({
         userAgent: z.string().nullable().optional(),
         ip: z.string().nullable().optional(),
         existingCookieValue: z.string().nullable().optional(),
+        supabaseSessionId: z.string().nullable().optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -174,6 +184,7 @@ const trustedDevicesRouter = router({
         userAgent: input.userAgent ?? null,
         ip: input.ip ?? null,
         existingCookieValue: input.existingCookieValue ?? null,
+        supabaseSessionId: input.supabaseSessionId ?? null,
       })
       return {
         deviceId: result.device.id,
@@ -189,6 +200,20 @@ const trustedDevicesRouter = router({
     .mutation(async ({ ctx, input }) => {
       if (!ctx.userId) throw new UnauthorizedError()
       await revokeTrustedDevice({ userId: ctx.userId, deviceId: input.deviceId })
+    }),
+
+  // Resolves the device id matching the caller-supplied cookie. Read by
+  // /account server-side so the trusted-devices list can light up the "this
+  // device" pill ; cookie value is hashed server-side so it never leaks
+  // into client memory.
+  currentDeviceId: publicProcedure
+    .input(z.object({ cookieValue: z.string().nullable().optional() }).optional())
+    .query(async ({ ctx, input }) => {
+      if (!ctx.userId) return null
+      return findCurrentDeviceId({
+        userId: ctx.userId,
+        cookieValue: input?.cookieValue ?? null,
+      })
     }),
 })
 
@@ -341,6 +366,7 @@ export {
   recognizeOrRegister,
   listTrustedDevices,
   revokeTrustedDevice,
+  findCurrentDeviceId,
   DEVICE_COOKIE_NAME,
   DEVICE_COOKIE_MAX_AGE_SECONDS,
   type TrustedDeviceRow,
@@ -356,8 +382,16 @@ export {
   isTotpActive,
   requiresTotpChallenge,
   markDeviceTotpVerified,
+  adminTotpEnforcement,
+  cleanupStaleTotpEnrollments,
+  TotpRateLimitError,
   type TotpStatus,
+  type AdminTotpEnforcement,
 } from "./totp"
+export { hardDeleteUser, processExpiredDeletions } from "./account-lifecycle"
+export { getSupabaseAdmin } from "./supabase-admin"
+export { sendMail, type MailMessage } from "./mailer"
+export { registerNewDeviceEmailListener } from "./new-device-email"
 
 // Read interface. Takes an explicit ctx so callers can use this from either
 // tRPC procedures or Next server components.

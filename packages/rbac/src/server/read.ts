@@ -1,7 +1,11 @@
 import { ValidationError } from "@monark/common"
 import { rolesForPermission, type Permission } from "../contracts/permissions"
 import { pickHighest, type Role } from "../contracts/role"
-import { findActiveAssignments, countActiveOrgAdmins } from "./data"
+import {
+  findActiveAssignments,
+  countActiveOrgAdmins,
+  hasAnyAdminAssignment,
+} from "./data"
 
 export async function getUserRoles(userId: string, orgId?: string): Promise<Role[]> {
   const assignments = await findActiveAssignments(userId, orgId)
@@ -43,4 +47,15 @@ export async function isLastAdmin(userId: string, orgId: string): Promise<boolea
   if (!has) return false
   const count = await countActiveOrgAdmins(orgId)
   return count <= 1
+}
+
+// True if the user holds any admin-tier role (platform MONARK_ADMIN or
+// org-scoped ADMIN). Returns the earliest grant date so callers can compute
+// "days since first admin assignment" for enforcement timers (e.g. TOTP
+// 7-day hard-wall).
+export async function adminAssignmentSummary(userId: string): Promise<{
+  hasAdmin: boolean
+  earliestGrantedAt: Date | null
+}> {
+  return hasAnyAdminAssignment(userId)
 }
