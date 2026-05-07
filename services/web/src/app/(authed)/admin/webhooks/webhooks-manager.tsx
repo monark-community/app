@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { useEffect, useMemo, useState } from "react"
 import { useTranslations } from "next-intl"
-import { ChevronRight, Plus, Search } from "lucide-react"
+import { ChevronRight, Filter, Plus, Search, X } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -13,6 +13,18 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import {
   Select,
@@ -25,6 +37,8 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { trpc } from "@/lib/trpc"
 
 const PLATFORM_VALUE = "__platform__"
+
+type StatusFilter = "all" | "active" | "disabled" | "failing"
 
 /**
  * Per-org list of webhook endpoints with a URL search + a status badge
@@ -77,16 +91,30 @@ export function WebhooksManager() {
   )
 
   const [search, setSearch] = useState("")
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all")
   const trimmedSearch = search.trim().toLowerCase()
   const allEndpoints = endpointsQuery.data ?? []
   const visibleEndpoints = useMemo(() => {
-    if (trimmedSearch === "") return allEndpoints
-    return allEndpoints.filter(
-      (ep) =>
+    return allEndpoints.filter((ep) => {
+      // Status filter is applied first ; "failing" is the active rows
+      // with a non-zero consecutive-failure counter, distinct from
+      // operator-disabled rows.
+      if (statusFilter === "active" && ep.status !== "active") return false
+      if (statusFilter === "disabled" && ep.status !== "disabled") return false
+      if (
+        statusFilter === "failing" &&
+        !(ep.status === "active" && ep.consecutiveFailures > 0)
+      ) {
+        return false
+      }
+      if (trimmedSearch === "") return true
+      return (
+        ep.name.toLowerCase().includes(trimmedSearch) ||
         ep.url.toLowerCase().includes(trimmedSearch) ||
-        (ep.description?.toLowerCase().includes(trimmedSearch) ?? false),
-    )
-  }, [allEndpoints, trimmedSearch])
+        (ep.description?.toLowerCase().includes(trimmedSearch) ?? false)
+      )
+    })
+  }, [allEndpoints, trimmedSearch, statusFilter])
 
   const newHref = (() => {
     if (selectedOrgValue === "") return "/admin/webhooks"
@@ -139,6 +167,48 @@ export function WebhooksManager() {
             className="pl-9"
           />
         </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              aria-label={t("filters.openAria")}
+            >
+              <Filter className="h-4 w-4" aria-hidden />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuLabel>{t("filters.menuLabel")}</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger>
+                {t("filters.status")}
+              </DropdownMenuSubTrigger>
+              <DropdownMenuSubContent>
+                <DropdownMenuRadioGroup
+                  value={statusFilter}
+                  onValueChange={(next) =>
+                    setStatusFilter(next as StatusFilter)
+                  }
+                >
+                  <DropdownMenuRadioItem value="all">
+                    {t("filters.allStatuses")}
+                  </DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="active">
+                    {t("filters.status_active")}
+                  </DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="disabled">
+                    {t("filters.status_disabled")}
+                  </DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="failing">
+                    {t("filters.status_failing")}
+                  </DropdownMenuRadioItem>
+                </DropdownMenuRadioGroup>
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+          </DropdownMenuContent>
+        </DropdownMenu>
         <Button
           asChild
           type="button"
@@ -154,6 +224,25 @@ export function WebhooksManager() {
           </Link>
         </Button>
       </div>
+
+      {statusFilter !== "all" && (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="inline-flex items-center gap-1.5 rounded-md bg-primary/10 px-2 py-1 text-xs font-medium text-foreground">
+            <span className="text-muted-foreground">{t("filters.status")}:</span>
+            <span>{t(`filters.status_${statusFilter}` as const)}</span>
+            <button
+              type="button"
+              onClick={() => setStatusFilter("all")}
+              className="cursor-pointer rounded-sm text-muted-foreground hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              aria-label={t("filters.clearChipAria", {
+                label: t("filters.status"),
+              })}
+            >
+              <X className="h-3 w-3" aria-hidden />
+            </button>
+          </span>
+        </div>
+      )}
 
       {endpointsQuery.isLoading ? (
         <div className="space-y-2">
@@ -179,8 +268,8 @@ export function WebhooksManager() {
                 >
                   <div className="min-w-0 flex-1 space-y-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="block min-w-0 max-w-full truncate font-mono text-sm text-foreground">
-                        {endpoint.url}
+                      <span className="block min-w-0 max-w-full truncate text-sm font-medium text-foreground">
+                        {endpoint.name}
                       </span>
                       <StatusBadge status={endpoint.status} />
                       {endpoint.consecutiveFailures > 0 &&
@@ -192,6 +281,9 @@ export function WebhooksManager() {
                           </Badge>
                         )}
                     </div>
+                    <p className="block min-w-0 max-w-full truncate font-mono text-xs text-muted-foreground">
+                      {endpoint.url}
+                    </p>
                     {endpoint.description && (
                       <p className="line-clamp-2 wrap-break-word text-xs text-muted-foreground">
                         {endpoint.description}

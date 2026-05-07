@@ -584,7 +584,7 @@
           "platform": "Plateforme (sans portée d'organisation)"
         },
         "createCta": "Nouveau point de terminaison",
-        "searchPlaceholder": "Rechercher par URL ou description…",
+        "searchPlaceholder": "Rechercher par nom, URL ou description…",
         "searchAria": "Rechercher des points de terminaison de webhook",
         "empty": "Aucun point de terminaison de webhook dans cette portée pour l'instant.",
         "emptySearch": "Aucun point de terminaison ne correspond à « {query} ».",
@@ -595,11 +595,22 @@
         },
         "badges": {
           "failing": "{count, plural, one {# échec récent} other {# échecs récents}}"
+        },
+        "filters": {
+          "openAria": "Ouvrir les filtres",
+          "menuLabel": "Filtrer par",
+          "clearChipAria": "Effacer le filtre {label}",
+          "status": "Statut",
+          "allStatuses": "Tous",
+          "status_active": "Actif",
+          "status_disabled": "Désactivé",
+          "status_failing": "En échec"
         }
       },
       "editor": {
         "createTitle": "Nouveau point de terminaison de webhook",
-        "editTitle": "Modifier le point de terminaison",
+        "editTitle": "Modifier {name}",
+        "editTitleFallback": "Modifier le point de terminaison",
         "createSubtitle": "URL cible et événements auxquels s'abonner. Le secret de signature est affiché une seule fois.",
         "editSubtitle": "Faites tourner le secret de signature pour en émettre un nouveau ; le secret précédent cesse immédiatement de fonctionner.",
         "back": "Retour aux webhooks",
@@ -608,6 +619,10 @@
         "scopeLabel": "Portée",
         "scopeHint": "Définie à la création. Supprimez et recréez pour changer de portée.",
         "orgScopeOrg": "Portée organisation",
+        "nameLabel": "Nom",
+        "namePlaceholder": "Nom du destinataire",
+        "nameHint": "Étiquette destinée à l'opérateur. Apparaît dans la liste, l'en-tête de page et les notifications.",
+        "nameInvalid": "Le nom doit comporter de 1 à 80 caractères.",
         "urlLabel": "URL",
         "urlHint": "URL https:// absolue. http:// est accepté en dev pour les hôtes loopback ou RFC 1918.",
         "urlInvalid": "L'URL doit commencer par http:// ou https://",

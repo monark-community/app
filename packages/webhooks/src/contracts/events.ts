@@ -12,7 +12,7 @@ export type WebhookEndpointUpdatedEvent = DomainEventBase & {
   type: "webhook.endpoint-updated"
   endpointId: string
   organizationId: string | null
-  changed: Array<"url" | "description" | "subscriptions" | "status">
+  changed: Array<"name" | "url" | "description" | "subscriptions" | "status">
   actorId: string
 }
 

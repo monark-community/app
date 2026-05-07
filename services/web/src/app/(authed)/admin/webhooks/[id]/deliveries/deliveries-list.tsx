@@ -44,7 +44,9 @@ export function DeliveriesList({ endpointId }: { endpointId: string }) {
     { refetchOnWindowFocus: false },
   )
 
-  const headerTitle = endpoint.data ? tEditor("editTitle") : t("title")
+  const headerTitle = endpoint.data?.name
+    ? tEditor("editTitle", { name: endpoint.data.name })
+    : tEditor("editTitleFallback")
   // Match the configuration tab's subtitle so switching tabs doesn't
   // shift the page vertically. PageHeader's subtitle slot reserves
   // line height ; an empty subtitle would collapse and bump the

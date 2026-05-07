@@ -15,7 +15,12 @@ import {
   type Permission,
 } from "../contracts/permissions"
 import { SYSADMIN_ROLE_KEY } from "../contracts/role"
-import { findRoleById, listRolesForOrg, listSysadmins } from "./data"
+import {
+  findRoleById,
+  hasSysadminAssignment,
+  listRolesForOrg,
+  listSysadmins,
+} from "./data"
 import {
   adminAssignmentSummary,
   getUserRoles,
@@ -67,6 +72,16 @@ export const rbacRouter = router({
     if (!ctx.userId) return false
     const summary = await adminAssignmentSummary(ctx.userId)
     return summary.hasAdmin
+  }),
+
+  // True when the caller specifically holds an active platform-tier
+  // SYSADMIN assignment. Stricter than `isAdmin` (which lights up for
+  // org-tier ADMIN too) ; gates surfaces that are platform-only, like
+  // the webhook editor's scope field and the platform-tier endpoint
+  // slot in the org picker.
+  isSysadmin: publicProcedure.query(async ({ ctx }) => {
+    if (!ctx.userId) return false
+    return hasSysadminAssignment(ctx.userId)
   }),
 
   // ── Admin role assignment ─────────────────────────────────────

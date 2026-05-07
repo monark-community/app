@@ -584,7 +584,7 @@
           "platform": "Platform (no org scope)"
         },
         "createCta": "New endpoint",
-        "searchPlaceholder": "Search by URL or description…",
+        "searchPlaceholder": "Search by name, URL, or description…",
         "searchAria": "Search webhook endpoints",
         "empty": "No webhook endpoints in this scope yet.",
         "emptySearch": "No endpoint matches “{query}”.",
@@ -595,11 +595,22 @@
         },
         "badges": {
           "failing": "{count, plural, one {# recent failure} other {# recent failures}}"
+        },
+        "filters": {
+          "openAria": "Open filters",
+          "menuLabel": "Filter by",
+          "clearChipAria": "Clear the {label} filter",
+          "status": "Status",
+          "allStatuses": "All",
+          "status_active": "Active",
+          "status_disabled": "Disabled",
+          "status_failing": "Failing"
         }
       },
       "editor": {
         "createTitle": "New webhook endpoint",
-        "editTitle": "Edit endpoint",
+        "editTitle": "Edit {name}",
+        "editTitleFallback": "Edit endpoint",
         "createSubtitle": "POST target plus the events it subscribes to. The signing secret shows once at creation.",
         "editSubtitle": "Rotate the signing secret to issue a new one ; the previous secret stops working immediately.",
         "back": "Back to webhooks",
@@ -608,6 +619,10 @@
         "scopeLabel": "Scope",
         "scopeHint": "Set at creation. Delete and recreate to change scope.",
         "orgScopeOrg": "Organization-scoped",
+        "nameLabel": "Name",
+        "namePlaceholder": "Receiver name",
+        "nameHint": "Operator-facing label. Surfaces on the list, the page header, and notifications.",
+        "nameInvalid": "Name must be 1 to 80 characters.",
         "urlLabel": "URL",
         "urlHint": "Absolute https:// URL. http:// is allowed in dev for loopback or RFC 1918 hosts.",
         "urlInvalid": "URL must start with http:// or https://",

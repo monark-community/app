@@ -182,6 +182,25 @@ export async function countActiveOrgAdmins(orgId: string): Promise<number> {
   })
 }
 
+// True if the user holds an active platform-tier SYSADMIN
+// assignment. Distinct from `hasAnyAdminAssignment` (which lights
+// up for org-tier ADMIN as well) ; some surfaces — e.g. the webhook
+// editor's scope chooser, the platform-tier endpoint slot in the
+// org picker — are sysadmin-only and need this finer gate.
+export async function hasSysadminAssignment(userId: string): Promise<boolean> {
+  const db = getDb()
+  const found = await db.roleAssignment.findFirst({
+    where: {
+      userId,
+      revokedAt: null,
+      organizationId: null,
+      role: { is: { key: SYSADMIN_ROLE_KEY, builtIn: true } },
+    },
+    select: { id: true },
+  })
+  return found !== null
+}
+
 // True if the user holds an active built-in admin-tier role anywhere :
 // either platform-tier `SYSADMIN` (any orgId is fine — sysadmins span
 // every org) or org-tier `ADMIN` for any single org. Used by /admin

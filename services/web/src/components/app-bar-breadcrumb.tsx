@@ -221,6 +221,12 @@ function pickCrumbForSegment({
   if (before === "/admin/rbac/roles" && segment !== "new") {
     return <RoleNameCrumb id={segment} />
   }
+  // Same shape : `/admin/webhooks/<id>` is the editor, `/admin/webhooks/new`
+  // is the create page. Resolve the endpoint's `name` so the breadcrumb
+  // renders an operator-readable label instead of a cuid.
+  if (before === "/admin/webhooks" && segment !== "new") {
+    return <WebhookNameCrumb id={segment} />
+  }
   return <StaticCrumb segment={segment} />
 }
 
@@ -269,6 +275,20 @@ function OrgNameCrumb({ id }: { id: string }) {
     { refetchOnWindowFocus: false, staleTime: Infinity, retry: false },
   )
   const label = query.data?.displayName || id
+  return <span className="truncate">{label}</span>
+}
+
+function WebhookNameCrumb({ id }: { id: string }) {
+  // Same caching / fallback shape as the role / user / org crumbs : the
+  // webhook editor's parent layout already gates `/admin/*` to admins,
+  // so the admin-only `webhooks.get` is reachable here. Falls back to
+  // the cuid while loading / on error so the breadcrumb always renders
+  // something stable.
+  const query = trpc.webhooks.get.useQuery(
+    { id },
+    { refetchOnWindowFocus: false, staleTime: Infinity, retry: false },
+  )
+  const label = query.data?.name || id
   return <span className="truncate">{label}</span>
 }
 

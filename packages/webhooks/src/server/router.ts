@@ -153,6 +153,7 @@ export const webhooksRouter = router({
     .input(
       z.object({
         organizationId: z.string().min(1).nullable(),
+        name: z.string().trim().min(1).max(80),
         url: z.string(),
         description: z.string().trim().max(280).nullable().optional(),
         subscriptions: z.array(subscriptionInputSchema).max(50),
@@ -168,6 +169,7 @@ export const webhooksRouter = router({
       const { plaintext, hash } = mintSecret()
       const endpoint = await createEndpoint({
         organizationId: input.organizationId,
+        name: input.name,
         url: input.url,
         description: input.description ?? null,
         secretHash: hash,
@@ -196,6 +198,7 @@ export const webhooksRouter = router({
     .input(
       z.object({
         id: z.string().min(1),
+        name: z.string().trim().min(1).max(80).optional(),
         url: z.string().optional(),
         description: z.string().trim().max(280).nullable().optional(),
         status: z.enum(["active", "disabled"]).optional(),
@@ -214,6 +217,7 @@ export const webhooksRouter = router({
       if (input.url !== undefined) assertSafeUrl(input.url)
       const updated = await updateEndpointPatch({
         id: input.id,
+        name: input.name,
         url: input.url,
         description: input.description,
         status: input.status,
@@ -221,6 +225,9 @@ export const webhooksRouter = router({
         subscriptions: input.subscriptions,
       })
       const changed: WebhookEndpointUpdatedEvent["changed"] = []
+      if (input.name !== undefined && input.name !== existing.name) {
+        changed.push("name")
+      }
       if (input.url !== undefined && input.url !== existing.url) changed.push("url")
       if (input.description !== undefined) changed.push("description")
       if (input.status !== undefined && input.status !== existing.status) {

@@ -514,6 +514,11 @@ model WebhookEndpoint {
   // events scoped to that org reach it.
   organizationId String?
   organization   Organization?           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  // Operator-facing label. Surfaces on the admin list, the page
+  // header, the breadcrumb, and any future filtering UI ; the URL
+  // is too long + cluttered to read as the row identity. Required ;
+  // existing rows are backfilled from the URL host on migration.
+  name           String
   url            String
   description    String?
   // SHA-256 hash of the shared signing secret. The plaintext is

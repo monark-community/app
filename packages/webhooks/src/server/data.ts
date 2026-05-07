@@ -45,6 +45,7 @@ export async function listAllEndpoints(): Promise<EndpointWithSubs[]> {
 
 export async function createEndpoint(input: {
   organizationId: string | null
+  name: string
   url: string
   description: string | null
   secretHash: string
@@ -55,6 +56,7 @@ export async function createEndpoint(input: {
     const endpoint = await tx.webhookEndpoint.create({
       data: {
         organizationId: input.organizationId,
+        name: input.name,
         url: input.url,
         description: input.description,
         secretHash: input.secretHash,
@@ -78,6 +80,7 @@ export async function createEndpoint(input: {
 
 export async function updateEndpointPatch(input: {
   id: string
+  name?: string
   url?: string
   description?: string | null
   status?: "active" | "disabled"
@@ -87,6 +90,7 @@ export async function updateEndpointPatch(input: {
   const db = getDb()
   return db.$transaction(async (tx) => {
     const patch: Prisma.WebhookEndpointUpdateInput = {}
+    if (input.name !== undefined) patch.name = input.name
     if (input.url !== undefined) patch.url = input.url
     if (input.description !== undefined) patch.description = input.description
     if (input.status !== undefined) {

@@ -72,12 +72,24 @@ export function WebhookEditor(
   const router = useRouter()
   const utils = trpc.useUtils()
 
+  // Scope field is informational-only ; it carries useful context for
+  // sysadmins who can land on either platform-tier or org-scoped
+  // endpoints, but for an org-admin it never holds anything other than
+  // "Organization-scoped" — they can't pick anything else, so hiding
+  // the field removes a useless row.
+  const isSysadminQuery = trpc.rbac.isSysadmin.useQuery(undefined, {
+    refetchOnWindowFocus: false,
+    staleTime: Infinity,
+  })
+  const showScope = isSysadminQuery.data === true
+
   const isEdit = props.mode === "edit"
   const endpointQuery = trpc.webhooks.get.useQuery(
     { id: isEdit ? props.endpointId : "" },
     { enabled: isEdit, refetchOnWindowFocus: false },
   )
 
+  const [name, setName] = useState("")
   const [url, setUrl] = useState("")
   const [description, setDescription] = useState("")
   const [status, setStatus] = useState<"active" | "disabled">("active")
@@ -96,6 +108,7 @@ export function WebhookEditor(
   useEffect(() => {
     if (!isEdit || !endpointQuery.data) return
     const ep = endpointQuery.data
+    setName(ep.name)
     setUrl(ep.url)
     setDescription(ep.description ?? "")
     setStatus(ep.status)
@@ -175,6 +188,7 @@ export function WebhookEditor(
     if (isEdit) {
       const ep = endpointQuery.data
       if (!ep) return false
+      if (name.trim() !== ep.name) return true
       if (url.trim() !== ep.url) return true
       if ((description.trim() || null) !== (ep.description ?? null)) return true
       if (status !== ep.status) return true
@@ -188,15 +202,17 @@ export function WebhookEditor(
       return false
     }
     return (
+      name.trim() !== "" ||
       url.trim() !== "" ||
       description.trim() !== "" ||
       currentSubs.length > 0
     )
-  }, [isEdit, endpointQuery.data, url, description, status, subscriptions])
+  }, [isEdit, endpointQuery.data, name, url, description, status, subscriptions])
 
   function onCancel() {
     if (isEdit && endpointQuery.data) {
       const ep = endpointQuery.data
+      setName(ep.name)
       setUrl(ep.url)
       setDescription(ep.description ?? "")
       setStatus(ep.status)
@@ -209,6 +225,7 @@ export function WebhookEditor(
       )
       return
     }
+    setName("")
     setUrl("")
     setDescription("")
     setStatus("active")
@@ -221,6 +238,11 @@ export function WebhookEditor(
 
   function handleSubmit(event: React.FormEvent) {
     event.preventDefault()
+    const trimmedName = name.trim()
+    if (trimmedName.length < 1 || trimmedName.length > 80) {
+      toast.error(t("nameInvalid"))
+      return
+    }
     if (!URL_RE.test(url.trim())) {
       toast.error(t("urlInvalid"))
       return
@@ -238,6 +260,7 @@ export function WebhookEditor(
     if (props.mode === "create") {
       createMutation.mutate({
         organizationId: props.organizationId,
+        name: trimmedName,
         url: url.trim(),
         description: trimmedDescription === "" ? null : trimmedDescription,
         subscriptions: subs,
@@ -247,6 +270,7 @@ export function WebhookEditor(
 
     updateMutation.mutate({
       id: props.endpointId,
+      name: trimmedName,
       url: url.trim(),
       description: trimmedDescription === "" ? null : trimmedDescription,
       status,
@@ -333,7 +357,11 @@ export function WebhookEditor(
     <div className="space-y-8">
       <PageHeader
         title={
-          props.mode === "create" ? t("createTitle") : t("editTitle")
+          props.mode === "create"
+            ? t("createTitle")
+            : endpointQuery.data?.name
+              ? t("editTitle", { name: endpointQuery.data.name })
+              : t("editTitleFallback")
         }
         subtitle={
           props.mode === "create" ? t("createSubtitle") : t("editSubtitle")
@@ -373,10 +401,30 @@ export function WebhookEditor(
         </Card>
 
         <PageSection title={t("endpointSectionTitle")}>
+          {showScope && (
+            <div className="space-y-2">
+              <Label htmlFor="webhook-scope">{t("scopeLabel")}</Label>
+              <Input
+                id="webhook-scope"
+                value={orgScopeLabel}
+                disabled
+                readOnly
+              />
+              <p className="text-xs text-muted-foreground">{t("scopeHint")}</p>
+            </div>
+          )}
+
           <div className="space-y-2">
-            <Label htmlFor="webhook-scope">{t("scopeLabel")}</Label>
-            <Input id="webhook-scope" value={orgScopeLabel} disabled readOnly />
-            <p className="text-xs text-muted-foreground">{t("scopeHint")}</p>
+            <Label htmlFor="webhook-name">{t("nameLabel")}</Label>
+            <Input
+              id="webhook-name"
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              placeholder={t("namePlaceholder")}
+              maxLength={80}
+              required
+            />
+            <p className="text-xs text-muted-foreground">{t("nameHint")}</p>
           </div>
 
           <div className="space-y-2">
