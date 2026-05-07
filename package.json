@@ -45,6 +45,6 @@
     "tsx": "^4.21.0",
     "turbo": "^2.5.0",
     "typescript": "^5.7.0",
-    "typescript-eslint": "^8.24.0"
+    "typescript-eslint": "^8.59.2"
   }
 }
