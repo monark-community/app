@@ -1,0 +1,2 @@
+-- RenameIndex
+ALTER INDEX "FeatureFlagOverride_module_flagKey_organizationId_userId_roleId" RENAME TO "FeatureFlagOverride_module_flagKey_organizationId_userId_ro_key";

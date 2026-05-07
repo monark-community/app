@@ -5,17 +5,11 @@ import { HelpCircle } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
-import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+import { PageSection } from "@/components/page-section"
 import { trpc } from "@/lib/trpc"
 import { cn } from "@/lib/utils"
 
@@ -77,13 +71,8 @@ export function AdminNotifications({
     cells.find((c) => c.category === category && c.channel === channel)
 
   return (
-    <Card className="bg-transparent shadow-none">
-      <CardHeader>
-        <CardTitle>{t("title")}</CardTitle>
-        <CardDescription>{t("subtitle")}</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="overflow-hidden rounded-md border border-border">
+    <PageSection title={t("title")} subtitle={t("subtitle")}>
+      <div className="overflow-hidden rounded-md border border-border">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-muted/50 text-left text-xs uppercase tracking-wide text-muted-foreground">
@@ -190,10 +179,9 @@ export function AdminNotifications({
             onClick={() => reset.mutate({ userId })}
             disabled={reset.isPending || disabled}
           >
-            {tShared("resetButton")}
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
+          {tShared("resetButton")}
+        </Button>
+      </div>
+    </PageSection>
   )
 }

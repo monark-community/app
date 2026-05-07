@@ -37,27 +37,36 @@ export type DomainEvent = DomainEventBase
 `
   }
 
-  const missing: string[] = []
+  // Modules without a contracts/events.ts are pure-config / data-only
+  // modules (e.g. @monark/branding). Skip them silently — they
+  // contribute nothing to the DomainEvent union. Modules that *should*
+  // emit events but forgot the file will surface the gap as an
+  // "<Module>Events not found" import error in the next typecheck,
+  // which is a more actionable signal than a codegen abort.
+  const eventModules: string[] = []
   for (const name of names) {
     const p = resolve(APP_ROOT, "packages", packageDirName(name), "src/contracts/events.ts")
-    if (!(await exists(p))) {
-      missing.push(`${name} (expected ${p})`)
-    }
-  }
-  if (missing.length > 0) {
-    throw new Error(
-      `gen:events: missing contracts/events.ts in modules:\n  ${missing.join("\n  ")}`,
-    )
+    if (await exists(p)) eventModules.push(name)
   }
 
-  const imports = names
+  if (eventModules.length === 0) {
+    return `${HEADER}import type { DomainEventBase } from "./events"
+
+// No modules export a contracts/events.ts yet.
+export type DomainEvent = DomainEventBase
+`
+  }
+
+  const imports = eventModules
     .map((name) => {
       const typeName = moduleEventsTypeName(name)
       return `import type { ${typeName} } from "${name}/contracts"`
     })
     .join("\n")
 
-  const union = names.map((name) => `  | ${moduleEventsTypeName(name)}`).join("\n")
+  const union = eventModules
+    .map((name) => `  | ${moduleEventsTypeName(name)}`)
+    .join("\n")
 
   return `${HEADER}${imports}
 

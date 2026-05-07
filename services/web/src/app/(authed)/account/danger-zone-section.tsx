@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { useState, useTransition } from "react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { DangerCard, DangerRow } from "@/components/danger-card"
 import { trpc } from "@/lib/trpc"
 import { cancelAccountDeletionAction } from "./actions"
 import { DeleteAccountDialog } from "./delete-account-dialog"
@@ -54,41 +54,45 @@ export function DangerZoneSection() {
       new Date(deletedAt).getTime() + 14 * 24 * 60 * 60 * 1000,
     ).toISOString()
     return (
-      <Card className="border-amber-400/50 bg-transparent shadow-none">
-        <CardHeader>
-          <CardTitle className="text-amber-500">{t("graceTitle")}</CardTitle>
-          <CardDescription>
-            {t("graceSubtitle", { date: formatCompletesAt(completesAt, locale) })}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Button type="button" variant="outline" onClick={onCancelDeletion}>
-            {t("cancelDeletion")}
-          </Button>
-        </CardContent>
-      </Card>
+      <DangerCard
+        tone="warning"
+        title={t("graceTitle")}
+        subtitle={t("graceSubtitle", {
+          date: formatCompletesAt(completesAt, locale),
+        })}
+      >
+        <DangerRow
+          title={t("cancelDeletion")}
+          description={t("cancelDescription")}
+          action={
+            <Button type="button" variant="outline" onClick={onCancelDeletion}>
+              {t("cancelDeletion")}
+            </Button>
+          }
+        />
+      </DangerCard>
     )
   }
 
   return (
     <>
-      <Card className="bg-transparent shadow-none">
-        <CardHeader>
-          <CardTitle>{t("title")}</CardTitle>
-          <CardDescription>{t("subtitle")}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Button
-            type="button"
-            variant="ghost"
-            className="text-destructive hover:text-destructive"
-            onClick={() => setDeleteDialogOpen(true)}
-            disabled={!email}
-          >
-            {t("deleteAccount")}
-          </Button>
-        </CardContent>
-      </Card>
+      <DangerCard title={t("title")} subtitle={t("subtitle")}>
+        <DangerRow
+          title={t("deleteAccount")}
+          description={t("deleteDescription")}
+          action={
+            <Button
+              type="button"
+              variant="ghost"
+              className="text-destructive hover:text-destructive"
+              onClick={() => setDeleteDialogOpen(true)}
+              disabled={!email}
+            >
+              {t("deleteAccount")}
+            </Button>
+          }
+        />
+      </DangerCard>
       {email && (
         <DeleteAccountDialog
           open={deleteDialogOpen}

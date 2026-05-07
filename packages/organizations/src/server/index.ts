@@ -7,7 +7,7 @@ import {
   UnauthorizedError,
   ValidationError,
 } from "@monark/common"
-import { adminAssignmentSummary } from "@monark/rbac/server"
+import { adminAssignmentSummary, requirePermission } from "@monark/rbac/server"
 import { getById as getUserById } from "@monark/users/server"
 import type { OrganizationUpdatedEvent } from "../contracts/events"
 import {
@@ -27,6 +27,12 @@ import {
   getBootstrapStatus,
 } from "./bootstrap"
 import { getCurrentOrg, getUserOrgs } from "./read"
+import {
+  deleteOrganizationMetadataValue,
+  getOrganizationMetadataValue,
+  listOrganizationMetadataForModule,
+  setOrganizationMetadataValue,
+} from "./metadata"
 
 // Mirror of the rbac.isAdmin gate the /admin layout uses, scoped to the
 // `organizations.admin*` procedures. Non-admins get FORBIDDEN before
@@ -278,6 +284,97 @@ export const organizationsRouter = router({
       return consumePendingInvitesForUser(ctx.userId, user.email)
     }),
   }),
+
+  // ── Generic metadata sidecar ────────────────────────────────────
+  // Same shape as @monark/users.metadata, scoped to an org. Reads
+  // require either org membership OR
+  // `organizations.read-metadata-for-module-<module>` ; writes always
+  // require `organizations.write-metadata-for-module-<module>`.
+  metadata: router({
+    list: publicProcedure
+      .input(
+        z.object({
+          organizationId: z.string().min(1),
+          module: z.string().min(1),
+        }),
+      )
+      .query(async ({ ctx, input }) => {
+        await requirePermission(
+          ctx,
+          `organizations.read-metadata-for-module-${input.module}`,
+          input.organizationId,
+        )
+        return listOrganizationMetadataForModule(
+          input.organizationId,
+          input.module,
+        )
+      }),
+
+    get: publicProcedure
+      .input(
+        z.object({
+          organizationId: z.string().min(1),
+          module: z.string().min(1),
+          key: z.string().min(1),
+        }),
+      )
+      .query(async ({ ctx, input }) => {
+        await requirePermission(
+          ctx,
+          `organizations.read-metadata-for-module-${input.module}`,
+          input.organizationId,
+        )
+        return getOrganizationMetadataValue(
+          input.organizationId,
+          input.module,
+          input.key,
+        )
+      }),
+
+    set: publicProcedure
+      .input(
+        z.object({
+          organizationId: z.string().min(1),
+          module: z.string().min(1),
+          key: z.string().min(1),
+          value: z.unknown(),
+        }),
+      )
+      .mutation(async ({ ctx, input }) => {
+        await requirePermission(
+          ctx,
+          `organizations.write-metadata-for-module-${input.module}`,
+          input.organizationId,
+        )
+        return setOrganizationMetadataValue({
+          organizationId: input.organizationId,
+          module: input.module,
+          key: input.key,
+          value: input.value,
+        })
+      }),
+
+    delete: publicProcedure
+      .input(
+        z.object({
+          organizationId: z.string().min(1),
+          module: z.string().min(1),
+          key: z.string().min(1),
+        }),
+      )
+      .mutation(async ({ ctx, input }) => {
+        await requirePermission(
+          ctx,
+          `organizations.write-metadata-for-module-${input.module}`,
+          input.organizationId,
+        )
+        await deleteOrganizationMetadataValue(
+          input.organizationId,
+          input.module,
+          input.key,
+        )
+      }),
+  }),
 })
 
 export {
@@ -303,3 +400,18 @@ export {
   type EnsureBootstrapResult,
   type InitialOrgInput,
 } from "./bootstrap"
+export { registerOrganizationsFeatureFlags } from "./flags"
+export { registerOrganizationsPermissions } from "./permissions"
+export { registerOrganizationsEventTypes } from "./event-types"
+export {
+  ensureSingletonMembership,
+  registerOrganizationsSubscribers,
+} from "./auto-membership"
+export {
+  listOrganizationMetadataForModule,
+  getOrganizationMetadataValue,
+  setOrganizationMetadataValue,
+  deleteOrganizationMetadataValue,
+  deleteOrganizationMetadataForModule,
+  type OrganizationMetadataRow,
+} from "./metadata"

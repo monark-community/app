@@ -10,6 +10,7 @@ import {
   getPermissionDef,
   isKnownPermission,
   listPermissions,
+  listPermissionDescriptors,
   permissionsByCategory,
   type Permission,
 } from "../contracts/permissions"
@@ -216,20 +217,27 @@ export const rbacRouter = router({
     return listSysadmins()
   }),
 
-  // Static metadata for the /admin/rbac permission-toggle matrix.
-  // Returns each permission's key + description + category so the UI
-  // doesn't need to hardcode the list.
+  // Merged-registry metadata for the /admin/rbac permission-toggle
+  // matrix. Returns each permission's dotted key + description +
+  // category. Categories appear in alphabetical order ; permissions
+  // inside each category are dotted and sorted alphabetically. Picks
+  // up extended modules' permissions automatically because the
+  // registry is built at api boot.
   adminListPermissions: publicProcedure.query(async ({ ctx }) => {
     await requireAdmin(ctx.userId)
     const grouped = permissionsByCategory()
+    const categories = Object.keys(grouped).sort()
     return {
-      categories: Object.entries(grouped).map(([category, keys]) => ({
-        category,
-        permissions: keys.map((key) => ({
-          key,
-          description: getPermissionDef(key as Permission).description,
-        })),
-      })),
+      categories: categories.map((category) => {
+        const keys = grouped[category] ?? []
+        return {
+          category,
+          permissions: keys.map((key) => ({
+            key,
+            description: getPermissionDef(key)?.description ?? "",
+          })),
+        }
+      }),
     }
   }),
 })
@@ -246,6 +254,8 @@ export {
   findRoleById,
   findBuiltInAdminRole,
   listRolesForOrg,
+  listOrgAdminUserIds,
+  listSysadminUserIds,
   type RoleRow,
   type RoleWithPermissions,
   type AssignmentRow,
@@ -268,3 +278,20 @@ export {
   SYSADMIN_ROLE_KEY,
   BUILTIN_ALL_PERMISSIONS_KEYS,
 } from "../contracts/role"
+export {
+  registerPermissions,
+  isKnownPermission,
+  parsePermissionKey,
+  listPermissions,
+  listPermissionDescriptors,
+  permissionsByCategory,
+  getPermissionDef,
+} from "../contracts/permissions"
+export type {
+  Permission,
+  PermissionCategory,
+  PermissionDef,
+  PermissionDescriptor,
+} from "../contracts/permissions"
+export { registerRbacPermissions } from "./rbac-permissions"
+export { registerRbacEventTypes } from "./event-types"

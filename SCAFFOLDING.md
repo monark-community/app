@@ -39,6 +39,18 @@ pnpm gen:routers --check  # should pass
 
 Expected result: `packages/auth/` exists with `src/{server,client,contracts}/`, the manifest has `@monark/auth` under `core`, and the generated app-router file names `authRouter` on an `auth` key.
 
+## Extension points for non-core modules
+
+The platform exposes five extension points that let extended modules add their own flags, permissions, notification kinds, per-user / per-org metadata, and event subscribers without modifying core code. The full contract is in [docs/technical-documentation/extensibility-contract.md](docs/technical-documentation/extensibility-contract.md) ; the short version :
+
+- **Feature flags** : `registerFlags("<module>", { ... })` from `@monark/feature-flags/server`.
+- **Permissions** : `registerPermissions("<module>", { ... })` from `@monark/rbac/server`.
+- **Notification kinds** : `registerNotificationKind(kind, def, messages)` from `@monark/notifications/server` + a `declare module` augmentation of `NotificationDataRegistry` for typed payloads.
+- **Per-user / per-org metadata** : the `users.metadata.*` / `organizations.metadata.*` tRPC procedures, gated by per-module read / write permissions the extended module registers itself.
+- **Domain events + webhooks** : export `XxxEvents` from your module's `/contracts/events.ts` and add the package to `modules.manifest.ts` ; the type union regenerates on `pnpm gen:events`, and the webhook subscriber routes any matching `WebhookSubscription` automatically.
+
+Boot wiring lives in [services/api/src/server.ts](services/api/src/server.ts) : every module's `register*` helpers are called once before `syncFlagsToDatabase()` + the worker starts.
+
 ## Known follow-ups (not blocking Phase 0)
 
 - **Production build story for the api.** Every package exports TypeScript source (via tsconfig `paths` + package.json exports pointing at `src/**/*.ts`), which makes dev + typecheck straightforward but blocks a plain `tsc` production build (cross-package imports trip `rootDir`). Phase 0 sidesteps this by running `pnpm --filter api start` through tsx. Phase 1 will add a bundler (esbuild or tsup) that traces all workspace imports and emits a single production artifact.
@@ -64,7 +76,7 @@ app/
 │  ├─ gen-events.ts   regenerate the DomainEvent union
 │  ├─ gen-routers.ts  regenerate the app router composition
 │  └─ lib/names.ts    naming helpers shared by the tools
-├─ modules.manifest.ts   single source of truth for the module graph
+├─ modules.manifest.ts   single source of truth for the module graph (eight core modules : auth, branding, feature-flags, notifications, organizations, rbac, users, webhooks)
 ├─ turbo.json
 ├─ tsconfig.base.json
 ├─ eslint.config.mjs

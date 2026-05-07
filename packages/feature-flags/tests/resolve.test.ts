@@ -5,7 +5,8 @@ import type { OverrideRow } from "../src/server/data"
 function row(partial: Partial<OverrideRow>): OverrideRow {
   return {
     id: partial.id ?? "row-id",
-    flagKey: partial.flagKey ?? "auth.trusted-devices",
+    module: partial.module ?? "auth",
+    flagKey: partial.flagKey ?? "trusted-devices",
     organizationId: partial.organizationId ?? null,
     userId: partial.userId ?? null,
     roleId: partial.roleId ?? null,

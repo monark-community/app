@@ -1,10 +1,38 @@
-import { describe, expect, it } from "vitest"
+import { afterEach, beforeEach, describe, expect, it } from "vitest"
 import { ValidationError } from "@monark/common"
+import {
+  _resetPermissionRegistryForTesting,
+  registerPermissions,
+} from "../src/contracts/permissions"
 import {
   validateColor,
   validatePermissionList,
   validateRoleKey,
 } from "../src/server/validators"
+
+beforeEach(() => {
+  _resetPermissionRegistryForTesting()
+  registerPermissions("organizations", {
+    "update-settings": {
+      description: "Edit organization profile.",
+      category: "organization",
+    },
+    "invite-member": {
+      description: "Send invites.",
+      category: "users",
+    },
+  })
+  registerPermissions("rbac", {
+    "manage-roles": {
+      description: "Create / edit / delete custom roles.",
+      category: "rbac",
+    },
+  })
+})
+
+afterEach(() => {
+  _resetPermissionRegistryForTesting()
+})
 
 describe("rbac/validators.validateColor", () => {
   it("returns null for null / undefined / empty / whitespace inputs", () => {
@@ -111,13 +139,16 @@ describe("rbac/validators.validateRoleKey", () => {
 })
 
 describe("rbac/validators.validatePermissionList", () => {
-  it("returns the deduplicated, in-order list of known permissions", () => {
+  it("returns the deduplicated, in-order list of known permissions as parsed pairs", () => {
     const out = validatePermissionList([
-      "org:update-settings",
-      "org:invite-member",
-      "org:update-settings", // duplicate ; first occurrence wins
+      "organizations.update-settings",
+      "organizations.invite-member",
+      "organizations.update-settings", // duplicate ; first occurrence wins
     ])
-    expect(out).toEqual(["org:update-settings", "org:invite-member"])
+    expect(out).toEqual([
+      { module: "organizations", key: "update-settings" },
+      { module: "organizations", key: "invite-member" },
+    ])
   })
 
   it("returns an empty list for an empty input", () => {
@@ -126,41 +157,41 @@ describe("rbac/validators.validatePermissionList", () => {
 
   it("preserves the input order (not alphabetical)", () => {
     const out = validatePermissionList([
-      "rbac:manage-roles",
-      "org:update-settings",
-      "org:invite-member",
+      "rbac.manage-roles",
+      "organizations.update-settings",
+      "organizations.invite-member",
     ])
     expect(out).toEqual([
-      "rbac:manage-roles",
-      "org:update-settings",
-      "org:invite-member",
+      { module: "rbac", key: "manage-roles" },
+      { module: "organizations", key: "update-settings" },
+      { module: "organizations", key: "invite-member" },
     ])
   })
 
   it("throws ValidationError on an unknown permission key", () => {
     expect(() =>
-      validatePermissionList(["org:update-settings", "totally:made-up"]),
+      validatePermissionList([
+        "organizations.update-settings",
+        "totally.made-up",
+      ]),
     ).toThrow(ValidationError)
   })
 
   it("error message names the offending key so the UI can highlight it", () => {
     try {
-      validatePermissionList(["totally:made-up"])
+      validatePermissionList(["totally.made-up"])
     } catch (err) {
       expect(err).toBeInstanceOf(ValidationError)
-      expect((err as ValidationError).message).toContain("totally:made-up")
+      expect((err as ValidationError).message).toContain("totally.made-up")
     }
   })
 
   it("rejects on the first unknown key (doesn't continue past it)", () => {
-    // The current implementation throws on the first unknown ; this
-    // documents the contract so a refactor that swaps to "collect all
-    // errors" notices the test break.
     expect(() =>
       validatePermissionList([
-        "first:unknown",
-        "second:also-unknown",
+        "first.unknown",
+        "second.also-unknown",
       ]),
-    ).toThrow(/first:unknown/)
+    ).toThrow(/first\.unknown/)
   })
 })

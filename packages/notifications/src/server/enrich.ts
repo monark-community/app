@@ -1,4 +1,5 @@
 import { BRANDING, brandingTemplateVars } from "@monark/branding"
+import { WEBHOOK_DELIVERY_FAILURE_LIMIT } from "@monark/webhooks/contracts"
 import type { TemplateVars } from "./template"
 import type {
   NotificationDataMap,
@@ -135,6 +136,17 @@ export function enrichVars<K extends NotificationKind>(
       // a compile error here until its derivation (or lack thereof) is
       // declared.
       break
+    case "webhooks.delivery-permanently-failed": {
+      const d = data as NotificationDataMap["webhooks.delivery-permanently-failed"]
+      out.webhookDeliveriesLink = `${out.appUrl}/admin/webhooks/${d.endpointId}/deliveries`
+      out.failureLimit = String(WEBHOOK_DELIVERY_FAILURE_LIMIT)
+      break
+    }
+    case "webhooks.endpoint-auto-disabled": {
+      const d = data as NotificationDataMap["webhooks.endpoint-auto-disabled"]
+      out.webhookEndpointLink = `${out.appUrl}/admin/webhooks/${d.endpointId}`
+      break
+    }
     default: {
       const _exhaustive: never = kind
       void _exhaustive

@@ -1,19 +1,18 @@
 "use client"
 
-import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { useTranslations } from "next-intl"
 import {
-  ArrowLeft,
   ChevronDown,
   ChevronRight,
   Lock,
   Search,
-  Trash2,
 } from "lucide-react"
 import { toast } from "sonner"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import {
   Collapsible,
   CollapsibleContent,
@@ -21,10 +20,14 @@ import {
 } from "@/components/ui/collapsible"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Separator } from "@/components/ui/separator"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Textarea } from "@/components/ui/textarea"
+import { DangerCard, DangerRow } from "@/components/danger-card"
+import { DirtyFormBar } from "@/components/dirty-form-bar"
+import { PageHeader } from "@/components/page-header"
+import { PageSection } from "@/components/page-section"
 import { trpc } from "@/lib/trpc"
-import { cn } from "@/lib/utils"
 
 const ADMIN_ROLE_KEY = "ADMIN"
 
@@ -80,6 +83,7 @@ export function RoleEditor(
     | { mode: "edit"; roleId: string },
 ) {
   const t = useTranslations("admin.rbac.editor")
+  const tCommon = useTranslations("common")
   const router = useRouter()
   const utils = trpc.useUtils()
   const isEdit = props.mode === "edit"
@@ -245,6 +249,48 @@ export function RoleEditor(
     }
   }
 
+  // Dirty-state vs the loaded baseline (edit mode) or the empty form
+  // (create mode). Drives the sticky save bar's visibility ; the bar
+  // only slides up once the operator has actually changed something.
+  const dirty = useMemo(() => {
+    if (isEdit) {
+      if (!role) return false
+      const baselinePerms = new Set(role.permissions.map((p) => p.permission))
+      if (name.trim() !== role.name) return true
+      if ((description.trim() || null) !== (role.description ?? null)) {
+        return true
+      }
+      if ((color.trim() || null) !== (role.color ?? null)) return true
+      if (!isBuiltInAdmin) {
+        if (permissions.size !== baselinePerms.size) return true
+        for (const p of permissions) {
+          if (!baselinePerms.has(p)) return true
+        }
+      }
+      return false
+    }
+    return (
+      name.trim() !== "" ||
+      description.trim() !== "" ||
+      color.trim() !== "" ||
+      permissions.size > 0
+    )
+  }, [isEdit, role, isBuiltInAdmin, name, description, color, permissions])
+
+  function onCancel() {
+    if (isEdit && role) {
+      setName(role.name)
+      setDescription(role.description ?? "")
+      setColor(role.color ?? "")
+      setPermissions(new Set(role.permissions.map((p) => p.permission)))
+      return
+    }
+    setName("")
+    setDescription("")
+    setColor("")
+    setPermissions(new Set())
+  }
+
   function onDelete() {
     if (!isEdit || !role) return
     if (
@@ -267,14 +313,12 @@ export function RoleEditor(
   }
   if (isEdit && roleByIdQuery.error) {
     return (
-      <div className="space-y-3">
-        <Link
-          href="/admin/rbac"
-          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
-        >
-          <ArrowLeft className="h-4 w-4" aria-hidden />
-          {t("back")}
-        </Link>
+      <div className="space-y-8">
+        <PageHeader
+          title={t("editTitle", { name: "" })}
+          backHref="/admin/rbac"
+          backLabel={t("back")}
+        />
         <p className="rounded-md border border-destructive/50 bg-destructive/5 p-4 text-sm text-destructive">
           {roleByIdQuery.error.message || t("loadError")}
         </p>
@@ -283,30 +327,20 @@ export function RoleEditor(
   }
 
   return (
-    <div className="space-y-4">
-      <div>
-        <Link
-          href="/admin/rbac"
-          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
-        >
-          <ArrowLeft className="h-4 w-4" aria-hidden />
-          {t("back")}
-        </Link>
-      </div>
-
-      <header>
-        <h1 className="text-2xl font-semibold tracking-tight">
-          {isEdit
+    <div className="space-y-8">
+      <PageHeader
+        title={
+          isEdit
             ? t("editTitle", { name: role?.name ?? "" })
-            : t("createTitle")}
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {isEdit ? t("editSubtitle") : t("createSubtitle")}
-        </p>
-      </header>
+            : t("createTitle")
+        }
+        subtitle={isEdit ? t("editSubtitle") : t("createSubtitle")}
+        backHref="/admin/rbac"
+        backLabel={t("back")}
+      />
 
-      <div className="grid gap-4 rounded-lg border border-border p-4">
-        <div className="grid gap-2">
+      <PageSection title={t("identitySectionTitle")}>
+        <div className="space-y-2">
           <Label htmlFor="role-name">{t("nameLabel")}</Label>
           <Input
             id="role-name"
@@ -316,7 +350,7 @@ export function RoleEditor(
             maxLength={80}
           />
         </div>
-        <div className="grid gap-2">
+        <div className="space-y-2">
           <Label htmlFor="role-description">{t("descriptionLabel")}</Label>
           <Textarea
             id="role-description"
@@ -327,7 +361,7 @@ export function RoleEditor(
             maxLength={280}
           />
         </div>
-        <div className="grid gap-2">
+        <div className="space-y-2">
           <Label htmlFor="role-color">{t("colorLabel")}</Label>
           <div className="flex items-center gap-3">
             <Input
@@ -351,18 +385,22 @@ export function RoleEditor(
           </div>
           <p className="text-xs text-muted-foreground">{t("colorHint")}</p>
         </div>
-      </div>
+      </PageSection>
 
-      <div className="space-y-2">
-        <div className="flex items-center justify-between gap-2">
-          <Label>{t("permissionsLabel")}</Label>
-          {isBuiltInAdmin && (
-            <span className="inline-flex items-center gap-1 rounded-md bg-muted px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">
+      <Separator />
+
+      <PageSection
+        title={t("permissionsLabel")}
+        subtitle={isBuiltInAdmin ? undefined : t("permissionsSectionSubtitle")}
+        action={
+          isBuiltInAdmin ? (
+            <Badge variant="secondary" size="sm">
               <Lock className="h-3 w-3" aria-hidden />
               {t("permissionsLocked")}
-            </span>
-          )}
-        </div>
+            </Badge>
+          ) : undefined
+        }
+      >
         {isBuiltInAdmin ? (
           <p className="rounded-md border border-dashed border-border px-3 py-2 text-xs text-muted-foreground">
             {t("permissionsAdminNote")}
@@ -407,45 +445,37 @@ export function RoleEditor(
             </div>
           </>
         )}
-      </div>
+      </PageSection>
 
-      <div className="flex items-center justify-between gap-2">
-        <div>
-          {isEdit && role && !role.builtIn && (
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={onDelete}
-              disabled={submitting}
-              className="text-destructive hover:text-destructive"
-            >
-              <Trash2 className="h-4 w-4" aria-hidden />
-              {t("deleteCta")}
-            </Button>
-          )}
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => router.push("/admin/rbac")}
-            disabled={submitting}
-          >
-            {t("cancel")}
-          </Button>
-          <Button
-            type="button"
-            onClick={onSubmit}
-            disabled={submitting || (isEdit && !role)}
-          >
-            {submitting
-              ? t("submitting")
-              : isEdit
-                ? t("save")
-                : t("create")}
-          </Button>
-        </div>
-      </div>
+      {isEdit && role && !role.builtIn && (
+        <DangerCard title={t("dangerSectionTitle")}>
+          <DangerRow
+            title={t("deleteCta")}
+            description={t("deleteRowDescription")}
+            action={
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={onDelete}
+                disabled={submitting}
+              >
+                {t("deleteCta")}
+              </Button>
+            }
+          />
+        </DangerCard>
+      )}
+
+      <DirtyFormBar
+        open={dirty}
+        onSave={onSubmit}
+        onCancel={onCancel}
+        saving={submitting}
+        saveLabel={isEdit ? t("save") : t("create")}
+        savingLabel={t("submitting")}
+        cancelLabel={t("cancel")}
+        message={tCommon("unsavedChanges")}
+      />
     </div>
   )
 }
@@ -481,26 +511,14 @@ function CategorySection({
   const state: "none" | "some" | "all" =
     selectedCount === 0 ? "none" : selectedCount === total ? "all" : "some"
 
-  // Drive the native checkbox `indeterminate` flag through a ref ;
-  // React doesn't expose it as a JSX prop. Re-applies on every
-  // render so it tracks `state` live.
-  const checkboxRef = useRef<HTMLInputElement | null>(null)
-  useEffect(() => {
-    if (checkboxRef.current) {
-      checkboxRef.current.indeterminate = state === "some"
-    }
-  }, [state])
-
   return (
     <Collapsible open={open} onOpenChange={onOpenChange}>
       <div className="flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-muted/40">
-        <input
-          ref={checkboxRef}
-          type="checkbox"
+        <Checkbox
           checked={state === "all"}
+          indeterminate={state === "some"}
           onChange={onToggleAll}
           aria-label={t("toggleAllAria", { category: categoryLabel })}
-          className="h-4 w-4 cursor-pointer"
           onClick={(event) => event.stopPropagation()}
         />
         <CollapsibleTrigger asChild>
@@ -516,16 +534,13 @@ function CategorySection({
               )}
               {categoryLabel}
             </span>
-            <span
-              className={cn(
-                "shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium",
-                state === "all"
-                  ? "bg-primary/10 text-primary"
-                  : "bg-muted text-muted-foreground",
-              )}
+            <Badge
+              variant={state === "all" ? "primary" : "secondary"}
+              size="sm"
+              className="shrink-0"
             >
               {t("categoryCount", { selected: selectedCount, total })}
-            </span>
+            </Badge>
           </button>
         </CollapsibleTrigger>
       </div>
@@ -536,13 +551,11 @@ function CategorySection({
             return (
               <li key={perm.key}>
                 <label className="flex cursor-pointer items-start gap-2 rounded-md border border-border px-3 py-2 text-sm">
-                  <input
-                    type="checkbox"
+                  <Checkbox
                     checked={checked}
                     onChange={(event) =>
                       onTogglePermission(perm.key, event.target.checked)
                     }
-                    className="mt-1 h-4 w-4 cursor-pointer"
                   />
                   <span className="flex-1 space-y-0.5">
                     <span className="block font-mono text-xs">{perm.key}</span>

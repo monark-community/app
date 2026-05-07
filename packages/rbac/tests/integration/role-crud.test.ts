@@ -83,7 +83,7 @@ describe("rbac/data findRoleById", () => {
       name: "Moderator",
       description: "Can moderate posts",
       color: "#F0870C",
-      permissions: ["org:invite-member"],
+      permissions: [{ module: "organizations", key: "invite-member" }],
     })
     const fetched = await findRoleById(created.id)
     expect(fetched).not.toBeNull()
@@ -93,7 +93,8 @@ describe("rbac/data findRoleById", () => {
     expect(fetched?.organizationId).toBe(ORG_ID)
     // The `permissions` relation is included by default.
     expect(fetched?.permissions).toHaveLength(1)
-    expect(fetched?.permissions[0]?.permission).toBe("org:invite-member")
+    expect(fetched?.permissions[0]?.module).toBe("organizations")
+    expect(fetched?.permissions[0]?.permission).toBe("invite-member")
   })
 })
 
@@ -105,22 +106,25 @@ describe("rbac/data createCustomRole", () => {
       name: "Editor",
       description: null,
       color: null,
-      permissions: ["org:invite-member", "org:remove-member"],
+      permissions: [
+        { module: "organizations", key: "invite-member" },
+        { module: "organizations", key: "remove-member" },
+      ],
     })
     expect(created.id).toBeTruthy()
     expect(created.key).toBe("editor")
     expect(created.builtIn).toBe(false)
     expect(created.organizationId).toBe(ORG_ID)
 
-    // Permission rows landed in the join table.
+    // Permission rows landed in the join table with module split.
     const db = getDb()
     const perms = await db.rolePermission.findMany({
       where: { roleId: created.id },
     })
     expect(perms).toHaveLength(2)
-    expect(perms.map((p) => p.permission).sort()).toEqual([
-      "org:invite-member",
-      "org:remove-member",
+    expect(perms.map((p) => `${p.module}.${p.permission}`).sort()).toEqual([
+      "organizations.invite-member",
+      "organizations.remove-member",
     ])
   })
 
@@ -232,15 +236,18 @@ describe("rbac/data updateRolePatch", () => {
       name: "Moderator",
       description: null,
       color: null,
-      permissions: ["org:invite-member", "org:remove-member"],
+      permissions: [
+        { module: "organizations", key: "invite-member" },
+        { module: "organizations", key: "remove-member" },
+      ],
     })
     const updated = await updateRolePatch({
       id: created.id,
-      permissions: ["org:assign-role"], // single new permission ; the previous two should drop
+      permissions: [{ module: "rbac", key: "assign-role" }],
     })
-    expect(updated.permissions.map((p) => p.permission).sort()).toEqual([
-      "org:assign-role",
-    ])
+    expect(
+      updated.permissions.map((p) => `${p.module}.${p.permission}`).sort(),
+    ).toEqual(["rbac.assign-role"])
   })
 
   it("leaves the permission set untouched when omitted from the patch", async () => {
@@ -250,15 +257,15 @@ describe("rbac/data updateRolePatch", () => {
       name: "Moderator",
       description: null,
       color: null,
-      permissions: ["org:invite-member"],
+      permissions: [{ module: "organizations", key: "invite-member" }],
     })
     const updated = await updateRolePatch({
       id: created.id,
       name: "Senior Moderator",
     })
-    expect(updated.permissions.map((p) => p.permission)).toEqual([
-      "org:invite-member",
-    ])
+    expect(
+      updated.permissions.map((p) => `${p.module}.${p.permission}`),
+    ).toEqual(["organizations.invite-member"])
   })
 })
 
@@ -315,7 +322,7 @@ describe("rbac/data deleteRoleRow", () => {
       name: "Doomed",
       description: null,
       color: null,
-      permissions: ["org:invite-member"],
+      permissions: [{ module: "organizations", key: "invite-member" }],
     })
     await deleteRoleRow(created.id)
     const role = await findRoleById(created.id)
@@ -341,7 +348,7 @@ describe("@monark/test-utils truncate helper", () => {
       name: "Smoke",
       description: null,
       color: null,
-      permissions: ["org:invite-member"],
+      permissions: [{ module: "organizations", key: "invite-member" }],
     })
     await truncate(db, ["RoleAssignment", "RolePermission"])
     const remaining = await db.rolePermission.count()

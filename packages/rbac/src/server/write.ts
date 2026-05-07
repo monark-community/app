@@ -155,7 +155,7 @@ export async function createRole(input: {
     name,
     description: input.description ?? null,
     color,
-    permissions,
+    permissions: permissions.map((p) => ({ module: p.module, key: p.key })),
   })
   const event: RoleCreatedEvent = {
     type: "rbac.role-created",
@@ -188,7 +188,7 @@ export async function updateRole(input: {
     name?: string
     description?: string | null
     color?: string | null
-    permissions?: string[]
+    permissions?: Array<{ module: string; key: string }>
   } = {}
   const changed: RoleUpdatedEvent["changed"] = []
   if (input.name !== undefined) {
@@ -216,7 +216,8 @@ export async function updateRole(input: {
     }
   }
   if (input.permissions !== undefined && !role.builtIn) {
-    patch.permissions = validatePermissionList(input.permissions)
+    const validated = validatePermissionList(input.permissions)
+    patch.permissions = validated.map((p) => ({ module: p.module, key: p.key }))
     changed.push("permissions")
   }
   if (changed.length === 0) return

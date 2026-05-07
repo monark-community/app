@@ -9,6 +9,7 @@ import { notificationsRouter } from "@monark/notifications/server"
 import { organizationsRouter } from "@monark/organizations/server"
 import { rbacRouter } from "@monark/rbac/server"
 import { usersRouter } from "@monark/users/server"
+import { webhooksRouter } from "@monark/webhooks/server"
 
 export const appRouter = router({
   auth         : authRouter,
@@ -17,6 +18,7 @@ export const appRouter = router({
   organizations: organizationsRouter,
   rbac         : rbacRouter,
   users        : usersRouter,
+  webhooks     : webhooksRouter,
 })
 
 export type AppRouter = typeof appRouter

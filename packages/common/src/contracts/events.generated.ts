@@ -7,6 +7,7 @@ import type { NotificationsEvents } from "@monark/notifications/contracts"
 import type { OrganizationsEvents } from "@monark/organizations/contracts"
 import type { RbacEvents } from "@monark/rbac/contracts"
 import type { UsersEvents } from "@monark/users/contracts"
+import type { WebhooksEvents } from "@monark/webhooks/contracts"
 
 export type DomainEvent =
   | AuthEvents
@@ -15,3 +16,4 @@ export type DomainEvent =
   | OrganizationsEvents
   | RbacEvents
   | UsersEvents
+  | WebhooksEvents

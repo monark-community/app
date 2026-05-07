@@ -2,18 +2,110 @@ import express from "express"
 import cors from "cors"
 import { createExpressMiddleware } from "@trpc/server/adapters/express"
 import { logger } from "@monark/common"
-import { processExpiredDeletions } from "@monark/auth/server"
-import { registerNotificationSubscribers } from "@monark/notifications/server"
-import { ensureSingletonOrganizationFromInput } from "@monark/organizations/server"
+import {
+  processExpiredDeletions,
+  registerAuthEventTypes,
+  registerAuthFeatureFlags,
+} from "@monark/auth/server"
+import {
+  registerFeatureFlagsEventTypes,
+  registerFeatureFlagsPermissions,
+  syncFlagsToDatabase,
+} from "@monark/feature-flags/server"
+import {
+  registerCoreNotificationKinds,
+  registerNotificationsEventTypes,
+  registerNotificationSubscribers,
+} from "@monark/notifications/server"
+import {
+  ensureSingletonOrganizationFromInput,
+  registerOrganizationsEventTypes,
+  registerOrganizationsFeatureFlags,
+  registerOrganizationsPermissions,
+  registerOrganizationsSubscribers,
+} from "@monark/organizations/server"
+import {
+  registerRbacEventTypes,
+  registerRbacPermissions,
+} from "@monark/rbac/server"
+import {
+  registerUsersEventTypes,
+  registerUsersPermissions,
+} from "@monark/users/server"
+import {
+  registerWebhookSubscribers,
+  registerWebhooksPermissions,
+  startWebhookDeliveryWorker,
+  tickOnce as webhookWorkerTick,
+} from "@monark/webhooks/server"
 import { evaluateCronAuth } from "./lib/cron-auth"
 import { env } from "./lib/env"
 import { httpLogger } from "./lib/http-logger"
 import { appRouter } from "./trpc/router"
 import { createContext } from "./trpc/context"
 
+// ── Boot-time module registrations ───────────────────────────────────
+// Every module that owns flags or permissions registers them here, in
+// a deterministic order, before any code path resolves a flag or
+// checks a permission. The order is alphabetical for predictability ;
+// modules don't have dependency-order requirements at registration
+// time because the registry is a flat namespace per kind.
+//
+// Extended modules drop their `register<Module>FeatureFlags()` /
+// `register<Module>Permissions()` calls in here too. The
+// `registerFromManifest()`-style codegen lands in a later phase ; for
+// now the manifest is hand-maintained.
+registerAuthFeatureFlags()
+registerOrganizationsFeatureFlags()
+
+registerFeatureFlagsPermissions()
+registerOrganizationsPermissions()
+registerRbacPermissions()
+registerUsersPermissions()
+registerWebhooksPermissions()
+
+// Event-type registrations feed the webhook admin UI's guided
+// subscription picker. Order doesn't matter ; the registry is a flat
+// namespace keyed on the wire-level event type. Webhook-internal
+// event types (`webhook.*`) intentionally aren't registered — the
+// subscriber filter skips them to avoid recursion, so showing them
+// in the picker would be misleading.
+registerAuthEventTypes()
+registerFeatureFlagsEventTypes()
+registerNotificationsEventTypes()
+registerOrganizationsEventTypes()
+registerRbacEventTypes()
+registerUsersEventTypes()
+
+// Notification kinds + templates need to be registered before any
+// subscriber can call `notify()` ; subscriber registration follows
+// kind registration.
+registerCoreNotificationKinds()
+
 // Domain event listeners are registered once at process boot. Add new ones
-// here as more event-driven side-effects come online.
+// here as more event-driven side-effects come online. The organizations
+// subscriber MUST register before the webhook subscriber so the auto-
+// membership upsert (`organization.member-joined` emit) lands on the
+// bus before webhook routing decides which org-scoped endpoints
+// receive a derived event. The webhook subscriber registers last so
+// its outbox writer sees a stable event-bus configuration.
+registerOrganizationsSubscribers()
 registerNotificationSubscribers()
+registerWebhookSubscribers()
+
+// Webhook delivery worker drains the outbox on a setInterval. The
+// `/cron/sweep-webhook-deliveries` endpoint below is an external
+// fallback (Vercel Cron, GitHub Actions, k8s CronJob) so a single
+// api crash doesn't strand the outbox.
+startWebhookDeliveryWorker()
+
+// Sync the merged flag registry into the FeatureFlag table so the
+// /admin/feature-flags surface can read definitions, and overrides
+// pin to real flag rows. Idempotent — safe to re-run on every boot.
+// Fire-and-forget : a DB hiccup here doesn't block the api process.
+void syncFlagsToDatabase().catch((err) =>
+  logger.error({ err }, "syncFlagsToDatabase failed at boot"),
+)
 
 // Single-tenant bootstrap. When the `tenancy.multi-tenant` flag is OFF
 // (default) and the deploy is missing its singleton organization, read
@@ -161,6 +253,23 @@ app.post("/cron/process-account-deletions", async (req, res) => {
     res.json({ ok: true, ...result })
   } catch (error) {
     logger.error({ err: error }, "processExpiredDeletions sweep failed")
+    res.status(500).json({ ok: false, error: "internal" })
+  }
+})
+
+// External fallback for the in-process webhook delivery worker. The
+// in-process loop runs every few seconds while the api is healthy ;
+// this endpoint exists so a Vercel Cron (or equivalent) can keep the
+// outbox draining if every api replica is wedged. Idempotent — the
+// worker's `tickOnce()` skips when another tick is in flight.
+app.post("/cron/sweep-webhook-deliveries", async (req, res) => {
+  if (!checkCronSecret(req, res)) return
+  try {
+    const result = await webhookWorkerTick()
+    logger.info({ ...result }, "webhook delivery sweep complete")
+    res.json({ ok: true, ...result })
+  } catch (error) {
+    logger.error({ err: error }, "webhook delivery sweep failed")
     res.status(500).json({ ok: false, error: "internal" })
   }
 })

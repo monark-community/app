@@ -1,12 +1,21 @@
 import { describe, expect, it } from "vitest"
 import {
-  NOTIFICATION_KINDS,
+  getNotificationKindDef,
+  getNotificationTemplate,
+  listNotificationKinds,
   type NotificationDataMap,
   type NotificationKind,
 } from "../src/contracts/registry"
+import { registerCoreNotificationKinds } from "../src/server/register-core-kinds"
 import { enrichVars } from "../src/server/enrich"
 import { renderString } from "../src/server/template"
-import { EMAIL_SHELL, TEMPLATES } from "../src/templates"
+import { EMAIL_SHELL } from "../src/templates"
+
+// Register at module-eval time so the describe-time `kinds` iteration
+// sees the full set. The function is idempotent — safe under multiple
+// imports, and other tests that reset the registry per-spec will
+// re-register inside their own beforeEach.
+registerCoreNotificationKinds()
 
 // Regression guard for the email-shell rendering bug fixed on 2026-05-05.
 // `dispatch.ts` previously called `renderString(EMAIL_SHELL, { locale,
@@ -55,6 +64,24 @@ function payloadFor<K extends NotificationKind>(
       } as NotificationDataMap[K]
     case "account.deletion-canceled":
       return { occurredAt } as NotificationDataMap[K]
+    case "webhooks.delivery-permanently-failed":
+      return {
+        endpointId: "wh_test_endpoint",
+        endpointUrl: "https://receiver.example/hook",
+        eventType: "rbac.role-assigned",
+        attempts: 5,
+        reason: "HTTP 500",
+        scope: "org",
+        occurredAt,
+      } as NotificationDataMap[K]
+    case "webhooks.endpoint-auto-disabled":
+      return {
+        endpointId: "wh_test_endpoint",
+        endpointUrl: "https://receiver.example/hook",
+        consecutiveFailures: 5,
+        scope: "org",
+        occurredAt,
+      } as NotificationDataMap[K]
     default: {
       // Exhaustiveness check : adding a kind to NotificationDataMap
       // without updating this switch turns into a compile error.
@@ -71,9 +98,10 @@ function renderEmail<K extends NotificationKind>(
   kind: K,
   locale: "en" | "fr",
 ): { subject: string; html: string; text: string } {
-  const def = NOTIFICATION_KINDS[kind]
+  const def = getNotificationKindDef(kind)
+  if (!def) throw new Error(`Kind not registered : ${kind}`)
   const vars = enrichVars(kind, payloadFor(kind), locale)
-  const messages = TEMPLATES[def.template]
+  const messages = getNotificationTemplate(def.template)
   if (!messages) throw new Error(`Template not registered for ${kind}`)
   const slot = messages[locale] ?? messages.en
   const subject = renderString(slot.subject, vars)
@@ -92,7 +120,7 @@ describe("notifications/email-shell snapshot guard", () => {
   // One test per registered kind × each locale we ship. Adding a new
   // kind extends this matrix automatically because we iterate the
   // registry's keys.
-  const kinds = Object.keys(NOTIFICATION_KINDS) as NotificationKind[]
+  const kinds = listNotificationKinds()
   const locales = ["en", "fr"] as const
 
   for (const kind of kinds) {

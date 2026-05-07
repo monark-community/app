@@ -341,6 +341,34 @@ importers:
         specifier: ^3.0.0
         version: 3.2.4(@types/node@22.19.17)(jiti@2.6.1)(jsdom@25.0.1)(lightningcss@1.32.0)(msw@2.14.3(@types/node@22.19.17)(typescript@5.9.3))(tsx@4.21.0)(yaml@2.8.4)
 
+  packages/webhooks:
+    dependencies:
+      '@monark/common':
+        specifier: workspace:*
+        version: link:../common
+      '@monark/db':
+        specifier: workspace:*
+        version: link:../db
+      '@monark/rbac':
+        specifier: workspace:*
+        version: link:../rbac
+      zod:
+        specifier: ^3.25.76
+        version: 3.25.76
+    devDependencies:
+      '@types/react':
+        specifier: ^19.0.0
+        version: 19.2.14
+      '@vitest/coverage-v8':
+        specifier: ^3.0.0
+        version: 3.2.4(vitest@3.2.4(@types/node@22.19.17)(jiti@2.6.1)(jsdom@25.0.1)(lightningcss@1.32.0)(msw@2.14.3(@types/node@22.19.17)(typescript@5.9.3))(tsx@4.21.0)(yaml@2.8.4))
+      react:
+        specifier: ^19.1.0
+        version: 19.2.5
+      vitest:
+        specifier: ^3.0.0
+        version: 3.2.4(@types/node@22.19.17)(jiti@2.6.1)(jsdom@25.0.1)(lightningcss@1.32.0)(msw@2.14.3(@types/node@22.19.17)(typescript@5.9.3))(tsx@4.21.0)(yaml@2.8.4)
+
   services/api:
     dependencies:
       '@monark/auth':
@@ -352,12 +380,24 @@ importers:
       '@monark/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@monark/feature-flags':
+        specifier: workspace:*
+        version: link:../../packages/feature-flags
       '@monark/notifications':
         specifier: workspace:*
         version: link:../../packages/notifications
       '@monark/organizations':
         specifier: workspace:*
         version: link:../../packages/organizations
+      '@monark/rbac':
+        specifier: workspace:*
+        version: link:../../packages/rbac
+      '@monark/users':
+        specifier: workspace:*
+        version: link:../../packages/users
+      '@monark/webhooks':
+        specifier: workspace:*
+        version: link:../../packages/webhooks
       '@supabase/supabase-js':
         specifier: ^2.47.0
         version: 2.104.1

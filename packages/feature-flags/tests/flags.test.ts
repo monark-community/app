@@ -1,64 +1,133 @@
-import { describe, expect, it } from "vitest"
-import { FLAGS, isKnownFlag, listFlagKeys } from "../src/contracts/flags"
+import { afterEach, beforeEach, describe, expect, it } from "vitest"
+import {
+  _resetFlagRegistryForTesting,
+  getFlagDef,
+  isKnownFlag,
+  listFlagDescriptors,
+  listFlagKeys,
+  parseFlagKey,
+  registerFlags,
+} from "../src/contracts/flags"
 
-describe("feature-flags/flags.FLAGS", () => {
-  it("exposes the auth subsystem flags with the expected defaults", () => {
-    // These three are load-bearing — the auth UX assumes they default ON,
-    // so a regression here would silently disable trusted devices /
-    // skip-on-recognized / admin TOTP enforcement.
-    expect(FLAGS["auth.trusted-devices"].defaultOn).toBe(true)
-    expect(FLAGS["auth.totp-trust-devices"].defaultOn).toBe(true)
-    expect(FLAGS["auth.totp-required-admin"].defaultOn).toBe(true)
+beforeEach(() => {
+  _resetFlagRegistryForTesting()
+  // Replicate the canonical core registrations the api boots with so
+  // the assertions below match production resolution.
+  registerFlags("auth", {
+    "trusted-devices": {
+      description: "Track trusted devices on sign-in.",
+      defaultOn: true,
+    },
+    "totp-trust-devices": {
+      description: "Skip TOTP on recognized devices.",
+      defaultOn: true,
+    },
+    "totp-required-admin": {
+      description: "Enforce TOTP for admin roles within 7 days.",
+      defaultOn: true,
+    },
+  })
+  registerFlags("tenancy", {
+    "multi-tenant": {
+      description: "Self-service org creation.",
+      defaultOn: false,
+    },
+  })
+})
+
+afterEach(() => {
+  _resetFlagRegistryForTesting()
+})
+
+describe("feature-flags/flags.registerFlags", () => {
+  it("exposes the registered auth flags with the expected defaults", () => {
+    expect(getFlagDef("auth.trusted-devices")?.defaultOn).toBe(true)
+    expect(getFlagDef("auth.totp-trust-devices")?.defaultOn).toBe(true)
+    expect(getFlagDef("auth.totp-required-admin")?.defaultOn).toBe(true)
   })
 
   it("keeps tenancy off by default (single-tenant is the starter mode)", () => {
-    expect(FLAGS["tenancy.multi-tenant"].defaultOn).toBe(false)
+    expect(getFlagDef("tenancy.multi-tenant")?.defaultOn).toBe(false)
   })
 
-  it("every flag has a non-empty description (so the admin UI shows context)", () => {
-    for (const [key, def] of Object.entries(FLAGS)) {
-      expect(def.description.length, `flag ${key} has empty description`)
-        .toBeGreaterThan(0)
+  it("every registered flag has a non-empty description", () => {
+    for (const desc of listFlagDescriptors()) {
+      expect(
+        desc.description.length,
+        `flag ${desc.module}.${desc.key} has empty description`,
+      ).toBeGreaterThan(0)
     }
+  })
+
+  it("rejects invalid module names", () => {
+    expect(() => registerFlags("BadModule", { x: { description: "x", defaultOn: false } }))
+      .toThrowError(/Invalid feature-flag module name/)
+  })
+
+  it("rejects invalid flag keys", () => {
+    expect(() => registerFlags("posts", { "bad key": { description: "x", defaultOn: false } }))
+      .toThrowError(/Invalid feature-flag key/)
+  })
+
+  it("lets a non-core module register its own flags without colliding", () => {
+    registerFlags("posts", {
+      "drafts-enabled": {
+        description: "Allow saving posts as drafts.",
+        defaultOn: true,
+      },
+    })
+    expect(isKnownFlag("posts.drafts-enabled")).toBe(true)
+    expect(getFlagDef("posts.drafts-enabled")?.defaultOn).toBe(true)
+    // Core flags are still resolvable.
+    expect(isKnownFlag("auth.trusted-devices")).toBe(true)
   })
 })
 
 describe("feature-flags/flags.isKnownFlag", () => {
-  it("returns true for declared flag keys", () => {
+  it("returns true for registered dotted keys", () => {
     expect(isKnownFlag("auth.trusted-devices")).toBe(true)
     expect(isKnownFlag("auth.totp-required-admin")).toBe(true)
     expect(isKnownFlag("tenancy.multi-tenant")).toBe(true)
   })
 
-  it("returns false for unknown keys (including empty string and prototype hits)", () => {
+  it("returns false for unknown keys, malformed input, and prototype hits", () => {
     expect(isKnownFlag("nope")).toBe(false)
     expect(isKnownFlag("")).toBe(false)
     expect(isKnownFlag("toString")).toBe(false)
     expect(isKnownFlag("hasOwnProperty")).toBe(false)
     expect(isKnownFlag("__proto__")).toBe(false)
+    expect(isKnownFlag(".missing-module")).toBe(false)
+    expect(isKnownFlag("missing-key.")).toBe(false)
+  })
+})
+
+describe("feature-flags/flags.parseFlagKey", () => {
+  it("splits on the first dot ; keys can contain further dashes / underscores", () => {
+    expect(parseFlagKey("auth.trusted-devices")).toEqual({
+      module: "auth",
+      key: "trusted-devices",
+    })
+    expect(parseFlagKey("posts.draft_mode-v2")).toEqual({
+      module: "posts",
+      key: "draft_mode-v2",
+    })
   })
 
-  it("narrows the type of the input on success (compile-time check)", () => {
-    const candidate: string = "auth.trusted-devices"
-    if (isKnownFlag(candidate)) {
-      // If this compiles, the narrowing works. The runtime value is also fine.
-      expect(FLAGS[candidate].defaultOn).toBe(true)
-    } else {
-      throw new Error("expected `auth.trusted-devices` to be known")
-    }
+  it("returns null on malformed input", () => {
+    expect(parseFlagKey("no-dot")).toBeNull()
+    expect(parseFlagKey(".leading-dot")).toBeNull()
+    expect(parseFlagKey("trailing-dot.")).toBeNull()
   })
 })
 
 describe("feature-flags/flags.listFlagKeys", () => {
-  it("returns every key in FLAGS, in declaration order", () => {
+  it("returns every registered key in dotted form, sorted", () => {
     const keys = listFlagKeys()
-    expect(keys).toEqual(Object.keys(FLAGS))
-  })
-
-  it("includes the three auth flags", () => {
-    const keys = listFlagKeys()
-    expect(keys).toContain("auth.trusted-devices")
-    expect(keys).toContain("auth.totp-trust-devices")
-    expect(keys).toContain("auth.totp-required-admin")
+    expect(keys).toEqual([
+      "auth.totp-required-admin",
+      "auth.totp-trust-devices",
+      "auth.trusted-devices",
+      "tenancy.multi-tenant",
+    ])
   })
 })

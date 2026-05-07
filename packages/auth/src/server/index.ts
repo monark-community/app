@@ -537,6 +537,8 @@ export {
 } from "./totp"
 export { hardDeleteUser, processExpiredDeletions } from "./account-lifecycle"
 export { getSupabaseAdmin } from "./supabase-admin"
+export { registerAuthFeatureFlags } from "./flags"
+export { registerAuthEventTypes } from "./event-types"
 
 // Read interface. Takes an explicit ctx so callers can use this from either
 // tRPC procedures or Next server components.

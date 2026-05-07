@@ -1,11 +1,17 @@
 import { z } from "zod"
 import { router, publicProcedure } from "@monark/common/trpc"
-import { isKnownFlag, listFlagKeys, type FlagKey } from "../contracts/index"
+import {
+  isKnownFlag,
+  listFlagKeys,
+  parseFlagKey,
+} from "../contracts/index"
 import { getFlags, isEnabled } from "./resolve"
 import { readOverridesForFlag } from "./data"
 import { setOverride, removeOverride, listFlagDefinitions } from "./write"
 
-const flagKeySchema = z.string().refine(isKnownFlag, { message: "Unknown feature flag key" })
+const flagKeySchema = z
+  .string()
+  .refine(isKnownFlag, { message: "Unknown feature flag key" })
 
 // `roleId` references a row in the `Role` table. The previous
 // `role` field was a `Role` enum value ; with the table-driven RBAC
@@ -22,17 +28,21 @@ const scopeSchema = z
 export const featureFlagsRouter = router({
   get: publicProcedure
     .input(z.object({ key: flagKeySchema, scope: scopeSchema.optional() }))
-    .query(({ input }) => isEnabled(input.key as FlagKey, input.scope)),
+    .query(({ input }) => isEnabled(input.key, input.scope)),
 
   getMany: publicProcedure
     .input(z.object({ keys: z.array(flagKeySchema), scope: scopeSchema.optional() }))
-    .query(({ input }) => getFlags(input.keys as FlagKey[], input.scope)),
+    .query(({ input }) => getFlags(input.keys, input.scope)),
 
   listDefinitions: publicProcedure.query(() => listFlagDefinitions()),
 
   listOverrides: publicProcedure
     .input(z.object({ key: flagKeySchema }))
-    .query(({ input }) => readOverridesForFlag(input.key as FlagKey)),
+    .query(({ input }) => {
+      const ref = parseFlagKey(input.key)
+      if (!ref) return []
+      return readOverridesForFlag(ref)
+    }),
 
   setOverride: publicProcedure
     .input(
@@ -57,4 +67,7 @@ export { isEnabled, getFlags } from "./resolve"
 export { setOverride, removeOverride, listFlagDefinitions } from "./write"
 export { syncFlagsToDatabase } from "./sync"
 export { listFlagKeys }
-export type { FlagKey }
+export { registerFlags, parseFlagKey, isKnownFlag } from "../contracts/index"
+export type { FlagKey, FlagDef, FlagDescriptor, FlagScope } from "../contracts/index"
+export { registerFeatureFlagsPermissions } from "./permissions"
+export { registerFeatureFlagsEventTypes } from "./event-types"

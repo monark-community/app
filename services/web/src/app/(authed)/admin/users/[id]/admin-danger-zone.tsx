@@ -6,7 +6,6 @@ import { useLocale, useTranslations } from "next-intl"
 import { Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Dialog,
   DialogContent,
@@ -17,6 +16,8 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Separator } from "@/components/ui/separator"
+import { DangerCard, DangerRow } from "@/components/danger-card"
 import { trpc } from "@/lib/trpc"
 
 function formatDate(iso: string, locale: string): string {
@@ -36,7 +37,7 @@ type Props = {
 }
 
 /**
- * Two destructive admin actions, gated by the same surface :
+ * Two destructive admin actions, gated by the same `<DangerCard>` :
  *
  *  - **Request deletion** : routes through the standard 14-day
  *    grace flow (`users.adminRequestDeletion`). The user's row gets
@@ -49,9 +50,13 @@ type Props = {
  *    confirmation matches the self-service dialog so the operator
  *    can't fat-finger an irreversible action.
  *
- * Self-target is blocked by both procedures — the operator's own
+ * Self-target is blocked by both procedures ; the operator's own
  * deletion lives on `/account` where the post-delete sign-out flow
  * is wired correctly.
+ *
+ * When the row is already in grace, the surface flips to a warning
+ * card with the cancel-deletion affordance (still bordered, still
+ * visually distinct, but amber instead of red).
  */
 export function AdminDangerZone({ userId, email, deletedAt }: Props) {
   const t = useTranslations("admin.users.dangerZone")
@@ -106,28 +111,22 @@ export function AdminDangerZone({ userId, email, deletedAt }: Props) {
   const emailMatches =
     confirmEmail.trim().toLowerCase() === email.trim().toLowerCase()
 
-  return (
-    <Card className="border-destructive/40 bg-transparent shadow-none">
-      <CardHeader>
-        <CardTitle className="text-destructive">{t("title")}</CardTitle>
-        <CardDescription>{t("subtitle")}</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        {inGrace && completesAtIso && (
-          <div className="rounded-md border border-amber-400/40 bg-amber-400/5 p-3">
-            <p className="text-sm font-medium text-amber-500">
-              {t("graceTitle")}
-            </p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              {t("graceSubtitle", {
-                date: formatDate(completesAtIso, locale),
-              })}
-            </p>
+  if (inGrace && completesAtIso) {
+    return (
+      <DangerCard
+        tone="warning"
+        title={t("graceTitle")}
+        subtitle={t("graceSubtitle", {
+          date: formatDate(completesAtIso, locale),
+        })}
+      >
+        <DangerRow
+          title={t("cancelDeletion")}
+          description={t("cancelDescription")}
+          action={
             <Button
               type="button"
               variant="outline"
-              size="sm"
-              className="mt-3"
               onClick={() => cancelDeletion.mutate({ userId })}
               disabled={cancelDeletion.isPending}
             >
@@ -135,42 +134,48 @@ export function AdminDangerZone({ userId, email, deletedAt }: Props) {
                 ? t("cancelPending")
                 : t("cancelDeletion")}
             </Button>
-          </div>
-        )}
+          }
+        />
+      </DangerCard>
+    )
+  }
 
-        {!inGrace && (
-          <div className="flex flex-wrap items-center gap-3">
+  return (
+    <>
+      <DangerCard title={t("title")} subtitle={t("subtitle")}>
+        <DangerRow
+          title={t("requestDeletion")}
+          description={t("requestHint")}
+          action={
             <Button
               type="button"
               variant="outline"
-              size="sm"
               onClick={() => setRequestOpen(true)}
             >
               {t("requestDeletion")}
             </Button>
-            <p className="text-xs text-muted-foreground">
-              {t("requestHint")}
-            </p>
-          </div>
-        )}
-
-        <div className="flex flex-wrap items-center gap-3 border-t border-border pt-3">
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="text-destructive hover:text-destructive"
-            onClick={() => {
-              setConfirmEmail("")
-              setHardOpen(true)
-            }}
-          >
-            <Trash2 className="h-4 w-4" aria-hidden />
-            {t("hardDelete")}
-          </Button>
-          <p className="text-xs text-muted-foreground">{t("hardDeleteHint")}</p>
-        </div>
-      </CardContent>
+          }
+        />
+        <Separator />
+        <DangerRow
+          title={t("hardDelete")}
+          description={t("hardDeleteHint")}
+          action={
+            <Button
+              type="button"
+              variant="ghost"
+              className="text-destructive hover:text-destructive"
+              onClick={() => {
+                setConfirmEmail("")
+                setHardOpen(true)
+              }}
+            >
+              <Trash2 className="h-4 w-4" aria-hidden />
+              {t("hardDelete")}
+            </Button>
+          }
+        />
+      </DangerCard>
 
       <Dialog open={requestOpen} onOpenChange={setRequestOpen}>
         <DialogContent>
@@ -252,6 +257,6 @@ export function AdminDangerZone({ userId, email, deletedAt }: Props) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </Card>
+    </>
   )
 }

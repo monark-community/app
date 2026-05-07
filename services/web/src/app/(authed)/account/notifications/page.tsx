@@ -1,3 +1,4 @@
+import { AccountPageHeader } from "../account-page-header"
 import { NotificationsSection } from "../notifications-section"
 
 /**
@@ -7,5 +8,10 @@ import { NotificationsSection } from "../notifications-section"
  * page is settings only.
  */
 export default function AccountNotificationsPage() {
-  return <NotificationsSection />
+  return (
+    <div className="space-y-8">
+      <AccountPageHeader tab="notifications" />
+      <NotificationsSection />
+    </div>
+  )
 }

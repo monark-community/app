@@ -7,7 +7,11 @@ import {
   UnauthorizedError,
   ValidationError,
 } from "@monark/common"
-import { adminAssignmentSummary, getAllAssignments } from "@monark/rbac/server"
+import {
+  adminAssignmentSummary,
+  getAllAssignments,
+  requirePermission,
+} from "@monark/rbac/server"
 import type {
   UserDeletionCanceledEvent,
   UserDeletionRequestedEvent,
@@ -22,6 +26,12 @@ import {
   updateEmail,
   updateProfileData,
 } from "./data"
+import {
+  deleteUserMetadataValue,
+  getUserMetadataValue,
+  listUserMetadataForModule,
+  setUserMetadataValue,
+} from "./metadata"
 
 // Centralised admin gate for the `users.admin*` procedures. Mirrors the
 // rbac.isAdmin check the /admin route layout uses, so a non-admin can't
@@ -311,6 +321,109 @@ export const usersRouter = router({
       }
       await emit(event)
     }),
+
+  // ── Generic metadata sidecar ────────────────────────────────────
+  // Read / write per-user JSON cells scoped to a specific module.
+  // Authorization is module-aware : the caller needs the
+  // `users.read-metadata-for-module-<module>` permission for reads
+  // (or to be the user themselves) ; writes need
+  // `users.write-metadata-for-module-<module>`. Each owning module
+  // registers those permissions at boot via
+  // `registerPermissions("users", { ... })` so non-core extensions
+  // can opt-in to operating on user metadata without modifying core.
+  metadata: router({
+    list: publicProcedure
+      .input(
+        z.object({
+          userId: z.string().min(1),
+          module: z.string().min(1),
+        }),
+      )
+      .query(async ({ ctx, input }) => {
+        const isSelf = ctx.userId === input.userId
+        if (!isSelf) {
+          await requirePermission(
+            ctx,
+            `users.read-metadata-for-module-${input.module}`,
+          )
+        }
+        return listUserMetadataForModule(input.userId, input.module)
+      }),
+
+    get: publicProcedure
+      .input(
+        z.object({
+          userId: z.string().min(1),
+          module: z.string().min(1),
+          key: z.string().min(1),
+        }),
+      )
+      .query(async ({ ctx, input }) => {
+        const isSelf = ctx.userId === input.userId
+        if (!isSelf) {
+          await requirePermission(
+            ctx,
+            `users.read-metadata-for-module-${input.module}`,
+          )
+        }
+        return getUserMetadataValue(input.userId, input.module, input.key)
+      }),
+
+    set: publicProcedure
+      .input(
+        z.object({
+          userId: z.string().min(1),
+          module: z.string().min(1),
+          key: z.string().min(1),
+          // `unknown` accepts arbitrary JSON ; the data layer stores
+          // it verbatim. Modules validate their own value shape on
+          // the way in.
+          value: z.unknown(),
+        }),
+      )
+      .mutation(async ({ ctx, input }) => {
+        await requirePermission(
+          ctx,
+          `users.write-metadata-for-module-${input.module}`,
+        )
+        return setUserMetadataValue({
+          userId: input.userId,
+          module: input.module,
+          key: input.key,
+          value: input.value,
+        })
+      }),
+
+    delete: publicProcedure
+      .input(
+        z.object({
+          userId: z.string().min(1),
+          module: z.string().min(1),
+          key: z.string().min(1),
+        }),
+      )
+      .mutation(async ({ ctx, input }) => {
+        await requirePermission(
+          ctx,
+          `users.write-metadata-for-module-${input.module}`,
+        )
+        await deleteUserMetadataValue(
+          input.userId,
+          input.module,
+          input.key,
+        )
+      }),
+  }),
 })
 
 export { getById, getByIdOrThrow, getByEmail, getCurrent, type User } from "./read"
+export { registerUsersPermissions } from "./permissions"
+export { registerUsersEventTypes } from "./event-types"
+export {
+  listUserMetadataForModule,
+  getUserMetadataValue,
+  setUserMetadataValue,
+  deleteUserMetadataValue,
+  deleteUserMetadataForModule,
+  type UserMetadataRow,
+} from "./metadata"

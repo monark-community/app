@@ -1,7 +1,9 @@
 import { cookies } from "next/headers"
+import { Separator } from "@/components/ui/separator"
 import { createSupabaseServerClient } from "@/lib/supabase/server"
 import { createServerTrpcClient } from "@/lib/trpc-server"
 import { DEVICE_COOKIE_NAME } from "@/lib/trusted-device-cookie"
+import { AccountPageHeader } from "../account-page-header"
 import { EmailSection } from "../email-section"
 import { PasswordSection } from "../password-section"
 import { TotpSection } from "../totp-section"
@@ -32,11 +34,15 @@ export default async function AccountSecurityPage() {
     : null
 
   return (
-    <>
+    <div className="space-y-8">
+      <AccountPageHeader tab="security" />
       <EmailSection />
+      <Separator />
       <PasswordSection />
+      <Separator />
       <TotpSection />
+      <Separator />
       <TrustedDevicesSection currentDeviceId={currentDeviceId} />
-    </>
+    </div>
   )
 }

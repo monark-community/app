@@ -1,10 +1,11 @@
 "use client"
 
-import Link from "next/link"
 import { useLocale, useTranslations } from "next-intl"
-import { ArrowLeft, Clock, ShieldOff } from "lucide-react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Clock, ShieldOff } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
+import { Separator } from "@/components/ui/separator"
 import { Skeleton } from "@/components/ui/skeleton"
+import { PageSection } from "@/components/page-section"
 import { trpc } from "@/lib/trpc"
 import { AdminAccountActions } from "./admin-account-actions"
 import { AdminDangerZone } from "./admin-danger-zone"
@@ -32,112 +33,103 @@ export function UserDetail({ userId }: { userId: string }) {
     { refetchOnWindowFocus: false },
   )
 
+  if (query.isLoading) {
+    return (
+      <section className="space-y-8">
+        <Skeleton className="h-40 w-full" />
+        <Skeleton className="h-32 w-full" />
+      </section>
+    )
+  }
+
+  if (query.isError || !query.data) {
+    return (
+      <section className="space-y-4">
+        <p className="rounded-md border border-dashed border-border px-4 py-10 text-center text-sm text-muted-foreground">
+          {t("loadError")}
+        </p>
+      </section>
+    )
+  }
+
+  const user = query.data.user
+  const badges = (
+    <>
+      {user.disabledAt && (
+        <Badge variant="secondary">
+          <ShieldOff className="h-3 w-3" aria-hidden />
+          {tBadges("disabled")}
+        </Badge>
+      )}
+      {user.deletedAt && (
+        <Badge variant="warning">
+          <Clock className="h-3 w-3" aria-hidden />
+          {tBadges("pendingDeletion")}
+        </Badge>
+      )}
+    </>
+  )
+
   return (
-    <section className="space-y-4">
-      <div>
-        <Link
-          href="/admin/users"
-          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
-        >
-          <ArrowLeft className="h-4 w-4" aria-hidden />
-          {t("back")}
-        </Link>
-      </div>
+    <section className="space-y-8">
+      <AdminProfileForm
+        user={user}
+        badges={badges}
+        backHref="/admin/users"
+        backLabel={t("back")}
+      />
 
-      {query.isLoading && (
-        <Card>
-          <CardHeader>
-            <Skeleton className="h-6 w-48" />
-            <Skeleton className="h-4 w-72" />
-          </CardHeader>
-          <CardContent>
-            <Skeleton className="h-32 w-full" />
-          </CardContent>
-        </Card>
-      )}
+      <Separator />
 
-      {query.isError && (
-        <Card>
-          <CardContent className="py-8 text-center text-sm text-muted-foreground">
-            {t("loadError")}
-          </CardContent>
-        </Card>
-      )}
-
-      {query.data && (
-        <>
-          <div className="flex flex-wrap items-center gap-2">
-            <h1 className="mr-auto text-xl font-semibold tracking-tight">
-              {query.data.user.displayName ?? query.data.user.email}
-            </h1>
-            {query.data.user.disabledAt && (
-              <span className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-0.5 text-xs text-muted-foreground">
-                <ShieldOff className="h-3 w-3" aria-hidden />
-                {tBadges("disabled")}
-              </span>
-            )}
-            {query.data.user.deletedAt && (
-              <span className="inline-flex items-center gap-1 rounded-md bg-amber-400/10 px-2 py-0.5 text-xs text-amber-500">
-                <Clock className="h-3 w-3" aria-hidden />
-                {tBadges("pendingDeletion")}
-              </span>
-            )}
-          </div>
-
-          <AdminProfileForm user={query.data.user} />
-
-          <Card className="bg-transparent shadow-none">
-            <CardHeader>
-              <CardTitle>{t("identity.title")}</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2 text-sm">
-              <Row label={t("identity.id")} value={query.data.user.id} />
-              <Row label={t("identity.email")} value={query.data.user.email} />
-              <Row
-                label={t("identity.emailVerified")}
-                value={
-                  query.data.user.emailVerifiedAt
-                    ? t("yes")
-                    : t("no")
-                }
-              />
-              <Row
-                label={t("identity.createdAt")}
-                value={formatDate(query.data.user.createdAt, locale)}
-              />
-              {query.data.user.deletedAt && (
-                <Row
-                  label={t("identity.deletedAt")}
-                  value={formatDate(query.data.user.deletedAt, locale)}
-                />
-              )}
-            </CardContent>
-          </Card>
-
-          <AdminRoles
-            userId={query.data.user.id}
-            assignments={query.data.assignments}
-            disabled={Boolean(query.data.user.deletedAt)}
+      <PageSection title={t("identity.title")}>
+        <dl className="space-y-2 text-sm">
+          <Row label={t("identity.id")} value={user.id} />
+          <Row label={t("identity.email")} value={user.email} />
+          <Row
+            label={t("identity.emailVerified")}
+            value={user.emailVerifiedAt ? t("yes") : t("no")}
           />
-
-          <AdminAccountActions
-            userId={query.data.user.id}
-            email={query.data.user.email}
-            disabled={Boolean(query.data.user.deletedAt)}
+          <Row
+            label={t("identity.createdAt")}
+            value={formatDate(user.createdAt, locale)}
           />
+          {user.deletedAt && (
+            <Row
+              label={t("identity.deletedAt")}
+              value={formatDate(user.deletedAt, locale)}
+            />
+          )}
+        </dl>
+      </PageSection>
 
-          <AdminNotifications
-            userId={query.data.user.id}
-            disabled={Boolean(query.data.user.deletedAt)}
-          />
+      <Separator />
 
-          <AdminDangerZone
-            userId={query.data.user.id}
-            email={query.data.user.email}
-            deletedAt={query.data.user.deletedAt}
-          />
-        </>
-      )}
+      <AdminRoles
+        userId={user.id}
+        assignments={query.data.assignments}
+        disabled={Boolean(user.deletedAt)}
+      />
+
+      <Separator />
+
+      <AdminAccountActions
+        userId={user.id}
+        email={user.email}
+        disabled={Boolean(user.deletedAt)}
+      />
+
+      <Separator />
+
+      <AdminNotifications
+        userId={user.id}
+        disabled={Boolean(user.deletedAt)}
+      />
+
+      <AdminDangerZone
+        userId={user.id}
+        email={user.email}
+        deletedAt={user.deletedAt}
+      />
     </section>
   )
 }
@@ -145,8 +137,8 @@ export function UserDetail({ userId }: { userId: string }) {
 function Row({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-baseline justify-between gap-4">
-      <span className="text-muted-foreground">{label}</span>
-      <span className="truncate text-right font-medium">{value}</span>
+      <dt className="text-muted-foreground">{label}</dt>
+      <dd className="truncate text-right font-medium">{value}</dd>
     </div>
   )
 }

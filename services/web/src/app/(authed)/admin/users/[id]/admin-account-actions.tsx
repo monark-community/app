@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl"
 import { Mail } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { PageSection } from "@/components/page-section"
 import { adminSendPasswordResetAction } from "../admin-actions"
 
 /**
@@ -43,30 +43,19 @@ export function AdminAccountActions({
   }
 
   return (
-    <Card className="bg-transparent shadow-none">
-      <CardHeader>
-        <CardTitle>{t("title")}</CardTitle>
-        <CardDescription>{t("subtitle")}</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-2">
-        <div className="flex flex-wrap items-center gap-3">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={onSendReset}
-            disabled={isPending || disabled}
-          >
-            <Mail className="h-4 w-4" aria-hidden />
-            {isPending
-              ? t("passwordReset.sending")
-              : t("passwordReset.cta")}
-          </Button>
-          <p className="text-xs text-muted-foreground">
-            {t("passwordReset.hint")}
-          </p>
-        </div>
-      </CardContent>
-    </Card>
+    <PageSection title={t("title")} subtitle={t("subtitle")}>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        onClick={onSendReset}
+        disabled={isPending || disabled}
+      >
+        <Mail className="h-4 w-4" aria-hidden />
+        {isPending
+          ? t("passwordReset.sending")
+          : t("passwordReset.cta")}
+      </Button>
+    </PageSection>
   )
 }

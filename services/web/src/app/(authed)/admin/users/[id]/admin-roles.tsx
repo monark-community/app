@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl"
 import { Plus } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { PageSection } from "@/components/page-section"
 import {
   Dialog,
   DialogContent,
@@ -96,12 +96,7 @@ export function AdminRoles({
   })
 
   return (
-    <Card className="bg-transparent shadow-none">
-      <CardHeader>
-        <CardTitle>{t("title")}</CardTitle>
-        <CardDescription>{t("subtitle")}</CardDescription>
-      </CardHeader>
-      <CardContent>
+    <PageSection title={t("title")} subtitle={t("subtitle")}>
         {/*
           Inline flex-wrap of removable chips + a dashed outline "+
           Add new role" chip at the end. The empty state collapses to
@@ -132,14 +127,13 @@ export function AdminRoles({
             {t("addCta")}
           </button>
         </div>
-      </CardContent>
 
       <AssignRoleDialog
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         userId={userId}
       />
-    </Card>
+    </PageSection>
   )
 }
 

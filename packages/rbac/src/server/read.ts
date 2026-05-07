@@ -3,6 +3,7 @@ import {
   ADMIN_ROLE_KEY,
   BUILTIN_ALL_PERMISSIONS_KEYS,
 } from "../contracts/role"
+import { parsePermissionKey } from "../contracts/permissions"
 import {
   findActiveAssignments,
   findAllActiveAssignments,
@@ -81,9 +82,15 @@ export async function hasRoleKey(
 // for any of the user's other role assignments.
 export async function hasPermission(
   userId: string,
-  permission: string,
+  dottedPermission: string,
   orgId?: string,
 ): Promise<boolean> {
+  const parsed = parsePermissionKey(dottedPermission)
+  if (!parsed) {
+    throw new ValidationError(
+      `hasPermission expects a dotted "<module>.<key>" form ; got "${dottedPermission}".`,
+    )
+  }
   const assignments = await findActiveAssignments(userId, orgId)
   if (assignments.length === 0) return false
   for (const a of assignments) {
@@ -94,7 +101,11 @@ export async function hasPermission(
   const roleIds = assignments.map((a) => a.roleId)
   const db = getDb()
   const granted = await db.rolePermission.findFirst({
-    where: { roleId: { in: roleIds }, permission },
+    where: {
+      roleId: { in: roleIds },
+      module: parsed.module,
+      permission: parsed.key,
+    },
     select: { id: true },
   })
   return granted !== null

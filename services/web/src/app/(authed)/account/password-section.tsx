@@ -5,7 +5,6 @@ import { useTranslations } from "next-intl"
 import { toast } from "sonner"
 import { checkPasswordOffline } from "@monark/auth/contracts"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Dialog,
   DialogContent,
@@ -17,6 +16,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { PasswordStrengthMeter } from "@/components/password-strength-meter"
+import { PageSection } from "@/components/page-section"
 import { TotpConfirmDialog } from "@/components/totp-confirm-dialog"
 import { trpc } from "@/lib/trpc"
 import { changePasswordAction, type ChangePasswordResult } from "./actions"
@@ -117,16 +117,10 @@ export function PasswordSection() {
   }
 
   return (
-    <Card className="bg-transparent shadow-none">
-      <CardHeader>
-        <CardTitle>{t("title")}</CardTitle>
-        <CardDescription>{t("subtitle")}</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <Button type="button" variant="outline" onClick={() => setOpen(true)}>
-          {t("change")}
-        </Button>
-      </CardContent>
+    <PageSection title={t("title")} subtitle={t("subtitle")}>
+      <Button type="button" variant="outline" onClick={() => setOpen(true)}>
+        {t("change")}
+      </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-md">
@@ -228,6 +222,6 @@ export function PasswordSection() {
         errorKey={dialogError}
         pending={isPending}
       />
-    </Card>
+    </PageSection>
   )
 }

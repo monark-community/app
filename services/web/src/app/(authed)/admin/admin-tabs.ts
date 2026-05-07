@@ -2,11 +2,12 @@ import {
   Building2,
   KeyRound,
   Users,
+  Webhook,
   type LucideIcon,
 } from "lucide-react"
 
 export type AdminTab = {
-  id: "organizations" | "users" | "rbac"
+  id: "organizations" | "users" | "rbac" | "webhooks"
   href: `/admin/${string}`
   icon: LucideIcon
 }
@@ -20,11 +21,14 @@ export type AdminTab = {
  *
  * Order : organization first since it's the spine of the deploy
  * (especially in single-tenant where it's the operator's own profile),
- * users next as the day-to-day surface, rbac last because role config
- * is rarer.
+ * users next as the day-to-day surface, rbac after that because role
+ * config is rarer, webhooks last because endpoint config is platform
+ * plumbing — operators set it up once and revisit only when an
+ * integration breaks.
  */
 export const ADMIN_TABS: ReadonlyArray<AdminTab> = [
   { id: "organizations", href: "/admin/organizations", icon: Building2 },
   { id: "users", href: "/admin/users", icon: Users },
   { id: "rbac", href: "/admin/rbac", icon: KeyRound },
+  { id: "webhooks", href: "/admin/webhooks", icon: Webhook },
 ]

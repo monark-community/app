@@ -1,16 +1,17 @@
-import { emit } from "@monark/common"
-import { ValidationError } from "@monark/common"
+import { emit, ValidationError } from "@monark/common"
 import {
-  FLAGS,
   isKnownFlag,
+  listFlagDescriptors,
+  parseFlagKey,
   type FlagFlippedEvent,
-  type FlagKey,
   type FlagScope,
 } from "../contracts/index"
 import { writeOverride, deleteOverride } from "./data"
 
 function assertValidScope(scope: FlagScope): void {
-  const parts = [scope.organizationId, scope.userId, scope.roleId].filter(Boolean)
+  const parts = [scope.organizationId, scope.userId, scope.roleId].filter(
+    Boolean,
+  )
   if (parts.length > 1) {
     throw new ValidationError(
       "A feature flag override scope must target exactly one of organizationId, userId, or roleId (or none, for a global override).",
@@ -18,32 +19,43 @@ function assertValidScope(scope: FlagScope): void {
   }
 }
 
-function assertKnownFlag(key: string): asserts key is FlagKey {
-  if (!isKnownFlag(key)) {
-    throw new ValidationError(`Unknown feature flag: ${key}`)
+function assertKnownFlag(
+  dotted: string,
+): { module: string; key: string } {
+  if (!isKnownFlag(dotted)) {
+    throw new ValidationError(`Unknown feature flag : ${dotted}`)
   }
+  // isKnownFlag already validated parsability, so this is non-null.
+  return parseFlagKey(dotted)!
 }
 
 export async function setOverride(
-  key: string,
+  dottedKey: string,
   scope: FlagScope,
   enabled: boolean,
   actorId: string,
   note?: string,
 ): Promise<void> {
-  assertKnownFlag(key)
+  const ref = assertKnownFlag(dottedKey)
   assertValidScope(scope)
 
-  // TODO: once @monark/rbac lands, guard this with requireRole("admin") on the caller context.
   if (!actorId) {
     throw new ValidationError("actorId is required to set a flag override.")
   }
 
-  await writeOverride({ flagKey: key, scope, enabled, setById: actorId, note })
+  await writeOverride({
+    module: ref.module,
+    flagKey: ref.key,
+    scope,
+    enabled,
+    setById: actorId,
+    note,
+  })
 
   const event: FlagFlippedEvent = {
     type: "feature-flag.flipped",
-    flagKey: key,
+    module: ref.module,
+    flagKey: ref.key,
     scope,
     enabled,
     actorId,
@@ -52,7 +64,10 @@ export async function setOverride(
   await emit(event)
 }
 
-export async function removeOverride(id: string, actorId: string): Promise<void> {
+export async function removeOverride(
+  id: string,
+  actorId: string,
+): Promise<void> {
   if (!actorId) {
     throw new ValidationError("actorId is required to remove a flag override.")
   }
@@ -60,15 +75,15 @@ export async function removeOverride(id: string, actorId: string): Promise<void>
 }
 
 export function listFlagDefinitions(): Array<{
-  key: FlagKey
+  key: string
+  module: string
   description: string
   defaultOn: boolean
 }> {
-  return (Object.entries(FLAGS) as Array<
-    [FlagKey, { description: string; defaultOn: boolean }]
-  >).map(([key, meta]) => ({
-    key,
-    description: meta.description,
-    defaultOn: meta.defaultOn,
+  return listFlagDescriptors().map((d) => ({
+    key: `${d.module}.${d.key}`,
+    module: d.module,
+    description: d.description,
+    defaultOn: d.defaultOn,
   }))
 }

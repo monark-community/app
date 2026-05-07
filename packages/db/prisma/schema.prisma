@@ -45,6 +45,31 @@ model User {
   rolesRevoked        RoleAssignment[]         @relation("RoleRevoker")
   notifications       Notification[]
   notifPreferences    NotificationPreference[]
+  metadata            UserMetadata[]
+}
+
+// Generic key/value sidecar for non-core modules to attach data to a
+// User without modifying the core schema. Identity is (userId,
+// module, key) ; the value is unstructured JSON. Modules read + write
+// only their own slice (`module = '<their-package-name>'`) — the
+// generic CRUD procedures in @monark/users gate access via
+// `users.write-metadata-for-module-<x>` permissions registered by the
+// owning module. Core modules don't use this sidecar ; they extend
+// User directly (the schema lives next to them) — the sidecar is for
+// extensions that can't or shouldn't touch core.
+model UserMetadata {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  module    String
+  key       String
+  value     Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, module, key])
+  @@index([module])
+  @@index([userId, module])
 }
 
 model PendingEmailChange {
@@ -201,14 +226,18 @@ model RolePermission {
   id         String   @id @default(cuid())
   roleId     String
   role       Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
-  // Permission key : a string from the in-code permission registry
-  // (`packages/rbac/src/contracts/permissions.ts`). Stored as text so
-  // the DB doesn't need to care about which permissions exist ; the
-  // code-side resolver ignores rows referencing unknown keys.
+  // Module that registered this permission via `registerPermissions()`.
+  // Two modules may declare the same `permission` slug without
+  // colliding because uniqueness is on (roleId, module, permission).
+  module     String
+  // Permission slug : a string from the merged permission registry
+  // built at api boot. Stored as text so the DB doesn't need to care
+  // about which permissions exist ; the code-side resolver ignores
+  // rows whose (module, permission) pair isn't currently registered.
   permission String
   createdAt  DateTime @default(now())
 
-  @@unique([roleId, permission])
+  @@unique([roleId, module, permission])
   @@index([roleId])
 }
 
@@ -262,6 +291,26 @@ model Organization {
   slugRedirects   OrgSlugRedirect[]
   roleAssignments RoleAssignment[]
   roles           Role[]
+  metadata        OrganizationMetadata[]
+  webhookEndpoints WebhookEndpoint[]
+}
+
+// Same shape as UserMetadata, scoped to an organization. Powers
+// extended modules that need per-org settings without modifying the
+// core schema. Identity is (organizationId, module, key).
+model OrganizationMetadata {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  module         String
+  key            String
+  value          Json
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@unique([organizationId, module, key])
+  @@index([module])
+  @@index([organizationId, module])
 }
 
 model OrganizationMembership {
@@ -317,19 +366,28 @@ model OrgSlugRedirect {
 }
 
 // ── MODULE: feature-flags ────────────────────────────────
+// Flags are keyed on (module, key) so non-core modules can register
+// their own flag namespace without colliding with core. Core modules
+// own these prefixes : `auth`, `feature-flags`, `notifications`,
+// `organizations`, `rbac`, `users`, `webhooks`. An extended module
+// owns whatever module-name string its package uses (e.g. `posts`).
 model FeatureFlag {
-  key         String                @id
+  module      String
+  key         String
   description String
   defaultOn   Boolean               @default(false)
   createdAt   DateTime              @default(now())
   updatedAt   DateTime              @updatedAt
   overrides   FeatureFlagOverride[]
+
+  @@id([module, key])
 }
 
 model FeatureFlagOverride {
   id      String      @id @default(cuid())
+  module  String
   flagKey String
-  flag    FeatureFlag @relation(fields: [flagKey], references: [key], onDelete: Cascade)
+  flag    FeatureFlag @relation(fields: [module, flagKey], references: [module, key], onDelete: Cascade)
 
   // Exactly one of these three is non-null; enforced at the app layer.
   // A role-scoped override targets every user holding any active
@@ -344,8 +402,8 @@ model FeatureFlagOverride {
   setAt   DateTime @default(now())
   note    String?
 
-  @@unique([flagKey, organizationId, userId, roleId])
-  @@index([flagKey])
+  @@unique([module, flagKey, organizationId, userId, roleId])
+  @@index([module, flagKey])
 }
 
 // ── MODULE: notifications ────────────────────────────────
@@ -418,4 +476,159 @@ enum NotificationCategory {
   ACCOUNT
   ACTIVITY
   DIGEST
+}
+
+// ── MODULE: webhooks ────────────────────────────────────
+// Operator-registered HTTP endpoints that receive a fan-out of domain
+// events. The lifecycle :
+//   1. An operator (or extended module on its behalf) creates a
+//      `WebhookEndpoint` row with target URL + a freshly-minted shared
+//      secret (only the SHA-256 hash is persisted).
+//   2. They subscribe the endpoint to one or more event types via
+//      `WebhookSubscription` rows. Subscriptions can be exact
+//      (`type = "rbac.role-assigned"`) or prefix (`isPrefix = true`,
+//      e.g. `type = "rbac."` matches every rbac event).
+//   3. At emit-time the webhook subscriber writes a `WebhookDelivery`
+//      outbox row inside the same Prisma transaction as the source
+//      mutation. The outbox guarantees at-least-once semantics across
+//      process crashes ; subscribers never lose work between
+//      `emit()` and the actual HTTP POST.
+//   4. A worker (in-process setInterval + the `/cron/sweep-webhook-
+//      deliveries` endpoint as a fallback) drains pending rows,
+//      signs the body with HMAC-SHA-256 of the endpoint's secret,
+//      POSTs, and records the attempt in `WebhookDeliveryAttempt`.
+//   5. Failures retry with exponential backoff up to a hard cap ; the
+//      endpoint is auto-disabled after `WebhookDeliveryFailureLimit`
+//      consecutive failures and emits `webhook.endpoint-disabled-
+//      after-failures` for operator notification.
+//
+// Extended modules don't need to touch any of this. The subscriber
+// listens for `*` from the in-memory event bus, so any event whose
+// type matches a subscription routes automatically — including
+// extended modules' events the moment they're added to
+// `modules.manifest.ts`.
+model WebhookEndpoint {
+  id             String                  @id @default(cuid())
+  // Optional org scope. Null = platform-tier endpoint (only sysadmins
+  // can manage). Non-null = the org's operators manage it ; only
+  // events scoped to that org reach it.
+  organizationId String?
+  organization   Organization?           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  url            String
+  description    String?
+  // SHA-256 hash of the shared signing secret. The plaintext is
+  // returned exactly once at creation time (and on rotation) so the
+  // operator can configure their receiver ; never stored.
+  secretHash     String
+  // Lifecycle. `active` is the steady state ; `disabled` is set
+  // manually by an operator OR automatically after consecutive
+  // delivery failures hit the cap. A disabled endpoint stops
+  // accumulating outbox rows ; pre-existing pending rows are still
+  // delivered on the next sweep so an outage doesn't lose
+  // already-queued events.
+  status         WebhookEndpointStatus   @default(active)
+  // Consecutive failure count, reset on the next successful delivery.
+  // Used by the worker to flip status → disabled when the cap is hit.
+  consecutiveFailures Int                @default(0)
+  createdAt      DateTime                @default(now())
+  updatedAt      DateTime                @updatedAt
+  disabledAt     DateTime?
+  disabledReason String?
+
+  subscriptions WebhookSubscription[]
+  deliveries    WebhookDelivery[]
+
+  @@index([organizationId])
+  @@index([status])
+}
+
+enum WebhookEndpointStatus {
+  active
+  disabled
+}
+
+model WebhookSubscription {
+  id         String          @id @default(cuid())
+  endpointId String
+  endpoint   WebhookEndpoint @relation(fields: [endpointId], references: [id], onDelete: Cascade)
+  // Event-type filter. When `isPrefix = false` (default) the type
+  // must match exactly. When `isPrefix = true` any event whose type
+  // starts with this string matches — e.g. `"rbac."` catches every
+  // rbac event, `""` catches every event (use sparingly).
+  eventType  String
+  isPrefix   Boolean         @default(false)
+  createdAt  DateTime        @default(now())
+
+  @@unique([endpointId, eventType, isPrefix])
+  @@index([endpointId])
+  @@index([eventType])
+}
+
+// One row per intended delivery. Created inside the source
+// transaction, drained asynchronously. `nextAttemptAt` is the schedule
+// hint the worker uses to pick rows ; on success we set
+// `deliveredAt` ; on permanent failure (retries exhausted) we set
+// `failedAt` + `lastError`.
+model WebhookDelivery {
+  id             String                @id @default(cuid())
+  endpointId     String
+  endpoint       WebhookEndpoint       @relation(fields: [endpointId], references: [id], onDelete: Cascade)
+  eventType      String
+  // Full DomainEvent payload as the subscriber saw it. Receivers
+  // parse this against the published event schema for the matching
+  // type ; we keep it untyped at the DB layer because the event
+  // shape is owned by the originating module.
+  payload        Json
+  // Stable hash of `(endpointId, eventType, dedupeBasis)` where
+  // dedupeBasis is the event's own `correlationId` if present (or
+  // a hash of the payload otherwise). Sent in the
+  // `Webhook-Delivery-Idempotency-Key` HTTP header so a receiver
+  // dedupes retries without seeing two near-identical bodies.
+  idempotencyKey String                @unique
+  status         WebhookDeliveryStatus @default(pending)
+  attempts       Int                   @default(0)
+  // First attempt is `createdAt` ; on retry we push this forward by
+  // an exponential-backoff delta. The worker only picks rows where
+  // `nextAttemptAt <= now()` AND `status = 'pending'`.
+  nextAttemptAt  DateTime              @default(now())
+  deliveredAt    DateTime?
+  failedAt       DateTime?
+  lastError      String?
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+
+  attempts_      WebhookDeliveryAttempt[]
+
+  @@index([endpointId])
+  @@index([status, nextAttemptAt])
+  @@index([eventType])
+}
+
+enum WebhookDeliveryStatus {
+  pending
+  delivered
+  failed
+}
+
+// One row per HTTP attempt. Survives the parent `WebhookDelivery`'s
+// success / failure terminal state so operators can debug a flaky
+// endpoint by reading the per-attempt status / latency / error rows.
+model WebhookDeliveryAttempt {
+  id           String          @id @default(cuid())
+  deliveryId   String
+  delivery     WebhookDelivery @relation(fields: [deliveryId], references: [id], onDelete: Cascade)
+  attemptNumber Int
+  startedAt    DateTime        @default(now())
+  finishedAt   DateTime?
+  // HTTP status code when the request completed ; null when the
+  // attempt failed before getting a response (DNS / TCP / TLS / read
+  // timeout).
+  statusCode   Int?
+  // Network / parse error string when statusCode is null. Truncated
+  // to 1k chars by the worker so a chatty receiver can't blow the
+  // row size up.
+  error        String?
+  durationMs   Int?
+
+  @@index([deliveryId])
 }

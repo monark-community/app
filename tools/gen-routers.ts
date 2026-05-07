@@ -35,28 +35,41 @@ export type AppRouter = typeof appRouter
 `
   }
 
-  const missing: string[] = []
+  // Modules without a server/index.ts (or one that doesn't export a
+  // <name>Router) are pure-config / data-only modules — e.g.
+  // @monark/branding contributes constants, not procedures. Skip
+  // them silently so the generated app router stays clean.
+  const routerModules: string[] = []
   for (const name of names) {
     const p = resolve(APP_ROOT, "packages", packageDirName(name), "src/server/index.ts")
-    if (!(await exists(p))) {
-      missing.push(`${name} (expected ${p})`)
-    }
-  }
-  if (missing.length > 0) {
-    throw new Error(
-      `gen:routers: missing server/index.ts in modules:\n  ${missing.join("\n  ")}`,
-    )
+    if (!(await exists(p))) continue
+    const source = await readFile(p, "utf8")
+    const expectedExport = `export { ${moduleRouterName(name)}`
+    const expectedAlt = `export const ${moduleRouterName(name)}`
+    if (!source.includes(expectedExport) && !source.includes(expectedAlt)) continue
+    routerModules.push(name)
   }
 
-  const imports = names
+  if (routerModules.length === 0) {
+    return `${HEADER}import { router } from "@monark/common/trpc"
+
+// No modules export a tRPC sub-router yet.
+export const appRouter = router({})
+export type AppRouter = typeof appRouter
+`
+  }
+
+  const imports = routerModules
     .map((name) => {
       const routerVar = moduleRouterName(name)
       return `import { ${routerVar} } from "${name}/server"`
     })
     .join("\n")
 
-  const longestKeyLength = Math.max(...names.map((n) => routerKey(n).length))
-  const entries = names
+  const longestKeyLength = Math.max(
+    ...routerModules.map((n) => routerKey(n).length),
+  )
+  const entries = routerModules
     .map((name) => {
       const key = routerKey(name)
       const padded = key.padEnd(longestKeyLength)

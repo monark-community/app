@@ -82,11 +82,11 @@ export function AppBarBreadcrumb() {
     return { segment, before, href, isLast: index === segments.length - 1 }
   })
 
-  // Truncation : keep the first two crumbs + ellipsis + last when the
-  // path is deeper than three segments. Three or fewer renders verbatim.
-  // Picks first-two-plus-last instead of first-plus-last-two so the
-  // top-of-app context (Admin / Organizations) stays visible — that's
-  // the part the user navigates "back up" through.
+  // Truncation : keep the first crumb + ellipsis + the last two when
+  // the path is deeper than three segments. Three or fewer renders
+  // verbatim. Picks first-plus-last-two so the immediate ancestor +
+  // the current page (the part the user is most likely to click) stay
+  // visible ; the top-of-app context survives as the first crumb.
   const visible: Array<
     | { kind: "crumb"; segment: string; before: string; href: string; isLast: boolean }
     | { kind: "ellipsis" }
@@ -95,8 +95,8 @@ export function AppBarBreadcrumb() {
       ? items.map((item) => ({ kind: "crumb" as const, ...item }))
       : [
           { kind: "crumb" as const, ...items[0]! },
-          { kind: "crumb" as const, ...items[1]! },
           { kind: "ellipsis" as const },
+          { kind: "crumb" as const, ...items[items.length - 2]! },
           { kind: "crumb" as const, ...items[items.length - 1]! },
         ]
 

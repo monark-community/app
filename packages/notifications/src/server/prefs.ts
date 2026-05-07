@@ -4,7 +4,7 @@ import type {
 } from "@monark/db"
 import { getDb } from "@monark/db"
 import {
-  NOTIFICATION_KINDS,
+  getNotificationKindDef,
   type NotificationKind,
 } from "../contracts/registry"
 
@@ -29,7 +29,11 @@ export function resolveChannelEnabled(input: {
   channel: NotificationChannel
   rows: PrefRow[]
 }): boolean {
-  const def = NOTIFICATION_KINDS[input.kind]
+  const def = getNotificationKindDef(input.kind)
+  // Unregistered kinds are treated as "off everywhere" — defensive
+  // default for the case where a renamed kind still has stale
+  // Notification rows pointing at it.
+  if (!def) return false
   if (def.requiredEmail && input.channel === "EMAIL") return true
   const match = input.rows.find(
     (r) => r.category === def.category && r.channel === input.channel,

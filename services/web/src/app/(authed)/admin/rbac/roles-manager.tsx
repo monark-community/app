@@ -4,6 +4,7 @@ import Link from "next/link"
 import { useEffect, useMemo, useState } from "react"
 import { useTranslations } from "next-intl"
 import { ChevronRight, Lock, Plus, Search } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -174,10 +175,10 @@ export function RolesManager() {
                     <div className="flex items-center gap-2">
                       <RoleChip name={role.name} color={role.color} />
                       {role.builtIn && (
-                        <span className="inline-flex items-center gap-1 rounded-md bg-muted px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">
+                        <Badge variant="secondary" size="sm">
                           <Lock className="h-3 w-3" aria-hidden />
                           {t("badges.builtIn")}
-                        </span>
+                        </Badge>
                       )}
                       {isBuiltInAdmin && (
                         <span className="text-[10px] uppercase tracking-wide text-muted-foreground">

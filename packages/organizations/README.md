@@ -82,7 +82,9 @@ No seed data ships by default; the first org is created through the (not-yet-bui
 
 ## Events consumed
 
-None yet.
+- `user.signed-up` and `user.signed-in` — `registerOrganizationsSubscribers()` listens on both and runs `ensureSingletonMembership(userId)`. In single-tenant deploys with exactly one org, this idempotently upserts an `OrganizationMembership` row and emits `organization.member-joined` so downstream listeners (notifications, webhooks) see the user join with the same shape as an invite-driven membership. Short-circuits when the multi-tenant flag is ON, when there is zero or more than one org, or when the user already has an active membership in the singleton. Members the operator explicitly removed (rows with `leftAt` set) are NOT auto-rejoined — a sign-in won't silently undo an admin-initiated removal.
+
+  Wire the subscriber once at api boot from [services/api/src/server.ts](../../services/api/src/server.ts), before `registerWebhookSubscribers()` so the derived `member-joined` event reaches the webhook outbox in the same emit pass.
 
 ## Deferred
 

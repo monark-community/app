@@ -2,7 +2,8 @@ import { createHash } from "node:crypto"
 import { emit, logger } from "@monark/common"
 import { getDb, type NotificationChannel } from "@monark/db"
 import {
-  NOTIFICATION_KINDS,
+  getNotificationKindDef,
+  getNotificationTemplate,
   type NotificationDataMap,
   type NotificationKind,
 } from "../contracts/registry"
@@ -14,7 +15,7 @@ import { isChannelEnabled } from "./prefs"
 import { sendMail } from "./transport/email"
 import { enrichVars } from "./enrich"
 import { renderString } from "./template"
-import { TEMPLATES, EMAIL_SHELL } from "../templates"
+import { EMAIL_SHELL } from "../templates"
 
 const DEDUPE_WINDOW_MS = 60_000
 
@@ -39,8 +40,15 @@ export async function notify<K extends NotificationKind>(
   data: NotificationDataMap[K],
 ): Promise<DispatchResult> {
   const db = getDb()
-  const def = NOTIFICATION_KINDS[kind]
+  const def = getNotificationKindDef(kind)
   const result: DispatchResult = { deliveryIds: [], skipped: [] }
+  if (!def) {
+    logger.error(
+      { kind },
+      "notify: kind not registered ; ensure registerCoreNotificationKinds() / register<Module>NotificationKinds() ran at boot",
+    )
+    return result
+  }
 
   const user = await db.user
     .findUnique({
@@ -66,7 +74,7 @@ export async function notify<K extends NotificationKind>(
   const dedupeKey = computeDedupeKey(data)
   const vars = enrichVars(kind, data, locale)
 
-  const messages = TEMPLATES[def.template]
+  const messages = getNotificationTemplate(def.template)
   if (!messages) {
     logger.error({ kind, template: def.template }, "notify: template not registered")
     return result

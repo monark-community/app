@@ -7,7 +7,7 @@
       "services": "Services en ligne",
       "auth": "Authentification configurée",
       "tenancySingle": "Organisation configurée",
-      "tenancyMulti": "Mode multi-tenant — prêt à accueillir de nouvelles organisations",
+      "tenancyMulti": "Mode multi-tenant ; prêt à accueillir de nouvelles organisations",
       "orgCount": "{count, plural, =0 {0 organisation} one {1 organisation} other {{count} organisations}}"
     },
     "stuck": {
@@ -22,7 +22,8 @@
     "tagline": "Au service de la collaboration au sein de la communauté Web3.",
     "cancel": "Annuler",
     "continue": "Continuer",
-    "loading": "Chargement…"
+    "loading": "Chargement…",
+    "unsavedChanges": "Modifications non enregistrées"
   },
   "imageCrop": {
     "cancel": "Annuler",
@@ -248,7 +249,8 @@
       "users": "Utilisateurs",
       "organizations": "Organisations",
       "organization": "Organisation",
-      "rbac": "Rôles et permissions"
+      "rbac": "Rôles et permissions",
+      "webhooks": "Webhooks"
     },
     "users": {
       "title": "Utilisateurs",
@@ -412,6 +414,7 @@
         "graceTitle": "Suppression planifiée",
         "graceSubtitle": "Ce compte sera supprimé définitivement le {date}. Annulez à tout moment avant cette date.",
         "cancelDeletion": "Annuler la suppression",
+        "cancelDescription": "Arrête la suppression planifiée et garde ce compte actif.",
         "cancelPending": "Annulation…",
         "cancelSuccess": "Suppression annulée.",
         "cancelError": "Impossible d'annuler la suppression.",
@@ -452,9 +455,13 @@
       "loadMore": "Charger plus",
       "detail": {
         "back": "Retour aux organisations",
+        "backAria": "Retour aux organisations",
         "title": "Profil de l'organisation",
-        "subtitle": "Les modifications sont enregistrées à la perte de focus. Les changements de slug créent une redirection de 90 jours depuis l'ancienne valeur.",
+        "subtitle": "Nom affiché, slug et couleur de marque visibles par les membres.",
         "loadError": "Impossible de charger cette organisation.",
+        "save": "Enregistrer",
+        "saving": "Enregistrement…",
+        "cancel": "Annuler",
         "saved": "Enregistré.",
         "saveError": "Impossible d'enregistrer les modifications.",
         "invalidSlug": "Le slug doit comporter de 2 à 60 lettres minuscules, chiffres ou tirets.",
@@ -517,17 +524,19 @@
       "editor": {
         "createTitle": "Créer un rôle",
         "editTitle": "Modifier le rôle : {name}",
-        "createSubtitle": "Donnez un nom au rôle et choisissez les permissions qu'il accorde. La clé interne est dérivée automatiquement.",
-        "editSubtitle": "Les rôles natifs disposent toujours de toutes les permissions ; seuls leur nom et leur description peuvent être modifiés.",
+        "createSubtitle": "Choisissez les permissions accordées par ce rôle. La clé est dérivée du nom.",
+        "editSubtitle": "Les rôles natifs accordent toujours toutes les permissions ; seuls leur nom et leur description sont modifiables.",
         "nameLabel": "Nom",
         "namePlaceholder": "Modérateur",
         "descriptionLabel": "Description",
-        "descriptionPlaceholder": "À quoi sert ce rôle ? Apparaît dans la liste des rôles.",
+        "descriptionPlaceholder": "Apparaît dans la liste des rôles.",
         "colorLabel": "Couleur",
-        "colorHint": "Code hexadécimal optionnel (ex. #F0870C). Utilisé pour la pastille du rôle dans l'admin.",
+        "colorHint": "Code hex optionnel (ex. #F0870C) utilisé pour la pastille du rôle.",
+        "identitySectionTitle": "Identité",
+        "permissionsSectionSubtitle": "Cochez l'en-tête d'une catégorie pour accorder toutes ses permissions.",
         "permissionsLabel": "Permissions",
         "permissionsLocked": "Verrouillé",
-        "permissionsAdminNote": "Le rôle natif ADMIN dispose toujours de toutes les permissions. Les nouvelles permissions ajoutées au système sont accordées automatiquement.",
+        "permissionsAdminNote": "ADMIN accorde toujours toutes les permissions, y compris celles ajoutées plus tard.",
         "searchPlaceholder": "Rechercher des permissions…",
         "searchAria": "Filtrer les permissions",
         "searchEmpty": "Aucune permission ne correspond.",
@@ -545,7 +554,9 @@
         "submitting": "Enregistrement…",
         "cancel": "Annuler",
         "back": "Retour aux rôles",
+        "dangerSectionTitle": "Zone sensible",
         "deleteCta": "Supprimer le rôle",
+        "deleteRowDescription": "Retire le rôle et le désassigne de tous les membres. Les rôles intégrés ne peuvent pas être supprimés.",
         "deleteConfirm": "Supprimer le rôle « {name} » ? Cette action est irréversible.",
         "deleteSuccess": "Rôle supprimé.",
         "deleteError": "Impossible de supprimer ce rôle.",
@@ -555,6 +566,135 @@
         "createError": "Impossible de créer ce rôle.",
         "updateSuccess": "Rôle mis à jour.",
         "updateError": "Impossible de mettre à jour ce rôle."
+      }
+    },
+    "webhooks": {
+      "title": "Webhooks",
+      "subtitle": "Points de terminaison HTTP qui reçoivent chaque événement de domaine émis par la plateforme.",
+      "tabs": {
+        "nav": "Sections du webhook",
+        "configuration": "Configuration",
+        "deliveries": "Livraisons"
+      },
+      "manager": {
+        "orgPicker": {
+          "title": "Portée",
+          "subtitle": "Choisissez l'organisation à gérer. L'emplacement « Plateforme » liste les points de terminaison sans portée d'organisation (réservé aux administrateurs système).",
+          "placeholder": "Sélectionner une portée",
+          "platform": "Plateforme (sans portée d'organisation)"
+        },
+        "createCta": "Nouveau point de terminaison",
+        "searchPlaceholder": "Rechercher par URL ou description…",
+        "searchAria": "Rechercher des points de terminaison de webhook",
+        "empty": "Aucun point de terminaison de webhook dans cette portée pour l'instant.",
+        "emptySearch": "Aucun point de terminaison ne correspond à « {query} ».",
+        "subscriptionCount": "{count, plural, =0 {Aucun abonnement} one {# abonnement} other {# abonnements}}",
+        "status": {
+          "active": "Actif",
+          "disabled": "Désactivé"
+        },
+        "badges": {
+          "failing": "{count, plural, one {# échec récent} other {# échecs récents}}"
+        }
+      },
+      "editor": {
+        "createTitle": "Nouveau point de terminaison de webhook",
+        "editTitle": "Modifier le point de terminaison",
+        "createSubtitle": "URL cible et événements auxquels s'abonner. Le secret de signature est affiché une seule fois.",
+        "editSubtitle": "Faites tourner le secret de signature pour en émettre un nouveau ; le secret précédent cesse immédiatement de fonctionner.",
+        "back": "Retour aux webhooks",
+        "endpointSectionTitle": "Point de terminaison",
+        "subsSectionSubtitle": "Cochez l'en-tête d'un module pour vous abonner à tous ses événements.",
+        "scopeLabel": "Portée",
+        "scopeHint": "Définie à la création. Supprimez et recréez pour changer de portée.",
+        "orgScopeOrg": "Portée organisation",
+        "urlLabel": "URL",
+        "urlHint": "URL https:// absolue. http:// est accepté en dev pour les hôtes loopback ou RFC 1918.",
+        "urlInvalid": "L'URL doit commencer par http:// ou https://",
+        "descriptionLabel": "Description",
+        "descriptionPlaceholder": "Optionnelle. Apparaît dans la liste des points de terminaison.",
+        "statusLabel": "Statut",
+        "statusActive": "Actif, reçoit les livraisons",
+        "statusDisabled": "Désactivé, met en pause la livraison",
+        "statusHint": "Les points de terminaison désactivés ne reçoivent plus de livraisons ; les événements en file d'attente reprennent à la réactivation.",
+        "subsLabel": "Abonnements aux événements",
+        "subsExactPlaceholder": "rbac.role-assigned",
+        "subsPrefixPlaceholder": "rbac.",
+        "subsIsPrefix": "Correspondance par préfixe",
+        "subsRemoveAria": "Supprimer cet abonnement",
+        "subsEventTypeAria": "Type d'événement",
+        "picker": {
+          "searchPlaceholder": "Rechercher des événements…",
+          "searchAria": "Rechercher des types d'événements",
+          "registryEmpty": "Aucun type d'événement enregistré pour l'instant.",
+          "emptySearch": "Aucun événement ne correspond à « {query} ».",
+          "moduleToggleAriaAll": "Basculer tous les événements de {module}",
+          "moduleAllAsPrefix": "Tous (préfixe)",
+          "moduleSelectionCount": "{selected} / {total}",
+          "customSectionTitle": "Événements personnalisés absents du registre. Ils reçoivent toujours les livraisons ; supprimez une puce pour vous désabonner.",
+          "customRemoveAria": "Supprimer l'abonnement personnalisé sur « {type} »"
+        },
+        "eventTypeInvalid": "« {eventType} » ne doit contenir que des minuscules, chiffres, points, tirets ou tirets bas.",
+        "create": "Créer le point de terminaison",
+        "save": "Enregistrer les modifications",
+        "submitting": "Enregistrement…",
+        "cancel": "Annuler",
+        "dangerSectionTitle": "Zone sensible",
+        "rotateRowDescription": "Émettre un nouveau secret de signature. Le secret précédent cesse immédiatement de fonctionner ; configurez votre destinataire avant qu'un nouvel événement ne se déclenche.",
+        "deleteRowDescription": "Supprimer définitivement ce point de terminaison. Les livraisons en file d'attente sont abandonnées et le secret est invalidé. Cette action est irréversible.",
+        "rotateCta": "Faire tourner le secret",
+        "rotateConfirm": "Faire tourner le secret de signature ? Le secret précédent cesse immédiatement de fonctionner ; configurez votre destinataire avec le nouveau secret avant que tout nouvel événement ne se déclenche.",
+        "rotateConfirming": "Rotation…",
+        "rotateDone": "Terminé",
+        "rotateSuccess": "Secret renouvelé.",
+        "rotateError": "Impossible de faire tourner le secret.",
+        "deleteCta": "Supprimer le point de terminaison",
+        "deleteConfirm": "Supprimer le point de terminaison à {url} ? Toutes les livraisons en file d'attente sont abandonnées et le secret est invalidé. Cette action est irréversible.",
+        "deleteSuccess": "Point de terminaison supprimé.",
+        "deleteError": "Impossible de supprimer ce point de terminaison.",
+        "createSuccess": "Point de terminaison créé. Copiez le secret ci-dessous ; il ne sera plus affiché.",
+        "createError": "Impossible de créer ce point de terminaison.",
+        "updateSuccess": "Point de terminaison mis à jour.",
+        "updateError": "Impossible de mettre à jour ce point de terminaison.",
+        "loadError": "Impossible de charger ce point de terminaison.",
+        "missingScope": "Aucune portée sélectionnée. Choisissez une organisation (ou l'emplacement plateforme) depuis le gestionnaire et réessayez.",
+        "secretRevealedTitle": "Secret de signature",
+        "secretRevealedSubtitle": "Copiez cette valeur maintenant ; elle est affichée une seule fois. Faites tourner le secret pour en émettre un nouveau.",
+        "secretCopy": "Copier le secret",
+        "secretCopied": "Secret copié dans le presse-papiers.",
+        "secretCopyError": "Impossible de copier le secret. Sélectionnez et copiez manuellement."
+      },
+      "deliveries": {
+        "back": "Retour au point de terminaison",
+        "title": "Livraisons",
+        "empty": "Aucune livraison pour l'instant. Les points de terminaison accumulent des lignes dès qu'un événement correspondant est émis.",
+        "attemptsCount": "{count, plural, =0 {Aucune tentative} one {# tentative} other {# tentatives}}",
+        "createdAt": "Mise en file d'attente {date}",
+        "status": {
+          "pending": "En attente",
+          "delivered": "Livrée",
+          "failed": "Échouée"
+        }
+      },
+      "delivery": {
+        "back": "Retour aux livraisons",
+        "notFound": "Cette livraison n'existe pas ou vous n'y avez pas accès.",
+        "createdAt": "Mise en file d'attente le {date}",
+        "idempotencyKey": "Clé d'idempotence",
+        "attempts": "Tentatives",
+        "nextAttemptAt": "Prochaine tentative",
+        "delivered": "Livrée le {date}",
+        "permanentlyFailed": "Échec définitif le {date}",
+        "lastError": "Dernière erreur",
+        "retryCta": "Réessayer maintenant",
+        "retrying": "Nouvelle tentative…",
+        "retrySuccess": "Nouvelle tentative en file d'attente. Actualisez le journal des tentatives pour voir le résultat.",
+        "retryError": "Impossible de relancer cette livraison.",
+        "payloadTitle": "Charge utile",
+        "attemptLogTitle": "Journal des tentatives",
+        "attemptLogEmpty": "Aucune tentative enregistrée pour l'instant.",
+        "networkError": "Erreur réseau",
+        "durationMs": "{ms} ms"
       }
     }
   },
@@ -576,6 +716,12 @@
       "security": "Compte et sécurité",
       "notifications": "Notifications",
       "danger": "Zone sensible"
+    },
+    "subtitles": {
+      "profile": "Votre identité publique, ainsi que la langue et le thème qui vous suivent dans toute l'application.",
+      "security": "Courriel, mot de passe, authentification à deux facteurs et appareils actuellement connectés.",
+      "notifications": "Choisissez quels événements vous atteignent et par quel canal ils arrivent.",
+      "danger": "Les actions irréversibles vivent ici. Lisez attentivement chacune avant de cliquer."
     },
     "notifications": {
       "title": "Notifications",
@@ -684,6 +830,8 @@
       "bannerUpdated": "Bannière mise à jour.",
       "bannerRemoved": "Bannière retirée.",
       "saved": "Enregistré.",
+      "save": "Enregistrer",
+      "saving": "Enregistrement…",
       "readOnlyBanner": {
         "title": "Profil en lecture seule",
         "subtitle": "Votre compte est en attente de suppression. Annulez la suppression pour pouvoir modifier votre profil.",
@@ -767,9 +915,9 @@
       "enrolling": "Préparation…",
       "enrollTitle": "Activer l'authentification à deux facteurs",
       "enrollSubtitle": "Scannez le QR avec votre application d'authentification, puis saisissez le code à 6 chiffres affiché pour confirmer.",
-      "enrollScanTitle": "Étape 1 — Scanner le QR code",
+      "enrollScanTitle": "Étape 1 : scanner le QR code",
       "enrollScanSubtitle": "Ouvrez votre application d'authentification et ajoutez un nouveau compte en scannant le code ci-dessous. Cliquez sur « Impossible de scanner ? » pour copier le secret à la place.",
-      "enrollVerifyTitle": "Étape 2 — Confirmer avec un code",
+      "enrollVerifyTitle": "Étape 2 : confirmer avec un code",
       "enrollVerifySubtitle": "Saisissez le code à 6 chiffres que votre application d'authentification affiche actuellement pour {appName}.",
       "continue": "Continuer",
       "back": "Retour",
@@ -885,9 +1033,11 @@
       "title": "Zone sensible",
       "subtitle": "Actions irréversibles.",
       "deleteAccount": "Supprimer le compte",
+      "deleteDescription": "Planifiez la suppression de votre compte. Vos données sont conservées pendant 14 jours avant la suppression définitive.",
       "graceTitle": "Suppression planifiée",
       "graceSubtitle": "Votre compte sera supprimé définitivement le {date}. Vous pouvez annuler jusque-là.",
       "cancelDeletion": "Annuler la suppression",
+      "cancelDescription": "Arrête la suppression planifiée et garde votre compte actif.",
       "cancelSuccess": "Suppression annulée.",
       "cancelError": "Impossible d'annuler. Réessayez."
     },
@@ -935,7 +1085,7 @@
     },
     "remoteDiagnostics": {
       "browserHost": "hôte navigateur",
-      "noSession": "aucune session — tRPC sera anonyme, toute requête authentifiée renvoie vide",
+      "noSession": "aucune session ; tRPC sera anonyme, toute requête authentifiée renvoie vide",
       "yes": "oui",
       "no": "non",
       "none": "(aucun)",

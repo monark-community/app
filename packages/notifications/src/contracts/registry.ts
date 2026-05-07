@@ -1,47 +1,82 @@
 import type { NotificationCategory, NotificationChannel } from "@monark/db"
+import type { KindMessages } from "../templates/types"
 
 /**
- * Per-kind data shape that callers must pass to `notify()`. The shape is
- * what the template renderer can interpolate (`{{ deviceLabel }}`,
- * `{{ completesAt }}`, …). Adding a kind below requires adding the
- * matching template files under `src/templates/<path>/{en,fr}.{html,txt,inapp.json}`.
+ * Per-kind data shape that callers must pass to `notify()`. Modules
+ * extend this map via TypeScript declaration merging :
  *
- * Pure data ; safe to import from any tier.
+ * ```ts
+ * declare module "@monark/notifications/contracts" {
+ *   interface NotificationDataRegistry {
+ *     "posts.published": { postId: string; authorId: string }
+ *   }
+ * }
+ * ```
+ *
+ * Adding an entry here at the type level pairs with a runtime
+ * `registerNotificationKind()` call that ships the definition + the
+ * template messages. The dispatch path renders the template by
+ * interpolating these data values into `{{ var }}` placeholders.
+ *
+ * Core modules pre-augment this registry below so the existing kinds
+ * stay typed without callers doing anything.
  */
-export type NotificationDataMap = {
-  "auth.new-device": {
-    deviceLabel: string
-    deviceCountry: string | null
-    deviceIp: string | null
-    seenAt: Date
-  }
-  "auth.password-changed": {
-    occurredAt: Date
-  }
-  "auth.totp-enabled": {
-    occurredAt: Date
-  }
-  "auth.totp-disabled": {
-    occurredAt: Date
-  }
-  "auth.all-devices-revoked": {
-    count: number
-    occurredAt: Date
-  }
-  "account.email-changed": {
-    previousEmail: string
-    newEmail: string
-    occurredAt: Date
-  }
-  "account.deletion-scheduled": {
-    completesAt: Date
-  }
-  "account.deletion-canceled": {
-    occurredAt: Date
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export interface NotificationDataRegistry {}
+
+declare module "./registry" {
+  interface NotificationDataRegistry {
+    "auth.new-device": {
+      deviceLabel: string
+      deviceCountry: string | null
+      deviceIp: string | null
+      seenAt: Date
+    }
+    "auth.password-changed": {
+      occurredAt: Date
+    }
+    "auth.totp-enabled": {
+      occurredAt: Date
+    }
+    "auth.totp-disabled": {
+      occurredAt: Date
+    }
+    "auth.all-devices-revoked": {
+      count: number
+      occurredAt: Date
+    }
+    "account.email-changed": {
+      previousEmail: string
+      newEmail: string
+      occurredAt: Date
+    }
+    "account.deletion-scheduled": {
+      completesAt: Date
+    }
+    "account.deletion-canceled": {
+      occurredAt: Date
+    }
+    "webhooks.delivery-permanently-failed": {
+      endpointId: string
+      endpointUrl: string
+      eventType: string
+      attempts: number
+      reason: string
+      scope: "org" | "platform"
+      occurredAt: Date
+    }
+    "webhooks.endpoint-auto-disabled": {
+      endpointId: string
+      endpointUrl: string
+      consecutiveFailures: number
+      scope: "org" | "platform"
+      occurredAt: Date
+    }
   }
 }
 
-export type NotificationKind = keyof NotificationDataMap
+export type NotificationDataMap = NotificationDataRegistry
+export type NotificationKind = keyof NotificationDataMap & string
 
 export type NotificationKindDef = {
   category: NotificationCategory
@@ -56,76 +91,59 @@ export type NotificationKindDef = {
    */
   requiredEmail: boolean
   /**
-   * Resolves to `src/templates/<template>/{locale}.{html|txt|inapp.json}`.
+   * Stable template id (e.g. `auth/new-device`). Only used as the
+   * runtime registry key ; the actual messages are stored alongside
+   * the def via `registerNotificationKind()`.
    */
   template: string
 }
 
-export const NOTIFICATION_KINDS: Record<NotificationKind, NotificationKindDef> = {
-  "auth.new-device": {
-    category: "SECURITY",
-    channels: ["EMAIL", "IN_APP"],
-    defaultEnabled: { EMAIL: true, IN_APP: true },
-    requiredEmail: true,
-    template: "auth/new-device",
-  },
-  "auth.password-changed": {
-    category: "SECURITY",
-    channels: ["EMAIL", "IN_APP"],
-    defaultEnabled: { EMAIL: true, IN_APP: true },
-    requiredEmail: true,
-    template: "auth/password-changed",
-  },
-  "auth.totp-enabled": {
-    category: "SECURITY",
-    channels: ["EMAIL", "IN_APP"],
-    defaultEnabled: { EMAIL: true, IN_APP: true },
-    requiredEmail: true,
-    template: "auth/totp-enabled",
-  },
-  "auth.totp-disabled": {
-    category: "SECURITY",
-    channels: ["EMAIL", "IN_APP"],
-    defaultEnabled: { EMAIL: true, IN_APP: true },
-    requiredEmail: true,
-    template: "auth/totp-disabled",
-  },
-  "auth.all-devices-revoked": {
-    category: "SECURITY",
-    channels: ["EMAIL", "IN_APP"],
-    defaultEnabled: { EMAIL: true, IN_APP: true },
-    requiredEmail: true,
-    template: "auth/all-devices-revoked",
-  },
-  "account.email-changed": {
-    category: "ACCOUNT",
-    channels: ["IN_APP"],
-    defaultEnabled: { IN_APP: true },
-    // Supabase already mails both addresses for the change ; we only post
-    // an in-app receipt so the user has a history entry.
-    requiredEmail: false,
-    template: "account/email-changed",
-  },
-  "account.deletion-scheduled": {
-    category: "ACCOUNT",
-    channels: ["EMAIL", "IN_APP"],
-    defaultEnabled: { EMAIL: true, IN_APP: true },
-    requiredEmail: false,
-    template: "account/deletion-scheduled",
-  },
-  "account.deletion-canceled": {
-    category: "ACCOUNT",
-    channels: ["IN_APP"],
-    defaultEnabled: { IN_APP: true },
-    requiredEmail: false,
-    template: "account/deletion-canceled",
-  },
+const definitions = new Map<string, NotificationKindDef>()
+const templates = new Map<string, KindMessages>()
+
+/**
+ * Register a notification kind + its localized templates. Idempotent
+ * by `kind` ; a re-register replaces the previous entry. Called once
+ * at api boot for every kind the deploy supports — core kinds via
+ * `registerCoreNotificationKinds()`, extended modules via their own
+ * `register<Module>NotificationKinds()` helpers.
+ */
+export function registerNotificationKind(
+  kind: string,
+  def: NotificationKindDef,
+  messages: KindMessages,
+): void {
+  definitions.set(kind, def)
+  templates.set(def.template, messages)
+}
+
+export function getNotificationKindDef(
+  kind: string,
+): NotificationKindDef | undefined {
+  return definitions.get(kind)
+}
+
+export function getNotificationTemplate(
+  templateId: string,
+): KindMessages | undefined {
+  return templates.get(templateId)
 }
 
 export function isKnownNotificationKind(value: string): value is NotificationKind {
-  return Object.prototype.hasOwnProperty.call(NOTIFICATION_KINDS, value)
+  return definitions.has(value)
 }
 
 export function listNotificationKinds(): NotificationKind[] {
-  return Object.keys(NOTIFICATION_KINDS) as NotificationKind[]
+  return [...definitions.keys()] as NotificationKind[]
+}
+
+export function listNotificationKindDescriptors(): Array<
+  { kind: string } & NotificationKindDef
+> {
+  return [...definitions.entries()].map(([kind, def]) => ({ kind, ...def }))
+}
+
+export function _resetNotificationRegistryForTesting(): void {
+  definitions.clear()
+  templates.clear()
 }

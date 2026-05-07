@@ -4,7 +4,8 @@
     "tagline": "Fostering collaboration within the Web3 community.",
     "cancel": "Cancel",
     "continue": "Continue",
-    "loading": "Loading…"
+    "loading": "Loading…",
+    "unsavedChanges": "Unsaved changes"
   },
   "setup": {
     "eyebrow": "{appName} setup",
@@ -14,7 +15,7 @@
       "services": "Services online",
       "auth": "Authentication configured",
       "tenancySingle": "Organization configured",
-      "tenancyMulti": "Multi-tenant mode — ready to accept new organizations",
+      "tenancyMulti": "Multi-tenant mode ; ready to accept new organizations",
       "orgCount": "{count, plural, =0 {0 organizations} one {1 organization} other {{count} organizations}}"
     },
     "stuck": {
@@ -248,7 +249,8 @@
       "users": "Users",
       "organizations": "Organizations",
       "organization": "Organization",
-      "rbac": "Roles & permissions"
+      "rbac": "Roles & permissions",
+      "webhooks": "Webhooks"
     },
     "users": {
       "title": "Users",
@@ -412,6 +414,7 @@
         "graceTitle": "Deletion scheduled",
         "graceSubtitle": "This account will be permanently removed on {date}. Cancel any time before then.",
         "cancelDeletion": "Cancel deletion",
+        "cancelDescription": "Stop the scheduled deletion and keep this account active.",
         "cancelPending": "Cancelling…",
         "cancelSuccess": "Deletion cancelled.",
         "cancelError": "Could not cancel deletion.",
@@ -452,12 +455,16 @@
       "loadMore": "Load more",
       "detail": {
         "back": "Back to organizations",
+        "backAria": "Back to organizations",
         "title": "Organization profile",
-        "subtitle": "Edits are saved on blur. Slug rotations create a 90-day redirect from the old value.",
+        "subtitle": "Display name, slug, and brand color shown to members.",
         "loadError": "Could not load this organization.",
+        "save": "Save changes",
+        "saving": "Saving…",
+        "cancel": "Cancel",
         "saved": "Saved.",
         "saveError": "Could not save changes.",
-        "invalidSlug": "Slug must be 2–60 lowercase letters, digits, or dashes.",
+        "invalidSlug": "Slug must be 2 to 60 lowercase letters, digits, or dashes.",
         "invalidColor": "Color must be a hex code like #F0870C.",
         "labels": {
           "displayName": "Display name",
@@ -517,17 +524,19 @@
       "editor": {
         "createTitle": "Create a role",
         "editTitle": "Edit role: {name}",
-        "createSubtitle": "Give the role a friendly name and pick the permissions it grants. The internal key is derived automatically.",
-        "editSubtitle": "Built-in roles always have every permission ; only their name and description are editable.",
+        "createSubtitle": "Pick the permissions this role grants. The role key is derived from the name.",
+        "editSubtitle": "Built-in roles always grant every permission ; only their name and description are editable.",
         "nameLabel": "Name",
         "namePlaceholder": "Moderator",
         "descriptionLabel": "Description",
-        "descriptionPlaceholder": "What does this role do? Surfaces on the role list.",
+        "descriptionPlaceholder": "Surfaces on the role list.",
         "colorLabel": "Color",
-        "colorHint": "Optional hex code (e.g. #F0870C). Used for the role's chip across the admin UI.",
+        "colorHint": "Optional hex (e.g. #F0870C) used for the role chip.",
+        "identitySectionTitle": "Identity",
+        "permissionsSectionSubtitle": "Tick a category header to grant every permission in it.",
         "permissionsLabel": "Permissions",
         "permissionsLocked": "Locked",
-        "permissionsAdminNote": "The built-in ADMIN role always has every permission. New permissions added to the system are granted automatically.",
+        "permissionsAdminNote": "ADMIN always grants every permission, including new ones added later.",
         "searchPlaceholder": "Search permissions…",
         "searchAria": "Filter permissions",
         "searchEmpty": "No permission matches that search.",
@@ -545,7 +554,9 @@
         "submitting": "Saving…",
         "cancel": "Cancel",
         "back": "Back to roles",
+        "dangerSectionTitle": "Danger zone",
         "deleteCta": "Delete role",
+        "deleteRowDescription": "Removes the role and unassigns it from every member. Built-in roles cannot be deleted.",
         "deleteConfirm": "Delete the role “{name}”? This cannot be undone.",
         "deleteSuccess": "Role deleted.",
         "deleteError": "Could not delete that role.",
@@ -555,6 +566,135 @@
         "createError": "Could not create that role.",
         "updateSuccess": "Role updated.",
         "updateError": "Could not update that role."
+      }
+    },
+    "webhooks": {
+      "title": "Webhooks",
+      "subtitle": "HTTP endpoints that receive every domain event the platform emits.",
+      "tabs": {
+        "nav": "Webhook sections",
+        "configuration": "Configuration",
+        "deliveries": "Deliveries"
+      },
+      "manager": {
+        "orgPicker": {
+          "title": "Scope",
+          "subtitle": "Pick the organization to manage. The platform slot lists endpoints with no org scope (sysadmin only).",
+          "placeholder": "Select a scope",
+          "platform": "Platform (no org scope)"
+        },
+        "createCta": "New endpoint",
+        "searchPlaceholder": "Search by URL or description…",
+        "searchAria": "Search webhook endpoints",
+        "empty": "No webhook endpoints in this scope yet.",
+        "emptySearch": "No endpoint matches “{query}”.",
+        "subscriptionCount": "{count, plural, =0 {No subscriptions} one {# subscription} other {# subscriptions}}",
+        "status": {
+          "active": "Active",
+          "disabled": "Disabled"
+        },
+        "badges": {
+          "failing": "{count, plural, one {# recent failure} other {# recent failures}}"
+        }
+      },
+      "editor": {
+        "createTitle": "New webhook endpoint",
+        "editTitle": "Edit endpoint",
+        "createSubtitle": "POST target plus the events it subscribes to. The signing secret shows once at creation.",
+        "editSubtitle": "Rotate the signing secret to issue a new one ; the previous secret stops working immediately.",
+        "back": "Back to webhooks",
+        "endpointSectionTitle": "Endpoint",
+        "subsSectionSubtitle": "Tick a module's header to grab every event in it.",
+        "scopeLabel": "Scope",
+        "scopeHint": "Set at creation. Delete and recreate to change scope.",
+        "orgScopeOrg": "Organization-scoped",
+        "urlLabel": "URL",
+        "urlHint": "Absolute https:// URL. http:// is allowed in dev for loopback or RFC 1918 hosts.",
+        "urlInvalid": "URL must start with http:// or https://",
+        "descriptionLabel": "Description",
+        "descriptionPlaceholder": "Optional. Surfaces on the endpoint list.",
+        "statusLabel": "Status",
+        "statusActive": "Active, receives deliveries",
+        "statusDisabled": "Disabled, pauses delivery",
+        "statusHint": "Disabled endpoints stop receiving deliveries ; queued events resume on re-enable.",
+        "subsLabel": "Event subscriptions",
+        "subsExactPlaceholder": "rbac.role-assigned",
+        "subsPrefixPlaceholder": "rbac.",
+        "subsIsPrefix": "Prefix match",
+        "subsRemoveAria": "Remove this subscription",
+        "subsEventTypeAria": "Event type",
+        "picker": {
+          "searchPlaceholder": "Search events…",
+          "searchAria": "Search event types",
+          "registryEmpty": "No event types are registered yet.",
+          "emptySearch": "No event matches “{query}”.",
+          "moduleToggleAriaAll": "Toggle every event in {module}",
+          "moduleAllAsPrefix": "All (prefix)",
+          "moduleSelectionCount": "{selected} / {total}",
+          "customSectionTitle": "Custom events not in the registry. Still receive deliveries ; remove a chip to unsubscribe.",
+          "customRemoveAria": "Remove the custom subscription on “{type}”"
+        },
+        "eventTypeInvalid": "“{eventType}” must be lowercase letters / digits / dots / dashes / underscores only.",
+        "create": "Create endpoint",
+        "save": "Save changes",
+        "submitting": "Saving…",
+        "cancel": "Cancel",
+        "dangerSectionTitle": "Danger zone",
+        "rotateRowDescription": "Issue a new signing secret. The previous secret stops working immediately ; configure your receiver before any new event fires.",
+        "deleteRowDescription": "Permanently delete this endpoint. Queued deliveries are dropped and the secret is invalidated. This cannot be undone.",
+        "rotateCta": "Rotate secret",
+        "rotateConfirm": "Rotate the signing secret? The previous secret stops working immediately ; configure your receiver with the new secret before any new event fires.",
+        "rotateConfirming": "Rotating…",
+        "rotateDone": "Done",
+        "rotateSuccess": "Secret rotated.",
+        "rotateError": "Could not rotate the secret.",
+        "deleteCta": "Delete endpoint",
+        "deleteConfirm": "Delete the endpoint at {url}? Any queued deliveries are dropped and the secret is invalidated. This cannot be undone.",
+        "deleteSuccess": "Endpoint deleted.",
+        "deleteError": "Could not delete that endpoint.",
+        "createSuccess": "Endpoint created. Copy the secret below ; it won't be shown again.",
+        "createError": "Could not create that endpoint.",
+        "updateSuccess": "Endpoint updated.",
+        "updateError": "Could not update that endpoint.",
+        "loadError": "Could not load that endpoint.",
+        "missingScope": "No scope selected. Pick an organization (or the platform slot) from the manager and try again.",
+        "secretRevealedTitle": "Signing secret",
+        "secretRevealedSubtitle": "Copy this now ; it is shown exactly once. Rotate the secret to issue a new one.",
+        "secretCopy": "Copy secret",
+        "secretCopied": "Secret copied to clipboard.",
+        "secretCopyError": "Could not copy the secret. Select and copy manually."
+      },
+      "deliveries": {
+        "back": "Back to endpoint",
+        "title": "Deliveries",
+        "empty": "No deliveries yet. Endpoints accumulate rows as soon as a matching event fires.",
+        "attemptsCount": "{count, plural, =0 {No attempts} one {# attempt} other {# attempts}}",
+        "createdAt": "Queued {date}",
+        "status": {
+          "pending": "Pending",
+          "delivered": "Delivered",
+          "failed": "Failed"
+        }
+      },
+      "delivery": {
+        "back": "Back to deliveries",
+        "notFound": "That delivery doesn't exist or you can't see it.",
+        "createdAt": "Queued at {date}",
+        "idempotencyKey": "Idempotency key",
+        "attempts": "Attempts",
+        "nextAttemptAt": "Next attempt",
+        "delivered": "Delivered at {date}",
+        "permanentlyFailed": "Permanently failed at {date}",
+        "lastError": "Last error",
+        "retryCta": "Retry now",
+        "retrying": "Retrying…",
+        "retrySuccess": "Retry queued. Refresh the attempt log to see the result.",
+        "retryError": "Could not retry that delivery.",
+        "payloadTitle": "Payload",
+        "attemptLogTitle": "Attempt log",
+        "attemptLogEmpty": "No attempts recorded yet.",
+        "networkError": "Network error",
+        "durationMs": "{ms} ms"
       }
     }
   },
@@ -576,6 +716,12 @@
       "security": "Account & security",
       "notifications": "Notifications",
       "danger": "Danger zone"
+    },
+    "subtitles": {
+      "profile": "Your public-facing identity, plus the language and theme that follow you across the app.",
+      "security": "Email, password, two-factor authentication, and the devices currently signed in.",
+      "notifications": "Decide which events reach you, and which channel they arrive on.",
+      "danger": "Irreversible actions live here. Read each one carefully before clicking through."
     },
     "notifications": {
       "title": "Notifications",
@@ -615,7 +761,7 @@
           "ACCOUNT": "Account"
         },
         "categoryDescriptions": {
-          "SECURITY": "Sign-in alerts, password changes, two-factor enable/disable. Email is required for these and can't be turned off — they protect your account from unauthorised access.",
+          "SECURITY": "Sign-in alerts, password changes, two-factor enable/disable. Email is required for these and can't be turned off ; they protect your account from unauthorised access.",
           "ACCOUNT": "Profile updates, email changes, deletion grace-period reminders. Anything that touches your account state without being a security event."
         },
         "categoryHelpAria": "More info about {category}",
@@ -626,7 +772,7 @@
         "enableAria": "Enable {category} on {channel}",
         "disableAria": "Disable {category} on {channel}",
         "forcedBadge": "Required",
-        "forcedTooltip": "Security emails can't be disabled — they protect your account.",
+        "forcedTooltip": "Security emails can't be disabled ; they protect your account.",
         "resetButton": "Reset to defaults",
         "resetSuccess": "Preferences reset to defaults."
       }
@@ -684,6 +830,8 @@
       "bannerUpdated": "Banner updated.",
       "bannerRemoved": "Banner removed.",
       "saved": "Saved.",
+      "save": "Save changes",
+      "saving": "Saving…",
       "readOnlyBanner": {
         "title": "Profile is read-only",
         "subtitle": "Your account is scheduled for deletion. Cancel deletion to edit your profile again.",
@@ -767,9 +915,9 @@
       "enrolling": "Preparing…",
       "enrollTitle": "Enable two-factor authentication",
       "enrollSubtitle": "Scan the QR with your authenticator app, then enter the 6-digit code it shows to confirm.",
-      "enrollScanTitle": "Step 1 — Scan the QR code",
+      "enrollScanTitle": "Step 1 : scan the QR code",
       "enrollScanSubtitle": "Open your authenticator app and add a new account by scanning the code below. Tap “Can't scan?” if you'd rather paste the secret manually.",
-      "enrollVerifyTitle": "Step 2 — Confirm with a code",
+      "enrollVerifyTitle": "Step 2 : confirm with a code",
       "enrollVerifySubtitle": "Enter the 6-digit code your authenticator app currently shows for {appName}.",
       "continue": "Continue",
       "back": "Back",
@@ -885,9 +1033,11 @@
       "title": "Danger zone",
       "subtitle": "Irreversible actions.",
       "deleteAccount": "Delete account",
+      "deleteDescription": "Schedule your account for deletion. We'll hold your data for 14 days before permanently removing it.",
       "graceTitle": "Deletion scheduled",
       "graceSubtitle": "Your account will be permanently removed on {date}. Cancel any time before then.",
       "cancelDeletion": "Cancel deletion",
+      "cancelDescription": "Stop the scheduled deletion and keep your account active.",
       "cancelSuccess": "Deletion canceled.",
       "cancelError": "Could not cancel. Try again."
     },
@@ -935,7 +1085,7 @@
     },
     "remoteDiagnostics": {
       "browserHost": "browser host",
-      "noSession": "no session — tRPC will be called as anon, every authed query returns empty",
+      "noSession": "no session ; tRPC will be called as anon, every authed query returns empty",
       "yes": "yes",
       "no": "no",
       "none": "(none)",
@@ -999,7 +1149,7 @@
     "currentOrg": {
       "none": "No active org.",
       "resolving": "resolving…",
-      "inferred": "no claim — inferred from memberships",
+      "inferred": "no claim ; inferred from memberships",
       "fields": { "slug": "slug", "name": "name", "id": "id" },
       "memberships": "memberships ({count})"
     },

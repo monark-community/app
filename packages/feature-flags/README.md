@@ -4,61 +4,83 @@ Server + client surface for feature-flag evaluation. Spec: [docs/features-planni
 
 ## What's here
 
-- `/contracts` — `FLAGS` constant, `FlagKey` type, `FlagFlippedEvent`, `FlagScope`.
-- `/server` — `isEnabled`, `getFlags`, `setOverride`, `removeOverride`, `listFlagDefinitions`, `syncFlagsToDatabase`, plus the `featureFlagsRouter` tRPC sub-router.
+- `/contracts` — `registerFlags`, `isKnownFlag`, `parseFlagKey`, `listFlagDescriptors`, plus the `FlagFlippedEvent` + `FlagScope` types.
+- `/server` — `isEnabled`, `getFlags`, `setOverride`, `removeOverride`, `listFlagDefinitions`, `syncFlagsToDatabase`, re-exports `registerFlags`, plus the `featureFlagsRouter` tRPC sub-router.
 - `/client` — `FlagsProvider`, `useFlag`, `useFlags`.
+
+## Module-namespacing
+
+Flags are runtime-registered. The DB stores `(module, key)` and the call-site uses the dotted form `"<module>.<key>"`. Any module — core or extended — registers its flags at api boot by calling `registerFlags(moduleName, flags)`. Two modules can declare a key with the same suffix without colliding because the unique key is the `(module, key)` pair.
+
+Core registrations live in each owning module's server package and are wired in [services/api/src/server.ts](../../services/api/src/server.ts) :
+
+- `auth.*` — registered by `registerAuthFeatureFlags()` in [@monark/auth/server](../auth/src/server/flags.ts).
+- `tenancy.*` — registered by `registerOrganizationsFeatureFlags()` in [@monark/organizations/server](../organizations/src/server/flags.ts).
+
+An extended module follows the same shape :
+
+```ts
+// packages/posts/src/server/flags.ts
+import { registerFlags } from "@monark/feature-flags/server"
+
+export function registerPostsFeatureFlags(): void {
+  registerFlags("posts", {
+    "drafts-enabled": {
+      description: "Allow saving posts as drafts before publishing.",
+      defaultOn: true,
+    },
+  })
+}
+```
+
+Then [services/api/src/server.ts](../../services/api/src/server.ts) calls it once at boot, before `syncFlagsToDatabase()`.
 
 ## Resolution order
 
-Most-specific override wins. For each flag key, evaluation cascades:
+Most-specific override wins. For each flag key, evaluation cascades :
 
 1. User-scoped override (exact `userId` match)
-2. Role-scoped override (user's active role)
+2. Role-scoped override (active role on the caller)
 3. Org-scoped override (active organization)
 4. Global override (all scope fields null)
-5. `defaultOn` from the flag definition in `FLAGS`
+5. `defaultOn` from the registered flag definition
+
+If no module ever registered the dotted key, `isEnabled` returns `false`.
 
 ## Adding a new flag
 
-1. Add an entry to `FLAGS` in [src/contracts/flags.ts](src/contracts/flags.ts) with a description and `defaultOn`.
-2. Call `syncFlagsToDatabase()` (at boot in the api service, or manually) to upsert the corresponding `FeatureFlag` row.
-3. Use `isEnabled("your-flag-key", { userId, organizationId, role })` on the server or `useFlag("your-flag-key")` on the client.
+1. Add an entry to your module's `flags.ts` registration helper (see core examples above).
+2. Make sure the helper is invoked from [services/api/src/server.ts](../../services/api/src/server.ts) at boot, before `syncFlagsToDatabase()` runs.
+3. Use `isEnabled("posts.drafts-enabled", { userId, organizationId, roleId })` on the server or `useFlag("posts.drafts-enabled")` on the client.
 
-Removing a flag from `FLAGS` is safe: the DB row and any overrides stay but become orphans. Use the admin tooling (lands with the admin UI in a later pass) to prune.
+Removing a registration is safe : the DB row and any overrides remain but become orphans. Use the admin tooling to prune.
 
 ## Database setup
 
-This is the first Phase 1 module with real Prisma models. Before the module can read/write overrides you need:
-
 1. A Postgres database reachable via `DATABASE_URL` + `DIRECT_URL` in `services/api/.env`. Use Supabase local (`supabase start`) or any Postgres instance.
-2. Apply the schema:
+2. Apply the schema :
    ```bash
-   pnpm --filter @monark/db exec prisma migrate dev --name add-feature-flags
+   pnpm --filter @monark/db db:migrate:dev
    ```
-3. Seed the flag definitions:
-   ```bash
-   pnpm --filter @monark/db exec tsx -e "import('@monark/feature-flags/server').then(m => m.syncFlagsToDatabase()).then(() => process.exit(0))"
-   ```
-   Or wire `syncFlagsToDatabase()` into api startup so it runs automatically.
+3. Boot the api once ; `syncFlagsToDatabase()` upserts a `FeatureFlag` row per registration.
 
 ## Admin write path
 
-`setOverride` and `removeOverride` accept an `actorId` argument today. Once `@monark/rbac` lands, this will be tightened to require an admin role on the calling session context. Search the module for the `TODO: once @monark/rbac lands` marker.
+`setOverride` and `removeOverride` accept an `actorId` argument today. Once `@monark/rbac` admin guards land at the tRPC layer, the actor is sourced from the request context.
 
 ## Client hydration
 
-`FlagsProvider` is a React context consumer. The intended pattern is:
+`FlagsProvider` is a React context consumer. The intended pattern is :
 
 ```tsx
 // Server component (e.g. app/layout.tsx)
-import { getFlags } from "@monark/feature-flags/server"
+import { getFlags, listFlagKeys } from "@monark/feature-flags/server"
 import { FlagsProvider } from "@monark/feature-flags/client"
-import { listFlagKeys } from "@monark/feature-flags/server"
 
 export default async function Layout({ children }) {
-  const flags = await getFlags(listFlagKeys(), { userId, organizationId, role })
+  const flags = await getFlags(listFlagKeys(), { userId, organizationId, roleId })
   return <FlagsProvider flags={flags}>{children}</FlagsProvider>
 }
 ```
 
-Client components then read via `useFlag("voting")` without a network round-trip.
+Client components then read via `useFlag("posts.drafts-enabled")` without a network round-trip.

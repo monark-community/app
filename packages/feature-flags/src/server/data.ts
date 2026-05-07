@@ -1,8 +1,9 @@
 import { getDb, type Prisma } from "@monark/db"
-import type { FlagKey, FlagScope } from "../contracts/index"
+import type { FlagScope } from "../contracts/index"
 
 export type OverrideRow = {
   id: string
+  module: string
   flagKey: string
   organizationId: string | null
   userId: string | null
@@ -13,18 +14,22 @@ export type OverrideRow = {
   note: string | null
 }
 
+export type FlagRef = { module: string; key: string }
+
 export async function readFlagDefinitions(): Promise<
-  Array<{ key: string; defaultOn: boolean }>
+  Array<{ module: string; key: string; defaultOn: boolean }>
 > {
   const db = getDb()
-  return db.featureFlag.findMany({ select: { key: true, defaultOn: true } })
+  return db.featureFlag.findMany({
+    select: { module: true, key: true, defaultOn: true },
+  })
 }
 
 export async function readOverridesForKeys(
-  keys: FlagKey[],
+  refs: FlagRef[],
   scope: FlagScope,
 ): Promise<OverrideRow[]> {
-  if (keys.length === 0) return []
+  if (refs.length === 0) return []
   const db = getDb()
 
   const scopeFilter: Prisma.FeatureFlagOverrideWhereInput[] = [
@@ -52,49 +57,68 @@ export async function readOverridesForKeys(
     })
   }
 
+  // Group refs by module to keep the WHERE clause shallow ; one OR
+  // group per module with its keys becomes a single index hit on the
+  // (module, flagKey) compound index.
+  const byModule = new Map<string, string[]>()
+  for (const ref of refs) {
+    const list = byModule.get(ref.module) ?? []
+    list.push(ref.key)
+    byModule.set(ref.module, list)
+  }
+  const flagFilter: Prisma.FeatureFlagOverrideWhereInput[] = []
+  for (const [module, keys] of byModule) {
+    flagFilter.push({ module, flagKey: { in: keys } })
+  }
+
   return db.featureFlagOverride.findMany({
     where: {
-      flagKey: { in: keys },
-      OR: scopeFilter,
+      OR: flagFilter,
+      AND: { OR: scopeFilter },
     },
     orderBy: { setAt: "desc" },
   })
 }
 
-export async function readOverridesForFlag(flagKey: FlagKey): Promise<OverrideRow[]> {
+export async function readOverridesForFlag(
+  ref: FlagRef,
+): Promise<OverrideRow[]> {
   const db = getDb()
   return db.featureFlagOverride.findMany({
-    where: { flagKey },
+    where: { module: ref.module, flagKey: ref.key },
     orderBy: { setAt: "desc" },
   })
 }
 
 export async function upsertFlagDefinition(
+  module: string,
   key: string,
   description: string,
   defaultOn: boolean,
 ): Promise<void> {
   const db = getDb()
   await db.featureFlag.upsert({
-    where: { key },
-    create: { key, description, defaultOn },
+    where: { module_key: { module, key } },
+    create: { module, key, description, defaultOn },
     update: { description, defaultOn },
   })
 }
 
 export async function writeOverride(input: {
-  flagKey: FlagKey
+  module: string
+  flagKey: string
   scope: FlagScope
   enabled: boolean
   setById: string
   note?: string
 }): Promise<void> {
   const db = getDb()
-  const { flagKey, scope, enabled, setById, note } = input
+  const { module, flagKey, scope, enabled, setById, note } = input
 
   await db.$transaction(async (tx) => {
     const existing = await tx.featureFlagOverride.findFirst({
       where: {
+        module,
         flagKey,
         organizationId: scope.organizationId ?? null,
         userId: scope.userId ?? null,
@@ -110,6 +134,7 @@ export async function writeOverride(input: {
     } else {
       await tx.featureFlagOverride.create({
         data: {
+          module,
           flagKey,
           organizationId: scope.organizationId ?? null,
           userId: scope.userId ?? null,

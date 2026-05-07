@@ -6,18 +6,19 @@ Spec: [docs/features-planning/phase-1/rbac-system.md](../../docs/features-planni
 
 ## What's here
 
-- `/contracts` — `Role` enum (re-exported from `@monark/db`), `PERMISSIONS` matrix + `Permission` type, `RoleAssignedEvent` + `RoleRevokedEvent`, role-rank helpers (`rankOf`, `pickHighest`).
-- `/server` — `rbacRouter` tRPC sub-router, read-interface (`hasRole`, `hasPermission`, `getUserRoles`, `primaryRole`, `isLastAdmin`), guards (`requireRole`, `requirePermission`), write path (`assignRole`, `revokeRole`).
+- `/contracts` — `registerPermissions` + dynamic registry helpers (`isKnownPermission`, `parsePermissionKey`, `listPermissionDescriptors`, `permissionsByCategory`, `getPermissionDef`), the role-key constants (`ADMIN_ROLE_KEY`, `SYSADMIN_ROLE_KEY`), and the per-event types under `RbacEvents`.
+- `/server` — `rbacRouter` tRPC sub-router, read-interface (`hasRoleKey`, `hasPermission`, `getUserRoles`, `getAllAssignments`, `isLastAdmin`, `adminAssignmentSummary`), guards (`requireRoleKey`, `requirePermission`), write path (`assignRole`, `revokeRole`, `createRole`, `updateRole`, `deleteRole`), and the rbac module's own permission registration (`registerRbacPermissions`).
 - `/client` — placeholder.
 
 The Prisma schema gets the canonical `Role` enum and a `RoleAssignment` table under `// ── MODULE: rbac ──`. The migration also flipped `Invite.role` and `FeatureFlagOverride.role` from `String?` to the enum.
 
 ## Key concepts
 
-- **Five roles, five values.** `MONARK_ADMIN` is platform-scoped (organizationId is null on the assignment row). The other four (`ADMIN`, `DEVELOPER`, `AMBASSADOR`, `STUDENT`) are per-org. A user can have multiple roles in the same org but the dashboard renders the highest-ranked via `primaryRole`.
-- **Capabilities, not roles.** Code checks `hasPermission("voting:cast")`, not `role === "DEVELOPER"`. The `PERMISSIONS` matrix is the only place roles map to capabilities; touching that file is the only place a role tweak affects the rest of the codebase.
-- **Guards return userId, not User.** `requireRole` and `requirePermission` confirm the caller and throw `UnauthorizedError` / `ForbiddenError`; they don't fetch the full user. Caller calls `@monark/users.getById(userId)` if they need the row.
-- **MONARK_ADMIN auto-grants on org reads.** `getUserRoles(userId, orgId)` includes the platform role if granted, since MONARK_ADMIN should never be filtered out by org context.
+- **Roles are table-driven.** Two reserved built-ins (`SYSADMIN` platform-tier, `ADMIN` org-tier) short-circuit `hasPermission` to true ; everything else is custom rows in the `Role` table per-org with their own permission set.
+- **Permissions are runtime-registered.** Each module calls `registerPermissions("<module>", { "<key>": { description, category }})` at api boot. The DB stores `(roleId, module, permission)` ; two modules can claim the same permission slug without colliding because uniqueness is on the triple. Identity at call sites is the dotted form `"<module>.<key>"` (e.g. `"organizations.update-settings"`, `"posts.publish"`).
+- **Capabilities, not roles.** Code checks `requirePermission(ctx, "organizations.update-settings")`, not `role.key === "ADMIN"`. New permissions show up in the /admin/rbac matrix automatically once their owning module registers them.
+- **Guards return userId, not User.** `requireRoleKey` and `requirePermission` confirm the caller and throw `UnauthorizedError` / `ForbiddenError` ; they don't fetch the full user. Caller calls `@monark/users.getById(userId)` if they need the row.
+- **SYSADMIN auto-grants across orgs.** `getUserRoles(userId, orgId)` and `findActiveAssignments` surface platform-tier SYSADMIN regardless of the org argument.
 
 ## Usage
 
@@ -28,24 +29,35 @@ import { requirePermission } from "@monark/rbac/server"
 myMutation: publicProcedure
   .input(...)
   .mutation(async ({ ctx, input }) => {
-    const userId = await requirePermission(ctx, "org:update-settings")
+    const userId = await requirePermission(ctx, "organizations.update-settings")
     // ... work ...
   })
 ```
 
 ```ts
 // Read interface from another module:
-import { hasRole, isLastAdmin } from "@monark/rbac/server"
+import { hasRoleKey, isLastAdmin, ADMIN_ROLE_KEY } from "@monark/rbac/server"
 
-if (await hasRole(userId, "ADMIN", orgId)) { /* ... */ }
+if (await hasRoleKey(userId, ADMIN_ROLE_KEY, orgId)) { /* ... */ }
 if (await isLastAdmin(userId, orgId)) { /* block leaving */ }
 ```
 
 ```ts
+// Extended-module permission registration (called once at api boot):
+import { registerPermissions } from "@monark/rbac/server"
+
+export function registerPostsPermissions(): void {
+  registerPermissions("posts", {
+    publish: { description: "Publish a draft to readers.", category: "posts" },
+    moderate: { description: "Hide / unhide flagged posts.", category: "posts" },
+  })
+}
+```
+
+```ts
 // Web side via tRPC:
-const roles    = trpc.rbac.myRoles.useQuery()        // Role[]
-const primary  = trpc.rbac.myPrimaryRole.useQuery()  // Role | null
-const allowed  = trpc.rbac.myPermissions.useQuery()  // Permission[]
+const roles    = trpc.rbac.myRoles.useQuery()        // role rows
+const allowed  = trpc.rbac.myPermissions.useQuery()  // dotted Permission[]
 ```
 
 ## Public API

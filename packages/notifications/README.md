@@ -6,8 +6,8 @@ Spec: [docs/features-planning/phase-1/notifications-system.md](../../docs/featur
 
 ## What's here (Phase 1 MVP)
 
-- `/server` — `notify()` + `notifyMany()` dispatch surface, prefs CRUD (`isChannelEnabled`, `setPreference`, `listPreferences`, `resetPreferences`), `registerNotificationSubscribers()` for the api boot path, `notificationsRouter` tRPC sub-router (unread count, list, markRead, markAllRead, dismiss, prefs.get/set/reset), and the email transport (`sendMail`).
-- `/contracts` — `NotificationCreatedEvent`, `NotificationDeliveryFailedEvent`, `NotificationPreferenceChangedEvent` (unioned into `NotificationsEvents`), the `NOTIFICATION_KINDS` registry, and the `NotificationDataMap` typed payload-per-kind.
+- `/server` — `notify()` + `notifyMany()` dispatch surface, prefs CRUD (`isChannelEnabled`, `setPreference`, `listPreferences`, `resetPreferences`), `registerNotificationSubscribers()` for the api boot path, `registerCoreNotificationKinds()` (the eight core kinds) + `registerNotificationKind()` (extension entrypoint), `notificationsRouter` tRPC sub-router (unread count, list, markRead, markAllRead, dismiss, prefs.get/set/reset), and the email transport (`sendMail`).
+- `/contracts` — `NotificationCreatedEvent`, `NotificationDeliveryFailedEvent`, `NotificationPreferenceChangedEvent` (unioned into `NotificationsEvents`), the runtime kind registry (`registerNotificationKind`, `getNotificationKindDef`, `listNotificationKinds`), and the `NotificationDataRegistry` interface that modules augment via TypeScript declaration merging to keep per-kind payloads typed.
 - `/client` — placeholder ; the web service consumes the inbox via `trpc.notifications.*` directly. Centralised hooks land here when more than one site needs them.
 - Templates under `src/templates/{auth,account}/<kind>.ts` ; each kind ships en + fr slots with `subject` / `html` / `text` / `inapp { subject, body, link? }`. The brand chrome (orange header band, Monark wordmark, brand-orange CTA, footer) is appended at render time from `src/templates/_partials/email-shell.ts` so adding a new kind is "fill in the body slot."
 - Prisma models `Notification`, `NotificationPreference`, enums `NotificationChannel`, `NotificationCategory` under the `// ── MODULE: notifications ──` banner in [packages/db/prisma/schema.prisma](../db/prisma/schema.prisma).
@@ -32,23 +32,32 @@ import { notify } from "@monark/notifications/server"
 await notify("auth.password-changed", { userId }, { occurredAt: new Date() })
 ```
 
-Most call sites won't reach `notify()` directly ; they emit a domain event and the subscriber registry forwards it. Add a new kind by:
+Most call sites won't reach `notify()` directly ; they emit a domain event and the subscriber registry forwards it. Add a new kind by :
 
-1. Append the kind + def to `NOTIFICATION_KINDS` in [src/contracts/registry.ts](src/contracts/registry.ts).
-2. Add the matching template module under `src/templates/<area>/<kind>.ts` and register it in `src/templates/index.ts`.
-3. Wire a subscriber in `src/server/subscribers/index.ts` that calls `notify()` with the typed payload.
-4. (Optional) Call `notify()` directly from any code path that has richer per-call data than the event carries.
+1. **Type the payload.** Augment the `NotificationDataRegistry` interface with declaration merging so `notify()` stays typed at call sites :
+   ```ts
+   declare module "@monark/notifications/contracts" {
+     interface NotificationDataRegistry {
+       "posts.published": { postId: string; authorId: string; publishedAt: Date }
+     }
+   }
+   ```
+2. **Build the template messages.** Either inline the `KindMessages` object, or import a `templates/<area>/<kind>.ts` file matching the existing core templates' shape (en + fr slots with `subject` / `html` / `text` / `inapp { subject, body, link? }`).
+3. **Register at api boot.** Add a `register<Module>NotificationKinds()` helper to your module's server package, calling `registerNotificationKind(kind, def, messages)`. Wire the helper into [services/api/src/server.ts](../../services/api/src/server.ts) next to `registerCoreNotificationKinds()`.
+4. **Subscribe to a domain event** (optional). If a corresponding domain event already fires elsewhere, add a handler in [src/server/subscribers/index.ts](src/server/subscribers/index.ts) that calls `notify()` with the typed payload. Otherwise call `notify()` directly from the code path that has the data.
 
 ## Public API
 
 | Import path                            | Export                              | Kind                |
 |----------------------------------------|-------------------------------------|---------------------|
 | `@monark/notifications/server`         | `notify`, `notifyMany`              | function            |
+| `@monark/notifications/server`         | `registerCoreNotificationKinds`, `registerNotificationKind` | function            |
 | `@monark/notifications/server`         | `registerNotificationSubscribers`   | function            |
 | `@monark/notifications/server`         | `notificationsRouter`               | tRPC sub-router     |
 | `@monark/notifications/server`         | `isChannelEnabled`, `setPreference`, `listPreferences`, `resetPreferences`, `resolveChannelEnabled` | function |
 | `@monark/notifications/server`         | `sendMail`                          | function (transport)|
-| `@monark/notifications/contracts`      | `NotificationKind`, `NotificationDataMap`, `NOTIFICATION_KINDS` | type / const |
+| `@monark/notifications/contracts`      | `NotificationKind`, `NotificationDataMap`, `NotificationDataRegistry` | type     |
+| `@monark/notifications/contracts`      | `getNotificationKindDef`, `listNotificationKinds`, `listNotificationKindDescriptors` | function |
 | `@monark/notifications/contracts`      | `NotificationsEvents` (and members) | type union          |
 
 ## tRPC surface

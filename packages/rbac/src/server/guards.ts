@@ -1,5 +1,4 @@
 import { ForbiddenError, UnauthorizedError } from "@monark/common"
-import type { Permission } from "../contracts/permissions"
 import { hasPermission, hasRoleKey } from "./read"
 
 export type RbacContext = {
@@ -23,15 +22,22 @@ export async function requireRoleKey(
   return ctx.userId
 }
 
+// `dottedPermission` is the merged-registry identity in the form
+// `"<module>.<key>"`, e.g. `"organizations.update-settings"` or
+// `"posts.publish"`. Extended modules' permissions are accepted the
+// same as core's because the registry is built at boot.
 export async function requirePermission(
   ctx: RbacContext,
-  permission: Permission,
+  dottedPermission: string,
   orgId?: string,
 ): Promise<string> {
   if (!ctx.userId) throw new UnauthorizedError()
   const target = effectiveOrg(ctx, orgId)
-  const ok = await hasPermission(ctx.userId, permission, target)
-  if (!ok)
-    throw new ForbiddenError(`Missing required permission: ${permission}`)
+  const ok = await hasPermission(ctx.userId, dottedPermission, target)
+  if (!ok) {
+    throw new ForbiddenError(
+      `Missing required permission: ${dottedPermission}`,
+    )
+  }
   return ctx.userId
 }

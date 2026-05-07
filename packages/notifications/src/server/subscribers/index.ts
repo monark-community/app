@@ -7,11 +7,16 @@ import type {
   TrustedDeviceAddedEvent,
   TrustedDevicesAllRevokedEvent,
 } from "@monark/auth/contracts"
+import { listOrgAdminUserIds, listSysadminUserIds } from "@monark/rbac/server"
 import type {
   UserDeletionCanceledEvent,
   UserDeletionRequestedEvent,
   UserEmailChangedEvent,
 } from "@monark/users/contracts"
+import type {
+  WebhookDeliveryFailedEvent,
+  WebhookEndpointDisabledEvent,
+} from "@monark/webhooks/contracts"
 import { notify } from "../dispatch"
 
 let registered = false
@@ -125,4 +130,115 @@ export function registerNotificationSubscribers(): void {
       logger.error({ err, event }, "account.deletion-canceled subscriber failed")
     }
   })
+
+  // ── Webhook operator alerts ─────────────────────────────────────
+  // Two notifications, both fanned out to the right operator group :
+  //
+  //   - On a *permanent* delivery failure (retries exhausted, the
+  //     `permanent: true` branch of the worker), tell every org admin
+  //     (org-scoped endpoint) or every sysadmin (platform-tier
+  //     endpoint) so they can investigate. Skipped on retry-able
+  //     failures to avoid spamming the inbox during a transient
+  //     receiver outage.
+  //   - On endpoint auto-disable (5 consecutive failures hit the
+  //     limit), the same fan-out plus `requiredEmail` since this is
+  //     the actionable "your endpoint is dead" signal.
+  //
+  // The fan-out helpers (`listOrgAdminUserIds` / `listSysadminUserIds`)
+  // are bounded by the number of admins per org ; for a small team
+  // this is a handful of users, so per-recipient `notify()` calls
+  // stay cheap. The dispatcher's 60s dedupe window absorbs simultaneous
+  // failures of distinct deliveries to the same endpoint.
+  on<WebhookDeliveryFailedEvent>("webhook.delivery-failed", async (event) => {
+    if (!event.permanent) return
+    try {
+      const recipients = await resolveWebhookOperators(event.organizationId)
+      const scope = event.organizationId === null ? "platform" : "org"
+      for (const userId of recipients) {
+        await notify(
+          "webhooks.delivery-permanently-failed",
+          { userId },
+          {
+            endpointId: event.endpointId,
+            endpointUrl: event.endpointUrl,
+            eventType: event.eventType,
+            attempts: event.attemptNumber,
+            reason: event.reason,
+            scope,
+            occurredAt: event.occurredAt,
+          },
+        )
+      }
+    } catch (err) {
+      logger.error(
+        { err, event },
+        "webhooks.delivery-permanently-failed subscriber failed",
+      )
+    }
+  })
+
+  on<WebhookEndpointDisabledEvent>(
+    "webhook.endpoint-disabled-after-failures",
+    async (event) => {
+      try {
+        const recipients = await resolveWebhookOperators(event.organizationId)
+        const scope = event.organizationId === null ? "platform" : "org"
+        for (const userId of recipients) {
+          await notify(
+            "webhooks.endpoint-auto-disabled",
+            { userId },
+            {
+              endpointId: event.endpointId,
+              endpointUrl: await resolveEndpointUrl(event.endpointId),
+              consecutiveFailures: event.consecutiveFailures,
+              scope,
+              occurredAt: event.occurredAt,
+            },
+          )
+        }
+      } catch (err) {
+        logger.error(
+          { err, event },
+          "webhooks.endpoint-auto-disabled subscriber failed",
+        )
+      }
+    },
+  )
+}
+
+/**
+ * Resolves the operator group that should receive an alert about a
+ * webhook endpoint :
+ *
+ *   - Org-scoped endpoint ⇒ active org admins (built-in `ADMIN` role).
+ *   - Platform-tier endpoint ⇒ active sysadmins.
+ *
+ * Returns user ids ; the caller hydrates with `notify(...)` per
+ * recipient. Empty list is a valid outcome when an org has no admins
+ * (e.g. the last admin was removed) — the alert is dropped silently
+ * since there's no one to notify.
+ */
+async function resolveWebhookOperators(
+  organizationId: string | null,
+): Promise<string[]> {
+  if (organizationId === null) {
+    return listSysadminUserIds()
+  }
+  return listOrgAdminUserIds(organizationId)
+}
+
+/**
+ * The auto-disable event doesn't carry the endpoint URL because it
+ * was added to delivery events but not to the disable event (the
+ * disable path runs after `markDeliveryFailed` from inside the
+ * worker, after the URL is no longer in scope). Looking it up from
+ * the row here keeps the event payload tight.
+ */
+async function resolveEndpointUrl(endpointId: string): Promise<string> {
+  const db = getDb()
+  const row = await db.webhookEndpoint.findUnique({
+    where: { id: endpointId },
+    select: { url: true },
+  })
+  return row?.url ?? "(deleted endpoint)"
 }

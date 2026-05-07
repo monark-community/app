@@ -37,7 +37,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
   return (
     <>
       <AppBar />
-      <main className="w-full px-4 py-8 sm:px-6">
+      <main className="w-full px-4 pb-20 pt-8 sm:px-6">
         <PageLayout sidebar={<AdminSidebar />}>
           <div className="border-b border-border pb-3 xl:hidden">
             <AdminSidebar orientation="horizontal" />

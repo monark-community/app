@@ -31,7 +31,8 @@
     "prebuild": "pnpm gen",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "sysadmin": "tsx --env-file=services/api/.env tools/sysadmin.ts"
+    "sysadmin": "tsx --env-file=services/api/.env tools/sysadmin.ts",
+    "webhook-receiver": "tsx tools/webhook-receiver.ts"
   },
   "dependencies": {
     "@monark/db": "workspace:*",

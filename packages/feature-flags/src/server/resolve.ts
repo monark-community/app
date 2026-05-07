@@ -1,5 +1,9 @@
-import { FLAGS, type FlagKey, type FlagScope } from "../contracts/index"
-import { readOverridesForKeys, type OverrideRow } from "./data"
+import {
+  getFlagDef,
+  parseFlagKey,
+  type FlagScope,
+} from "../contracts/index"
+import { readOverridesForKeys, type OverrideRow, type FlagRef } from "./data"
 
 /**
  * Resolves the winning override for one flag against a scope, applying
@@ -31,29 +35,52 @@ export function mostSpecific(
   return global
 }
 
-export async function getFlags<K extends FlagKey>(
-  keys: K[],
-  scope: FlagScope = {},
-): Promise<Record<K, boolean>> {
-  if (keys.length === 0) return {} as Record<K, boolean>
+function dotted(ref: FlagRef): string {
+  return `${ref.module}.${ref.key}`
+}
 
-  const rows = await readOverridesForKeys(keys, scope)
-  const grouped = new Map<string, OverrideRow[]>()
-  for (const row of rows) {
-    const list = grouped.get(row.flagKey) ?? []
-    list.push(row)
-    grouped.set(row.flagKey, list)
+export async function getFlags(
+  keys: string[],
+  scope: FlagScope = {},
+): Promise<Record<string, boolean>> {
+  if (keys.length === 0) return {}
+
+  const refs: FlagRef[] = []
+  const refByDotted = new Map<string, FlagRef>()
+  for (const dottedKey of keys) {
+    const parsed = parseFlagKey(dottedKey)
+    if (!parsed) continue
+    refs.push(parsed)
+    refByDotted.set(dottedKey, parsed)
   }
 
-  const result = {} as Record<K, boolean>
-  for (const key of keys) {
-    const override = mostSpecific(grouped.get(key) ?? [], scope)
-    result[key] = override?.enabled ?? FLAGS[key].defaultOn
+  const rows = await readOverridesForKeys(refs, scope)
+  const grouped = new Map<string, OverrideRow[]>()
+  for (const row of rows) {
+    const k = `${row.module}.${row.flagKey}`
+    const list = grouped.get(k) ?? []
+    list.push(row)
+    grouped.set(k, list)
+  }
+
+  const result: Record<string, boolean> = {}
+  for (const dottedKey of keys) {
+    const ref = refByDotted.get(dottedKey)
+    if (!ref) {
+      result[dottedKey] = false
+      continue
+    }
+    const def = getFlagDef(dottedKey)
+    const override = mostSpecific(grouped.get(dotted(ref)) ?? [], scope)
+    result[dottedKey] = override?.enabled ?? def?.defaultOn ?? false
   }
   return result
 }
 
-export async function isEnabled(key: FlagKey, scope: FlagScope = {}): Promise<boolean> {
+export async function isEnabled(
+  key: string,
+  scope: FlagScope = {},
+): Promise<boolean> {
   const flags = await getFlags([key], scope)
   return flags[key] ?? false
 }

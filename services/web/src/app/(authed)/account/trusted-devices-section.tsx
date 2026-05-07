@@ -5,7 +5,6 @@ import { useState, useTransition } from "react"
 import { useTranslations } from "next-intl"
 import { ShieldOff } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Dialog,
   DialogContent,
@@ -15,6 +14,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Skeleton } from "@/components/ui/skeleton"
+import { PageSection } from "@/components/page-section"
 import { TrustedDeviceCard } from "@/components/trusted-device-card"
 import { trpc } from "@/lib/trpc"
 import {
@@ -99,12 +99,11 @@ export function TrustedDevicesSection({
         }
 
   return (
-    <Card className="bg-transparent shadow-none">
-      <CardHeader>
-        <CardTitle>{t("title")}</CardTitle>
-        <CardDescription>{t("subtitle")}</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-3">
+    <PageSection
+      title={t("title")}
+      subtitle={t("subtitle")}
+      contentClassName="space-y-3"
+    >
         {query.isLoading && (
           <div className="space-y-2" aria-busy="true" aria-label={t("resolving")}>
             {[0, 1].map((i) => (
@@ -185,7 +184,6 @@ export function TrustedDevicesSection({
             </Button>
           )}
         </div>
-      </CardContent>
 
       <Dialog
         open={confirm !== null}
@@ -218,6 +216,6 @@ export function TrustedDevicesSection({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </Card>
+    </PageSection>
   )
 }

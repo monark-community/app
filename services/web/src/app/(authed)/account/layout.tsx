@@ -63,7 +63,7 @@ export default async function AccountLayout({
         `xl+` so the content stays viewport-centered alongside the
         sidebar).
       */}
-      <main className="w-full px-4 py-8 sm:px-6">
+      <main className="w-full px-4 pb-20 pt-8 sm:px-6">
         <PageLayout sidebar={<AccountSidebar />}>
           <div className="border-b border-border pb-3 xl:hidden">
             <AccountSidebar orientation="horizontal" />

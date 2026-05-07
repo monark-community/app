@@ -9,7 +9,8 @@ import {
 import { getDb } from "@monark/db"
 import { adminAssignmentSummary } from "@monark/rbac/server"
 import {
-  NOTIFICATION_KINDS,
+  getNotificationKindDef,
+  listNotificationKindDescriptors,
   type NotificationKind,
 } from "../contracts/registry"
 import type { NotificationPreferenceChangedEvent } from "../contracts/events"
@@ -47,19 +48,17 @@ async function resolvePrefsCells(userId: string) {
   }> = []
   const categories = ["SECURITY", "ACCOUNT"] as const
   const channels = ["IN_APP", "EMAIL"] as const
+  const descriptors = listNotificationKindDescriptors()
   for (const category of categories) {
     for (const channel of channels) {
-      const sampleKindEntry = Object.entries(NOTIFICATION_KINDS).find(
-        ([, def]) => def.category === category,
-      )
-      if (!sampleKindEntry) continue
-      const [sampleKind, sampleDef] = sampleKindEntry
+      const sample = descriptors.find((d) => d.category === category)
+      if (!sample) continue
       const enabled = resolveChannelEnabled({
-        kind: sampleKind as never,
+        kind: sample.kind as never,
         channel,
         rows,
       })
-      const forced = sampleDef.requiredEmail && channel === "EMAIL"
+      const forced = sample.requiredEmail && channel === "EMAIL"
       cells.push({ category, channel, enabled, forced })
     }
   }
@@ -292,7 +291,7 @@ export const notificationsRouter = router({
         }
         if (!ctx.userId) throw new UnauthorizedError()
         const kind = input.kind as NotificationKind
-        const def = NOTIFICATION_KINDS[kind]
+        const def = getNotificationKindDef(kind)
         if (!def) {
           throw new NotFoundError("NotificationKind", input.kind)
         }
@@ -325,6 +324,24 @@ export const notificationsRouter = router({
               return {
                 completesAt: new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000),
               }
+            case "webhooks.delivery-permanently-failed":
+              return {
+                endpointId: "wh_test_endpoint",
+                endpointUrl: "https://receiver.example/hook",
+                eventType: "rbac.role-assigned",
+                attempts: 5,
+                reason: "HTTP 500",
+                scope: "org" as const,
+                occurredAt: now,
+              }
+            case "webhooks.endpoint-auto-disabled":
+              return {
+                endpointId: "wh_test_endpoint",
+                endpointUrl: "https://receiver.example/hook",
+                consecutiveFailures: 5,
+                scope: "org" as const,
+                occurredAt: now,
+              }
             default: {
               const _exhaustive: never = kind
               return _exhaustive
@@ -342,10 +359,10 @@ export const notificationsRouter = router({
     listKinds: publicProcedure.query(() => {
       if (process.env.NODE_ENV === "production") return { kinds: [] }
       return {
-        kinds: (Object.keys(NOTIFICATION_KINDS) as NotificationKind[]).map((k) => ({
-          kind: k,
-          category: NOTIFICATION_KINDS[k].category,
-          channels: NOTIFICATION_KINDS[k].channels,
+        kinds: listNotificationKindDescriptors().map((d) => ({
+          kind: d.kind,
+          category: d.category,
+          channels: d.channels,
         })),
       }
     }),

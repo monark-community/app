@@ -247,13 +247,18 @@ export async function listRolesForOrg(
   })
 }
 
+// Each `permission` entry is a parsed (module, key) pair sourced from
+// `validatePermissionList`. The DB stores both columns separately ;
+// uniqueness is on (roleId, module, permission).
+export type RolePermissionInput = { module: string; key: string }
+
 export async function createCustomRole(input: {
   organizationId: string
   key: string
   name: string
   description: string | null
   color: string | null
-  permissions: string[]
+  permissions: RolePermissionInput[]
 }): Promise<RoleWithPermissions> {
   const db = getDb()
   return db.$transaction(async (tx) => {
@@ -269,9 +274,10 @@ export async function createCustomRole(input: {
     })
     if (input.permissions.length > 0) {
       await tx.rolePermission.createMany({
-        data: input.permissions.map((permission) => ({
+        data: input.permissions.map((p) => ({
           roleId: role.id,
-          permission,
+          module: p.module,
+          permission: p.key,
         })),
       })
     }
@@ -287,7 +293,7 @@ export async function updateRolePatch(input: {
   name?: string
   description?: string | null
   color?: string | null
-  permissions?: string[]
+  permissions?: RolePermissionInput[]
 }): Promise<RoleWithPermissions> {
   const db = getDb()
   return db.$transaction(async (tx) => {
@@ -305,9 +311,10 @@ export async function updateRolePatch(input: {
       await tx.rolePermission.deleteMany({ where: { roleId: input.id } })
       if (input.permissions.length > 0) {
         await tx.rolePermission.createMany({
-          data: input.permissions.map((permission) => ({
+          data: input.permissions.map((p) => ({
             roleId: input.id,
-            permission,
+            module: p.module,
+            permission: p.key,
           })),
         })
       }
@@ -369,3 +376,47 @@ export async function listSysadminHolders(): Promise<
 // Alias kept short for the tRPC procedure that re-exports this. The
 // CLI uses `listSysadminHolders` directly via the data layer.
 export const listSysadmins = listSysadminHolders
+
+/**
+ * Active built-in ADMIN holders for one organization. Returns the
+ * user ids only ; callers (notification fan-out, etc.) hydrate the
+ * surrounding User row themselves. Excludes platform-tier SYSADMIN
+ * (a separate group) and revoked assignments.
+ */
+export async function listOrgAdminUserIds(
+  organizationId: string,
+): Promise<string[]> {
+  const db = getDb()
+  const rows = await db.roleAssignment.findMany({
+    where: {
+      organizationId,
+      revokedAt: null,
+      role: { is: { key: ADMIN_ROLE_KEY, builtIn: true } },
+    },
+    select: { userId: true },
+  })
+  // De-dup just in case ; the unique key on the assignment table
+  // already guarantees no double-grants of the same role per user
+  // per org, so this is defensive.
+  return [...new Set(rows.map((r) => r.userId))]
+}
+
+/**
+ * Active platform-tier SYSADMIN holders. Same shape as
+ * `listOrgAdminUserIds` ; user ids only, no User row hydration.
+ * Used by webhook notification fan-out for platform-tier endpoints
+ * (organizationId = null) and by other system-tier alerting paths
+ * that need the on-call group.
+ */
+export async function listSysadminUserIds(): Promise<string[]> {
+  const db = getDb()
+  const rows = await db.roleAssignment.findMany({
+    where: {
+      revokedAt: null,
+      organizationId: null,
+      role: { is: { key: SYSADMIN_ROLE_KEY, builtIn: true } },
+    },
+    select: { userId: true },
+  })
+  return [...new Set(rows.map((r) => r.userId))]
+}

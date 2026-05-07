@@ -5,7 +5,6 @@ import { useTranslations } from "next-intl"
 import { Check, Copy } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Dialog,
   DialogContent,
@@ -21,6 +20,7 @@ import {
   InputOTPSlot,
 } from "@/components/ui/input-otp"
 import { Label } from "@/components/ui/label"
+import { PageSection } from "@/components/page-section"
 import { trpc } from "@/lib/trpc"
 
 type Enrollment = { secret: string; qrSvg: string }
@@ -78,52 +78,47 @@ export function TotpSection() {
   const [regenOpen, setRegenOpen] = useState(false)
 
   return (
-    <Card className="bg-transparent shadow-none">
-      <CardHeader>
-        <CardTitle>{t("title")}</CardTitle>
-        <CardDescription>
-          {active ? t("subtitleActive") : t("subtitleInactive")}
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {!active && (
-          <Button variant="outline" onClick={() => setEnrollOpen(true)}>
-            {t("enroll")}
-          </Button>
-        )}
-        {active && (
-          <div className="space-y-3">
-            <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
-              <dt className="text-muted-foreground">
-                {t("fields.recoveryRemaining")}
-              </dt>
-              <dd>{remainingRecoveryCodes ?? "—"}</dd>
-            </dl>
-            <div className="flex flex-wrap gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setRegenOpen(true)}
-              >
-                {t("regenerate")}
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setDisableOpen(true)}
-                className="text-destructive hover:text-destructive"
-              >
-                {t("disable")}
-              </Button>
-            </div>
+    <PageSection
+      title={t("title")}
+      subtitle={active ? t("subtitleActive") : t("subtitleInactive")}
+    >
+      {!active && (
+        <Button variant="outline" onClick={() => setEnrollOpen(true)}>
+          {t("enroll")}
+        </Button>
+      )}
+      {active && (
+        <div className="space-y-3">
+          <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
+            <dt className="text-muted-foreground">
+              {t("fields.recoveryRemaining")}
+            </dt>
+            <dd>{remainingRecoveryCodes ?? "—"}</dd>
+          </dl>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setRegenOpen(true)}
+            >
+              {t("regenerate")}
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setDisableOpen(true)}
+              className="text-destructive hover:text-destructive"
+            >
+              {t("disable")}
+            </Button>
           </div>
-        )}
-      </CardContent>
+        </div>
+      )}
 
       <TotpEnrollDialog open={enrollOpen} onOpenChange={setEnrollOpen} />
       <TotpDisableDialog open={disableOpen} onOpenChange={setDisableOpen} />
       <TotpRegenerateDialog open={regenOpen} onOpenChange={setRegenOpen} />
-    </Card>
+    </PageSection>
   )
 }
 

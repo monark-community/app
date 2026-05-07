@@ -3,7 +3,10 @@ import {
   ADMIN_ROLE_KEY,
   SYSADMIN_ROLE_KEY,
 } from "../contracts/role"
-import { isKnownPermission } from "../contracts/permissions"
+import {
+  isKnownPermission,
+  parsePermissionKey,
+} from "../contracts/permissions"
 
 const KEY_RE = /^[a-z0-9](?:[a-z0-9_-]*[a-z0-9])?$/
 const HEX_RE = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/
@@ -54,25 +57,33 @@ export function validateRoleKey(key: string): string {
   return trimmed
 }
 
+export type ValidatedPermission = { module: string; key: string }
+
 /**
- * Validates a list of permission keys : every entry must be a known
- * permission (registered in `contracts/permissions.ts`), duplicates
- * are silently de-duped (first-seen wins), and the input order is
- * preserved. Throws ValidationError on the first unknown key so the
- * caller learns which one is wrong.
+ * Validates a list of dotted permission keys : every entry must be a
+ * known permission (registered via `registerPermissions()` at boot),
+ * duplicates are silently de-duped (first-seen wins), and the input
+ * order is preserved. Throws ValidationError on the first unknown key
+ * so the caller learns which one is wrong. Returns the parsed
+ * `{ module, key }` pairs ready for DB insertion.
  */
 export function validatePermissionList(
   permissions: readonly string[],
-): string[] {
+): ValidatedPermission[] {
   const seen = new Set<string>()
-  const out: string[] = []
-  for (const p of permissions) {
-    if (!isKnownPermission(p)) {
-      throw new ValidationError(`Unknown permission key : ${p}`)
+  const out: ValidatedPermission[] = []
+  for (const dotted of permissions) {
+    if (!isKnownPermission(dotted)) {
+      throw new ValidationError(`Unknown permission key : ${dotted}`)
     }
-    if (seen.has(p)) continue
-    seen.add(p)
-    out.push(p)
+    if (seen.has(dotted)) continue
+    seen.add(dotted)
+    const parsed = parsePermissionKey(dotted)
+    if (!parsed) {
+      // unreachable — isKnownPermission already validated parsability
+      continue
+    }
+    out.push(parsed)
   }
   return out
 }

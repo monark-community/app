@@ -18,6 +18,30 @@ body {
 }
 
 /*
+ * Always reserve gutter space for the vertical scrollbar so a tall
+ * page (with scrollbar) and a short page (without) anchor their
+ * content at the same horizontal position. Without this, navigating
+ * between routes nudges the centered content a few pixels left/right
+ * as the scrollbar appears or disappears. `stable` keeps the gutter
+ * even when the bar isn't drawn ; supported in every modern browser.
+ */
+html {
+  scrollbar-gutter: stable;
+}
+
+/*
+ * `overflow-x: clip` absorbs the 1-2px overshoot that full-viewport-
+ * width bleed elements (e.g. the user banner using `w-screen` +
+ * `ml-[calc(50%-50vw)]`) introduce on browsers where `100vw`
+ * includes the scrollbar gutter. Unlike `overflow-x: hidden`,
+ * `clip` does not create a new scroll container, so vertical
+ * scrolling on the html / page level keeps working normally.
+ */
+body {
+  overflow-x: clip;
+}
+
+/*
  * Top-of-viewport route progress bar (NProgress). The two brand colour
  * variables (`--brand-primary` / `--brand-accent`) are injected from
  * `@monark/branding` via the inline style block in the root layout, so
