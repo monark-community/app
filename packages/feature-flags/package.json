@@ -11,7 +11,8 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "lint": "eslint src",
-    "test": "vitest run --passWithNoTests"
+    "test": "vitest run --passWithNoTests",
+    "test:coverage": "vitest run --coverage --passWithNoTests"
   },
   "dependencies": {
     "@monark/common": "workspace:*",
@@ -23,6 +24,7 @@
   },
   "devDependencies": {
     "@types/react": "^19.0.0",
+    "@vitest/coverage-v8": "^3.0.0",
     "react": "^19.1.0",
     "vitest": "^3.0.0"
   }

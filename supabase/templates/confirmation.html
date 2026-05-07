@@ -1,8 +1,92 @@
-<h2>Confirm your Monark account</h2>
-<p>Click the link below to verify your email:</p>
-<p><a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=signup">Confirm your email</a></p>
-<p>Or enter this 6-digit code on the verification page:</p>
-<p style="font-family: monospace; font-size: 1.4em; letter-spacing: 0.25em;">{{ .Token }}</p>
-<p style="color: #888; font-size: 0.85em;">
-  If you didn't try to sign up for Monark, you can ignore this email.
-</p>
+{{/*
+  Monark — signup confirmation email.
+
+  Branches on user_metadata.locale_preference (set by signUpUser at signup
+  and refreshed by updateLocaleAction whenever the user toggles language in
+  /account). Defaults to English when the field is absent or unrecognised.
+
+  Layout is single-column 560px, table-based for Outlook/Gmail compat,
+  inline styles only. Brand colours use hex (oklch isn't supported in
+  email clients). The wordmark is rendered as text + a brand-colour bar
+  rather than the SVG logo, since Outlook desktop and parts of Gmail
+  don't render SVG reliably.
+*/}}
+<!doctype html>
+<html lang="{{ if eq .Data.locale_preference "fr" }}fr{{ else }}en{{ end }}">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="supported-color-schemes" content="light dark" />
+    <title>{{ if eq .Data.locale_preference "fr" }}Confirmez votre compte Monark{{ else }}Confirm your Monark account{{ end }}</title>
+  </head>
+  <body style="margin:0;padding:0;background-color:#f4f4f5;font-family:'Nunito Sans','Helvetica Neue',Helvetica,Arial,sans-serif;color:#18181b;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f4f4f5;">
+      <tr>
+        <td align="center" style="padding:32px 16px;">
+          <table role="presentation" width="560" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;width:100%;background-color:#ffffff;border-radius:12px;border:1px solid #e4e4e7;">
+            <tr>
+              <td style="background-color:#F0870C;height:4px;line-height:4px;font-size:0;">&nbsp;</td>
+            </tr>
+            <tr>
+              <td style="padding:28px 32px 8px 32px;">
+                <img src="{{ .SiteURL }}/monark-logo.svg" alt="Monark" width="40" height="40" style="display:block;border:0;outline:none;text-decoration:none;width:40px;height:40px;" />
+                <span style="margin-top:8px;display:inline-block;font-size:22px;font-weight:800;color:#F0870C;letter-spacing:-0.02em;font-family:'Nunito Sans','Helvetica Neue',Helvetica,Arial,sans-serif;">Monark</span>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:8px 32px 0 32px;font-family:'Nunito Sans','Helvetica Neue',Helvetica,Arial,sans-serif;color:#18181b;font-size:16px;line-height:1.6;">
+                {{ if eq .Data.locale_preference "fr" }}
+                <h1 style="margin:0 0 16px 0;font-size:22px;font-weight:700;color:#18181b;letter-spacing:-0.01em;">Confirmez votre adresse e-mail</h1>
+                <p style="margin:0 0 24px 0;color:#3f3f46;">{{ if .Data.display_name }}Bonjour {{ .Data.display_name }},<br /><br />{{ end }}Merci d'avoir créé un compte Monark. Cliquez sur le bouton ci-dessous pour vérifier votre adresse e-mail.</p>
+                {{ else }}
+                <h1 style="margin:0 0 16px 0;font-size:22px;font-weight:700;color:#18181b;letter-spacing:-0.01em;">Confirm your email address</h1>
+                <p style="margin:0 0 24px 0;color:#3f3f46;">{{ if .Data.display_name }}Hi {{ .Data.display_name }},<br /><br />{{ end }}Thanks for creating a Monark account. Click the button below to verify your email.</p>
+                {{ end }}
+              </td>
+            </tr>
+            <tr>
+              <td align="center" style="padding:0 32px 8px 32px;">
+                <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                  <tr>
+                    <td align="center" bgcolor="#F0870C" style="border-radius:8px;">
+                      <a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=signup" target="_blank" style="display:inline-block;padding:14px 28px;font-family:'Nunito Sans','Helvetica Neue',Helvetica,Arial,sans-serif;font-size:15px;font-weight:700;color:#18181b;text-decoration:none;border-radius:8px;">{{ if eq .Data.locale_preference "fr" }}Vérifier mon adresse{{ else }}Verify my email{{ end }}</a>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+            <tr>
+              <td align="center" style="padding:24px 32px 8px 32px;font-family:'Nunito Sans','Helvetica Neue',Helvetica,Arial,sans-serif;color:#71717a;font-size:14px;line-height:1.6;">
+                {{ if eq .Data.locale_preference "fr" }}
+                <p style="margin:0 0 8px 0;">Ou saisissez ce code à 6 chiffres sur la page de vérification :</p>
+                {{ else }}
+                <p style="margin:0 0 8px 0;">Or enter this 6-digit code on the verification page:</p>
+                {{ end }}
+              </td>
+            </tr>
+            <tr>
+              <td align="center" style="padding:0 32px 24px 32px;">
+                <span style="display:inline-block;font-family:'JetBrains Mono','Courier New',Courier,monospace;font-size:24px;font-weight:700;letter-spacing:0.3em;color:#18181b;background-color:#fafafa;border:1px solid #e4e4e7;border-radius:8px;padding:12px 20px;">{{ .Token }}</span>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:0 32px 32px 32px;border-top:1px solid #f4f4f5;">
+                <p style="margin:24px 0 0 0;font-family:'Nunito Sans','Helvetica Neue',Helvetica,Arial,sans-serif;color:#a1a1aa;font-size:13px;line-height:1.6;">
+                  {{ if eq .Data.locale_preference "fr" }}
+                  Si vous n'êtes pas à l'origine de cette inscription, vous pouvez ignorer ce message en toute sécurité.
+                  {{ else }}
+                  If you didn't try to sign up for Monark, you can safely ignore this email.
+                  {{ end }}
+                </p>
+              </td>
+            </tr>
+          </table>
+          <p style="margin:24px 0 0 0;font-family:'Nunito Sans','Helvetica Neue',Helvetica,Arial,sans-serif;color:#a1a1aa;font-size:12px;">
+            © Monark
+          </p>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>

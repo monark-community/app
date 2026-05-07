@@ -1,5 +1,6 @@
 import { cookies } from "next/headers"
 import { createServerClient, type CookieOptions } from "@supabase/ssr"
+import { SUPABASE_AUTH_STORAGE_KEY } from "./storage-key"
 
 type CookieToSet = { name: string; value: string; options: CookieOptions }
 
@@ -9,6 +10,11 @@ export async function createSupabaseServerClient() {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
     {
+      // Pin the storage key so the browser-side Supabase client (which
+      // may have rewritten the URL for LAN access) reads sessions
+      // under the same name we wrote them. See
+      // `lib/supabase/storage-key.ts` for the threat-model rationale.
+      auth: { storageKey: SUPABASE_AUTH_STORAGE_KEY },
       cookies: {
         getAll() {
           return cookieStore.getAll()

@@ -1,5 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server"
 import { createServerClient, type CookieOptions } from "@supabase/ssr"
+import { getRequestOrigin } from "@/lib/request-origin"
+import { SUPABASE_AUTH_STORAGE_KEY } from "@/lib/supabase/storage-key"
 
 type CookieToSet = { name: string; value: string; options: CookieOptions }
 
@@ -13,12 +15,25 @@ const TOTP_PENDING_COOKIE = "monark_totp_pending"
 // `/signin/totp` while a TOTP challenge is pending. See
 // https://supabase.com/docs/guides/auth/server-side/nextjs.
 export async function middleware(request: NextRequest) {
-  let response = NextResponse.next({ request })
+  // Pass the resolved pathname through to server components via a
+  // request header. Next 15 doesn't expose `pathname` to layouts /
+  // server components otherwise ; the (authed) and /account layouts
+  // both read this to make routing decisions (e.g. redirecting
+  // deletion-pending users to /account/danger when they navigate
+  // elsewhere).
+  request.headers.set("x-pathname", request.nextUrl.pathname)
+  let response = NextResponse.next({
+    request: { headers: request.headers },
+  })
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
     {
+      // Pinned key matches the server-action + browser clients ; without
+      // this the middleware reads/writes a different cookie name than
+      // those clients, the session goes invisible across tab refreshes.
+      auth: { storageKey: SUPABASE_AUTH_STORAGE_KEY },
       cookies: {
         getAll() {
           return request.cookies.getAll()
@@ -38,6 +53,29 @@ export async function middleware(request: NextRequest) {
 
   await supabase.auth.getUser()
 
+  // Opt into User-Agent Client Hints. Modern Chrome / Edge on Android
+  // freeze the User-Agent's device-model field to "K" by default for
+  // privacy ; without this header we'd see "Pixel 7" reduced to "K" in
+  // the trusted-device list. The hints below are sent on the *next*
+  // request after the browser sees this header (a one-page warm-up
+  // delay), but persist for as long as the browser caches the policy.
+  // No effect on browsers that don't implement UA-CH (Firefox, Safari) ;
+  // we keep the UA-string fallback in the parser for those.
+  response.headers.append(
+    "Accept-CH",
+    "Sec-CH-UA-Model, Sec-CH-UA-Platform-Version, Sec-CH-UA-Full-Version-List",
+  )
+  // Tells the browser this hint policy applies to the whole site so it
+  // doesn't have to be re-requested on every navigation.
+  response.headers.append(
+    "Critical-CH",
+    "Sec-CH-UA-Model, Sec-CH-UA-Platform-Version",
+  )
+  response.headers.append(
+    "Permissions-Policy",
+    "ch-ua-model=(self), ch-ua-platform-version=(self), ch-ua-full-version-list=(self)",
+  )
+
   const totpPending = request.cookies.get(TOTP_PENDING_COOKIE)?.value
   if (totpPending) {
     const path = request.nextUrl.pathname
@@ -45,7 +83,10 @@ export async function middleware(request: NextRequest) {
       (prefix) => path === prefix || path.startsWith(prefix + "/") || path.startsWith(prefix),
     )
     if (!bypass) {
-      const redirectUrl = new URL("/signin/totp", request.url)
+      // Build from the Host header rather than `request.url` so a
+      // user mid-TOTP-pending on a LAN device gets redirected to
+      // their host, not loopback. Same reasoning as /auth/confirm.
+      const redirectUrl = new URL("/signin/totp", getRequestOrigin(request))
       return NextResponse.redirect(redirectUrl)
     }
   }

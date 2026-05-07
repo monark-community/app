@@ -26,7 +26,7 @@ Executive priorities:
 
 Two module tiers, both documented in [`phase-0/modular-architecture.md`](phase-0/modular-architecture.md):
 
-- **Core modules**: foundational, coupled, cannot be removed. Feature flags, auth, organizations, users, RBAC.
+- **Core modules**: foundational, coupled, cannot be removed. Feature flags, auth, organizations, users, RBAC, notifications.
 - **Extended modules**: Monark-specific, self-contained, communicate with each other and core only through well-defined interfaces. Removing one must not break another.
 
 Each business module is its own workspace package (`@monark/auth`, `@monark/voting`, …) with three entry points: `/server`, `/client`, `/contracts`. Workspace package boundaries *are* the module boundaries; you can't reach into another module by file path because the internals aren't exported. Two thin services (`services/web` for Next.js 16, `services/api` for Express 5 + tRPC) consume those packages. See [`phase-0/project-scaffolding.md`](phase-0/project-scaffolding.md) for the full layout.
@@ -60,6 +60,7 @@ Coupled; ship together. Anything after Phase 1 assumes the full core is live.
 - [`phase-1/auth-trusted-devices.md`](phase-1/auth-trusted-devices.md)
 - [`phase-1/auth-totp.md`](phase-1/auth-totp.md)
 - [`phase-1/auth-aesthetics.md`](phase-1/auth-aesthetics.md)
+- [`phase-1/notifications-system.md`](phase-1/notifications-system.md)
 
 ### Phase 2 — Extended modules: user acquisition
 
@@ -86,9 +87,11 @@ phase-0 (architecture, scaffolding)
 phase-1 (core modules, all coupled)
    ├── feature-flags ──┐
    ├── auth ───────────┤
-   ├── orgs ───────────┼──► consumed by every extended module
-   ├── users ──────────┤
-   └── rbac ───────────┘
+   ├── orgs ───────────┤
+   ├── users ──────────┼──► consumed by every extended module
+   ├── rbac ───────────┤
+   └── notifications ──┘  (subscribes to events from auth, users, orgs ;
+                           extended modules emit events it dispatches)
    │
    ▼
 phase-2 (extended: acquisition)

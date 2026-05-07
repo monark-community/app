@@ -1,5 +1,14 @@
 import { NotFoundError } from "@monark/common"
-import { findById, findBySlug, findOrgsForUser, isMember, type OrganizationRow } from "./data"
+import { isEnabled } from "@monark/feature-flags/server"
+import {
+  countActiveOrganizations,
+  findById,
+  findBySlug,
+  findOnlyActiveOrganization,
+  findOrgsForUser,
+  isMember,
+  type OrganizationRow,
+} from "./data"
 
 export type Organization = OrganizationRow
 
@@ -26,14 +35,30 @@ export async function getUserOrgs(userId: string): Promise<Organization[]> {
   return findOrgsForUser(userId)
 }
 
-// Returns the active org for a session, validating that the user still has a
-// live membership. If the session carries a stale org_id (user was removed),
-// returns null so the caller can route them to the org switcher.
+// Returns the active org for a session.
+//
+// Multi-tenant : drives off the session's `active_organization_id`
+// claim, validating that the user still has a live membership. A
+// stale claim (user was removed from the org) returns null so the
+// caller can route them to the org switcher.
+//
+// Single-tenant : there's only ever one org, so the claim is dead
+// weight ; we fall back to the singleton for any signed-in caller
+// (sysadmins, dev users without a formal Membership row, anyone the
+// session metadata never got populated for). Without this fallback,
+// `current.useQuery` would forever return null in single-tenant
+// dev — which is what bit the dev overlay panel.
 export async function getCurrentOrg(ctx: OrgSessionContext): Promise<Organization | null> {
-  if (!ctx.userId || !ctx.activeOrganizationId) return null
-  const alive = await isMember(ctx.userId, ctx.activeOrganizationId)
-  if (!alive) return null
-  return findById(ctx.activeOrganizationId)
+  if (!ctx.userId) return null
+  if (ctx.activeOrganizationId) {
+    const alive = await isMember(ctx.userId, ctx.activeOrganizationId)
+    if (!alive) return null
+    return findById(ctx.activeOrganizationId)
+  }
+  const multi = await isEnabled("tenancy.multi-tenant").catch(() => false)
+  if (multi) return null
+  if ((await countActiveOrganizations()) !== 1) return null
+  return findOnlyActiveOrganization()
 }
 
 export async function requireOrg(ctx: OrgSessionContext): Promise<Organization> {

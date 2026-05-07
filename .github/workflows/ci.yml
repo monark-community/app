@@ -17,6 +17,10 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 jobs:
+  # Fast verification gate : lint, typecheck, unit + integration
+  # tests with coverage. Runs first ; PRs can't merge unless this
+  # passes. Should clear in about 3 minutes once node_modules is
+  # cached.
   verify:
     runs-on: ubuntu-latest
     steps:
@@ -49,5 +53,87 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
 
-      - name: Test
-        run: pnpm test
+      - name: Test (with coverage)
+        run: pnpm test:coverage
+
+      # Each package emits its own `coverage/lcov.info` ; we hand
+      # them all to Codecov which aggregates into a single repo-level
+      # number. Per-package coverage thresholds enforced inside vitest
+      # are the actual gate ; Codecov is just for the badge + the
+      # PR-level diff annotation. `fail_ci_if_error: false` keeps the
+      # build green when CODECOV_TOKEN isn't set on a fork's CI.
+      - name: Upload coverage to Codecov
+        if: always()
+        uses: codecov/codecov-action@v4
+        with:
+          files: |
+            ./packages/auth/coverage/lcov.info
+            ./packages/branding/coverage/lcov.info
+            ./packages/common/coverage/lcov.info
+            ./packages/feature-flags/coverage/lcov.info
+            ./packages/notifications/coverage/lcov.info
+            ./packages/organizations/coverage/lcov.info
+            ./packages/rbac/coverage/lcov.info
+            ./packages/users/coverage/lcov.info
+            ./services/api/coverage/lcov.info
+          fail_ci_if_error: false
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+  # Slower end-to-end gate : boots Supabase locally, runs the api +
+  # web services, drives the browser through Playwright. Depends on
+  # `verify` passing so we don't waste 10 minutes booting a stack
+  # for code that doesn't typecheck.
+  e2e:
+    runs-on: ubuntu-latest
+    needs: verify
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Supabase CLI ships postgres + auth + inbucket. `supabase
+      # start` boots the whole stack on the standard ports
+      # (54321 / 54322 / 54324 / 54325). This is the same surface
+      # `pnpm dev` runs against locally, so the e2e suite tests
+      # against an environment matching what humans test against.
+      - name: Start Supabase local stack
+        run: pnpm exec supabase start
+
+      - name: Run database migrations
+        run: pnpm db:migrate
+
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium firefox webkit
+
+      - name: Run end-to-end suite
+        run: pnpm test:e2e
+        env:
+          # Inbucket SMTP listener (catches outbound mail so the
+          # specs can poll for verification codes + reset tokens).
+          SMTP_URL: smtp://localhost:54325
+          # Standard local-dev URLs ; the playwright config + the
+          # web/api .env defaults agree on these ports.
+          APP_URL: http://localhost:3000
+          API_URL: http://localhost:4000
+
+      # Always upload the Playwright HTML report so failures are
+      # diagnosable without a re-run. The artefact viewer in the GH
+      # Actions UI surfaces traces + screenshots + stdout per spec.
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: services/web/playwright-report
+          retention-days: 14

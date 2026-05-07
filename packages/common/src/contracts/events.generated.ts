@@ -3,6 +3,7 @@
 
 import type { AuthEvents } from "@monark/auth/contracts"
 import type { FeatureFlagsEvents } from "@monark/feature-flags/contracts"
+import type { NotificationsEvents } from "@monark/notifications/contracts"
 import type { OrganizationsEvents } from "@monark/organizations/contracts"
 import type { RbacEvents } from "@monark/rbac/contracts"
 import type { UsersEvents } from "@monark/users/contracts"
@@ -10,6 +11,7 @@ import type { UsersEvents } from "@monark/users/contracts"
 export type DomainEvent =
   | AuthEvents
   | FeatureFlagsEvents
+  | NotificationsEvents
   | OrganizationsEvents
   | RbacEvents
   | UsersEvents

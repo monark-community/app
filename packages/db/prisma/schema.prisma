@@ -25,6 +25,8 @@ model User {
   emailVerifiedAt  DateTime?
   displayName      String?
   avatarUrl        String?
+  bannerUrl        String?
+  bio              String?
   localePreference String    @default("en")
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
@@ -41,6 +43,8 @@ model User {
   roleAssignments     RoleAssignment[]
   rolesGranted        RoleAssignment[]         @relation("RoleGranter")
   rolesRevoked        RoleAssignment[]         @relation("RoleRevoker")
+  notifications       Notification[]
+  notifPreferences    NotificationPreference[]
 }
 
 model PendingEmailChange {
@@ -75,6 +79,16 @@ model TrustedDevice {
   cookieHash      String    @unique
   label           String
   userAgent       String
+  // High-entropy User-Agent Client Hints captured at recognize-time
+  // when the browser sends them (Chrome / Edge after the middleware's
+  // `Accept-CH` header lands). Stored as JSON :
+  // `{ model?: string, platformVersion?: string, fullVersionList?: string }`.
+  // Lets `toView` show the real device model ("Pixel 7") instead of
+  // the UA-reduced placeholder ("K") that modern Android Chrome
+  // freezes the UA's device-model field to for privacy. Null on
+  // browsers that don't implement UA-CH (Firefox, Safari) — `toView`
+  // falls back to ua-parser-js on the userAgent string in that case.
+  clientHints     Json?
   firstSeenIp     String?
   firstSeenAt     DateTime  @default(now())
   lastSeenIp      String?
@@ -122,44 +136,112 @@ model TotpSecret {
 
 // One-time recovery codes; `codeHash` is bcrypt(plaintext).
 model RecoveryCode {
-  id           String     @id @default(cuid())
-  totpSecretId String
-  totpSecret   TotpSecret @relation(fields: [totpSecretId], references: [id], onDelete: Cascade)
-  codeHash     String
-  usedAt       DateTime?
+  id             String     @id @default(cuid())
+  totpSecretId   String
+  totpSecret     TotpSecret @relation(fields: [totpSecretId], references: [id], onDelete: Cascade)
+  codeHash       String
+  usedAt         DateTime?
+  // Stamped after the post-sign-in reminder modal has shown the user
+  // their use + they've confirmed striking it from their saved list.
+  // The modal's trigger query is "exists a row with usedAt IS NOT NULL
+  // AND acknowledgedAt IS NULL" ; the unack state survives sign-out so
+  // the modal re-appears on next sign-in until acknowledged.
+  acknowledgedAt DateTime?
 
   @@index([totpSecretId])
 }
 
 // ── MODULE: rbac ─────────────────────────────────────────
-// See docs/features-planning/phase-1/rbac-system.md.
-// MONARK_ADMIN is platform-level (organizationId null); the four others are per-org.
-enum Role {
-  MONARK_ADMIN
-  ADMIN
-  DEVELOPER
-  AMBASSADOR
-  STUDENT
+// Roles are table-driven : the previous `Role` enum collapsed into a
+// single built-in row (`key = "ADMIN"`, `builtIn = true`,
+// `organizationId = null`) and operator-defined custom roles per-org.
+// Code-side guarantees on the built-in :
+//   - `key` and `builtIn` are immutable from API ; only `name` and
+//     `description` are editable.
+//   - Hard-block deletion in the rbac package's write helpers.
+//   - `hasPermission` short-circuits to true for users holding any
+//     active ADMIN assignment ; `RolePermission` rows for ADMIN are
+//     decorative — never read by the check, so new permissions added
+//     to the system later are auto-granted.
+// Custom roles are scoped : `Role.organizationId` carries the owning
+// org, and any RoleAssignment to that role must match its
+// `organizationId`. Multi-role-per-user is allowed by the (userId,
+// organizationId, roleId) unique tuple.
+model Role {
+  id             String          @id @default(cuid())
+  // Stable identifier used by code-side guards (e.g. `isAdmin` checks
+  // `key === "ADMIN"`). Lowercase / kebab-case for custom roles is
+  // recommended but not enforced at the DB level.
+  key            String
+  name           String
+  description    String?
+  // Optional brand color for UI scannability. Hex string (`#RGB` or
+  // `#RRGGBB`) ; null falls back to a neutral muted tone in the UI.
+  color          String?
+  builtIn        Boolean         @default(false)
+  organizationId String?
+  organization   Organization?   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  permissions    RolePermission[]
+  assignments    RoleAssignment[]
+  invites        Invite[]
+  flagOverrides  FeatureFlagOverride[]
+
+  // Each org can have its own list of role keys ; the built-in ADMIN
+  // row's `(ADMIN, null)` slot is enforced uniquely too. PostgreSQL's
+  // null-distinct unique semantics let `(ADMIN, null)` coexist with
+  // `(ADMIN, "org_xxx")` safely (the built-in stays a singleton).
+  @@unique([key, organizationId])
+  @@index([organizationId])
+}
+
+model RolePermission {
+  id         String   @id @default(cuid())
+  roleId     String
+  role       Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  // Permission key : a string from the in-code permission registry
+  // (`packages/rbac/src/contracts/permissions.ts`). Stored as text so
+  // the DB doesn't need to care about which permissions exist ; the
+  // code-side resolver ignores rows referencing unknown keys.
+  permission String
+  createdAt  DateTime @default(now())
+
+  @@unique([roleId, permission])
+  @@index([roleId])
 }
 
 model RoleAssignment {
   id             String        @id @default(cuid())
   userId         String
   user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // The assignment's scope. ADMIN assignments may carry null (= platform
+  // tier, the equivalent of the retired MONARK_ADMIN) ; custom-role
+  // assignments must match the role's `organizationId` (enforced at
+  // the rbac write-layer, not via a DB constraint since SQL can't
+  // express "FK A's column equals FK B's column").
   organizationId String?
   organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  role           Role
-  grantedById    String
-  granter        User          @relation("RoleGranter", fields: [grantedById], references: [id])
+  roleId         String
+  role           Role          @relation(fields: [roleId], references: [id], onDelete: Restrict)
+  // Nullable so system-driven grants (e.g. the `tools/sysadmin.ts`
+  // CLI bootstrapping the first SYSADMIN before any operator exists)
+  // can record "no granter". UI grants always carry a non-null
+  // actor (enforced upstream at the tRPC layer via
+  // `requireAdmin(ctx.userId)`).
+  grantedById    String?
+  granter        User?         @relation("RoleGranter", fields: [grantedById], references: [id], onDelete: SetNull)
   grantedAt      DateTime      @default(now())
   revokedAt      DateTime?
   revokedById    String?
   revoker        User?         @relation("RoleRevoker", fields: [revokedById], references: [id])
   reason         String?
 
-  @@unique([userId, organizationId, role])
+  @@unique([userId, organizationId, roleId])
   @@index([userId])
   @@index([organizationId])
+  @@index([roleId])
 }
 
 // ── MODULE: organizations ────────────────────────────────
@@ -179,6 +261,7 @@ model Organization {
   invites         Invite[]
   slugRedirects   OrgSlugRedirect[]
   roleAssignments RoleAssignment[]
+  roles           Role[]
 }
 
 model OrganizationMembership {
@@ -201,7 +284,15 @@ model Invite {
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   email       String
-  role        Role
+  // Optional display-name pre-fill captured by the inviter (e.g. "Jane
+  // Doe"). Used in the invite email greeting and pre-fills the user's
+  // displayName on signup acceptance ; null when the inviter didn't
+  // supply one.
+  displayName String?
+  // FK to Role table. The role's `organizationId` must match the
+  // invite's `organizationId` (enforced at the write layer).
+  roleId      String
+  role        Role         @relation(fields: [roleId], references: [id], onDelete: Restrict)
   invitedById String
   invitedBy   User         @relation("InviteSender", fields: [invitedById], references: [id])
   tokenHash   String       @unique
@@ -212,6 +303,7 @@ model Invite {
 
   @@index([organizationId])
   @@index([email])
+  @@index([roleId])
 }
 
 model OrgSlugRedirect {
@@ -240,15 +332,90 @@ model FeatureFlagOverride {
   flag    FeatureFlag @relation(fields: [flagKey], references: [key], onDelete: Cascade)
 
   // Exactly one of these three is non-null; enforced at the app layer.
+  // A role-scoped override targets every user holding any active
+  // RoleAssignment for that Role row.
   organizationId String?
   userId         String?
-  role           Role?
+  roleId         String?
+  role           Role?       @relation(fields: [roleId], references: [id], onDelete: Cascade)
 
   enabled Boolean
   setById String
   setAt   DateTime @default(now())
   note    String?
 
-  @@unique([flagKey, organizationId, userId, role])
+  @@unique([flagKey, organizationId, userId, roleId])
   @@index([flagKey])
+}
+
+// ── MODULE: notifications ────────────────────────────────
+// One row per *delivered* notification (not per-event ; an event that fans
+// out to N recipients writes N rows). Owns both the in-app surface
+// (read/dismissed state) and the audit trail for email/push channels
+// (delivered/failed status). The `kind` is a stable string from the
+// in-code registry ; the `category` mirror is denormalised so the inbox
+// can filter without a registry lookup at query time.
+model Notification {
+  id            String              @id @default(cuid())
+  userId        String
+  user          User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  kind          String
+  category      NotificationCategory
+  channel       NotificationChannel
+
+  subject       String
+  body          String?
+  link          String?
+
+  // In-app channel only ; null for email/push deliveries.
+  readAt        DateTime?
+  dismissedAt   DateTime?
+
+  // Email/push channel ; null for in-app.
+  deliveredAt   DateTime?
+  failedAt      DateTime?
+  failureReason String?
+
+  // Used by the de-dup check inside dispatch ; sha-256 hex of the
+  // event-data payload, scoped per (userId, kind). Not exposed.
+  dedupeKey     String?
+
+  createdAt     DateTime            @default(now())
+
+  @@index([userId, createdAt])
+  @@index([userId, channel, readAt])
+  @@index([userId, channel, dismissedAt])
+  @@index([kind, createdAt])
+  @@index([userId, kind, dedupeKey, createdAt])
+}
+
+// Per-user × per-category × per-channel preferences. Categories are coarser
+// than `kind` so the prefs surface stays compact. "No row" means use the
+// kind's `defaultEnabled` from the in-code registry ; rows are inserted
+// only when the user explicitly toggles, keeping the table small and
+// letting registry defaults change without a backfill.
+model NotificationPreference {
+  id        String                @id @default(cuid())
+  userId    String
+  user      User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category  NotificationCategory
+  channel   NotificationChannel
+  enabled   Boolean
+  updatedAt DateTime              @updatedAt
+
+  @@unique([userId, category, channel])
+  @@index([userId])
+}
+
+enum NotificationChannel {
+  IN_APP
+  EMAIL
+}
+
+enum NotificationCategory {
+  SECURITY
+  ACCOUNT
+  ACTIVITY
+  DIGEST
 }

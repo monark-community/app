@@ -3,10 +3,11 @@
 import { useEffect, useState, type ReactNode } from "react"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { httpBatchLink } from "@trpc/client"
+import { rewriteForCurrentHost } from "./dev-host-rewrite"
 import { createSupabaseBrowserClient } from "./supabase/browser"
 import { trpc } from "./trpc"
 
-const API_URL =
+const CONFIGURED_API_URL =
   process.env.NEXT_PUBLIC_API_URL && process.env.NEXT_PUBLIC_API_URL.length > 0
     ? process.env.NEXT_PUBLIC_API_URL
     : "http://localhost:4000"
@@ -14,11 +15,17 @@ const API_URL =
 export function TrpcProvider({ children }: { children: ReactNode }) {
   const [queryClient] = useState(() => new QueryClient())
   const [supabase] = useState(() => createSupabaseBrowserClient())
-  const [trpcClient] = useState(() =>
-    trpc.createClient({
+  const [trpcClient] = useState(() => {
+    // Resolved at client-init time so the loopback-host rewrite runs
+    // against the browser's actual `window.location` ; in dev this
+    // makes phone-from-LAN testing work without env edits, in prod
+    // it's a no-op because the configured URL doesn't point to
+    // localhost.
+    const apiUrl = rewriteForCurrentHost(CONFIGURED_API_URL)
+    return trpc.createClient({
       links: [
         httpBatchLink({
-          url: `${API_URL}/trpc`,
+          url: `${apiUrl}/trpc`,
           async headers() {
             const { data } = await supabase.auth.getSession()
             const token = data.session?.access_token
@@ -26,8 +33,8 @@ export function TrpcProvider({ children }: { children: ReactNode }) {
           },
         }),
       ],
-    }),
-  )
+    })
+  })
 
   // Server-action sign-in / sign-out uses redirect(), which is a soft
   // navigation in Next App Router; the QueryClient survives, so anything

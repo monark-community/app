@@ -1,6 +1,5 @@
 "use client"
 
-import Image from "next/image"
 import { useState } from "react"
 import { useTranslations } from "next-intl"
 import { Button } from "@/components/ui/button"
@@ -8,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { trpc } from "@/lib/trpc"
 import { CollapsibleSection } from "../collapsible-section"
 
-type Enrollment = { secret: string; qrDataUrl: string }
+type Enrollment = { secret: string; qrSvg: string }
 
 export function TotpPanel() {
   const t = useTranslations("devOverlay")
@@ -111,15 +110,12 @@ export function TotpPanel() {
             <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
               {t("totp.scanQr")}
             </p>
-            <div className="rounded border border-border bg-white p-2">
-              <Image
-                src={enrollment.qrDataUrl}
-                alt="TOTP QR"
-                width={180}
-                height={180}
-                unoptimized
-              />
-            </div>
+            <div
+              role="img"
+              aria-label="TOTP QR"
+              className="rounded border border-border p-2 text-foreground [&_svg]:h-45 [&_svg]:w-45"
+              dangerouslySetInnerHTML={{ __html: enrollment.qrSvg }}
+            />
             <p className="break-all font-mono text-[10px] text-muted-foreground">
               {enrollment.secret}
             </p>

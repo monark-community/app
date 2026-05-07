@@ -23,7 +23,7 @@ export function CollapsibleSection({
 
   return (
     <Collapsible open={open} onOpenChange={setOpen} className="border-t border-border">
-      <CollapsibleTrigger className="group flex w-full items-center justify-between px-4 py-2 text-left transition hover:bg-border/20">
+      <CollapsibleTrigger className="group flex w-full cursor-pointer items-center justify-between px-4 py-2 text-left transition hover:bg-border/20">
         <span className="flex items-center gap-2">
           <span className="text-xs uppercase tracking-wider text-muted-foreground">{title}</span>
           {badge}

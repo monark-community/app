@@ -10,10 +10,10 @@ import {
 import { writeOverride, deleteOverride } from "./data"
 
 function assertValidScope(scope: FlagScope): void {
-  const parts = [scope.organizationId, scope.userId, scope.role].filter(Boolean)
+  const parts = [scope.organizationId, scope.userId, scope.roleId].filter(Boolean)
   if (parts.length > 1) {
     throw new ValidationError(
-      "A feature flag override scope must target exactly one of organizationId, userId, or role (or none, for a global override).",
+      "A feature flag override scope must target exactly one of organizationId, userId, or roleId (or none, for a global override).",
     )
   }
 }

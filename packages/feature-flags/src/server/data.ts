@@ -1,4 +1,4 @@
-import { getDb, type Prisma, type Role } from "@monark/db"
+import { getDb, type Prisma } from "@monark/db"
 import type { FlagKey, FlagScope } from "../contracts/index"
 
 export type OverrideRow = {
@@ -6,7 +6,7 @@ export type OverrideRow = {
   flagKey: string
   organizationId: string | null
   userId: string | null
-  role: Role | null
+  roleId: string | null
   enabled: boolean
   setById: string
   setAt: Date
@@ -28,23 +28,27 @@ export async function readOverridesForKeys(
   const db = getDb()
 
   const scopeFilter: Prisma.FeatureFlagOverrideWhereInput[] = [
-    { organizationId: null, userId: null, role: null },
+    { organizationId: null, userId: null, roleId: null },
   ]
   if (scope.organizationId) {
     scopeFilter.push({
       organizationId: scope.organizationId,
       userId: null,
-      role: null,
+      roleId: null,
     })
   }
-  if (scope.role) {
-    scopeFilter.push({ role: scope.role, organizationId: null, userId: null })
+  if (scope.roleId) {
+    scopeFilter.push({
+      roleId: scope.roleId,
+      organizationId: null,
+      userId: null,
+    })
   }
   if (scope.userId) {
     scopeFilter.push({
       userId: scope.userId,
       organizationId: null,
-      role: null,
+      roleId: null,
     })
   }
 
@@ -94,7 +98,7 @@ export async function writeOverride(input: {
         flagKey,
         organizationId: scope.organizationId ?? null,
         userId: scope.userId ?? null,
-        role: scope.role ?? null,
+        roleId: scope.roleId ?? null,
       },
     })
 
@@ -109,7 +113,7 @@ export async function writeOverride(input: {
           flagKey,
           organizationId: scope.organizationId ?? null,
           userId: scope.userId ?? null,
-          role: scope.role ?? null,
+          roleId: scope.roleId ?? null,
           enabled,
           setById,
           note: note ?? null,

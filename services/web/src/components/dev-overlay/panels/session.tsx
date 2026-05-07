@@ -4,7 +4,7 @@ import { useTransition } from "react"
 import Link from "next/link"
 import { useTranslations } from "next-intl"
 import { Button } from "@/components/ui/button"
-import { signOutAction } from "@/app/signin/actions"
+import { signOutAction } from "@/app/(anon)/signin/actions"
 import { trpc } from "@/lib/trpc"
 import { CollapsibleSection } from "../collapsible-section"
 

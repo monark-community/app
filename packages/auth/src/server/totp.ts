@@ -2,6 +2,7 @@ import { randomBytes } from "node:crypto"
 import bcrypt from "bcryptjs"
 import { authenticator } from "otplib"
 import qrcode from "qrcode"
+import { BRANDING } from "@monark/branding"
 import { emit, ConflictError, ValidationError } from "@monark/common"
 import { getDb } from "@monark/db"
 import { isEnabled } from "@monark/feature-flags/server"
@@ -12,8 +13,6 @@ import type {
   TotpRecoveryCodeUsedEvent,
 } from "../contracts/events"
 import { decryptSecret, encryptSecret } from "./crypto"
-
-const ISSUER = "Monark"
 const RECOVERY_CODE_COUNT = 10
 // A ±1 window (30 sec either side) catches mild client clock skew without
 // opening the door to brute force beyond what the 6-digit code already allows.
@@ -48,13 +47,20 @@ export async function isTotpActive(userId: string): Promise<boolean> {
   return Boolean(secret?.activatedAt)
 }
 
-// Returns the secret + a QR data URL pointing at `otpauth://...`. Replaces any
-// previous in-progress enrollment (activatedAt null) atomically; activated
-// enrollments must be explicitly disabled first.
+// Returns the secret + an inline SVG QR pointing at `otpauth://...`.
+// Replaces any previous in-progress enrollment (activatedAt null)
+// atomically ; activated enrollments must be explicitly disabled first.
+//
+// SVG rather than PNG so the client can theme it with one CSS rule:
+// the QR modules are emitted with `fill="currentColor"` (we ask qrcode
+// for solid black and rewrite the hex to `currentColor` in the returned
+// string) and the background is transparent. Dropping it inside a
+// `text-foreground` element makes it black on light themes, white on
+// dark, with no `<img>` filter trick.
 export async function beginTotpEnrollment(input: {
   userId: string
   accountLabel: string
-}): Promise<{ secret: string; qrDataUrl: string }> {
+}): Promise<{ secret: string; qrSvg: string }> {
   const db = getDb()
   const existing = await db.totpSecret.findUnique({ where: { userId: input.userId } })
   if (existing?.activatedAt) {
@@ -62,8 +68,17 @@ export async function beginTotpEnrollment(input: {
   }
 
   const secret = authenticator.generateSecret()
-  const otpauth = authenticator.keyuri(input.accountLabel, ISSUER, secret)
-  const qrDataUrl = await qrcode.toDataURL(otpauth, { width: 240, margin: 1 })
+  const otpauth = authenticator.keyuri(input.accountLabel, BRANDING.totpIssuer, secret)
+  const rawSvg = await qrcode.toString(otpauth, {
+    type: "svg",
+    margin: 1,
+    color: { dark: "#000000ff", light: "#00000000" },
+  })
+  // qrcode's SVG bakes the dark color as a literal `#000000` attribute on
+  // the path ; swap to `currentColor` so the foreground tracks the
+  // surrounding text colour. The transparent background is already there
+  // from the `light: "#00000000"` option above.
+  const qrSvg = rawSvg.replace(/#000000/g, "currentColor")
   const encrypted = encryptSecret(secret)
 
   if (existing) {
@@ -81,7 +96,7 @@ export async function beginTotpEnrollment(input: {
     },
   })
 
-  return { secret, qrDataUrl }
+  return { secret, qrSvg }
 }
 
 function generateRecoveryCode(): string {
@@ -139,33 +154,12 @@ export async function confirmTotpEnrollment(input: {
   return { recoveryCodes }
 }
 
-// Per-user, per-minute cap on `verifyTotpCode`. In-memory by design ; we'd
-// use Redis in a multi-instance deployment, but for single-process Phase 1
-// MVP this is the right size of solution. Resets on process restart, which
-// is acceptable: the 6-digit TOTP space is small enough that any reasonable
-// cap is meaningful.
-const TOTP_VERIFY_MAX_PER_MINUTE = 5
-const verifyAttempts = new Map<string, number[]>()
+// Per-user, per-minute cap on `verifyTotpCode`. Sliding-window logic lives
+// in the standalone `totp-rate-limit.ts` module (single-process, in-memory)
+// so the unit suite can exercise it without pulling in Prisma/Supabase.
+import { recordVerifyAttempt, TotpRateLimitError } from "./totp-rate-limit"
 
-function recordVerifyAttempt(userId: string): { allowed: boolean; remaining: number } {
-  const now = Date.now()
-  const cutoff = now - 60_000
-  const history = (verifyAttempts.get(userId) ?? []).filter((ts) => ts > cutoff)
-  if (history.length >= TOTP_VERIFY_MAX_PER_MINUTE) {
-    verifyAttempts.set(userId, history)
-    return { allowed: false, remaining: 0 }
-  }
-  history.push(now)
-  verifyAttempts.set(userId, history)
-  return { allowed: true, remaining: TOTP_VERIFY_MAX_PER_MINUTE - history.length }
-}
-
-export class TotpRateLimitError extends Error {
-  constructor() {
-    super("Too many TOTP attempts. Wait a minute and try again.")
-    this.name = "TotpRateLimitError"
-  }
-}
+export { TotpRateLimitError } from "./totp-rate-limit"
 
 export async function verifyTotpCode(input: {
   userId: string
@@ -219,13 +213,23 @@ export async function verifyRecoveryCode(input: {
   return false
 }
 
+// Recovery-code regeneration always requires a fresh TOTP code as
+// proof of intent. Earlier we explored a no-TOTP shortcut gated on a
+// recent recovery-code use ("just signed in via recovery code, lost
+// my authenticator, give me a fresh batch") but that turns the
+// threat model upside down : an attacker who steals one recovery
+// code (paper photo, leaky password manager, …) gets a one-click
+// path to mint a new batch and lock the legitimate user out of the
+// recovery path entirely. Industry norm (Google, GitHub, AWS) is to
+// require the second factor for regen, full stop ; the
+// lost-authenticator user proceeds via account recovery (support /
+// ID verification), not via in-app self-service.
 export async function regenerateRecoveryCodes(input: {
   userId: string
   code: string
 }): Promise<string[]> {
   const ok = await verifyTotpCode(input)
   if (!ok) throw new ValidationError("Invalid TOTP code.")
-
   const db = getDb()
   const secret = await db.totpSecret.findUnique({ where: { userId: input.userId } })
   if (!secret) throw new ValidationError("TOTP is not enrolled.")
@@ -239,6 +243,73 @@ export async function regenerateRecoveryCodes(input: {
     }),
   ])
   return recoveryCodes
+}
+
+// Read surface for the post-sign-in reminder modal. Returns the data
+// the client needs to decide which mode to render (acknowledge / low
+// quota / forced regen) without exposing the recovery codes themselves
+// (which we only have as bcrypt hashes anyway).
+//
+// `hasUnacknowledgedUse` triggers the strike-it-from-your-list flow ;
+// `remainingCodes < 3` triggers the "running low" suggestion ;
+// `remainingCodes === 0` makes the modal blocking. The callers compose
+// the mode from these primitives.
+export type RecoveryCodeStatus = {
+  enrolled: boolean
+  hasUnacknowledgedUse: boolean
+  /** Most recent used+unacked timestamp, for "you used a code on …" copy. */
+  lastUnacknowledgedUseAt: Date | null
+  remainingCodes: number
+}
+
+export async function getRecoveryCodeStatus(userId: string): Promise<RecoveryCodeStatus> {
+  const db = getDb()
+  const secret = await db.totpSecret.findUnique({
+    where: { userId },
+    select: {
+      activatedAt: true,
+      recoveryCodes: {
+        select: { id: true, usedAt: true, acknowledgedAt: true },
+      },
+    },
+  })
+  if (!secret || !secret.activatedAt) {
+    return {
+      enrolled: false,
+      hasUnacknowledgedUse: false,
+      lastUnacknowledgedUseAt: null,
+      remainingCodes: 0,
+    }
+  }
+  const remaining = secret.recoveryCodes.filter((row) => row.usedAt === null).length
+  const unacked = secret.recoveryCodes
+    .filter((row) => row.usedAt !== null && row.acknowledgedAt === null)
+    .sort(
+      (a, b) =>
+        (b.usedAt?.getTime() ?? 0) - (a.usedAt?.getTime() ?? 0),
+    )
+  return {
+    enrolled: true,
+    hasUnacknowledgedUse: unacked.length > 0,
+    lastUnacknowledgedUseAt: unacked[0]?.usedAt ?? null,
+    remainingCodes: remaining,
+  }
+}
+
+// Marks every used+unacked recovery row for the user as acknowledged.
+// Idempotent ; running it twice is a no-op the second time. The user
+// triggers this when they confirm they've struck the spent code from
+// their saved list.
+export async function acknowledgeRecoveryCodeUse(userId: string): Promise<void> {
+  const db = getDb()
+  await db.recoveryCode.updateMany({
+    where: {
+      usedAt: { not: null },
+      acknowledgedAt: null,
+      totpSecret: { userId },
+    },
+    data: { acknowledgedAt: new Date() },
+  })
 }
 
 // Requires a current TOTP code to confirm intent. Password re-entry is

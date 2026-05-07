@@ -1,6 +1,5 @@
 import { z } from "zod"
 import { router, publicProcedure } from "@monark/common/trpc"
-import { Role } from "@monark/db"
 import { isKnownFlag, listFlagKeys, type FlagKey } from "../contracts/index"
 import { getFlags, isEnabled } from "./resolve"
 import { readOverridesForFlag } from "./data"
@@ -8,11 +7,15 @@ import { setOverride, removeOverride, listFlagDefinitions } from "./write"
 
 const flagKeySchema = z.string().refine(isKnownFlag, { message: "Unknown feature flag key" })
 
+// `roleId` references a row in the `Role` table. The previous
+// `role` field was a `Role` enum value ; with the table-driven RBAC
+// migration the enum is gone, so role-scoped flag overrides target a
+// specific role id (built-in or custom).
 const scopeSchema = z
   .object({
     organizationId: z.string().optional(),
     userId: z.string().optional(),
-    role: z.nativeEnum(Role).optional(),
+    roleId: z.string().optional(),
   })
   .default({})
 

@@ -1,15 +1,92 @@
 {
+  "setup": {
+    "eyebrow": "Configuration de {appName}",
+    "title": "Démarrage du déploiement",
+    "subtitle": "L'application attend ici jusqu'à ce que le déploiement soit entièrement configuré. Le statut ci-dessous est rafraîchi toutes les quelques secondes ; vous pouvez laisser l'onglet ouvert pendant que les éléments manquants sont mis en place.",
+    "checks": {
+      "services": "Services en ligne",
+      "auth": "Authentification configurée",
+      "tenancySingle": "Organisation configurée",
+      "tenancyMulti": "Mode multi-tenant — prêt à accueillir de nouvelles organisations",
+      "orgCount": "{count, plural, =0 {0 organisation} one {1 organisation} other {{count} organisations}}"
+    },
+    "stuck": {
+      "title": "En attente des données d'organisation",
+      "subtitle": "Le mode single-tenant exige exactement une organisation. Définissez les variables d'environnement ci-dessous sur le service API et redémarrez le déploiement ; le hook de démarrage créera la ligne, cette page la détectera au prochain sondage, et le reste de l'application sera débloqué.",
+      "envHeading": "Variables d'environnement du service API :",
+      "restartHint": "Après les avoir définies, redémarrez le service API pour que le hook de démarrage soit ré-exécuté avec les nouvelles valeurs."
+    }
+  },
   "common": {
-    "appName": "Monark",
+    "appName": "{appName}",
     "tagline": "Au service de la collaboration au sein de la communauté Web3.",
     "cancel": "Annuler",
     "continue": "Continuer",
     "loading": "Chargement…"
   },
+  "imageCrop": {
+    "cancel": "Annuler",
+    "confirm": "Enregistrer",
+    "processing": "Traitement…",
+    "zoomAria": "Zoom"
+  },
+  "appBar": {
+    "home": "Accueil {appName}",
+    "breadcrumb": {
+      "account": "Compte",
+      "profile": "Profil",
+      "security": "Sécurité",
+      "notifications": "Notifications",
+      "danger": "Zone de danger",
+      "admin": "Admin",
+      "users": "Utilisateurs",
+      "organizations": "Organisations",
+      "organization": "Organisation",
+      "rbac": "Rôles et permissions",
+      "roles": "Rôles",
+      "new": "Nouveau",
+      "setup": "Configuration"
+    },
+    "apps": {
+      "triggerAria": "Changer d'application",
+      "aria": "Applications Monark",
+      "title": "Applications Monark",
+      "subtitle": "Naviguez entre les produits Monark.",
+      "currentBadge": "Actuel",
+      "emptySlot": "Aucune application enregistrée",
+      "items": {
+        "core": {
+          "name": "Monark Core",
+          "tagline": "Communauté, gouvernance et récompenses."
+        }
+      }
+    },
+    "primaryNav": {
+      "triggerAria": "Ouvrir le menu de navigation",
+      "aria": "Navigation principale",
+      "brandHomeAria": "Accueil {appName}",
+      "brandWordmark": "{appName}",
+      "empty": "Aucun module enregistré.",
+      "items": {}
+    },
+    "userMenu": {
+      "triggerAria": "Ouvrir le menu utilisateur",
+      "aria": "Menu utilisateur",
+      "aboutYou": "À propos de vous",
+      "comingSoon": "Bientôt disponible",
+      "links": {
+        "profile": "Profil",
+        "security": "Compte et sécurité",
+        "notifications": "Notifications"
+      },
+      "signOut": "Déconnexion",
+      "signingOut": "Déconnexion…"
+    }
+  },
   "auth": {
     "signUp": {
       "title": "Créez votre compte",
-      "subtitle": "Rejoignez la communauté Monark en moins d'une minute.",
+      "subtitle": "Rejoignez la communauté {appName} en moins d'une minute.",
       "labels": {
         "email": "Courriel",
         "password": "Mot de passe",
@@ -27,7 +104,7 @@
     },
     "signIn": {
       "title": "Bon retour",
-      "subtitle": "Connectez-vous pour accéder à Monark.",
+      "subtitle": "Connectez-vous pour accéder à {appName}.",
       "labels": {
         "email": "Courriel",
         "password": "Mot de passe"
@@ -36,6 +113,7 @@
       "submitting": "Connexion…",
       "noAccount": "Pas encore de compte ?",
       "signUpLink": "Créez-en un",
+      "forgotPasswordLink": "Mot de passe oublié ?",
       "errors": {
         "invalidCredentials": "Courriel ou mot de passe incorrect."
       },
@@ -44,10 +122,57 @@
           "title": "Courriel mis à jour",
           "subtitle": "Connectez-vous avec votre nouveau courriel pour continuer."
         },
+        "passwordReset": {
+          "title": "Mot de passe mis à jour",
+          "subtitle": "Connectez-vous avec votre nouveau mot de passe pour continuer."
+        },
         "deletionScheduled": {
           "title": "Suppression planifiée",
           "subtitle": "Votre compte sera supprimé le {date}. Reconnectez-vous à tout moment d'ici-là pour annuler."
         }
+      }
+    },
+    "forgotPassword": {
+      "title": "Réinitialiser votre mot de passe",
+      "subtitle": "Saisissez le courriel de votre compte ; nous vous enverrons un lien de réinitialisation.",
+      "labels": {
+        "email": "Courriel"
+      },
+      "submit": "Envoyer le lien",
+      "submitting": "Envoi…",
+      "sentTitle": "Vérifiez votre boîte courriel.",
+      "sentBody": "Si un compte existe pour {email}, un lien de réinitialisation est en route. Cliquez sur le lien ou saisissez le code à 6 chiffres ci-dessous. Valide pendant une heure.",
+      "otpPrompt": "Saisissez le code reçu par courriel",
+      "verify": "Continuer",
+      "verifying": "Vérification…",
+      "or": "ou",
+      "resend": "Renvoyer le courriel",
+      "errors": {
+        "invalidCode": "Ce code est invalide ou a expiré.",
+        "missing": "Saisissez le code à 6 chiffres du courriel."
+      },
+      "backToSignIn": "Vous vous en souvenez ?",
+      "signInLink": "Retour à la connexion"
+    },
+    "resetPassword": {
+      "title": "Définir un nouveau mot de passe",
+      "subtitle": "Vous réinitialisez le mot de passe pour {email}.",
+      "labels": {
+        "new": "Nouveau mot de passe",
+        "confirm": "Confirmer le nouveau mot de passe"
+      },
+      "submit": "Mettre à jour",
+      "submitting": "Mise à jour…",
+      "expiredTitle": "Lien expiré",
+      "expiredSubtitle": "Ce lien de réinitialisation n'est plus valide. Demandez-en un nouveau pour continuer.",
+      "requestAgain": "Demander un nouveau lien",
+      "errors": {
+        "noSession": "Votre lien de réinitialisation a expiré. Demandez-en un nouveau.",
+        "weakPassword": "Ce mot de passe ne respecte pas les exigences de sécurité.",
+        "totpRequired": "Un code à deux facteurs est requis pour réinitialiser le mot de passe.",
+        "invalidTotpCode": "Ce code à deux facteurs est invalide ou a expiré.",
+        "upstream": "Impossible de mettre à jour. Réessayez.",
+        "mismatch": "Le nouveau mot de passe et la confirmation ne correspondent pas."
       }
     },
     "checkEmail": {
@@ -105,7 +230,7 @@
     }
   },
   "home": {
-    "heading": "Monark",
+    "heading": "{appName}",
     "subheading": "Au service de la collaboration au sein de la communauté Web3."
   },
   "notFound": {
@@ -117,7 +242,321 @@
   },
   "admin": {
     "title": "Admin",
-    "placeholder": "Les surfaces admin seront ajoutées ici à mesure qu'elles seront livrées."
+    "placeholder": "Les surfaces admin seront ajoutées ici à mesure qu'elles seront livrées.",
+    "tabs": {
+      "nav": "Sections admin",
+      "users": "Utilisateurs",
+      "organizations": "Organisations",
+      "organization": "Organisation",
+      "rbac": "Rôles et permissions"
+    },
+    "users": {
+      "title": "Utilisateurs",
+      "subtitle": "Recherchez et gérez chaque compte de la plateforme.",
+      "placeholder": "La gestion des utilisateurs sera ajoutée ici.",
+      "searchLabel": "Rechercher des utilisateurs",
+      "searchPlaceholder": "Recherchez par courriel ou nom affiché…",
+      "empty": "Aucun utilisateur pour l'instant.",
+      "emptySearch": "Aucun utilisateur ne correspond à « {query} ».",
+      "loading": "Chargement…",
+      "loadMore": "Charger plus",
+      "badges": {
+        "disabled": "Désactivé",
+        "pendingDeletion": "Suppression en attente",
+        "pending": "En attente"
+      },
+      "filters": {
+        "openAria": "Ouvrir les filtres",
+        "menuLabel": "Filtrer par",
+        "clearChipAria": "Effacer le filtre {label}",
+        "role": "Rôle",
+        "allRoles": "Tous les rôles",
+        "status": "Statut",
+        "allStatuses": "Tous les statuts",
+        "status_active": "Actif",
+        "status_pending": "Invitation en attente",
+        "status_disabled": "Désactivé",
+        "status_pending-deletion": "Suppression en attente",
+        "joined": "Inscrit",
+        "joinedAll": "Sans limite",
+        "joined_7d": "7 derniers jours",
+        "joined_30d": "30 derniers jours",
+        "joined_90d": "90 derniers jours",
+        "emailVerified": "Courriel vérifié",
+        "emailAll": "Tous",
+        "email_verified": "Vérifié",
+        "email_unverified": "Non vérifié"
+      },
+      "invite": {
+        "cta": "Inviter un utilisateur",
+        "title": "Inviter un nouvel utilisateur",
+        "subtitle": "Un courriel part avec un lien d'inscription valable 14 jours. Les rôles peuvent être ajustés plus tard depuis la page de l'utilisateur.",
+        "nameLabel": "Nom complet",
+        "namePlaceholder": "Jane Doe",
+        "nameHint": "Optionnel. Utilisé dans la formule de politesse de l'invitation et pré-rempli sur le profil à l'inscription.",
+        "emailLabel": "Courriel",
+        "emailPlaceholder": "personne@exemple.com",
+        "roleLabel": "Rôle",
+        "rolePlaceholder": "Choisissez un rôle",
+        "orgLabel": "Organisation",
+        "orgPlaceholder": "Choisissez une organisation",
+        "submit": "Envoyer l'invitation",
+        "sending": "Envoi…",
+        "cancel": "Annuler",
+        "success": "Invitation envoyée.",
+        "error": "Impossible d'envoyer l'invitation.",
+        "revokeAria": "Révoquer l'invitation pour {email}",
+        "revokeSuccess": "Invitation révoquée.",
+        "revokeError": "Impossible de révoquer cette invitation."
+      },
+      "detail": {
+        "back": "Retour aux utilisateurs",
+        "loadError": "Impossible de charger cet utilisateur.",
+        "yes": "Oui",
+        "no": "Non",
+        "identity": {
+          "title": "Identité",
+          "id": "Identifiant",
+          "email": "Courriel",
+          "emailVerified": "Courriel vérifié",
+          "locale": "Langue",
+          "createdAt": "Inscrit le",
+          "deletedAt": "Suppression demandée le"
+        },
+        "roles": {
+          "title": "Rôles",
+          "subtitle": "Rôles actifs détenus par cet utilisateur.",
+          "none": "Aucun rôle assigné.",
+          "platform": "Plateforme"
+        }
+      },
+      "profileForm": {
+        "title": "Profil",
+        "subtitle": "Modifiez les informations affichées au nom de cet utilisateur.",
+        "labels": {
+          "displayName": "Nom affiché",
+          "bio": "Bio",
+          "locale": "Langue"
+        },
+        "placeholders": {
+          "displayName": "Le nom affiché dans l'application",
+          "bio": "Un court texte qui apparaît sur le profil."
+        },
+        "saved": "Enregistré.",
+        "avatarUploadAria": "Téléverser une photo de profil",
+        "avatarEditAria": "Changer la photo de profil",
+        "avatarReplace": "Remplacer",
+        "avatarRemove": "Retirer",
+        "avatarUploading": "Téléversement…",
+        "avatarUpdated": "Avatar mis à jour.",
+        "avatarRemoved": "Avatar retiré.",
+        "avatarErrors": {
+          "invalidType": "Choisissez une image JPEG, PNG ou WebP.",
+          "tooLarge": "L'image dépasse 2 Mo.",
+          "notAuthenticated": "Reconnectez-vous puis réessayez.",
+          "upstream": "Le téléversement a échoué. Réessayez."
+        },
+        "bannerUploadAria": "Téléverser une bannière",
+        "bannerEditAria": "Changer la bannière",
+        "bannerReplace": "Remplacer la bannière",
+        "bannerRemove": "Retirer la bannière",
+        "bannerUploading": "Téléversement…",
+        "bannerUpdated": "Bannière mise à jour.",
+        "bannerRemoved": "Bannière retirée.",
+        "bannerErrors": {
+          "invalidType": "Choisissez une image JPEG, PNG ou WebP.",
+          "tooLarge": "L'image dépasse 5 Mo.",
+          "notAuthenticated": "Reconnectez-vous puis réessayez.",
+          "upstream": "Le téléversement a échoué. Réessayez."
+        }
+      },
+      "roles": {
+        "title": "Rôles",
+        "subtitle": "Rôles actifs. Ajoutez ou révoquez par utilisateur depuis cette page.",
+        "revokeAria": "Révoquer {role}",
+        "addCta": "Ajouter un rôle",
+        "dialogTitle": "Assigner un rôle",
+        "dialogSubtitle": "Choisissez la portée et le rôle à accorder.",
+        "dialogCancel": "Annuler",
+        "roleLabel": "Rôle",
+        "rolePlaceholder": "Choisissez un rôle",
+        "orgLabel": "Organisation",
+        "orgPlaceholder": "Choisissez une organisation",
+        "add": "Ajouter",
+        "assigning": "Assignation…",
+        "assignSuccess": "Rôle assigné.",
+        "assignError": "Impossible d'assigner ce rôle.",
+        "revokeSuccess": "Rôle révoqué.",
+        "revokeError": "Impossible de révoquer ce rôle."
+      },
+      "actions": {
+        "title": "Actions de compte",
+        "subtitle": "Aidez cet utilisateur à récupérer ou mettre à jour ses identifiants.",
+        "passwordReset": {
+          "cta": "Envoyer un courriel de réinitialisation",
+          "sending": "Envoi…",
+          "hint": "Envoie le lien standard ; l'utilisateur choisit lui-même son nouveau mot de passe.",
+          "success": "Courriel de réinitialisation envoyé à {email}.",
+          "forbidden": "Vous n'avez plus la permission de faire ceci.",
+          "error": "Impossible d'envoyer le courriel de réinitialisation."
+        }
+      },
+      "notifications": {
+        "title": "Préférences de notifications",
+        "subtitle": "Ajustez les catégories qui parviennent à cet utilisateur via l'application ou le courriel.",
+        "resetSuccess": "Préférences réinitialisées."
+      },
+      "dangerZone": {
+        "title": "Zone dangereuse",
+        "subtitle": "Actions destructrices qui affectent ce compte.",
+        "graceTitle": "Suppression planifiée",
+        "graceSubtitle": "Ce compte sera supprimé définitivement le {date}. Annulez à tout moment avant cette date.",
+        "cancelDeletion": "Annuler la suppression",
+        "cancelPending": "Annulation…",
+        "cancelSuccess": "Suppression annulée.",
+        "cancelError": "Impossible d'annuler la suppression.",
+        "requestDeletion": "Demander la suppression (14 jours)",
+        "requestHint": "Marque le compte pour suppression ; le nettoyage automatique le retire après 14 jours. Réversible.",
+        "requestSuccess": "Suppression planifiée.",
+        "requestError": "Impossible de planifier la suppression.",
+        "hardDelete": "Supprimer définitivement",
+        "hardDeleteHint": "Saute la période de grâce. Irréversible.",
+        "hardDeleteSuccess": "Compte supprimé.",
+        "hardDeleteError": "Impossible de supprimer le compte.",
+        "requestDialog": {
+          "title": "Planifier la suppression ?",
+          "description": "{email} sera supprimé définitivement dans 14 jours, sauf si la suppression est annulée avant. L'utilisateur peut annuler lui-même depuis sa page de compte pendant toute la période de grâce ; vous pouvez également annuler depuis cette page admin. Après 14 jours, le nettoyage quotidien anonymise le compte et l'action devient irréversible.",
+          "cancel": "Annuler",
+          "confirm": "Planifier la suppression",
+          "confirming": "Planification…"
+        },
+        "hardDialog": {
+          "title": "Supprimer ce compte définitivement ?",
+          "description": "{email} et toutes les données associées seront retirées immédiatement. Cette action est irréversible.",
+          "label": "Tapez {email} pour confirmer",
+          "cancel": "Annuler",
+          "confirm": "Supprimer définitivement",
+          "confirming": "Suppression…"
+        }
+      }
+    },
+    "organizations": {
+      "title": "Organisations",
+      "subtitle": "Gérez les profils, l'image de marque et les slugs des organisations.",
+      "placeholder": "L'édition des profils d'organisation sera ajoutée ici.",
+      "searchLabel": "Rechercher des organisations",
+      "searchPlaceholder": "Recherchez par nom ou slug…",
+      "empty": "Aucune organisation pour l'instant.",
+      "emptySearch": "Aucune organisation ne correspond à « {query} ».",
+      "loading": "Chargement…",
+      "loadMore": "Charger plus",
+      "detail": {
+        "back": "Retour aux organisations",
+        "title": "Profil de l'organisation",
+        "subtitle": "Les modifications sont enregistrées à la perte de focus. Les changements de slug créent une redirection de 90 jours depuis l'ancienne valeur.",
+        "loadError": "Impossible de charger cette organisation.",
+        "saved": "Enregistré.",
+        "saveError": "Impossible d'enregistrer les modifications.",
+        "invalidSlug": "Le slug doit comporter de 2 à 60 lettres minuscules, chiffres ou tirets.",
+        "invalidColor": "La couleur doit être un code hexadécimal comme #F0870C.",
+        "labels": {
+          "displayName": "Nom affiché",
+          "slug": "Slug",
+          "primaryColor": "Couleur de marque principale"
+        },
+        "placeholders": {
+          "displayName": "Le nom affiché de l'organisation",
+          "slug": "slug-pour-url"
+        },
+        "slugHint": "Utilisé dans les URL ; le faire pivoter crée une redirection de 90 jours depuis l'ancienne valeur.",
+        "primaryColorHint": "Code hexadécimal comme #F0870C. Laissez vide pour utiliser la couleur par défaut.",
+        "logoHint": "Recadrage carré, max 2 Mo. JPEG, PNG ou WebP.",
+        "logoUploadAria": "Téléverser un logo d'organisation",
+        "logoEditAria": "Changer le logo de l'organisation",
+        "logoReplace": "Remplacer",
+        "logoRemove": "Retirer",
+        "logoUploading": "Téléversement…",
+        "logoUpdated": "Logo mis à jour.",
+        "logoRemoved": "Logo retiré.",
+        "logoErrors": {
+          "invalidType": "Choisissez une image JPEG, PNG ou WebP.",
+          "tooLarge": "L'image dépasse 2 Mo.",
+          "notAuthenticated": "Reconnectez-vous puis réessayez.",
+          "forbidden": "Vous n'avez plus la permission de faire ceci.",
+          "upstream": "Le téléversement a échoué. Réessayez."
+        }
+      }
+    },
+    "rbac": {
+      "title": "Rôles et permissions",
+      "subtitle": "Définissez les rôles utilisés par votre organisation et les permissions accordées à chacun.",
+      "placeholder": "L'assignation des rôles sera ajoutée ici.",
+      "sysadmins": {
+        "title": "Administrateurs système",
+        "subtitle": "Comptes au niveau plateforme qui détiennent toutes les permissions dans chaque organisation.",
+        "empty": "Aucun administrateur système actif pour le moment.",
+        "grantedAt": "Depuis le {date}"
+      },
+      "manager": {
+        "orgPicker": {
+          "title": "Organisation",
+          "subtitle": "Choisissez l'organisation dont vous souhaitez gérer les rôles.",
+          "placeholder": "Sélectionner une organisation"
+        },
+        "listSubtitle": "Les rôles natifs ne peuvent pas être supprimés ; leurs permissions sont gérées par le système.",
+        "createCta": "Nouveau rôle",
+        "searchPlaceholder": "Rechercher un rôle…",
+        "searchAria": "Rechercher un rôle par nom",
+        "empty": "Aucun rôle pour l'instant. Créez-en un pour commencer.",
+        "emptySearch": "Aucun rôle ne correspond à « {query} ».",
+        "badges": {
+          "builtIn": "Natif",
+          "allPermissions": "Toutes les permissions"
+        }
+      },
+      "editor": {
+        "createTitle": "Créer un rôle",
+        "editTitle": "Modifier le rôle : {name}",
+        "createSubtitle": "Donnez un nom au rôle et choisissez les permissions qu'il accorde. La clé interne est dérivée automatiquement.",
+        "editSubtitle": "Les rôles natifs disposent toujours de toutes les permissions ; seuls leur nom et leur description peuvent être modifiés.",
+        "nameLabel": "Nom",
+        "namePlaceholder": "Modérateur",
+        "descriptionLabel": "Description",
+        "descriptionPlaceholder": "À quoi sert ce rôle ? Apparaît dans la liste des rôles.",
+        "colorLabel": "Couleur",
+        "colorHint": "Code hexadécimal optionnel (ex. #F0870C). Utilisé pour la pastille du rôle dans l'admin.",
+        "permissionsLabel": "Permissions",
+        "permissionsLocked": "Verrouillé",
+        "permissionsAdminNote": "Le rôle natif ADMIN dispose toujours de toutes les permissions. Les nouvelles permissions ajoutées au système sont accordées automatiquement.",
+        "searchPlaceholder": "Rechercher des permissions…",
+        "searchAria": "Filtrer les permissions",
+        "searchEmpty": "Aucune permission ne correspond.",
+        "categoryCount": "{selected} / {total}",
+        "toggleAllAria": "Activer toutes les permissions de {category}",
+        "categories": {
+          "organization": "Organisation",
+          "users": "Utilisateurs",
+          "rbac": "Rôles et permissions",
+          "platform": "Plateforme"
+        },
+        "nameRequired": "Le nom du rôle est requis.",
+        "create": "Créer le rôle",
+        "save": "Enregistrer",
+        "submitting": "Enregistrement…",
+        "cancel": "Annuler",
+        "back": "Retour aux rôles",
+        "deleteCta": "Supprimer le rôle",
+        "deleteConfirm": "Supprimer le rôle « {name} » ? Cette action est irréversible.",
+        "deleteSuccess": "Rôle supprimé.",
+        "deleteError": "Impossible de supprimer ce rôle.",
+        "loadError": "Impossible de charger ce rôle.",
+        "missingOrg": "Aucune organisation sélectionnée. Choisissez-en une depuis la liste des rôles et réessayez.",
+        "createSuccess": "Rôle créé.",
+        "createError": "Impossible de créer ce rôle.",
+        "updateSuccess": "Rôle mis à jour.",
+        "updateError": "Impossible de mettre à jour ce rôle."
+      }
+    }
   },
   "account": {
     "title": "Compte",
@@ -127,34 +566,99 @@
       "softTitle": "L'authentification à deux facteurs est requise",
       "softSubtitle": "Activez TOTP ci-dessous pour conserver l'accès admin. Toutes les routes hors /account seront bloquées 7 jours après le délai accordé.",
       "hardTitle": "Inscription TOTP en retard",
-      "hardSubtitle": "Votre compte admin est en retard depuis {days, plural, =0 {moins d'un jour} one {# jour} other {# jours}}. L'accès est limité à /account jusqu'à l'activation de TOTP."
+      "hardSubtitle": "Votre compte admin est en retard depuis {days, plural, =0 {moins d'un jour} one {# jour} other {# jours}}. L'accès est limité à /account jusqu'à l'activation de TOTP.",
+      "redirectToastTitle": "Accès admin restreint",
+      "redirectToastSubtitle": "Réactivez l'authentification à deux facteurs pour retrouver l'accès aux surfaces admin."
     },
     "tabs": {
+      "nav": "Section du compte",
       "profile": "Profil et préférences",
       "security": "Compte et sécurité",
+      "notifications": "Notifications",
       "danger": "Zone sensible"
+    },
+    "notifications": {
+      "title": "Notifications",
+      "bellAriaLabel": "{count, plural, =0 {Notifications, aucune non lue} one {Notifications, # non lue} other {Notifications, # non lues}}",
+      "popoverAriaLabel": "Notifications récentes",
+      "markAllRead": "Tout marquer comme lu",
+      "loading": "Chargement…",
+      "empty": "Aucune nouvelle notification.",
+      "open": "Ouvrir",
+      "markRead": "Marquer comme lu",
+      "markUnread": "Marquer comme non lu",
+      "rowActionsAria": "Actions sur la notification",
+      "filterTabsAria": "Filtrer les notifications",
+      "dismiss": "Ignorer",
+      "filterAll": "Toutes",
+      "filterUnread": "Non lues",
+      "loadMore": "Charger plus",
+      "kinds": {
+        "auth": {
+          "new-device": "Nouvelle connexion",
+          "password-changed": "Mot de passe changé",
+          "totp-enabled": "TOTP activé",
+          "totp-disabled": "TOTP désactivé"
+        },
+        "account": {
+          "email-changed": "Adresse e-mail changée",
+          "deletion-scheduled": "Suppression programmée",
+          "deletion-canceled": "Suppression annulée"
+        }
+      },
+      "prefs": {
+        "title": "Préférences de notification",
+        "subtitle": "Choisissez les catégories à recevoir, et sur quel canal.",
+        "categoryLabel": "Catégorie",
+        "categories": {
+          "SECURITY": "Sécurité",
+          "ACCOUNT": "Compte"
+        },
+        "categoryDescriptions": {
+          "SECURITY": "Alertes de connexion, changements de mot de passe, activation/désactivation de la double authentification. Le courriel est obligatoire pour ces événements et ne peut pas être désactivé ; il protège votre compte contre les accès non autorisés.",
+          "ACCOUNT": "Mises à jour du profil, changements d'adresse e-mail, rappels durant le délai de grâce de suppression. Tout ce qui touche à l'état de votre compte sans être un événement de sécurité."
+        },
+        "categoryHelpAria": "Plus d'infos sur {category}",
+        "channels": {
+          "IN_APP": "In-app",
+          "EMAIL": "Courriel"
+        },
+        "enableAria": "Activer {category} sur {channel}",
+        "disableAria": "Désactiver {category} sur {channel}",
+        "forcedBadge": "Requis",
+        "forcedTooltip": "Les courriels de sécurité ne peuvent pas être désactivés ; ils protègent votre compte.",
+        "resetButton": "Rétablir les paramètres par défaut",
+        "resetSuccess": "Préférences rétablies par défaut."
+      }
     },
     "profile": {
       "title": "Profil",
       "subtitle": "Vos informations publiques.",
       "labels": {
         "avatar": "Avatar",
+        "banner": "Bannière",
         "displayName": "Nom affiché",
+        "bio": "Bio",
         "locale": "Langue",
         "theme": "Thème"
       },
       "themes": {
         "light": "Clair",
-        "dark": "Sombre"
+        "dark": "Sombre",
+        "system": "Système"
       },
       "placeholders": {
-        "displayName": "Le nom affiché dans l'application"
+        "displayName": "Le nom affiché dans l'application",
+        "bio": "Une courte description visible sur votre profil."
       },
       "avatarUpload": "Téléverser",
       "avatarReplace": "Remplacer",
       "avatarRemove": "Retirer",
       "avatarUploading": "Téléversement…",
-      "avatarHint": "JPEG, PNG ou WebP. Jusqu'à 2 Mo.",
+      "avatarUploadAria": "Téléverser une photo de profil",
+      "avatarEditAria": "Modifier la photo de profil",
+      "avatarCropTitle": "Recadrer votre photo de profil",
+      "avatarCropHint": "Glissez pour repositionner, faites défiler ou utilisez le curseur pour zoomer.",
       "avatarErrors": {
         "invalidType": "Choisissez une image JPEG, PNG ou WebP.",
         "tooLarge": "Cette image dépasse 2 Mo.",
@@ -163,7 +667,28 @@
       },
       "avatarUpdated": "Avatar mis à jour.",
       "avatarRemoved": "Avatar retiré.",
+      "bannerUpload": "Téléverser une bannière",
+      "bannerReplace": "Remplacer la bannière",
+      "bannerRemove": "Retirer la bannière",
+      "bannerUploading": "Téléversement…",
+      "bannerUploadAria": "Téléverser une bannière",
+      "bannerEditAria": "Modifier la bannière",
+      "bannerCropTitle": "Recadrer votre bannière",
+      "bannerCropHint": "Glissez pour repositionner, faites défiler ou utilisez le curseur pour zoomer. La bannière est recadrée au format 3:1.",
+      "bannerErrors": {
+        "invalidType": "Choisissez une image JPEG, PNG ou WebP.",
+        "tooLarge": "Cette image dépasse 5 Mo.",
+        "notAuthenticated": "Reconnectez-vous puis réessayez.",
+        "upstream": "Le téléversement a échoué. Réessayez."
+      },
+      "bannerUpdated": "Bannière mise à jour.",
+      "bannerRemoved": "Bannière retirée.",
       "saved": "Enregistré.",
+      "readOnlyBanner": {
+        "title": "Profil en lecture seule",
+        "subtitle": "Votre compte est en attente de suppression. Annulez la suppression pour pouvoir modifier votre profil.",
+        "cta": "Voir les options de suppression"
+      },
       "locales": {
         "en": "English",
         "fr": "Français"
@@ -176,20 +701,35 @@
     },
     "emailChange": {
       "change": "Modifier le courriel",
+      "dialogTitle": "Modifier votre courriel",
+      "dialogSubtitle": "Une confirmation sera envoyée aux deux adresses (actuelle et nouvelle) ; le changement prend effet dès que vous confirmez depuis l'une d'elles.",
       "labels": {
         "newEmail": "Nouveau courriel",
-        "currentPassword": "Mot de passe actuel"
+        "currentPassword": "Mot de passe actuel",
+        "totpCode": "Code à deux facteurs"
       },
+      "totpHint": "Saisissez le code à 6 chiffres de votre application d'authentification.",
       "submit": "Envoyer la confirmation",
       "submitting": "Envoi…",
       "cancel": "Annuler",
       "sent": "Consultez votre nouvelle boîte courriel.",
-      "sentHint": "Nous avons également averti {email}. Le changement prend effet dès que vous cliquez sur le lien reçu à la nouvelle adresse.",
-      "close": "Terminé",
+      "sentHint": "Nous avons également averti {email}. Le changement prend effet une fois les deux adresses confirmées.",
+      "close": "Fermer",
+      "otpInstructions": "Confirmation envoyée à {newEmail} et {currentEmail}. Cliquez sur le lien dans l'un des deux courriels, ou saisissez le code à 6 chiffres ci-dessous.",
+      "otpPendingOther": "Première adresse confirmée. Saisissez maintenant le code à 6 chiffres reçu à {currentEmail} (ou cliquez sur son lien) pour finaliser le passage à {newEmail}.",
+      "otpPrompt": "Code à 6 chiffres de l'un des deux courriels",
+      "otpHalfDone": "Première adresse confirmée. Saisissez maintenant le code reçu à l'autre adresse.",
+      "verify": "Vérifier",
+      "verifying": "Vérification…",
       "errors": {
         "invalidCurrentPassword": "Le mot de passe actuel est incorrect.",
         "emailInUse": "Ce courriel est déjà utilisé.",
         "sameEmail": "C'est déjà votre courriel.",
+        "totpRequired": "Un code à deux facteurs est requis pour modifier le courriel.",
+        "invalidTotpCode": "Ce code à deux facteurs est invalide ou a expiré.",
+        "missing": "Saisissez le code à 6 chiffres reçu dans l'un des courriels.",
+        "invalidCode": "Ce code est invalide ou a expiré. Essayez celui de l'autre adresse si vous ne l'avez pas encore fait.",
+        "notAuthenticated": "Reconnectez-vous et réessayez.",
         "upstream": "Impossible d'envoyer la confirmation. Réessayez."
       }
     },
@@ -197,12 +737,15 @@
       "title": "Mot de passe",
       "subtitle": "Modifier le mot de passe utilisé pour se connecter.",
       "change": "Modifier le mot de passe",
+      "dialogTitle": "Modifier votre mot de passe",
+      "dialogSubtitle": "Saisissez votre mot de passe actuel, puis un nouveau. Vous recevrez un courriel de confirmation après le changement.",
       "labels": {
         "current": "Mot de passe actuel",
         "new": "Nouveau mot de passe",
-        "confirm": "Confirmer le nouveau mot de passe"
+        "confirm": "Confirmer le nouveau mot de passe",
+        "totpCode": "Code à deux facteurs"
       },
-      "minLengthHint": "Au moins 12 caractères.",
+      "totpHint": "Saisissez le code à 6 chiffres de votre application d'authentification.",
       "submit": "Mettre à jour",
       "submitting": "Mise à jour…",
       "cancel": "Annuler",
@@ -210,6 +753,8 @@
       "errors": {
         "invalidCurrentPassword": "Le mot de passe actuel est incorrect.",
         "weakPassword": "Le nouveau mot de passe est trop court.",
+        "totpRequired": "Un code à deux facteurs est requis pour modifier le mot de passe.",
+        "invalidTotpCode": "Ce code à deux facteurs est invalide ou a expiré.",
         "upstream": "Impossible de mettre à jour. Réessayez.",
         "mismatch": "Le nouveau mot de passe et la confirmation ne correspondent pas."
       }
@@ -218,8 +763,16 @@
       "title": "Authentification à deux facteurs",
       "subtitleActive": "Activée. Un code vous sera demandé sur les nouveaux appareils.",
       "subtitleInactive": "Protégez votre compte avec une application d'authentification.",
-      "enroll": "Activer TOTP",
+      "enroll": "Configurer TOTP",
       "enrolling": "Préparation…",
+      "enrollTitle": "Activer l'authentification à deux facteurs",
+      "enrollSubtitle": "Scannez le QR avec votre application d'authentification, puis saisissez le code à 6 chiffres affiché pour confirmer.",
+      "enrollScanTitle": "Étape 1 — Scanner le QR code",
+      "enrollScanSubtitle": "Ouvrez votre application d'authentification et ajoutez un nouveau compte en scannant le code ci-dessous. Cliquez sur « Impossible de scanner ? » pour copier le secret à la place.",
+      "enrollVerifyTitle": "Étape 2 — Confirmer avec un code",
+      "enrollVerifySubtitle": "Saisissez le code à 6 chiffres que votre application d'authentification affiche actuellement pour {appName}.",
+      "continue": "Continuer",
+      "back": "Retour",
       "scanQr": "Scannez ce QR avec votre application d'authentification (Google Authenticator, 1Password, Authy, etc.).",
       "cantScan": "Impossible de scanner ? Afficher le secret.",
       "enrollCodePrompt": "Entrez le code à 6 chiffres généré par votre application",
@@ -227,22 +780,73 @@
       "confirming": "Confirmation…",
       "cancel": "Annuler",
       "saveRecovery": "Conservez ces codes de récupération",
-      "saveRecoveryHint": "Chaque code fonctionne une seule fois. Gardez-les dans un endroit accessible si vous perdez votre authentificateur.",
+      "saveRecoveryHint": "Chaque code fonctionne une seule fois. Gardez-les dans un endroit sûr si vous perdez votre authentificateur.",
+      "recoveryTitle": "Vos codes de récupération",
+      "recoveryCopy": "Copier les codes de récupération",
+      "recoveryCopied": "Codes de récupération copiés dans le presse-papiers.",
+      "secretCopy": "Copier le secret",
+      "secretCopied": "Secret copié dans le presse-papiers.",
       "ack": "Je les ai sauvegardés",
       "fields": {
         "recoveryRemaining": "Codes de récupération restants"
       },
       "regenerate": "Régénérer les codes de récupération",
+      "regeneratePending": "Renouvellement…",
+      "regenerateTitle": "Régénérer les codes de récupération",
+      "regenerateSubtitle": "Le renouvellement invalide tous les codes existants. Saisissez votre code à 6 chiffres actuel pour continuer.",
       "disable": "Désactiver TOTP",
+      "disablePending": "Désactivation…",
+      "disableTitle": "Désactiver l'authentification à deux facteurs",
+      "disableSubtitle": "Votre compte sera protégé uniquement par mot de passe pour les nouvelles connexions. Saisissez votre code à 6 chiffres actuel pour confirmer.",
       "disablePrompt": "Entrez votre code TOTP actuel pour confirmer la désactivation",
       "regeneratePrompt": "Entrez votre code TOTP actuel pour renouveler les codes",
       "enrolledSuccess": "Authentification à deux facteurs activée.",
       "disabledSuccess": "Authentification à deux facteurs désactivée.",
       "regeneratedSuccess": "Codes de récupération renouvelés.",
       "errors": {
+        "enroll": "Impossible de démarrer l'enrôlement.",
         "confirm": "Ce code est invalide ou a expiré.",
         "disable": "Impossible de désactiver TOTP.",
-        "regenerate": "Impossible de renouveler les codes."
+        "regenerate": "Impossible de renouveler les codes.",
+        "copy": "Copie impossible. Sélectionnez les codes manuellement."
+      },
+      "dialog": {
+        "label": "Code à 6 chiffres",
+        "verify": "Confirmer",
+        "verifying": "Vérification…",
+        "cancel": "Annuler",
+        "default": {
+          "title": "Confirmer avec l'authentification à deux facteurs",
+          "description": "Saisissez le code à 6 chiffres de votre application d'authentification pour continuer."
+        },
+        "passwordChange": {
+          "title": "Confirmer le changement de mot de passe",
+          "description": "Saisissez le code à 6 chiffres de votre application d'authentification pour mettre à jour votre mot de passe."
+        },
+        "emailChange": {
+          "title": "Confirmer le changement de courriel",
+          "description": "Saisissez le code à 6 chiffres de votre application d'authentification pour envoyer les courriels de confirmation."
+        }
+      },
+      "reminder": {
+        "usedTitle": "Vous avez utilisé un code de récupération",
+        "usedSubtitle": "Il reste {remaining} codes de récupération. Rayez celui que vous venez d'utiliser de votre liste pour ne pas le réessayer.",
+        "usedAndLowSubtitle": "Il ne reste que {remaining} codes après celui-ci. Rayez-le de votre liste et envisagez de régénérer dès maintenant pour ne pas en manquer.",
+        "lowTitle": "Il ne reste que {remaining} codes de récupération",
+        "lowSubtitle": "Lorsque vous serez à court, vous serez bloqué si vous perdez votre authentificateur. Générez un nouveau lot et remplacez votre liste.",
+        "mustRegenerateTitle": "Vous n'avez plus de codes de récupération",
+        "mustRegenerateSubtitle": "Tous vos codes à usage unique ont été utilisés. Générez un nouveau lot avant de continuer ; sans eux, aucun moyen de revenir en cas de perte de votre authentificateur.",
+        "strikeHint": "Trouvez le code que vous venez d'utiliser et rayez-le",
+        "totpPrompt": "Entrez votre code d'authentification actuel pour confirmer",
+        "regeneratedTitle": "Nouveaux codes de récupération",
+        "regeneratedSubtitle": "Conservez-les en lieu sûr. Chaque code fonctionne une seule fois. L'ancien lot est désactivé.",
+        "struckIt": "Je l'ai rayé de ma liste",
+        "regenLater": "Je l'ai rayé (régénérer plus tard)",
+        "regenerateNow": "Régénérer maintenant",
+        "regenerating": "Régénération…",
+        "enterTotpToRegenerate": "Utiliser un code d'authentification pour régénérer",
+        "saving": "Enregistrement…",
+        "notNow": "Pas maintenant"
       }
     },
     "trustedDevices": {
@@ -251,13 +855,30 @@
       "resolving": "Chargement…",
       "none": "Aucun appareil reconnu pour le moment.",
       "revoke": "Révoquer",
+      "revokeAll": "Tout révoquer",
       "refresh": "Rafraîchir",
+      "cancel": "Annuler",
       "current": "Cet appareil",
+      "deviceTitle": "{browser} sur {os}",
+      "deviceUnknown": "Appareil inconnu",
       "fields": {
         "firstSeen": "Vu pour la première fois",
         "lastSeen": "Vu récemment",
         "ip": "Localisation",
+        "location": "Localisation",
+        "localDev": "Développement local",
+        "device": "Appareil",
         "totpVerified": "TOTP vérifié"
+      },
+      "revokeCurrentDialog": {
+        "title": "Révoquer cet appareil ?",
+        "description": "Vous serez déconnecté immédiatement. Vous devrez vous reconnecter et réautoriser cet appareil pour utiliser {appName}.",
+        "confirm": "Révoquer et se déconnecter"
+      },
+      "revokeAllDialog": {
+        "title": "Révoquer toutes les sessions ?",
+        "description": "Cela déconnecte tous les navigateurs et appareils actuellement connectés. Utilisez cette option si vous soupçonnez que votre compte est compromis.",
+        "confirm": "Tout révoquer"
       }
     },
     "danger": {
@@ -304,11 +925,53 @@
     "sections": {
       "session": "session",
       "apiHealth": "santé api",
+      "remoteDiagnostics": "diagnostics dev distant",
       "currentOrg": "org active",
       "trustedDevices": "appareils de confiance",
       "totp": "totp",
       "rbac": "rbac",
-      "featureFlags": "feature flags"
+      "featureFlags": "feature flags",
+      "notifications": "notifications"
+    },
+    "remoteDiagnostics": {
+      "browserHost": "hôte navigateur",
+      "noSession": "aucune session — tRPC sera anonyme, toute requête authentifiée renvoie vide",
+      "yes": "oui",
+      "no": "non",
+      "none": "(aucun)",
+      "clearAndSignIn": "Effacer les cookies périmés + se reconnecter",
+      "fields": {
+        "resolved": "résolu",
+        "result": "résultat",
+        "hint": "indice",
+        "auth": "état d'authentification",
+        "cookies": "cookies",
+        "session": "a une session",
+        "userId": "id utilisateur"
+      },
+      "hints": {
+        "apiUnreachable": "Connexion échouée avant la réponse du serveur. Causes probables : pare-feu Windows bloque le port 4000 ; api pas sur 0.0.0.0 ; pas sur le même LAN ; l'URL résolue est encore en loopback.",
+        "apiRejected": "L'API a répondu mais a rejeté la requête. Vérifiez stderr de l'api pour un avertissement CORS.",
+        "supabaseUnreachable": "Les conteneurs Docker Supabase écoutent sur 127.0.0.1 par défaut. Sous Windows, exécutez `tools/dev-lan-setup.ps1` pour ajouter un portproxy + une règle de pare-feu.",
+        "getSessionThrew": "Le client Supabase navigateur a levé une exception sur getSession() ; vérifiez la console.",
+        "staleCookie": "Vous vous êtes connecté avant le verrouillage de la clé de stockage. Le navigateur a un cookie sous un nom périmé (le client cherche maintenant « {key} »). Utilisez le bouton ci-dessous pour effacer les cookies + vous reconnecter.",
+        "cookiesUnreadable": "Cookies présents mais le client Supabase navigateur ne peut pas les lire. Ouvrez le panneau cookies des DevTools et vérifiez que le nom correspond à la clé de stockage verrouillée.",
+        "noCookies": "Aucun cookie `sb-*` sur cet appareil. Vous êtes-vous réellement connecté *depuis cet appareil* (pas votre laptop) ? Les cookies ne se synchronisent pas entre appareils.",
+        "meRejected": "Le navigateur a une session + un token mais l'api a rejeté. Souvent : l'api ne peut pas valider le JWT contre Supabase ; ou CORS a bloqué l'en-tête Authorization.",
+        "meThrew": "L'appel tRPC authentifié a échoué. Vérifiez stderr de l'api."
+      }
+    },
+    "notifications": {
+      "unreadShort": "non lues",
+      "zero": "0",
+      "signInPrompt": "Connectez-vous pour tester les notifications.",
+      "markAllRead": "Tout marquer comme lu",
+      "resetPrefs": "Réinitialiser les préférences",
+      "sendTest": "envoyer un test",
+      "noKinds": "Aucun type enregistré.",
+      "lastResult": "envoyés : {delivered} · ignorés : {skipped}",
+      "recent": "récentes",
+      "recentEmpty": "Aucune notification."
     },
     "badges": {
       "signedIn": "connecté",
@@ -336,6 +999,7 @@
     "currentOrg": {
       "none": "Aucune organisation active.",
       "resolving": "résolution…",
+      "inferred": "aucune réclamation ; déduit des appartenances",
       "fields": { "slug": "slug", "name": "nom", "id": "id" },
       "memberships": "appartenances ({count})"
     },
@@ -350,10 +1014,15 @@
       "resolving": "résolution…",
       "none": "Aucun appareil de confiance.",
       "revoke": "révoquer",
+      "current": "cet appareil",
       "fields": {
         "firstSeen": "premier",
         "lastSeen": "dernier",
-        "ip": "ip"
+        "ip": "ip",
+        "location": "loc",
+        "localDev": "dev local",
+        "device": "appareil",
+        "totpVerified": "totp"
       }
     },
     "totp": {

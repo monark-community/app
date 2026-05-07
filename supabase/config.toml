@@ -100,8 +100,10 @@ openai_api_key = "env(OPENAI_API_KEY)"
 enabled = true
 # Port to use for the email testing server web interface.
 port = 54324
-# Uncomment to expose additional ports for testing user applications that send emails.
-# smtp_port = 54325
+# SMTP listener exposed so app code (notifications module via nodemailer) can
+# deliver outbound mail to Inbucket. Without this, transport calls silently
+# fail and dev never sees account-security emails.
+smtp_port = 54325
 # pop3_port = 54326
 # admin_email = "admin@email.com"
 # sender_name = "Admin"
@@ -159,8 +161,35 @@ enabled = true
 # The base URL of your website. Used as an allow-list for redirects and for constructing URLs used
 # in emails.
 site_url = "http://localhost:3000"
-# A list of *exact* URLs that auth providers are permitted to redirect to post authentication.
-additional_redirect_urls = ["http://localhost:3000", "http://127.0.0.1:3000"]
+# A list of *exact* URLs (or wildcard patterns) that auth providers are
+# permitted to redirect to post authentication. The RFC 1918 wildcards
+# (`192.168.*.*`, `10.*.*.*`, `172.16.*.*`–`172.31.*.*`) let a developer
+# open the app from a phone on the local network (`http://10.0.0.42:3000`)
+# and have Supabase accept the redirect URL the web action mints from
+# the request's actual Host header. Production deploys should narrow
+# this list back to the canonical app origins.
+additional_redirect_urls = [
+  "http://localhost:3000",
+  "http://127.0.0.1:3000",
+  "http://10.*.*.*:3000",
+  "http://192.168.*.*:3000",
+  "http://172.16.*.*:3000",
+  "http://172.17.*.*:3000",
+  "http://172.18.*.*:3000",
+  "http://172.19.*.*:3000",
+  "http://172.20.*.*:3000",
+  "http://172.21.*.*:3000",
+  "http://172.22.*.*:3000",
+  "http://172.23.*.*:3000",
+  "http://172.24.*.*:3000",
+  "http://172.25.*.*:3000",
+  "http://172.26.*.*:3000",
+  "http://172.27.*.*:3000",
+  "http://172.28.*.*:3000",
+  "http://172.29.*.*:3000",
+  "http://172.30.*.*:3000",
+  "http://172.31.*.*:3000",
+]
 # How long tokens are valid for, in seconds. Defaults to 3600 (1 hour), maximum 604,800 (1 week).
 jwt_expiry = 3600
 # JWT issuer URL. If not set, defaults to the local API URL (http://127.0.0.1:<port>/auth/v1).
@@ -254,6 +283,23 @@ otp_expiry = 3600
 [auth.email.template.confirmation]
 subject = "Confirm your Monark account"
 content_path = "./supabase/templates/confirmation.html"
+
+# Email change confirmation. With `double_confirm_changes = true` (above),
+# this template is sent to BOTH the old and new addresses ; each must
+# confirm before Supabase rotates the email. Locale + display name come
+# from user_metadata (kept current by signUp + updateLocaleAction).
+[auth.email.template.email_change]
+subject = "Confirm your Monark email change"
+content_path = "./supabase/templates/email-change.html"
+
+# Password reset. Sent when the /forgot-password form calls
+# supabase.auth.resetPasswordForEmail. The template uses the token-hash
+# URL form so the link lands directly on /auth/confirm?type=recovery
+# (which forwards to /auth/reset-password) instead of double-hopping
+# through Supabase's /auth/v1/verify endpoint.
+[auth.email.template.recovery]
+subject = "Reset your Monark password"
+content_path = "./supabase/templates/recovery.html"
 
 # Uncomment to customize notification email template
 # [auth.email.notification.password_changed]

@@ -7,7 +7,9 @@ import { Button } from "@/components/ui/button"
 import { ApiHealthPanel } from "./panels/api-health"
 import { CurrentOrgPanel } from "./panels/current-org"
 import { FeatureFlagsPanel } from "./panels/feature-flags"
+import { NotificationsPanel } from "./panels/notifications"
 import { RbacPanel } from "./panels/rbac"
+import { RemoteDiagnosticsPanel } from "./panels/remote-diagnostics"
 import { SessionPanel } from "./panels/session"
 import { TotpPanel } from "./panels/totp"
 import { TrustedDevicesPanel } from "./panels/trusted-devices"
@@ -66,9 +68,11 @@ export function DevOverlay() {
           <div className="flex-1 overflow-y-auto">
             <FeatureFlagsPanel />
             <ApiHealthPanel />
+            <RemoteDiagnosticsPanel />
             <SessionPanel />
             <TrustedDevicesPanel />
             <TotpPanel />
+            <NotificationsPanel />
             <CurrentOrgPanel />
             <RbacPanel />
           </div>

@@ -46,6 +46,13 @@ export type TrustedDeviceRevokedEvent = DomainEventBase & {
   scope: "user" | "admin"
 }
 
+export type TrustedDevicesAllRevokedEvent = DomainEventBase & {
+  type: "trusted-devices.all-revoked"
+  userId: string
+  count: number
+  scope: "user" | "admin"
+}
+
 export type TotpEnabledEvent = DomainEventBase & {
   type: "totp.enabled"
   userId: string
@@ -71,6 +78,7 @@ export type AuthEvents =
   | EmailVerifiedEvent
   | TrustedDeviceAddedEvent
   | TrustedDeviceRevokedEvent
+  | TrustedDevicesAllRevokedEvent
   | TotpEnabledEvent
   | TotpDisabledEvent
   | TotpRecoveryCodeUsedEvent

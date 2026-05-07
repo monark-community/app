@@ -1,20 +1,4 @@
 export const FLAGS = {
-  voting: {
-    description: "Decentralized voting module",
-    defaultOn: false,
-  },
-  "contributions.quantification": {
-    description: "Contribution estimation + reward surface",
-    defaultOn: false,
-  },
-  "referral.external-sync": {
-    description: "Sync with the external referral system",
-    defaultOn: false,
-  },
-  "onboarding.v2": {
-    description: "Redesigned onboarding flow",
-    defaultOn: false,
-  },
   "auth.trusted-devices": {
     description:
       "Track trusted devices on sign-in (cookie + DB rows). Kill switch for the whole subsystem; when off, no recognition or persistence happens.",
@@ -29,6 +13,11 @@ export const FLAGS = {
     description:
       "Enforce TOTP enrollment for admin roles within 7 days of first sign-in.",
     defaultOn: true,
+  },
+  "tenancy.multi-tenant": {
+    description:
+      "When ON, the app accepts multiple organizations and self-service org creation. When OFF (default), the app runs in single-tenant mode : exactly one Organization is expected, every route gates to /setup until that org exists, and the admin UX collapses around the single-org assumption.",
+    defaultOn: false,
   },
 } as const satisfies Record<string, { description: string; defaultOn: boolean; critical?: boolean }>
 

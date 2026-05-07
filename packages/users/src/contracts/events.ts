@@ -3,7 +3,7 @@ import type { DomainEventBase } from "@monark/common/contracts/events"
 export type UserProfileUpdatedEvent = DomainEventBase & {
   type: "user.profile-updated"
   userId: string
-  changed: Array<"displayName" | "avatarUrl" | "localePreference">
+  changed: Array<"displayName" | "avatarUrl" | "bannerUrl" | "bio" | "localePreference">
 }
 
 export type UserEmailChangedEvent = DomainEventBase & {

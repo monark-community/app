@@ -1,60 +1,40 @@
 import { describe, expect, it } from "vitest"
 import {
+  getPermissionDef,
+  isKnownPermission,
   listPermissions,
-  rolesForPermission,
+  permissionsByCategory,
   type Permission,
 } from "../src/contracts/permissions"
-import { pickHighest } from "../src/contracts/role"
 
-describe("rbac/permissions matrix", () => {
-  it("listPermissions returns every declared key", () => {
+describe("rbac/permissions registry", () => {
+  it("listPermissions returns every declared key without duplicates", () => {
     const all = listPermissions()
     expect(all).toContain("org:update-settings")
-    expect(all).toContain("voting:cast")
+    expect(all).toContain("rbac:manage-roles")
     expect(new Set(all).size).toBe(all.length)
   })
 
-  it("rolesForPermission scopes admin role assignment to MONARK_ADMIN", () => {
-    expect(rolesForPermission("org:assign-admin-role")).toEqual(["MONARK_ADMIN"])
+  it("isKnownPermission discriminates known vs unknown keys", () => {
+    expect(isKnownPermission("org:update-settings")).toBe(true)
+    expect(isKnownPermission("not:a-real-permission")).toBe(false)
   })
 
-  it("rolesForPermission opens voting:cast to all org-active roles", () => {
-    expect(rolesForPermission("voting:cast")).toEqual(
-      expect.arrayContaining(["MONARK_ADMIN", "ADMIN", "DEVELOPER", "AMBASSADOR"]),
-    )
-    expect(rolesForPermission("voting:cast")).not.toContain("STUDENT")
-  })
-
-  it("every permission entry resolves to at least one role", () => {
+  it("every permission carries a description and a category", () => {
     for (const perm of listPermissions() as Permission[]) {
-      expect(rolesForPermission(perm).length).toBeGreaterThan(0)
+      const def = getPermissionDef(perm)
+      expect(def.description.length).toBeGreaterThan(0)
+      expect(["organization", "users", "rbac", "platform"]).toContain(
+        def.category,
+      )
     }
   })
 
-  it("MONARK_ADMIN appears in every staff-facing permission", () => {
-    const staff = listPermissions().filter(
-      (p) => !p.startsWith("onboarding:") && p !== "contributions:view-own",
-    )
-    for (const perm of staff) {
-      expect(rolesForPermission(perm)).toContain("MONARK_ADMIN")
-    }
-  })
-})
-
-describe("rbac/role.pickHighest", () => {
-  it("returns the highest-ranked role from a set", () => {
-    expect(pickHighest(["STUDENT", "DEVELOPER", "AMBASSADOR"])).toBe("DEVELOPER")
-  })
-
-  it("returns null on empty input", () => {
-    expect(pickHighest([])).toBeNull()
-  })
-
-  it("ranks ADMIN above DEVELOPER", () => {
-    expect(pickHighest(["DEVELOPER", "ADMIN"])).toBe("ADMIN")
-  })
-
-  it("ranks MONARK_ADMIN above ADMIN", () => {
-    expect(pickHighest(["ADMIN", "MONARK_ADMIN"])).toBe("MONARK_ADMIN")
+  it("permissionsByCategory groups every permission exactly once", () => {
+    const grouped = permissionsByCategory()
+    const flattened = Object.values(grouped).flat()
+    const all = listPermissions()
+    expect(flattened.length).toBe(all.length)
+    expect(new Set(flattened).size).toBe(all.length)
   })
 })

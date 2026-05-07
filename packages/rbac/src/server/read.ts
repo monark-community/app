@@ -1,58 +1,118 @@
 import { ValidationError } from "@monark/common"
-import { rolesForPermission, type Permission } from "../contracts/permissions"
-import { pickHighest, type Role } from "../contracts/role"
+import {
+  ADMIN_ROLE_KEY,
+  BUILTIN_ALL_PERMISSIONS_KEYS,
+} from "../contracts/role"
 import {
   findActiveAssignments,
+  findAllActiveAssignments,
   countActiveOrgAdmins,
   hasAnyAdminAssignment,
+  type AssignmentWithRole,
 } from "./data"
+import { getDb } from "@monark/db"
 
-export async function getUserRoles(userId: string, orgId?: string): Promise<Role[]> {
+const ALL_PERMISSIONS_KEY_SET = new Set<string>(BUILTIN_ALL_PERMISSIONS_KEYS)
+
+// ── Role helpers ─────────────────────────────────────────────────
+
+// Returns every distinct role row the user holds an active assignment
+// for in the given org. Org-tier rows + any platform-tier ADMIN
+// assignment are unioned (per `findActiveAssignments` semantics).
+export async function getUserRoles(
+  userId: string,
+  orgId?: string,
+): Promise<AssignmentWithRole["role"][]> {
   const assignments = await findActiveAssignments(userId, orgId)
-  return assignments.map((a) => a.role)
+  // De-dup by roleId — a user could (in theory) have the same role
+  // assigned at platform AND org tier. The presentation surface
+  // doesn't care which assignment surfaced it.
+  const seen = new Set<string>()
+  const out: AssignmentWithRole["role"][] = []
+  for (const a of assignments) {
+    if (seen.has(a.roleId)) continue
+    seen.add(a.roleId)
+    out.push(a.role)
+  }
+  return out
 }
 
-export async function hasRole(userId: string, role: Role, orgId?: string): Promise<boolean> {
-  if (role !== "MONARK_ADMIN" && !orgId) {
+// Full assignment list (with role) across every org the user touches.
+// Powers admin user-detail surfaces that need to render every role +
+// its scope.
+export async function getAllAssignments(
+  userId: string,
+): Promise<AssignmentWithRole[]> {
+  return findAllActiveAssignments(userId)
+}
+
+// Org-tier role membership check. Platform-tier (SYSADMIN) requires
+// no orgId — its presence is unconditional. ADMIN and custom roles
+// require an orgId since they're scoped per-org.
+export async function hasRoleKey(
+  userId: string,
+  roleKey: string,
+  orgId?: string,
+): Promise<boolean> {
+  // Sysadmin is the only platform-tier role ; any other key checked
+  // without an orgId would be a programming error in the caller.
+  if (roleKey === ADMIN_ROLE_KEY && !orgId) {
     throw new ValidationError(
-      `hasRole(${role}) requires an orgId; only MONARK_ADMIN is platform-scoped.`,
+      `hasRoleKey(${roleKey}) requires an orgId — ADMIN is org-tier.`,
     )
   }
   const roles = await getUserRoles(userId, orgId)
-  return roles.includes(role)
+  return roles.some((r) => r.key === roleKey)
 }
 
-export async function primaryRole(userId: string, orgId: string): Promise<Role | null> {
-  const roles = await getUserRoles(userId, orgId)
-  // MONARK_ADMIN is shown only on platform admin surfaces; primary org role is the
-  // highest-ranked among non-MONARK_ADMIN roles.
-  const orgRoles = roles.filter((r) => r !== "MONARK_ADMIN") as Role[]
-  return pickHighest(orgRoles)
-}
+// ── Permission resolution ────────────────────────────────────────
 
+// True if the user holds at least one active assignment that grants
+// the requested permission. Two short-circuit paths :
+//
+//   - Built-in `SYSADMIN` (any orgId) — sysadmins implicitly hold every
+//     permission across every org. `findActiveAssignments` already
+//     surfaces platform-tier SYSADMIN regardless of the `orgId` arg.
+//   - Built-in `ADMIN` for the requested org — org admins implicitly
+//     hold every permission within their org. `findActiveAssignments`
+//     surfaces ADMIN only when the assignment's orgId matches.
+//
+// Falling through to the non-admin path checks `RolePermission` rows
+// for any of the user's other role assignments.
 export async function hasPermission(
   userId: string,
-  permission: Permission,
+  permission: string,
   orgId?: string,
 ): Promise<boolean> {
-  const allowed = rolesForPermission(permission)
-  const userRoles = await getUserRoles(userId, orgId)
-  return allowed.some((r) => userRoles.includes(r))
+  const assignments = await findActiveAssignments(userId, orgId)
+  if (assignments.length === 0) return false
+  for (const a of assignments) {
+    if (a.role.builtIn && ALL_PERMISSIONS_KEY_SET.has(a.role.key)) {
+      return true
+    }
+  }
+  const roleIds = assignments.map((a) => a.roleId)
+  const db = getDb()
+  const granted = await db.rolePermission.findFirst({
+    where: { roleId: { in: roleIds }, permission },
+    select: { id: true },
+  })
+  return granted !== null
 }
 
-// Returns true if the user is the only active ADMIN in the given org. Used by
-// org-management to block "last admin leaves" scenarios.
-export async function isLastAdmin(userId: string, orgId: string): Promise<boolean> {
-  const has = await hasRole(userId, "ADMIN", orgId)
+// Returns true when the user is the only active built-in ADMIN row in
+// the org. Used by org-management to block "last admin leaves"
+// scenarios.
+export async function isLastAdmin(
+  userId: string,
+  orgId: string,
+): Promise<boolean> {
+  const has = await hasRoleKey(userId, ADMIN_ROLE_KEY, orgId)
   if (!has) return false
   const count = await countActiveOrgAdmins(orgId)
   return count <= 1
 }
 
-// True if the user holds any admin-tier role (platform MONARK_ADMIN or
-// org-scoped ADMIN). Returns the earliest grant date so callers can compute
-// "days since first admin assignment" for enforcement timers (e.g. TOTP
-// 7-day hard-wall).
 export async function adminAssignmentSummary(userId: string): Promise<{
   hasAdmin: boolean
   earliestGrantedAt: Date | null

@@ -1,4 +1,12 @@
 @import "tailwindcss";
+/*
+ * `tw-animate-css` ports the `tailwindcss-animate` utility set
+ * (`animate-in`, `slide-in-from-left`, `fade-in-0`, etc.) to Tailwind v4.
+ * Every shadcn overlay (Sheet, Dialog, Popover, DropdownMenu, ContextMenu,
+ * Select) bakes those utilities into its `data-[state=*]:` rules ; without
+ * this import they're inert and the overlays appear without animation.
+ */
+@import "tw-animate-css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -7,6 +15,40 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans);
+}
+
+/*
+ * Top-of-viewport route progress bar (NProgress). The two brand colour
+ * variables (`--brand-primary` / `--brand-accent`) are injected from
+ * `@monark/branding` via the inline style block in the root layout, so
+ * a downstream team retargets the bar by editing the branding config
+ * (no CSS edits needed). We don't import the NProgress stylesheet ;
+ * these rules are everything we need and avoid pulling the default
+ * blue / spinner / parent-relative CSS into the bundle.
+ */
+#nprogress {
+  pointer-events: none;
+}
+#nprogress .bar {
+  position: fixed;
+  z-index: 9999;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(90deg, var(--brand-accent) 0%, var(--brand-primary) 100%);
+}
+#nprogress .peg {
+  position: absolute;
+  right: 0;
+  display: block;
+  width: 100px;
+  height: 100%;
+  box-shadow:
+    0 0 10px var(--brand-primary),
+    0 0 5px var(--brand-accent);
+  opacity: 1;
+  transform: rotate(3deg) translate(0px, -4px);
 }
 
 @keyframes collapsible-down {
@@ -151,4 +193,24 @@ h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-sans);
   font-weight: 700;
   letter-spacing: -0.02em;
+}
+
+/* Tailwind v4 + shadcn base layer.
+ *
+ * In Tailwind v4 the `border` utility (no explicit color) defaults to
+ * `currentColor`, which renders Card / Input / etc. with foreground-color
+ * borders ; high-contrast and wrong against the muted-zinc Monark palette.
+ * Mirroring shadcn's stock new-york preset, we set every element's default
+ * border-color to `var(--border)` and the focus-ring fallback to
+ * `var(--ring)` so unstyled outlines tint with the brand orange.
+ *
+ * The @monark/theme registry item only ships the `:root` / `.dark` token
+ * blocks ; this base rule is the consumer's responsibility. */
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
 }

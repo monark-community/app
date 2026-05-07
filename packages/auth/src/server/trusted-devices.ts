@@ -5,6 +5,7 @@ import { getDb, type Prisma } from "@monark/db"
 import type {
   TrustedDeviceAddedEvent,
   TrustedDeviceRevokedEvent,
+  TrustedDevicesAllRevokedEvent,
 } from "../contracts/events"
 import { getSupabaseAdmin } from "./supabase-admin"
 
@@ -14,17 +15,22 @@ export type TrustedDeviceRow = Prisma.TrustedDeviceGetPayload<Record<string, nev
 export const DEVICE_COOKIE_NAME = "monark_device_id"
 export const DEVICE_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 400
 
-function hashCookieValue(raw: string): string {
+/**
+ * The next three helpers are pure and exported so the unit suite can
+ * import them directly from `tests/`. The package's exports map only
+ * opens `./server` so external consumers can't reach these.
+ */
+export function hashCookieValue(raw: string): string {
   return createHash("sha256").update(raw).digest("hex")
 }
 
-function mintCookieValue(): string {
+export function mintCookieValue(): string {
   return randomBytes(32).toString("base64url")
 }
 
 // Turns "Mozilla/5.0 ..." into a short human label like "Chrome on macOS".
 // Falls back to "Unknown device" when parsing yields nothing usable.
-function labelFromUserAgent(ua: string): string {
+export function labelFromUserAgent(ua: string): string {
   const parsed = new UAParser(ua).getResult()
   const browser = parsed.browser.name
   const os = parsed.os.name
@@ -34,10 +40,28 @@ function labelFromUserAgent(ua: string): string {
   return "Unknown device"
 }
 
+export type ClientHints = {
+  model?: string
+  platformVersion?: string
+  fullVersionList?: string
+}
+
 export type RecognizeOrRegisterInput = {
   userId: string
   userAgent: string | null
   ip: string | null
+  // ISO-3166-1 alpha-2 country code resolved from the platform's edge
+  // geo header (Vercel `x-vercel-ip-country`, Cloudflare `cf-ipcountry`,
+  // CloudFront `cloudfront-viewer-country`). Null when no proxy + no
+  // GeoIP lookup is wired ; persisted as-is so the row reflects what
+  // the platform told us at sign-in time.
+  country?: string | null
+  // High-entropy User-Agent Client Hints captured by the web layer
+  // when the browser sends them (modern Chrome / Edge after the
+  // middleware's Accept-CH header lands ; null on browsers that don't
+  // implement UA-CH). Persisted to the row so toView can prefer the
+  // real device model over the UA-reduced placeholder.
+  clientHints?: ClientHints | null
   // Existing cookie value (raw) if the request carried one; pass null/undefined
   // when first-time.
   existingCookieValue: string | null
@@ -80,6 +104,14 @@ export async function recognizeOrRegister(
         data: {
           lastSeenAt: now,
           lastSeenIp: input.ip ?? match.lastSeenIp,
+          // Refresh country on every recognized sign-in so a roaming
+          // user's location keeps up. Treat null from the caller as
+          // "no fresh signal" rather than "clear the field".
+          country: input.country ?? match.country,
+          // Same null-as-no-signal handling for clientHints : a
+          // browser that stops sending UA-CH after a profile change
+          // shouldn't wipe the model we already learned.
+          clientHints: input.clientHints ?? match.clientHints ?? undefined,
         },
       })
       await recordDeviceSession(updated.id, input.supabaseSessionId)
@@ -97,6 +129,8 @@ export async function recognizeOrRegister(
       userAgent,
       firstSeenIp: input.ip,
       lastSeenIp: input.ip,
+      country: input.country ?? null,
+      clientHints: input.clientHints ?? undefined,
     },
   })
   await recordDeviceSession(created.id, input.supabaseSessionId)
@@ -228,4 +262,59 @@ export async function revokeTrustedDevice(input: {
     occurredAt: now,
   }
   await emit(event)
+}
+
+// Emergency lockout: revokes every non-revoked TrustedDevice for the user
+// in sequence so each row's per-device Supabase admin signOut runs. The
+// user's local Supabase cookie is still intact after this returns ; the
+// caller is responsible for clearing it (the web service action does
+// `supabase.auth.signOut({ scope: "local" })` immediately after).
+//
+// Emits `trusted-devices.all-revoked` once at the end with the actual
+// count revoked ; individual `trusted-device.revoked` events still fire
+// per row inside revokeTrustedDevice for audit / per-device subscribers.
+// The notifications module subscribes to the bulk event so the user only
+// gets one "every session ended" email instead of N "device X revoked"
+// emails.
+//
+// Returns the number of devices successfully revoked. A best-effort count ;
+// individual failures are swallowed so one bad row doesn't strand the others.
+export async function revokeAllTrustedDevices(input: {
+  userId: string
+  scope?: "user" | "admin"
+}): Promise<number> {
+  const db = getDb()
+  const rows = await db.trustedDevice.findMany({
+    where: { userId: input.userId, revokedAt: null },
+    select: { id: true },
+  })
+  let count = 0
+  for (const row of rows) {
+    try {
+      await revokeTrustedDevice({
+        userId: input.userId,
+        deviceId: row.id,
+        scope: input.scope,
+      })
+      count += 1
+    } catch (err) {
+      logger.warn(
+        { err, deviceId: row.id, userId: input.userId },
+        "revokeAllTrustedDevices: per-device revoke failed; continuing",
+      )
+    }
+  }
+
+  if (count > 0) {
+    const event: TrustedDevicesAllRevokedEvent = {
+      type: "trusted-devices.all-revoked",
+      userId: input.userId,
+      count,
+      scope: input.scope ?? "user",
+      occurredAt: new Date(),
+    }
+    await emit(event)
+  }
+
+  return count
 }

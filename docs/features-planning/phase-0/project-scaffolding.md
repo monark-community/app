@@ -323,7 +323,61 @@ pnpm gen                    # run all codegen (events + routers)
 pnpm gen:module <name>      # scaffold a new module package; --tier core|extended
 pnpm gen:events             # regenerate packages/common/src/contracts/events.generated.ts
 pnpm gen:routers            # regenerate services/api/src/trpc/app-router.generated.ts
+pnpm dev:tools              # list local dev tools (mail, supabase, db studio, ...)
+pnpm dev:tools <name>       # open one (mail | supabase | api | db | web | api-server | all)
 ```
+
+### LAN-from-phone testing
+
+`pnpm dev` works as-is when accessed from any device on your local network ; no env edits required for the app itself.
+
+1. Find your dev machine's LAN IP (e.g. `10.0.0.42`, `192.168.1.50`).
+2. **Run the LAN setup script** (Windows) — opens firewall + sets up the Supabase portproxy in one shot. From an elevated PowerShell:
+   ```powershell
+   .\tools\dev-lan-setup.ps1
+   ```
+   Idempotent ; re-run after reboots or `pnpm supabase stop && start`. To tear down : `.\tools\dev-lan-setup.ps1 -Remove`. macOS / Linux : see "Re-binding Supabase to the LAN" below for the equivalent commands.
+3. On your phone (same Wi-Fi), open `http://<your-LAN-IP>:3000`. **If anything misbehaves, open the dev overlay on the phone (Alt+D, or tap the wrench bottom-right) and expand the "Remote Dev Diagnostics" section** to see exactly which layer is unreachable, what the resolved URLs are, and whether the auth session is reaching the api. The panel includes a one-tap "Clear stale cookies + sign in" button when it detects an old `sb-*` cookie under a stale storage key (the most common "everything green but data won't load" failure mode).
+
+What works out of the box:
+
+- The browser-side tRPC + Supabase clients (and avatar / banner `<img>` src URLs) [auto-rewrite the hostname](../../services/web/src/lib/dev-host-rewrite.ts) when the configured URL points to loopback but the browser is on a non-loopback host. The phone hits your dev machine for everything, not its own loopback.
+- Email-link redirects (signup confirm, password reset, resend) read the request Host header via [getRequestAppUrl](../../services/web/src/lib/request-app-url.ts) and forward it through the relevant tRPC mutations, so the link lands on whatever host the phone is on.
+- The api's CORS check accepts any RFC 1918 / loopback origin in `NODE_ENV=development` (production stays strict). Rejected origins log a warn line so you can see why.
+- Supabase's `additional_redirect_urls` allowlist in [supabase/config.toml](../../supabase/config.toml) covers every private IPv4 range on port 3000.
+- The api server explicitly binds to `0.0.0.0` so it's reachable from the LAN without depending on Node's dual-stack defaults.
+- Mailpit / Inbucket stays loopback-only ; view captured emails on the dev machine via `pnpm dev:tools mail`.
+
+#### Re-binding Supabase to the LAN
+
+Supabase CLI v1.x maps every container port to `127.0.0.1` by default — even with our URL rewrite, the phone can't reach Supabase Auth or Storage because Docker isn't listening on the LAN side. **Symptom**: sign-in works (server actions live on the dev PC), but `/account` shows empty fields + infinite spinners because every browser-side Supabase / api call falls into a hung connection.
+
+Pick one workaround:
+
+**Option A — `socat` reverse proxy (simplest, run while testing).** Forward the Supabase port from the LAN interface to loopback. Re-run after every reboot, no Supabase restart required:
+
+```bash
+# bash on macOS / Linux ; PowerShell-equivalent below.
+socat TCP-LISTEN:54321,fork,bind=<your-LAN-IP> TCP:127.0.0.1:54321
+```
+
+```powershell
+# Windows PowerShell with `nssm` or just `netsh portproxy` :
+netsh interface portproxy add v4tov4 `
+  listenaddress=<your-LAN-IP> listenport=54321 `
+  connectaddress=127.0.0.1 connectport=54321
+# Remove with : netsh interface portproxy delete v4tov4 listenaddress=<your-LAN-IP> listenport=54321
+```
+
+**Option B — Re-tag the Docker port binding.** More invasive but persists across `supabase start` calls until you stop the container :
+
+```bash
+docker stop supabase_kong_app
+docker run --name supabase_kong_app_lan --network supabase_network_app \
+  -p 0.0.0.0:54321:8000 -d supabase/kong:2.8.1
+```
+
+**Option C — newer Supabase CLI.** Recent CLI versions support `host = "0.0.0.0"` in the `[api]` block of `supabase/config.toml`. Check `supabase --version` ; if you're on something post-2.x, this is cleanest. Stick the directive in, restart with `pnpm supabase stop && pnpm supabase start`.
 
 ### Per-package commands
 

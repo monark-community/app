@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server"
+import { getRequestOrigin } from "@/lib/request-origin"
 import { createSupabaseServerClient } from "@/lib/supabase/server"
 import { createServerTrpcClient } from "@/lib/trpc-server"
 import { recognizeDeviceAfterAuth } from "@/lib/trusted-device-cookie"
@@ -8,7 +9,13 @@ import { recognizeDeviceAfterAuth } from "@/lib/trusted-device-cookie"
 //   2. No token_hash ; Supabase's default template sent the user through
 //      `/auth/v1/verify` first, which already set the session cookie and 302'd here.
 export async function GET(request: NextRequest) {
+  // `url` is parsed from the request line and is OK for reading query
+  // params, but its `origin` reflects whatever Node sees (loopback in
+  // proxied / LAN-portproxy setups) — never use it for redirects.
+  // `origin` below is read from the Host header so 30x responses keep
+  // the user on the host they originally hit.
   const url = new URL(request.url)
+  const origin = getRequestOrigin(request)
   const tokenHash = url.searchParams.get("token_hash")
   const type = url.searchParams.get("type") ?? "email"
   const errorCode = url.searchParams.get("error_code") ?? url.searchParams.get("error")
@@ -17,7 +24,7 @@ export async function GET(request: NextRequest) {
 
   if (errorCode) {
     return NextResponse.redirect(
-      new URL(`/auth/confirm-error?reason=${encodeURIComponent(errorCode)}`, url.origin),
+      new URL(`/auth/confirm-error?reason=${encodeURIComponent(errorCode)}`, origin),
       { headers: noReferrer },
     )
   }
@@ -33,7 +40,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(
         new URL(
           `/auth/confirm-error?reason=${encodeURIComponent(error?.code ?? "invalid")}`,
-          url.origin,
+          origin,
         ),
         { headers: noReferrer },
       )
@@ -51,7 +58,21 @@ export async function GET(request: NextRequest) {
       }
       await supabase.auth.signOut({ scope: "local" })
       return NextResponse.redirect(
-        new URL("/signin?emailChanged=1", url.origin),
+        new URL("/signin?emailChanged=1", origin),
+        { headers: noReferrer },
+      )
+    }
+
+    // Password recovery: Supabase has issued a temporary session keyed
+    // to the recovery token. Land the user on `/auth/reset-password` so
+    // they can set a new password without going through the full
+    // current-password gate (they don't know the current one). The
+    // reset page lives outside the (authed) route group so the trusted-
+    // device check doesn't bounce a recovery-flow session that has no
+    // device cookie yet.
+    if (type === "recovery") {
+      return NextResponse.redirect(
+        new URL("/auth/reset-password", origin),
         { headers: noReferrer },
       )
     }
@@ -60,7 +81,10 @@ export async function GET(request: NextRequest) {
       // Best-effort shadow-table update.
     })
     await recognizeDeviceAfterAuth(accessToken)
-    return NextResponse.redirect(new URL("/account", url.origin), { headers: noReferrer })
+    // Auto-accept any pending invites that target this verified address.
+    // Best-effort ; failures don't block the user from reaching /account.
+    await api.organizations.invites.consumePending.mutate().catch(() => {})
+    return NextResponse.redirect(new URL("/account", origin), { headers: noReferrer })
   }
 
   // No token in the URL; Supabase already verified server-side and set the
@@ -68,13 +92,32 @@ export async function GET(request: NextRequest) {
   const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
   const user = sessionData.session?.user ?? null
   const accessToken = sessionData.session?.access_token
-  if (sessionError || !user || !user.email_confirmed_at || !accessToken) {
-    return NextResponse.redirect(new URL("/auth/confirm-error?reason=missing", url.origin), {
+  if (sessionError || !user || !accessToken) {
+    return NextResponse.redirect(new URL("/auth/confirm-error?reason=missing", origin), {
       headers: noReferrer,
     })
   }
+
+  // Recovery via Supabase's default verify→redirect path : token is gone
+  // by the time we arrive here, but the redirect_to query string still
+  // carries `type=recovery`. Mirror the token-hash branch and forward to
+  // the password-reset page.
+  if (type === "recovery") {
+    return NextResponse.redirect(
+      new URL("/auth/reset-password", origin),
+      { headers: noReferrer },
+    )
+  }
+
+  if (!user.email_confirmed_at) {
+    return NextResponse.redirect(new URL("/auth/confirm-error?reason=missing", origin), {
+      headers: noReferrer,
+    })
+  }
+
   const api = createServerTrpcClient(accessToken)
   await api.auth.markOwnEmailVerified.mutate().catch(() => {})
   await recognizeDeviceAfterAuth(accessToken)
-  return NextResponse.redirect(new URL("/account", url.origin), { headers: noReferrer })
+  await api.organizations.invites.consumePending.mutate().catch(() => {})
+  return NextResponse.redirect(new URL("/account", origin), { headers: noReferrer })
 }

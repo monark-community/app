@@ -89,10 +89,11 @@ tRPC procedures under `auth.*`:
 | `auth.markOwnEmailVerified` | — | void (mutation; uses `ctx.userId` post-verifyOtp) |
 | `auth.requestConfirmationResend` | `{ email }` | `ResendActionResult` (mutation) |
 | `auth.trustedDevices.mine`     | — | `TrustedDeviceView[]` |
-| `auth.trustedDevices.recognize`| `{ userAgent?, ip?, existingCookieValue? }` | `{ deviceId, isNew, rawCookieValue }` |
+| `auth.trustedDevices.recognize`| `{ userAgent?, ip?, country?, existingCookieValue?, supabaseSessionId? }` | `{ deviceId, isNew, rawCookieValue }` |
 | `auth.trustedDevices.revoke`   | `{ deviceId }` | void (mutation) |
+| `auth.trustedDevices.revokeAll`| — | `{ count }` (mutation; emergency lockout, per-device admin signOut) |
 | `auth.totp.status`                  | — | `TotpStatus` (`{ enrolled: false }` or `{ enrolled: true, activatedAt, remainingRecoveryCodes }`) |
-| `auth.totp.beginEnrollment`         | — | `{ secret, qrDataUrl }` (mutation) |
+| `auth.totp.beginEnrollment`         | — | `{ secret, qrSvg }` (mutation; SVG with `currentColor` foreground + transparent background, themed inline) |
 | `auth.totp.confirmEnrollment`       | `{ code }` | `{ recoveryCodes }` (mutation; recovery codes shown once) |
 | `auth.totp.verifyCode`              | `{ code, trustedDeviceId? }` | `{ ok }` (mutation; stamps device on success) |
 | `auth.totp.verifyRecoveryCode`      | `{ code, trustedDeviceId? }` | `{ ok }` (mutation; consumes one code) |
@@ -110,7 +111,8 @@ tRPC procedures under `auth.*`:
 - `@supabase/supabase-js` (admin client)
 - `ua-parser-js` (derives human-readable device labels like "Chrome on macOS")
 - `otplib` (TOTP generation + validation, ±1 window)
-- `qrcode` (PNG data URL for the enrollment QR)
+- `qrcode` (SVG string for the enrollment QR ; rewritten to `currentColor` + transparent bg so it themes via the parent's text colour)
+- `@monark/branding` (`BRANDING.totpIssuer` is the label users see in their authenticator app)
 - `bcryptjs` (recovery code hashing; pure JS so Windows dev works)
 - `nodemailer` (transactional outbound for new-device alerts; falls back to log-only when `SMTP_URL` is unset)
 
@@ -128,10 +130,12 @@ APP_URL=http://localhost:3000
 # 32 bytes hex; generate with:
 #   node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"
 TOTP_ENCRYPTION_KEY=...
-# Outbound mail (new-device alerts, future transactional). Mailpit on the
-# default `supabase start` listens on smtp://localhost:1025. Leave unset to
-# log instead of send.
-SMTP_URL=smtp://localhost:1025
+# Outbound mail (new-device alerts, password-change, revoke-all, …).
+# Supabase ships Inbucket as the dev mail server ; the SMTP listener is
+# exposed via `smtp_port = 54325` in supabase/config.toml. Web UI for
+# inspecting captured mail is at http://127.0.0.1:54324 (`pnpm dev:tools mail`).
+# Leave SMTP_URL unset to log instead of send.
+SMTP_URL=smtp://127.0.0.1:54325
 SMTP_FROM=Monark <noreply@monark.io>
 ```
 
@@ -197,10 +201,11 @@ The first two compose:
 | `user.signed-up`       | every `signUpUser` call                         | emitted |
 | `user.signed-in`       | after `signInWithPassword` succeeds             | emitted (via `emitSignedIn` from the web server action) |
 | `user.signed-out`      | `signOutAction`                                 | emitted |
-| `user.password-changed`| password reset / account page password change   | type declared, not yet emitted |
+| `user.password-changed`| password reset / account page password change   | emitted (via `emitPasswordChanged` from the web server action through `auth.notifyPasswordChanged`) |
 | `user.email-verified`  | `/auth/confirm` successfully verified            | emitted via `markEmailVerified` |
 | `trusted-device.added` | first sign-in from a new device (or stale / wrong-user cookie) | emitted via `recognizeOrRegister` |
 | `trusted-device.revoked` | user revokes a device or an admin revokes | emitted via `revokeTrustedDevice` |
+| `trusted-devices.all-revoked` | emergency lockout (`revokeAllTrustedDevices`) | emitted once per bulk run with the actual revoked count |
 | `totp.enabled`         | `confirmTotpEnrollment` succeeds                | emitted |
 | `totp.disabled`        | `disableTotp` succeeds                          | emitted (`triggeredBy: "user"`) |
 | `totp.recovery-code-used` | recovery code consumed during challenge       | emitted |
@@ -219,7 +224,7 @@ The first two compose:
 - **Cron schedulers.** Functions are ready (`cleanupStaleTotpEnrollments`, `processExpiredDeletions`); only the scheduler glue (Vercel Cron / Supabase pg_cron / GitHub Actions) needs wiring.
 - **Distributed-safe rate limit.** `verifyTotpCode`'s in-memory cap is single-process. Multi-instance deployments need Redis (or equivalent) backing.
 - **Mailpit-driven E2E happy path.** Playwright smoke is routing-only today; the full signup → verify-email → TOTP-enroll round-trip ships with a Mailpit HTTP polling helper in a follow-up.
-- **IP-to-country geo lookup.** `TrustedDevice.country` exists but stays null; needs Vercel edge-geo or an ip-to-country dataset.
+- **IP-to-country geo lookup (server-side).** `TrustedDevice.country` is now populated via the hosting platform's edge headers (Vercel `x-vercel-ip-country`, Cloudflare `cf-ipcountry`, CloudFront `cloudfront-viewer-country`, generic `x-country-code`) read by [`recognizeDeviceAfterAuth`](../../services/web/src/lib/trusted-device-cookie.ts) ; reaches the row via the `recognize` mutation's `country` input. Self-hosted-no-proxy still leaves the field null until a paid GeoIP dataset is wired.
 - **180-day stale-device GC.** Background job to auto-revoke devices inactive beyond the window.
 - **Full auth-aesthetics styling.** The current forms are functional-minimum; the [`auth-aesthetics.md`](../../docs/features-planning/phase-1/auth-aesthetics.md) spec (two-column layout, ambient gradient, forced dark palette, polished typography) lands as a later pass.
 - **Active-org selection flow.** `user_metadata.active_organization_id` is the channel; the org switcher UI writes to it.

@@ -1,0 +1,23 @@
+{
+  "name": "@monark/test-utils",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./db": "./src/db.ts",
+    "./global-setup": "./src/global-setup.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src"
+  },
+  "dependencies": {
+    "@monark/db": "workspace:*",
+    "@testcontainers/postgresql": "^10.13.0",
+    "testcontainers": "^10.13.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "vitest": "^3.0.0"
+  }
+}

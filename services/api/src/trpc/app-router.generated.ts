@@ -5,6 +5,7 @@ import { router } from "@monark/common/trpc"
 
 import { authRouter } from "@monark/auth/server"
 import { featureFlagsRouter } from "@monark/feature-flags/server"
+import { notificationsRouter } from "@monark/notifications/server"
 import { organizationsRouter } from "@monark/organizations/server"
 import { rbacRouter } from "@monark/rbac/server"
 import { usersRouter } from "@monark/users/server"
@@ -12,6 +13,7 @@ import { usersRouter } from "@monark/users/server"
 export const appRouter = router({
   auth         : authRouter,
   featureFlags : featureFlagsRouter,
+  notifications: notificationsRouter,
   organizations: organizationsRouter,
   rbac         : rbacRouter,
   users        : usersRouter,

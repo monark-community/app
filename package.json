@@ -10,10 +10,16 @@
   },
   "scripts": {
     "dev": "turbo run dev",
+    "dev:tools": "tsx tools/open-tool.ts",
+    "dev:tools:mail": "tsx tools/open-tool.ts mail",
+    "dev:tools:supabase": "tsx tools/open-tool.ts supabase",
+    "dev:tools:db": "tsx tools/open-tool.ts db",
+    "dev:tools:all": "tsx tools/open-tool.ts all",
     "build": "turbo run build",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
+    "test:coverage": "turbo run test:coverage",
     "test:e2e": "pnpm --filter web test:e2e",
     "db:migrate": "pnpm --filter @monark/db db:migrate",
     "db:reset": "pnpm --filter @monark/db db:reset",
@@ -24,13 +30,18 @@
     "gen:routers": "tsx tools/gen-routers.ts",
     "prebuild": "pnpm gen",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "sysadmin": "tsx --env-file=services/api/.env tools/sysadmin.ts"
+  },
+  "dependencies": {
+    "@monark/db": "workspace:*",
+    "@monark/rbac": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",
     "eslint": "^9.20.0",
     "prettier": "^3.4.0",
-    "supabase": "^2.95.0",
+    "supabase": "^2.95.4",
     "tsx": "^4.21.0",
     "turbo": "^2.5.0",
     "typescript": "^5.7.0",

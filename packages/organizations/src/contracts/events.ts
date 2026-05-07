@@ -1,10 +1,21 @@
 import type { DomainEventBase } from "@monark/common/contracts/events"
-import type { Role } from "@monark/db"
 
 export type OrganizationCreatedEvent = DomainEventBase & {
   type: "organization.created"
   organizationId: string
   actorId: string
+}
+
+// Emitted when an admin updates an organization profile (displayName, slug,
+// logoUrl, primaryColor). The `changed` array carries which fields rotated
+// so subscribers can branch (e.g. invalidate slug-keyed caches when slug
+// changed). Actor is the rbac-gated admin who triggered the mutation.
+export type OrganizationUpdatedEvent = DomainEventBase & {
+  type: "organization.updated"
+  organizationId: string
+  actorId: string
+  changed: Array<"displayName" | "slug" | "logoUrl" | "primaryColor">
+  previousSlug?: string
 }
 
 export type MemberJoinedEvent = DomainEventBase & {
@@ -25,7 +36,11 @@ export type InviteSentEvent = DomainEventBase & {
   organizationId: string
   inviteId: string
   email: string
-  role: Role
+  // `roleId` references the `Role` table. `roleKey` is duplicated on
+  // the event so subscribers don't need to round-trip back to the DB
+  // to learn which role was offered.
+  roleId: string
+  roleKey: string
   actorId: string
 }
 
@@ -40,6 +55,7 @@ export type InviteAcceptedEvent = DomainEventBase & {
 // Phase 1 MVP ships the types so subscribers can type-import them now.
 export type OrganizationsEvents =
   | OrganizationCreatedEvent
+  | OrganizationUpdatedEvent
   | MemberJoinedEvent
   | MemberRemovedEvent
   | InviteSentEvent

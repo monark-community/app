@@ -1,13 +1,23 @@
 import { FLAGS, type FlagKey, type FlagScope } from "../contracts/index"
 import { readOverridesForKeys, type OverrideRow } from "./data"
 
-function mostSpecific(overrides: OverrideRow[], scope: FlagScope): OverrideRow | undefined {
+/**
+ * Resolves the winning override for one flag against a scope, applying
+ * the precedence: user > role > org > global. Exported so the unit suite
+ * can exercise the precedence logic without standing up a database.
+ */
+export function mostSpecific(
+  overrides: OverrideRow[],
+  scope: FlagScope,
+): OverrideRow | undefined {
   const byUser = scope.userId
     ? overrides.find((o) => o.userId === scope.userId)
     : undefined
   if (byUser) return byUser
 
-  const byRole = scope.role ? overrides.find((o) => o.role === scope.role) : undefined
+  const byRole = scope.roleId
+    ? overrides.find((o) => o.roleId === scope.roleId)
+    : undefined
   if (byRole) return byRole
 
   const byOrg = scope.organizationId
@@ -16,7 +26,7 @@ function mostSpecific(overrides: OverrideRow[], scope: FlagScope): OverrideRow |
   if (byOrg) return byOrg
 
   const global = overrides.find(
-    (o) => o.userId === null && o.role === null && o.organizationId === null,
+    (o) => o.userId === null && o.roleId === null && o.organizationId === null,
   )
   return global
 }

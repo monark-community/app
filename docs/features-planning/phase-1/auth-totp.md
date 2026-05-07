@@ -72,7 +72,7 @@ TOTP secrets are encrypted with AES-256-GCM. The key is stored in the Supabase V
 "use server"
 export async function beginTotpEnrollment(): Promise<{
   secret: string                // base32; displayed to user as a fallback
-  qrDataUrl: string             // otpauth URL rendered as data-URL PNG
+  qrSvg: string                 // otpauth URL rendered as themed SVG (currentColor + transparent bg)
 }>
 
 // Verify the first code; if valid, activate + issue recovery codes.

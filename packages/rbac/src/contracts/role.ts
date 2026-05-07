@@ -1,21 +1,28 @@
-// Re-export the Prisma-generated Role enum so it's importable from the contracts
-// surface without forcing consumers to depend on @monark/db.
-export { Role } from "@monark/db"
-export type { Role as RoleType } from "@monark/db"
+// The hardcoded `Role` enum was retired in favour of the `Role` /
+// `RolePermission` tables ; consumers identify roles by their `key`
+// (string) or by the row's `id`. Two built-in role keys are reserved
+// for code-side checks ; both grant "all permissions" implicitly via
+// short-circuits in the rbac read layer, but their scope is locked
+// to one assignment shape :
+//
+//   - `SYSADMIN` : platform-tier only (RoleAssignment.organizationId
+//     IS NULL). Never UI-assignable ; granted through the
+//     `tools/sysadmin.ts` CLI or a direct SQL insert.
+//   - `ADMIN`    : org-tier only (RoleAssignment.organizationId IS
+//     NOT NULL). Assignable through /admin/users to designate per-org
+//     administrators.
+export const SYSADMIN_ROLE_KEY = "SYSADMIN" as const
+export const ADMIN_ROLE_KEY = "ADMIN" as const
 
-const RANK: Record<string, number> = {
-  MONARK_ADMIN: 100,
-  ADMIN: 80,
-  DEVELOPER: 60,
-  AMBASSADOR: 50,
-  STUDENT: 20,
-}
+export type SysadminRoleKey = typeof SYSADMIN_ROLE_KEY
+export type AdminRoleKey = typeof ADMIN_ROLE_KEY
 
-export function rankOf(role: string): number {
-  return RANK[role] ?? 0
-}
-
-export function pickHighest<R extends string>(roles: R[]): R | null {
-  if (roles.length === 0) return null
-  return roles.reduce((a, b) => (rankOf(b) > rankOf(a) ? b : a))
-}
+// Convenience for code paths that grant "everything" to either tier
+// (e.g. the rbac read layer's permission short-circuit). These keys
+// live on `Role` rows with `builtIn = true` and `organizationId =
+// NULL` ; the rbac write layer reserves them so operators can't
+// create custom roles that collide with the code-side guards.
+export const BUILTIN_ALL_PERMISSIONS_KEYS = [
+  SYSADMIN_ROLE_KEY,
+  ADMIN_ROLE_KEY,
+] as const

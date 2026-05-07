@@ -19,6 +19,27 @@ const schema = z.object({
   // 32 bytes, hex-encoded (64 chars). Validated lazily by the TOTP module
   // so environments without TOTP configured (e.g. CI) don't need to set it.
   TOTP_ENCRYPTION_KEY: z.string().optional(),
+  // Shared secret required to trigger any of the `/cron/*` endpoints. Optional
+  // here ; the cron handlers refuse requests when it's unset so an
+  // accidentally-empty secret can't be matched. Set in production.
+  CRON_SECRET: z.string().optional(),
+  // Single-tenant bootstrap : when the `tenancy.multi-tenant` flag is OFF
+  // and zero organizations exist, the API boot hook reads these and
+  // creates the singleton org so the /setup gate can lift. Idempotent ;
+  // a second restart on a healthy install is a no-op. The "external
+  // tool / system" the user manages writes these into the deployment
+  // environment.
+  INITIAL_ORG_SLUG: z
+    .string()
+    .min(2)
+    .max(60)
+    .regex(/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/, "invalid INITIAL_ORG_SLUG")
+    .optional(),
+  INITIAL_ORG_NAME: z.string().trim().min(1).max(120).optional(),
+  INITIAL_ORG_PRIMARY_COLOR: z
+    .string()
+    .regex(/^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/, "invalid INITIAL_ORG_PRIMARY_COLOR")
+    .optional(),
 })
 
 const parsed = schema.safeParse(process.env)

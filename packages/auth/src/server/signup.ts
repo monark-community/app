@@ -63,14 +63,22 @@ export async function signUpUser(
     { auth: { autoRefreshToken: false, persistSession: false } },
   )
 
+  // Stash display name + locale into Supabase user_metadata so the email
+  // template can render the user's preferred language (`{{ .Data.locale_preference }}`)
+  // and personalise the greeting (`{{ .Data.display_name }}`). Locale falls
+  // back to "en" inside the template when the field is absent.
+  const userMetadata: Record<string, string> = {}
+  if (parsed.data.displayName) userMetadata.display_name = parsed.data.displayName
+  if (parsed.data.localePreference) {
+    userMetadata.locale_preference = parsed.data.localePreference
+  }
+
   const signUp = await publicClient.auth.signUp({
     email: parsed.data.email,
     password: parsed.data.password,
     options: {
       emailRedirectTo: `${deps.appUrl}/auth/confirm`,
-      data: parsed.data.displayName
-        ? { display_name: parsed.data.displayName }
-        : undefined,
+      data: Object.keys(userMetadata).length > 0 ? userMetadata : undefined,
     },
   })
 

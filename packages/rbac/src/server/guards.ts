@@ -1,7 +1,6 @@
 import { ForbiddenError, UnauthorizedError } from "@monark/common"
 import type { Permission } from "../contracts/permissions"
-import type { Role } from "../contracts/role"
-import { hasPermission, hasRole } from "./read"
+import { hasPermission, hasRoleKey } from "./read"
 
 export type RbacContext = {
   userId: string | null
@@ -12,15 +11,15 @@ function effectiveOrg(ctx: RbacContext, orgId?: string): string | undefined {
   return orgId ?? ctx.activeOrganizationId ?? undefined
 }
 
-export async function requireRole(
+export async function requireRoleKey(
   ctx: RbacContext,
-  role: Role,
+  roleKey: string,
   orgId?: string,
 ): Promise<string> {
   if (!ctx.userId) throw new UnauthorizedError()
   const target = effectiveOrg(ctx, orgId)
-  const ok = await hasRole(ctx.userId, role, target)
-  if (!ok) throw new ForbiddenError(`Missing required role: ${role}`)
+  const ok = await hasRoleKey(ctx.userId, roleKey, target)
+  if (!ok) throw new ForbiddenError(`Missing required role: ${roleKey}`)
   return ctx.userId
 }
 
@@ -32,6 +31,7 @@ export async function requirePermission(
   if (!ctx.userId) throw new UnauthorizedError()
   const target = effectiveOrg(ctx, orgId)
   const ok = await hasPermission(ctx.userId, permission, target)
-  if (!ok) throw new ForbiddenError(`Missing required permission: ${permission}`)
+  if (!ok)
+    throw new ForbiddenError(`Missing required permission: ${permission}`)
   return ctx.userId
 }

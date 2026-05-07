@@ -1,15 +1,92 @@
 {
   "common": {
-    "appName": "Monark",
+    "appName": "{appName}",
     "tagline": "Fostering collaboration within the Web3 community.",
     "cancel": "Cancel",
     "continue": "Continue",
     "loading": "Loading…"
   },
+  "setup": {
+    "eyebrow": "{appName} setup",
+    "title": "Booting up your deployment",
+    "subtitle": "The app waits here until the deployment is fully configured. The status below refreshes every few seconds ; you can leave the tab open while the missing pieces land.",
+    "checks": {
+      "services": "Services online",
+      "auth": "Authentication configured",
+      "tenancySingle": "Organization configured",
+      "tenancyMulti": "Multi-tenant mode — ready to accept new organizations",
+      "orgCount": "{count, plural, =0 {0 organizations} one {1 organization} other {{count} organizations}}"
+    },
+    "stuck": {
+      "title": "Waiting for organization data",
+      "subtitle": "Single-tenant mode expects exactly one organization. Set the environment variables below on the API service and restart the deployment ; the boot hook will provision the row, this page will detect it on the next poll, and the rest of the app will unlock.",
+      "envHeading": "API service environment variables :",
+      "restartHint": "After setting these, restart the API service so the boot hook re-runs against the new values."
+    }
+  },
+  "imageCrop": {
+    "cancel": "Cancel",
+    "confirm": "Save",
+    "processing": "Processing…",
+    "zoomAria": "Zoom"
+  },
+  "appBar": {
+    "home": "{appName} home",
+    "breadcrumb": {
+      "account": "Account",
+      "profile": "Profile",
+      "security": "Security",
+      "notifications": "Notifications",
+      "danger": "Danger zone",
+      "admin": "Admin",
+      "users": "Users",
+      "organizations": "Organizations",
+      "organization": "Organization",
+      "rbac": "Roles & permissions",
+      "roles": "Roles",
+      "new": "New",
+      "setup": "Setup"
+    },
+    "apps": {
+      "triggerAria": "Switch app",
+      "aria": "Monark apps",
+      "title": "Monark apps",
+      "subtitle": "Switch between Monark products.",
+      "currentBadge": "Current",
+      "emptySlot": "No app registered",
+      "items": {
+        "core": {
+          "name": "Monark Core",
+          "tagline": "Community, governance, and rewards."
+        }
+      }
+    },
+    "primaryNav": {
+      "triggerAria": "Open navigation menu",
+      "aria": "Primary navigation",
+      "brandHomeAria": "{appName} home",
+      "brandWordmark": "{appName}",
+      "empty": "No module registered.",
+      "items": {}
+    },
+    "userMenu": {
+      "triggerAria": "Open user menu",
+      "aria": "User menu",
+      "aboutYou": "About you",
+      "comingSoon": "Coming soon",
+      "links": {
+        "profile": "Profile",
+        "security": "Account & Security",
+        "notifications": "Notifications"
+      },
+      "signOut": "Logout",
+      "signingOut": "Signing out…"
+    }
+  },
   "auth": {
     "signUp": {
       "title": "Create your account",
-      "subtitle": "Join the Monark community in under a minute.",
+      "subtitle": "Join the {appName} community in under a minute.",
       "labels": {
         "email": "Email",
         "password": "Password",
@@ -27,7 +104,7 @@
     },
     "signIn": {
       "title": "Welcome back",
-      "subtitle": "Sign in to continue to Monark.",
+      "subtitle": "Sign in to continue to {appName}.",
       "labels": {
         "email": "Email",
         "password": "Password"
@@ -36,6 +113,7 @@
       "submitting": "Signing in…",
       "noAccount": "Don't have an account?",
       "signUpLink": "Create one",
+      "forgotPasswordLink": "Forgot password?",
       "errors": {
         "invalidCredentials": "Email or password is incorrect."
       },
@@ -44,10 +122,57 @@
           "title": "Email updated",
           "subtitle": "Sign in with your new email to continue."
         },
+        "passwordReset": {
+          "title": "Password updated",
+          "subtitle": "Sign in with your new password to continue."
+        },
         "deletionScheduled": {
           "title": "Deletion scheduled",
           "subtitle": "Your account is set to be removed on {date}. Sign back in any time before then to cancel."
         }
+      }
+    },
+    "forgotPassword": {
+      "title": "Reset your password",
+      "subtitle": "Enter your account email and we'll send you a reset link.",
+      "labels": {
+        "email": "Email"
+      },
+      "submit": "Send reset link",
+      "submitting": "Sending…",
+      "sentTitle": "Check your email.",
+      "sentBody": "If an account exists for {email}, a reset link is on its way. Click the link, or enter the 6-digit code below. Valid for one hour.",
+      "otpPrompt": "Enter the code from the email",
+      "verify": "Continue",
+      "verifying": "Verifying…",
+      "or": "or",
+      "resend": "Resend email",
+      "errors": {
+        "invalidCode": "That code is invalid or has expired.",
+        "missing": "Enter the 6-digit code from the email."
+      },
+      "backToSignIn": "Remembered it?",
+      "signInLink": "Back to sign in"
+    },
+    "resetPassword": {
+      "title": "Set a new password",
+      "subtitle": "You're resetting the password for {email}.",
+      "labels": {
+        "new": "New password",
+        "confirm": "Confirm new password"
+      },
+      "submit": "Update password",
+      "submitting": "Updating…",
+      "expiredTitle": "Link expired",
+      "expiredSubtitle": "This reset link is no longer valid. Request a new one to continue.",
+      "requestAgain": "Request a new link",
+      "errors": {
+        "noSession": "Your reset link expired. Request a new one.",
+        "weakPassword": "That password doesn't meet the strength requirements.",
+        "totpRequired": "Two-factor code is required to reset your password.",
+        "invalidTotpCode": "That two-factor code is invalid or expired.",
+        "upstream": "Could not update your password. Try again.",
+        "mismatch": "New password and confirmation do not match."
       }
     },
     "checkEmail": {
@@ -105,7 +230,7 @@
     }
   },
   "home": {
-    "heading": "Monark",
+    "heading": "{appName}",
     "subheading": "Fostering collaboration within the Web3 community."
   },
   "notFound": {
@@ -117,7 +242,321 @@
   },
   "admin": {
     "title": "Admin",
-    "placeholder": "Admin surfaces land here as they ship."
+    "placeholder": "Admin surfaces land here as they ship.",
+    "tabs": {
+      "nav": "Admin sections",
+      "users": "Users",
+      "organizations": "Organizations",
+      "organization": "Organization",
+      "rbac": "Roles & permissions"
+    },
+    "users": {
+      "title": "Users",
+      "subtitle": "Search and manage every account on the platform.",
+      "placeholder": "User management lands here.",
+      "searchLabel": "Search users",
+      "searchPlaceholder": "Search by email or display name…",
+      "empty": "No users yet.",
+      "emptySearch": "No users match \"{query}\".",
+      "loading": "Loading…",
+      "loadMore": "Load more",
+      "badges": {
+        "disabled": "Disabled",
+        "pendingDeletion": "Pending deletion",
+        "pending": "Pending"
+      },
+      "filters": {
+        "openAria": "Open filters",
+        "menuLabel": "Filter by",
+        "clearChipAria": "Clear {label} filter",
+        "role": "Role",
+        "allRoles": "All roles",
+        "status": "Status",
+        "allStatuses": "All statuses",
+        "status_active": "Active",
+        "status_pending": "Pending invite",
+        "status_disabled": "Disabled",
+        "status_pending-deletion": "Pending deletion",
+        "joined": "Joined",
+        "joinedAll": "Any time",
+        "joined_7d": "Last 7 days",
+        "joined_30d": "Last 30 days",
+        "joined_90d": "Last 90 days",
+        "emailVerified": "Email verified",
+        "emailAll": "All",
+        "email_verified": "Verified",
+        "email_unverified": "Unverified"
+      },
+      "invite": {
+        "cta": "Invite user",
+        "title": "Invite a new user",
+        "subtitle": "An email goes out with a 14-day sign-up link. Roles can be changed later from the user detail page.",
+        "nameLabel": "Full name",
+        "namePlaceholder": "Jane Doe",
+        "nameHint": "Optional. Used in the invite email greeting and pre-fills the user's display name on signup.",
+        "emailLabel": "Email",
+        "emailPlaceholder": "person@example.com",
+        "roleLabel": "Role",
+        "rolePlaceholder": "Pick a role",
+        "orgLabel": "Organization",
+        "orgPlaceholder": "Pick an organization",
+        "submit": "Send invite",
+        "sending": "Sending…",
+        "cancel": "Cancel",
+        "success": "Invite sent.",
+        "error": "Could not send the invite.",
+        "revokeAria": "Revoke invite for {email}",
+        "revokeSuccess": "Invite revoked.",
+        "revokeError": "Could not revoke that invite."
+      },
+      "detail": {
+        "back": "Back to users",
+        "loadError": "Could not load this user.",
+        "yes": "Yes",
+        "no": "No",
+        "identity": {
+          "title": "Identity",
+          "id": "User ID",
+          "email": "Email",
+          "emailVerified": "Email verified",
+          "locale": "Language",
+          "createdAt": "Joined",
+          "deletedAt": "Deletion requested"
+        },
+        "roles": {
+          "title": "Roles",
+          "subtitle": "Active role assignments held by this user.",
+          "none": "No roles assigned.",
+          "platform": "Platform"
+        }
+      },
+      "profileForm": {
+        "title": "Profile",
+        "subtitle": "Edit display info on this user's behalf.",
+        "labels": {
+          "displayName": "Display name",
+          "bio": "Bio",
+          "locale": "Language"
+        },
+        "placeholders": {
+          "displayName": "How their name appears in the app",
+          "bio": "A short blurb that shows up on their profile."
+        },
+        "saved": "Saved.",
+        "avatarUploadAria": "Upload a profile picture",
+        "avatarEditAria": "Change profile picture",
+        "avatarReplace": "Replace",
+        "avatarRemove": "Remove",
+        "avatarUploading": "Uploading…",
+        "avatarUpdated": "Avatar updated.",
+        "avatarRemoved": "Avatar removed.",
+        "avatarErrors": {
+          "invalidType": "Please pick a JPEG, PNG, or WebP image.",
+          "tooLarge": "That image is over 2 MB.",
+          "notAuthenticated": "Sign in again and retry.",
+          "upstream": "Upload failed. Try again."
+        },
+        "bannerUploadAria": "Upload a banner image",
+        "bannerEditAria": "Change banner image",
+        "bannerReplace": "Replace banner",
+        "bannerRemove": "Remove banner",
+        "bannerUploading": "Uploading…",
+        "bannerUpdated": "Banner updated.",
+        "bannerRemoved": "Banner removed.",
+        "bannerErrors": {
+          "invalidType": "Please pick a JPEG, PNG, or WebP image.",
+          "tooLarge": "That image is over 5 MB.",
+          "notAuthenticated": "Sign in again and retry.",
+          "upstream": "Upload failed. Try again."
+        }
+      },
+      "roles": {
+        "title": "Roles",
+        "subtitle": "Active role assignments. Add or revoke per-user from this surface.",
+        "revokeAria": "Revoke {role}",
+        "addCta": "Add new role",
+        "dialogTitle": "Assign a role",
+        "dialogSubtitle": "Pick the scope and the role to grant.",
+        "dialogCancel": "Cancel",
+        "roleLabel": "Role",
+        "rolePlaceholder": "Pick a role",
+        "orgLabel": "Organization",
+        "orgPlaceholder": "Pick an organization",
+        "add": "Add",
+        "assigning": "Assigning…",
+        "assignSuccess": "Role assigned.",
+        "assignError": "Could not assign that role.",
+        "revokeSuccess": "Role revoked.",
+        "revokeError": "Could not revoke that role."
+      },
+      "actions": {
+        "title": "Account actions",
+        "subtitle": "Help this user recover or update their credentials.",
+        "passwordReset": {
+          "cta": "Send password reset email",
+          "sending": "Sending…",
+          "hint": "Sends the standard reset link ; the user picks the new password themselves.",
+          "success": "Password reset email sent to {email}.",
+          "forbidden": "You no longer have permission to do that.",
+          "error": "Could not send the password reset email."
+        }
+      },
+      "notifications": {
+        "title": "Notification preferences",
+        "subtitle": "Adjust which categories reach this user via in-app or email.",
+        "resetSuccess": "Preferences reset to defaults."
+      },
+      "dangerZone": {
+        "title": "Danger zone",
+        "subtitle": "Destructive actions that affect this account.",
+        "graceTitle": "Deletion scheduled",
+        "graceSubtitle": "This account will be permanently removed on {date}. Cancel any time before then.",
+        "cancelDeletion": "Cancel deletion",
+        "cancelPending": "Cancelling…",
+        "cancelSuccess": "Deletion cancelled.",
+        "cancelError": "Could not cancel deletion.",
+        "requestDeletion": "Request deletion (14-day grace)",
+        "requestHint": "Stamps the account for deletion ; the cleanup cron removes it after 14 days. Reversible.",
+        "requestSuccess": "Deletion scheduled.",
+        "requestError": "Could not schedule deletion.",
+        "hardDelete": "Delete permanently",
+        "hardDeleteHint": "Skips the grace window. Irreversible.",
+        "hardDeleteSuccess": "Account deleted.",
+        "hardDeleteError": "Could not delete account.",
+        "requestDialog": {
+          "title": "Schedule deletion?",
+          "description": "{email} will be permanently removed in 14 days unless the deletion is cancelled before then. The user can cancel themselves from their account page at any point during the grace window ; you can also cancel from this admin surface. After 14 days the daily cleanup cron anonymizes the row and the action becomes irreversible.",
+          "cancel": "Cancel",
+          "confirm": "Schedule deletion",
+          "confirming": "Scheduling…"
+        },
+        "hardDialog": {
+          "title": "Delete this account permanently?",
+          "description": "{email} and all associated data will be removed immediately. This cannot be undone.",
+          "label": "Type {email} to confirm",
+          "cancel": "Cancel",
+          "confirm": "Delete permanently",
+          "confirming": "Deleting…"
+        }
+      }
+    },
+    "organizations": {
+      "title": "Organizations",
+      "subtitle": "Manage organization profiles, branding, and slugs.",
+      "placeholder": "Organization profile editing lands here.",
+      "searchLabel": "Search organizations",
+      "searchPlaceholder": "Search by name or slug…",
+      "empty": "No organizations yet.",
+      "emptySearch": "No organizations match \"{query}\".",
+      "loading": "Loading…",
+      "loadMore": "Load more",
+      "detail": {
+        "back": "Back to organizations",
+        "title": "Organization profile",
+        "subtitle": "Edits are saved on blur. Slug rotations create a 90-day redirect from the old value.",
+        "loadError": "Could not load this organization.",
+        "saved": "Saved.",
+        "saveError": "Could not save changes.",
+        "invalidSlug": "Slug must be 2–60 lowercase letters, digits, or dashes.",
+        "invalidColor": "Color must be a hex code like #F0870C.",
+        "labels": {
+          "displayName": "Display name",
+          "slug": "Slug",
+          "primaryColor": "Primary brand color"
+        },
+        "placeholders": {
+          "displayName": "How the organization is shown across the app",
+          "slug": "url-friendly-slug"
+        },
+        "slugHint": "Used in URLs ; rotating creates a 90-day redirect from the previous value.",
+        "primaryColorHint": "Hex code like #F0870C. Leave blank to fall back to the platform default.",
+        "logoHint": "Square crop, max 2 MB. JPEG, PNG, or WebP.",
+        "logoUploadAria": "Upload an organization logo",
+        "logoEditAria": "Change organization logo",
+        "logoReplace": "Replace",
+        "logoRemove": "Remove",
+        "logoUploading": "Uploading…",
+        "logoUpdated": "Logo updated.",
+        "logoRemoved": "Logo removed.",
+        "logoErrors": {
+          "invalidType": "Please pick a JPEG, PNG, or WebP image.",
+          "tooLarge": "That image is over 2 MB.",
+          "notAuthenticated": "Sign in again and retry.",
+          "forbidden": "You no longer have permission to do that.",
+          "upstream": "Upload failed. Try again."
+        }
+      }
+    },
+    "rbac": {
+      "title": "Roles & permissions",
+      "subtitle": "Define the roles your organization uses and which permissions each one grants.",
+      "placeholder": "Role assignment lands here.",
+      "sysadmins": {
+        "title": "System administrators",
+        "subtitle": "Platform-tier accounts that hold every permission across every organization.",
+        "empty": "No system administrators are currently active.",
+        "grantedAt": "Since {date}"
+      },
+      "manager": {
+        "orgPicker": {
+          "title": "Organization",
+          "subtitle": "Pick the organization whose roles you want to manage.",
+          "placeholder": "Select an organization"
+        },
+        "listSubtitle": "Built-in roles cannot be deleted ; their permissions are managed by the system.",
+        "createCta": "New role",
+        "searchPlaceholder": "Search roles…",
+        "searchAria": "Search roles by name",
+        "empty": "No roles yet. Create one to get started.",
+        "emptySearch": "No role matches “{query}”.",
+        "badges": {
+          "builtIn": "Built-in",
+          "allPermissions": "All permissions"
+        }
+      },
+      "editor": {
+        "createTitle": "Create a role",
+        "editTitle": "Edit role: {name}",
+        "createSubtitle": "Give the role a friendly name and pick the permissions it grants. The internal key is derived automatically.",
+        "editSubtitle": "Built-in roles always have every permission ; only their name and description are editable.",
+        "nameLabel": "Name",
+        "namePlaceholder": "Moderator",
+        "descriptionLabel": "Description",
+        "descriptionPlaceholder": "What does this role do? Surfaces on the role list.",
+        "colorLabel": "Color",
+        "colorHint": "Optional hex code (e.g. #F0870C). Used for the role's chip across the admin UI.",
+        "permissionsLabel": "Permissions",
+        "permissionsLocked": "Locked",
+        "permissionsAdminNote": "The built-in ADMIN role always has every permission. New permissions added to the system are granted automatically.",
+        "searchPlaceholder": "Search permissions…",
+        "searchAria": "Filter permissions",
+        "searchEmpty": "No permission matches that search.",
+        "categoryCount": "{selected} / {total}",
+        "toggleAllAria": "Toggle every permission in {category}",
+        "categories": {
+          "organization": "Organization",
+          "users": "Users",
+          "rbac": "Roles & permissions",
+          "platform": "Platform"
+        },
+        "nameRequired": "Role name is required.",
+        "create": "Create role",
+        "save": "Save",
+        "submitting": "Saving…",
+        "cancel": "Cancel",
+        "back": "Back to roles",
+        "deleteCta": "Delete role",
+        "deleteConfirm": "Delete the role “{name}”? This cannot be undone.",
+        "deleteSuccess": "Role deleted.",
+        "deleteError": "Could not delete that role.",
+        "loadError": "Could not load that role.",
+        "missingOrg": "No organization selected. Pick one from the role manager and try again.",
+        "createSuccess": "Role created.",
+        "createError": "Could not create that role.",
+        "updateSuccess": "Role updated.",
+        "updateError": "Could not update that role."
+      }
+    }
   },
   "account": {
     "title": "Account",
@@ -127,34 +566,99 @@
       "softTitle": "Two-factor required for admin access",
       "softSubtitle": "Enable TOTP below to keep your admin access. We'll hard-block routes outside of /account once you're 7 days overdue.",
       "hardTitle": "Two-factor enrollment overdue",
-      "hardSubtitle": "Your admin account has been overdue for {days, plural, =0 {less than a day} one {# day} other {# days}}. Sign-in is restricted to /account until you enroll TOTP."
+      "hardSubtitle": "Your admin account has been overdue for {days, plural, =0 {less than a day} one {# day} other {# days}}. Sign-in is restricted to /account until you enroll TOTP.",
+      "redirectToastTitle": "Admin access restricted",
+      "redirectToastSubtitle": "Re-enable two-factor authentication to regain access to admin surfaces."
     },
     "tabs": {
+      "nav": "Account section",
       "profile": "Profile & preferences",
       "security": "Account & security",
+      "notifications": "Notifications",
       "danger": "Danger zone"
+    },
+    "notifications": {
+      "title": "Notifications",
+      "bellAriaLabel": "{count, plural, =0 {Notifications, none unread} one {Notifications, # unread} other {Notifications, # unread}}",
+      "popoverAriaLabel": "Recent notifications",
+      "markAllRead": "Mark all read",
+      "loading": "Loading…",
+      "empty": "You're all caught up.",
+      "open": "Open",
+      "markRead": "Mark as read",
+      "markUnread": "Mark as unread",
+      "rowActionsAria": "Notification actions",
+      "filterTabsAria": "Filter notifications",
+      "dismiss": "Dismiss",
+      "filterAll": "All",
+      "filterUnread": "Unread",
+      "loadMore": "Load more",
+      "kinds": {
+        "auth": {
+          "new-device": "New sign-in",
+          "password-changed": "Password changed",
+          "totp-enabled": "TOTP enabled",
+          "totp-disabled": "TOTP disabled"
+        },
+        "account": {
+          "email-changed": "Email changed",
+          "deletion-scheduled": "Deletion scheduled",
+          "deletion-canceled": "Deletion canceled"
+        }
+      },
+      "prefs": {
+        "title": "Notification preferences",
+        "subtitle": "Pick which categories reach you, and on which channel.",
+        "categoryLabel": "Category",
+        "categories": {
+          "SECURITY": "Security",
+          "ACCOUNT": "Account"
+        },
+        "categoryDescriptions": {
+          "SECURITY": "Sign-in alerts, password changes, two-factor enable/disable. Email is required for these and can't be turned off — they protect your account from unauthorised access.",
+          "ACCOUNT": "Profile updates, email changes, deletion grace-period reminders. Anything that touches your account state without being a security event."
+        },
+        "categoryHelpAria": "More info about {category}",
+        "channels": {
+          "IN_APP": "In-app",
+          "EMAIL": "Email"
+        },
+        "enableAria": "Enable {category} on {channel}",
+        "disableAria": "Disable {category} on {channel}",
+        "forcedBadge": "Required",
+        "forcedTooltip": "Security emails can't be disabled — they protect your account.",
+        "resetButton": "Reset to defaults",
+        "resetSuccess": "Preferences reset to defaults."
+      }
     },
     "profile": {
       "title": "Profile",
       "subtitle": "Your public-facing display info.",
       "labels": {
         "avatar": "Avatar",
+        "banner": "Banner",
         "displayName": "Display name",
+        "bio": "Bio",
         "locale": "Language",
         "theme": "Theme"
       },
       "themes": {
         "light": "Light",
-        "dark": "Dark"
+        "dark": "Dark",
+        "system": "System"
       },
       "placeholders": {
-        "displayName": "How your name appears in the app"
+        "displayName": "How your name appears in the app",
+        "bio": "A short blurb that shows up on your profile."
       },
       "avatarUpload": "Upload",
       "avatarReplace": "Replace",
       "avatarRemove": "Remove",
       "avatarUploading": "Uploading…",
-      "avatarHint": "JPEG, PNG, or WebP. Up to 2 MB.",
+      "avatarUploadAria": "Upload a profile picture",
+      "avatarEditAria": "Change profile picture",
+      "avatarCropTitle": "Crop your profile picture",
+      "avatarCropHint": "Drag to position, scroll or use the slider to zoom.",
       "avatarErrors": {
         "invalidType": "Please pick a JPEG, PNG, or WebP image.",
         "tooLarge": "That image is over 2 MB.",
@@ -163,7 +667,28 @@
       },
       "avatarUpdated": "Avatar updated.",
       "avatarRemoved": "Avatar removed.",
+      "bannerUpload": "Upload banner",
+      "bannerReplace": "Replace banner",
+      "bannerRemove": "Remove banner",
+      "bannerUploading": "Uploading…",
+      "bannerUploadAria": "Upload a banner image",
+      "bannerEditAria": "Change banner image",
+      "bannerCropTitle": "Crop your banner",
+      "bannerCropHint": "Drag to position, scroll or use the slider to zoom. The banner is cropped to a 3:1 ratio.",
+      "bannerErrors": {
+        "invalidType": "Please pick a JPEG, PNG, or WebP image.",
+        "tooLarge": "That image is over 5 MB.",
+        "notAuthenticated": "Sign in again and retry.",
+        "upstream": "Upload failed. Try again."
+      },
+      "bannerUpdated": "Banner updated.",
+      "bannerRemoved": "Banner removed.",
       "saved": "Saved.",
+      "readOnlyBanner": {
+        "title": "Profile is read-only",
+        "subtitle": "Your account is scheduled for deletion. Cancel deletion to edit your profile again.",
+        "cta": "Go to deletion settings"
+      },
       "locales": {
         "en": "English",
         "fr": "Français"
@@ -176,20 +701,35 @@
     },
     "emailChange": {
       "change": "Change email",
+      "dialogTitle": "Change your email",
+      "dialogSubtitle": "We'll send a confirmation to both your current and new addresses ; the change applies once you confirm with one of them.",
       "labels": {
         "newEmail": "New email",
-        "currentPassword": "Current password"
+        "currentPassword": "Current password",
+        "totpCode": "Two-factor code"
       },
+      "totpHint": "Enter the 6-digit code from your authenticator app.",
       "submit": "Send confirmation",
       "submitting": "Sending…",
       "cancel": "Cancel",
       "sent": "Check your new inbox.",
-      "sentHint": "We also notified {email}. The change takes effect once you click the link in the new inbox.",
-      "close": "Done",
+      "sentHint": "We also notified {email}. The change takes effect once both sides confirm.",
+      "close": "Close",
+      "otpInstructions": "We sent a confirmation to {newEmail} and {currentEmail}. Click the link in either, or enter the 6-digit code below.",
+      "otpPendingOther": "First side confirmed. Now enter the 6-digit code from {currentEmail} (or click its link) to complete the change to {newEmail}.",
+      "otpPrompt": "6-digit code from either email",
+      "otpHalfDone": "First side confirmed. Now enter the code from the other email.",
+      "verify": "Verify",
+      "verifying": "Verifying…",
       "errors": {
         "invalidCurrentPassword": "Current password is incorrect.",
         "emailInUse": "That email is already in use.",
         "sameEmail": "That's already your email.",
+        "totpRequired": "Two-factor code is required to change your email.",
+        "invalidTotpCode": "That two-factor code is invalid or expired.",
+        "missing": "Enter the 6-digit code from one of the confirmation emails.",
+        "invalidCode": "That code is invalid or expired. Try the one from the other inbox if you haven't already.",
+        "notAuthenticated": "Sign in again and retry.",
         "upstream": "Could not send the confirmation. Try again."
       }
     },
@@ -197,12 +737,15 @@
       "title": "Password",
       "subtitle": "Change the password used to sign in.",
       "change": "Change password",
+      "dialogTitle": "Change your password",
+      "dialogSubtitle": "Enter your current password, then a new one. We'll email you a confirmation once the change lands.",
       "labels": {
         "current": "Current password",
         "new": "New password",
-        "confirm": "Confirm new password"
+        "confirm": "Confirm new password",
+        "totpCode": "Two-factor code"
       },
-      "minLengthHint": "At least 12 characters.",
+      "totpHint": "Enter the 6-digit code from your authenticator app.",
       "submit": "Update password",
       "submitting": "Updating…",
       "cancel": "Cancel",
@@ -210,6 +753,8 @@
       "errors": {
         "invalidCurrentPassword": "Current password is incorrect.",
         "weakPassword": "New password is too short.",
+        "totpRequired": "Two-factor code is required to change your password.",
+        "invalidTotpCode": "That two-factor code is invalid or expired.",
         "upstream": "Could not update password. Try again.",
         "mismatch": "New password and confirmation do not match."
       }
@@ -218,8 +763,16 @@
       "title": "Two-factor authentication",
       "subtitleActive": "Enabled. You'll be prompted for a code on new devices.",
       "subtitleInactive": "Protect your account with an authenticator app.",
-      "enroll": "Enable TOTP",
+      "enroll": "Configure TOTP",
       "enrolling": "Preparing…",
+      "enrollTitle": "Enable two-factor authentication",
+      "enrollSubtitle": "Scan the QR with your authenticator app, then enter the 6-digit code it shows to confirm.",
+      "enrollScanTitle": "Step 1 — Scan the QR code",
+      "enrollScanSubtitle": "Open your authenticator app and add a new account by scanning the code below. Tap “Can't scan?” if you'd rather paste the secret manually.",
+      "enrollVerifyTitle": "Step 2 — Confirm with a code",
+      "enrollVerifySubtitle": "Enter the 6-digit code your authenticator app currently shows for {appName}.",
+      "continue": "Continue",
+      "back": "Back",
       "scanQr": "Scan this QR with your authenticator app (Google Authenticator, 1Password, Authy, etc.).",
       "cantScan": "Can't scan? Show the secret.",
       "enrollCodePrompt": "Enter the 6-digit code from your app",
@@ -227,22 +780,73 @@
       "confirming": "Confirming…",
       "cancel": "Cancel",
       "saveRecovery": "Save these recovery codes",
-      "saveRecoveryHint": "Each code works once. Keep them somewhere you can reach if you lose your authenticator.",
+      "saveRecoveryHint": "Each code works once. Keep them somewhere safe so you can reach them if you lose your authenticator.",
+      "recoveryTitle": "Your recovery codes",
+      "recoveryCopy": "Copy recovery codes",
+      "recoveryCopied": "Recovery codes copied to clipboard.",
+      "secretCopy": "Copy secret",
+      "secretCopied": "Secret copied to clipboard.",
       "ack": "I saved them",
       "fields": {
         "recoveryRemaining": "Recovery codes remaining"
       },
       "regenerate": "Regenerate recovery codes",
+      "regeneratePending": "Rotating…",
+      "regenerateTitle": "Regenerate recovery codes",
+      "regenerateSubtitle": "Rotating invalidates every existing recovery code. Enter your current 6-digit code to continue.",
       "disable": "Disable TOTP",
+      "disablePending": "Disabling…",
+      "disableTitle": "Disable two-factor authentication",
+      "disableSubtitle": "Your account will rely on password alone for new sign-ins. Enter your current 6-digit code to confirm.",
       "disablePrompt": "Enter your current TOTP code to confirm disable",
       "regeneratePrompt": "Enter your current TOTP code to rotate recovery codes",
       "enrolledSuccess": "Two-factor authentication enabled.",
       "disabledSuccess": "Two-factor authentication disabled.",
       "regeneratedSuccess": "Recovery codes rotated.",
       "errors": {
+        "enroll": "Could not start enrollment.",
         "confirm": "That code is invalid or expired.",
         "disable": "Could not disable TOTP.",
-        "regenerate": "Could not rotate recovery codes."
+        "regenerate": "Could not rotate recovery codes.",
+        "copy": "Couldn't copy to clipboard. Select the codes manually."
+      },
+      "dialog": {
+        "label": "6-digit code",
+        "verify": "Confirm",
+        "verifying": "Verifying…",
+        "cancel": "Cancel",
+        "default": {
+          "title": "Confirm with two-factor",
+          "description": "Enter the current 6-digit code from your authenticator app to continue."
+        },
+        "passwordChange": {
+          "title": "Confirm password change",
+          "description": "Enter the 6-digit code from your authenticator app to update your password."
+        },
+        "emailChange": {
+          "title": "Confirm email change",
+          "description": "Enter the 6-digit code from your authenticator app to send the confirmation emails."
+        }
+      },
+      "reminder": {
+        "usedTitle": "You used a recovery code",
+        "usedSubtitle": "{remaining} recovery codes remain. Strike the one you used from your saved list so you don't try it again.",
+        "usedAndLowSubtitle": "Only {remaining} codes left after this one. Strike it from your list and consider regenerating now so you don't run out.",
+        "lowTitle": "Only {remaining} recovery codes left",
+        "lowSubtitle": "When you run out, you'll be locked out if you ever lose your authenticator. Generate a fresh batch and replace your saved list.",
+        "mustRegenerateTitle": "You're out of recovery codes",
+        "mustRegenerateSubtitle": "All your one-shot codes have been used. Generate a fresh batch before continuing ; without them you have no way back in if you lose your authenticator.",
+        "strikeHint": "Find the code you just used and strike it",
+        "totpPrompt": "Enter your current authenticator code to confirm",
+        "regeneratedTitle": "New recovery codes",
+        "regeneratedSubtitle": "Save these somewhere safe. Each code works once. The old set has been invalidated.",
+        "struckIt": "I struck it from my list",
+        "regenLater": "I struck it (regenerate later)",
+        "regenerateNow": "Regenerate now",
+        "regenerating": "Regenerating…",
+        "enterTotpToRegenerate": "Use authenticator code to regenerate",
+        "saving": "Saving…",
+        "notNow": "Not now"
       }
     },
     "trustedDevices": {
@@ -251,13 +855,30 @@
       "resolving": "Loading…",
       "none": "No devices recognized yet.",
       "revoke": "Revoke",
+      "revokeAll": "Revoke all",
       "refresh": "Refresh",
+      "cancel": "Cancel",
       "current": "This device",
+      "deviceTitle": "{browser} on {os}",
+      "deviceUnknown": "Unknown device",
       "fields": {
         "firstSeen": "First seen",
         "lastSeen": "Last seen",
         "ip": "Location",
+        "location": "Location",
+        "localDev": "Local development",
+        "device": "Device",
         "totpVerified": "TOTP verified"
+      },
+      "revokeCurrentDialog": {
+        "title": "Revoke this device?",
+        "description": "This will sign you out immediately. You'll need to sign in and reauthorize this device to use {appName} again.",
+        "confirm": "Revoke and sign out"
+      },
+      "revokeAllDialog": {
+        "title": "Revoke every session?",
+        "description": "This signs out every browser and device you're currently signed in on. Use this if you suspect your account is compromised.",
+        "confirm": "Revoke everything"
       }
     },
     "danger": {
@@ -304,11 +925,53 @@
     "sections": {
       "session": "session",
       "apiHealth": "api health",
+      "remoteDiagnostics": "remote dev diagnostics",
       "currentOrg": "current org",
       "trustedDevices": "trusted devices",
       "totp": "totp",
       "rbac": "rbac",
-      "featureFlags": "feature flags"
+      "featureFlags": "feature flags",
+      "notifications": "notifications"
+    },
+    "remoteDiagnostics": {
+      "browserHost": "browser host",
+      "noSession": "no session — tRPC will be called as anon, every authed query returns empty",
+      "yes": "yes",
+      "no": "no",
+      "none": "(none)",
+      "clearAndSignIn": "Clear stale cookies + sign in",
+      "fields": {
+        "resolved": "resolved",
+        "result": "result",
+        "hint": "hint",
+        "auth": "auth state",
+        "cookies": "cookies",
+        "session": "has session",
+        "userId": "user id"
+      },
+      "hints": {
+        "apiUnreachable": "Connection failed before the server responded. Likely : Windows Firewall blocks inbound 4000 ; api isn't on 0.0.0.0 ; not on the same LAN ; the resolved URL above is still loopback.",
+        "apiRejected": "API replied but rejected. Check api stderr for a CORS warning.",
+        "supabaseUnreachable": "Supabase Docker binds to 127.0.0.1 by default. On Windows, run `tools/dev-lan-setup.ps1` to add a portproxy + firewall rule.",
+        "getSessionThrew": "Browser-side Supabase client threw on getSession() ; check the browser console.",
+        "staleCookie": "You signed in before the storage-key pin landed. The browser has a cookie under a stale name (the client now looks for \"{key}\"). Use the button below to clear stale cookies + re-sign-in.",
+        "cookiesUnreadable": "Auth cookies present but the browser-side Supabase client can't read them. Open the cookies panel in DevTools and confirm the cookie name matches the pinned storage key.",
+        "noCookies": "No `sb-*` cookies on this device. Did you actually sign in *from this device* (not your laptop) ? Cookies don't sync across devices.",
+        "meRejected": "Browser has a session + token but the api rejected the request. Most often : api can't validate the JWT against Supabase ; or CORS blocked the Authorization header.",
+        "meThrew": "Authed tRPC fetch failed. Check api stderr for a stack trace."
+      }
+    },
+    "notifications": {
+      "unreadShort": "unread",
+      "zero": "0",
+      "signInPrompt": "Sign in to test notifications.",
+      "markAllRead": "Mark all read",
+      "resetPrefs": "Reset prefs",
+      "sendTest": "send test",
+      "noKinds": "No kinds registered.",
+      "lastResult": "delivered: {delivered} · skipped: {skipped}",
+      "recent": "recent",
+      "recentEmpty": "No notifications yet."
     },
     "badges": {
       "signedIn": "signed in",
@@ -336,6 +999,7 @@
     "currentOrg": {
       "none": "No active org.",
       "resolving": "resolving…",
+      "inferred": "no claim — inferred from memberships",
       "fields": { "slug": "slug", "name": "name", "id": "id" },
       "memberships": "memberships ({count})"
     },
@@ -350,10 +1014,15 @@
       "resolving": "resolving…",
       "none": "No trusted devices yet.",
       "revoke": "revoke",
+      "current": "this device",
       "fields": {
         "firstSeen": "first",
         "lastSeen": "last",
-        "ip": "ip"
+        "ip": "ip",
+        "location": "loc",
+        "localDev": "local dev",
+        "device": "device",
+        "totpVerified": "totp"
       }
     },
     "totp": {

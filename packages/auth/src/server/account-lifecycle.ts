@@ -7,6 +7,16 @@ import { getSupabaseAdmin } from "./supabase-admin"
 const DELETION_GRACE_DAYS = 14
 const ANONYMIZED_NAME = "Deleted User"
 
+/**
+ * Pure helper exposed for the unit suite. The format is load-bearing:
+ * `processExpiredDeletions` filters out rows whose email already contains
+ * `@monark.invalid` to make hard-delete idempotent, so changing the domain
+ * here without updating the filter would re-anonymize already-deleted rows.
+ */
+export function buildAnonymizedEmail(): string {
+  return `deleted-${randomUUID()}@monark.invalid`
+}
+
 // Anonymizes one user row + removes the Supabase auth row + emits
 // `user.deleted`. Idempotent on the email field (re-running won't undo a
 // prior anonymization). Callers are responsible for ensuring the user is
@@ -17,7 +27,7 @@ export async function hardDeleteUser(userId: string): Promise<void> {
   if (!user) return
 
   const previousEmail = user.email
-  const anonymizedEmail = `deleted-${randomUUID()}@monark.invalid`
+  const anonymizedEmail = buildAnonymizedEmail()
 
   await db.user.update({
     where: { id: userId },

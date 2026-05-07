@@ -14,10 +14,20 @@ export function CurrentOrgPanel() {
     refetchOnWindowFocus: false,
   })
 
+  // `organizations.current` only resolves the org when the session
+  // carries an `active_organization_id` claim ; in single-tenant
+  // deploys (and in any deploy where the claim hasn't been persisted
+  // yet) the call returns null even though the user clearly has a
+  // working org. Fall back to the first membership so the dev panel
+  // surfaces something useful instead of "(none)" — annotated below
+  // so the operator can tell apart "claim resolved" from "inferred".
+  const inferredOrg = current.data ?? mine.data?.[0] ?? null
+  const inferredFromClaim = current.data !== null && current.data !== undefined
+
   const isFetching = current.isFetching || mine.isFetching
-  const badge = current.data ? (
+  const badge = inferredOrg ? (
     <span className="rounded-full bg-emerald-400/20 px-1.5 py-0.5 font-mono text-[10px] text-emerald-400">
-      {current.data.slug}
+      {inferredOrg.slug}
     </span>
   ) : null
 
@@ -30,18 +40,25 @@ export function CurrentOrgPanel() {
             {t("errorPrefix")} <span className="font-mono">{current.error.message}</span>
           </p>
         )}
-        {!current.isLoading && !current.error && !current.data && (
+        {!current.isLoading && !current.error && !inferredOrg && (
           <p className="text-xs text-muted-foreground">{t("currentOrg.none")}</p>
         )}
-        {current.data && (
-          <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs font-mono">
-            <dt className="text-muted-foreground">{t("currentOrg.fields.slug")}</dt>
-            <dd className="truncate">{current.data.slug}</dd>
-            <dt className="text-muted-foreground">{t("currentOrg.fields.name")}</dt>
-            <dd className="truncate">{current.data.displayName}</dd>
-            <dt className="text-muted-foreground">{t("currentOrg.fields.id")}</dt>
-            <dd className="truncate">{current.data.id}</dd>
-          </dl>
+        {inferredOrg && (
+          <>
+            {!inferredFromClaim && (
+              <p className="text-[10px] uppercase tracking-wider text-amber-400/80">
+                {t("currentOrg.inferred")}
+              </p>
+            )}
+            <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs font-mono">
+              <dt className="text-muted-foreground">{t("currentOrg.fields.slug")}</dt>
+              <dd className="truncate">{inferredOrg.slug}</dd>
+              <dt className="text-muted-foreground">{t("currentOrg.fields.name")}</dt>
+              <dd className="truncate">{inferredOrg.displayName}</dd>
+              <dt className="text-muted-foreground">{t("currentOrg.fields.id")}</dt>
+              <dd className="truncate">{inferredOrg.id}</dd>
+            </dl>
+          </>
         )}
         {mine.data && mine.data.length > 0 && (
           <div>
