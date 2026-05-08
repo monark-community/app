@@ -7,6 +7,23 @@ import { createSupabaseServerClient } from "@/lib/supabase/server"
 import { createServerTrpcClient } from "@/lib/trpc-server"
 import { isCurrentDeviceTrusted } from "@/lib/trusted-device-cookie"
 
+// Diagnostic logging gate. Set MONARK_AUTH_GATE_DEBUG=1 in CI to
+// surface which (authed) gate path is firing on each redirect. The
+// e2e suite started bouncing /account → /signin after the
+// admin-interface refactor and we needed visibility into whether it
+// was the session check or the trusted-device check pulling the
+// trigger. Cheap enough to leave in ; production logs stay quiet
+// unless an operator explicitly opts in.
+const DEBUG_GATE = process.env.MONARK_AUTH_GATE_DEBUG === "1"
+function debugRedirect(reason: string, extra?: Record<string, unknown>): void {
+  if (!DEBUG_GATE) return
+  // eslint-disable-next-line no-console
+  console.error(
+    `[(authed)/layout] redirect: ${reason}`,
+    extra ? JSON.stringify(extra) : "",
+  )
+}
+
 /**
  * Auth gate for every protected route in the app. Pages mounted under
  * `app/(authed)/...` (the parens make this a route group ; the URL
@@ -38,7 +55,10 @@ export default async function AuthedLayout({ children }: { children: ReactNode }
   // Bootstrap gate runs first — before any auth check — so a deploy
   // sitting on /setup doesn't briefly hit Supabase for a user who
   // can't actually do anything yet. Mirrors the (anon) layout's gate.
-  if (!(await isSystemBootstrapped())) redirect("/setup")
+  if (!(await isSystemBootstrapped())) {
+    debugRedirect("not-bootstrapped → /setup")
+    redirect("/setup")
+  }
 
   const supabase = await createSupabaseServerClient()
   // `getUser()` round-trips to the Supabase Auth server to validate the
@@ -53,14 +73,28 @@ export default async function AuthedLayout({ children }: { children: ReactNode }
     supabase.auth.getUser(),
     supabase.auth.getSession(),
   ])
-  if (userResult.error || !userResult.data.user) redirect("/signin")
-  if (!sessionResult.data.session) redirect("/signin")
+  if (userResult.error || !userResult.data.user) {
+    debugRedirect("getUser failed → /signin", {
+      hasError: !!userResult.error,
+      errorMessage: userResult.error?.message,
+    })
+    redirect("/signin")
+  }
+  if (!sessionResult.data.session) {
+    debugRedirect("no session → /signin")
+    redirect("/signin")
+  }
 
   const trusted = await isCurrentDeviceTrusted({
     accessToken: sessionResult.data.session.access_token,
     userId: userResult.data.user.id,
   })
-  if (!trusted) redirect("/auth/sign-out-stale")
+  if (!trusted) {
+    debugRedirect("trusted-device check failed → /auth/sign-out-stale", {
+      userId: userResult.data.user.id,
+    })
+    redirect("/auth/sign-out-stale")
+  }
 
   // Deletion-grace lockdown : when the user has requested account
   // deletion but the 14-day window hasn't elapsed yet, the only

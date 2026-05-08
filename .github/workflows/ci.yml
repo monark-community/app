@@ -16,12 +16,48 @@ env:
   # v5 tags that default to Node 24 natively.
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
+# CI is split into four parallel jobs (lint+typecheck, unit, integration,
+# repo-checks) plus a final coverage-upload job that depends on the two
+# test jobs. Wall time is the slowest leg + the upload step, instead of
+# the sum of every step in one job. The integration leg dominates at
+# ~3 min ; everything else clears in under 2 min, so the verify gate
+# closes in ~3:30.
+#
+# End-to-end Playwright tests are NOT auto-run on push / PR — they live
+# in [.github/workflows/e2e.yml](./e2e.yml) and are triggered manually
+# from the Actions tab when an auth / admin regression check is needed.
+
 jobs:
-  # Fast verification gate : lint, typecheck, unit + integration
-  # tests with coverage. Runs first ; PRs can't merge unless this
-  # passes. Should clear in about 3 minutes once node_modules is
-  # cached.
-  verify:
+  # Lint + typecheck only ; the lightest leg, usually wins the race
+  # against the slower test legs.
+  lint-typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+  # Cross-package invariants — codegen drift + module-tier rules. Cheap
+  # checks ; isolated in their own job so a stale generated file
+  # doesn't masquerade as a lint or typecheck failure.
+  repo-checks:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -47,108 +83,11 @@ jobs:
       - name: Check module tiers
         run: pnpm check:tiers
 
-      - name: Lint
-        run: pnpm lint
-
-      - name: Typecheck
-        run: pnpm typecheck
-
-      - name: Test (with coverage)
-        run: pnpm test:coverage
-
-      # Integration suites under each package's `tests/integration/`.
-      # Each one boots its own Postgres testcontainer (~5 s amortised
-      # across the file) ; Docker is available on `ubuntu-latest`
-      # without extra setup. Packages without an integration config
-      # `--passWithNoTests` so this stays cheap to add to. Runs with
-      # coverage so `coverage/integration/coverage-final.json` lands
-      # next to the unit run for the merge step below.
-      - name: Test (integration, with coverage)
-        run: pnpm test:integration:coverage
-
-      # Fuse each package's `coverage/unit/coverage-final.json` and
-      # `coverage/integration/coverage-final.json` into a single
-      # `coverage/coverage-final.json` + `coverage/lcov.info`. Most
-      # data-layer code only runs under integration ; without this
-      # step Codecov sees the unit-only lcov and reports artificially
-      # low numbers.
-      - name: Merge coverage (unit + integration)
-        run: pnpm coverage:merge
-
-      # Each package emits its own `coverage/lcov.info` (regenerated
-      # by `coverage:merge` above) ; we hand them all to Codecov which
-      # aggregates into a single repo-level number. Per-package
-      # coverage thresholds enforced inside vitest are the actual
-      # gate ; Codecov is just for the badge + the PR-level diff
-      # annotation. `fail_ci_if_error: false` keeps the build green
-      # when CODECOV_TOKEN isn't set on a fork's CI.
-      #
-      # `files` is comma-separated — codecov-action v4 takes the YAML
-      # value verbatim and passes it as one CLI arg, so a `files: |`
-      # block (newline-separated) lands as a single string with
-      # literal `\n` chars and matches no real path. The action's
-      # auto-discovery fallback would then walk every `coverage/`
-      # subdir and upload the per-run lcov.info + coverage-final.json
-      # files alongside the merged one, leading to three conflicting
-      # numbers per package on the dashboard. `disable_search: true`
-      # locks down the upload to exactly the listed files.
-      - name: Upload coverage to Codecov
-        if: always()
-        uses: codecov/codecov-action@v4
-        with:
-          files: ./packages/auth/coverage/lcov.info,./packages/common/coverage/lcov.info,./packages/feature-flags/coverage/lcov.info,./packages/notifications/coverage/lcov.info,./packages/organizations/coverage/lcov.info,./packages/rbac/coverage/lcov.info,./packages/users/coverage/lcov.info,./packages/webhooks/coverage/lcov.info,./services/api/coverage/lcov.info,./services/web/coverage/lcov.info
-          disable_search: true
-          fail_ci_if_error: false
-          token: ${{ secrets.CODECOV_TOKEN }}
-
-  # Slower end-to-end gate : boots Supabase locally, runs the api +
-  # web services, drives the browser through Playwright. Depends on
-  # `verify` passing so we don't waste 10 minutes booting a stack
-  # for code that doesn't typecheck.
-  e2e:
+  # Unit suites only. Coverage outputs upload to a per-job artifact so
+  # the codecov-upload job below can fuse them with the integration
+  # leg's outputs into a merged report.
+  unit-tests:
     runs-on: ubuntu-latest
-    needs: verify
-    # `.env` files are gitignored, so CI has nothing to read at the
-    # filesystem level. Set the local-stack defaults at the JOB level
-    # so every step (Prisma migrate + the api/web processes that
-    # Playwright spins up via `pnpm dev`) inherits them. Values match
-    # what `supabase start` boots locally — fixed credentials baked
-    # into the Supabase CLI's dev stack ; safe to hardcode because
-    # the stack only listens on localhost and never leaves CI.
-    env:
-      DATABASE_URL: postgresql://postgres:postgres@localhost:54322/postgres
-      DIRECT_URL: postgresql://postgres:postgres@localhost:54322/postgres
-      SUPABASE_URL: http://127.0.0.1:54321
-      SUPABASE_PUBLISHABLE_KEY: sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH
-      SUPABASE_SECRET_KEY: sb_secret_N7UND0UgjKTVK-Uodkm0Hg_xSvEMPvz
-      NEXT_PUBLIC_APP_URL: http://localhost:3000
-      NEXT_PUBLIC_API_URL: http://localhost:4000
-      NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
-      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH
-      WEB_ORIGIN: http://localhost:3000
-      APP_URL: http://localhost:3000
-      # Supabase's bundled Inbucket SMTP listener.
-      SMTP_URL: smtp://localhost:54325
-      SMTP_FROM: "Monark <noreply@monark.io>"
-      # Deterministic test value ; never used outside the e2e job.
-      TOTP_ENCRYPTION_KEY: d371e31288d4f5e19dd6e192ad7ab8edb3b2143695b23c70afba4d59ad8584c7
-      # Single-tenant bootstrap so `/setup` finishes provisioning the
-      # singleton org before any e2e spec hits a protected route.
-      INITIAL_ORG_SLUG: monark
-      INITIAL_ORG_NAME: Monark
-      # Opt every gated e2e spec into running.
-      E2E_FULL_STACK: "1"
-      INBUCKET_URL: http://localhost:54324
-      # Seeded test accounts. The seed step below provisions both
-      # users + grants ADMIN at the singleton org to the admin one.
-      # Passwords are deterministic test values — the runner only
-      # listens on localhost and the stack is torn down at job end.
-      # Strong-enough to clear the password-rule validator (>=12
-      # chars, mixed classes, no obvious dictionary words).
-      E2E_USER_EMAIL: e2e-user@monark.test
-      E2E_USER_PASSWORD: "Tg7!hP9q*xLb-user"
-      E2E_ADMIN_EMAIL: e2e-admin@monark.test
-      E2E_ADMIN_PASSWORD: "Tg7!hP9q*xLb-admin"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -165,50 +104,113 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      # Supabase CLI ships postgres + auth + inbucket. `supabase
-      # start` boots the whole stack on the standard ports
-      # (54321 / 54322 / 54324 / 54325). This is the same surface
-      # `pnpm dev` runs against locally, so the e2e suite tests
-      # against an environment matching what humans test against.
-      - name: Start Supabase local stack
-        run: pnpm exec supabase start
+      - name: Test (with coverage)
+        run: pnpm test:coverage
 
-      - name: Run database migrations
-        run: pnpm db:migrate
-
-      # Provision the e2e test accounts the gated specs sign in as.
-      # Idempotent ; safe on CI re-runs and on the rare local
-      # invocation. Bootstraps the singleton org along the way so
-      # the ADMIN grant has somewhere to scope to (the api process
-      # would do this at boot anyway, but Playwright doesn't start
-      # the api until after this step).
-      - name: Seed e2e test users
-        run: pnpm tsx tools/seed-e2e-users.ts
-
-      # `@playwright/test` is a devDep of `services/web` only ; from
-      # the repo root `pnpm exec` resolves bins against the root
-      # package's node_modules (which has no playwright there). Use
-      # `--filter web exec` so pnpm cd's into the web workspace
-      # before launching the binary.
-      - name: Install Playwright browsers
-        run: pnpm --filter web exec playwright install --with-deps chromium firefox webkit
-
-      - name: Run end-to-end suite
-        run: pnpm test:e2e
-        env:
-          # `API_URL` is the only spec-only var that isn't already on
-          # the job-level env block (which carries `APP_URL` since the
-          # api process needs it for cross-origin checks). Specs use
-          # this to reach the api directly.
-          API_URL: http://localhost:4000
-
-      # Always upload the Playwright HTML report so failures are
-      # diagnosable without a re-run. The artefact viewer in the GH
-      # Actions UI surfaces traces + screenshots + stdout per spec.
-      - name: Upload Playwright report
-        if: failure()
+      # Per-package `coverage/unit/coverage-final.json` is what the
+      # merge script in the codecov-upload job consumes. The artifact
+      # bundles every package's `coverage/unit/` so the downstream
+      # job has a single download to do.
+      - name: Upload unit coverage
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-report
-          path: services/web/playwright-report
-          retention-days: 14
+          name: coverage-unit
+          path: |
+            packages/*/coverage/unit/
+            services/*/coverage/unit/
+          if-no-files-found: error
+          retention-days: 1
+
+  # Integration suites only. The slow leg of CI ; each package boots a
+  # Postgres testcontainer in `globalSetup`. Already parallelised
+  # across packages by turbo's task graph ; this job just runs in
+  # parallel with the lint-typecheck + unit + repo-checks legs so the
+  # ~3 min cost doesn't pile on top of everything else.
+  integration-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Test (integration, with coverage)
+        run: pnpm test:integration:coverage
+
+      - name: Upload integration coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-integration
+          path: |
+            packages/*/coverage/integration/
+            services/*/coverage/integration/
+          if-no-files-found: error
+          retention-days: 1
+
+  # Fuses unit + integration coverage into one report per package and
+  # uploads to Codecov. Depends on both test jobs so the artifacts
+  # exist by the time the merge runs.
+  #
+  # `unit-tests` and `integration-tests` upload to distinct artifacts
+  # ; this job downloads both into the per-package `coverage/{unit,
+  # integration}/` shape the merge script expects, then runs
+  # `pnpm coverage:merge` to produce `coverage/coverage-final.json`
+  # + `coverage/lcov.info` per package. Codecov reads the merged
+  # lcov files via the explicit `files:` list (auto-discovery is
+  # disabled to avoid uploading the per-run files alongside, which
+  # would land three conflicting numbers per package).
+  coverage-upload:
+    runs-on: ubuntu-latest
+    needs: [unit-tests, integration-tests]
+    if: always()
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Land each artifact at its origin path. The `path:` from the
+      # upload step preserves the leading directories
+      # (`packages/X/coverage/unit/...`), so a download with no
+      # explicit path restores the same tree.
+      - name: Download unit coverage
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage-unit
+
+      - name: Download integration coverage
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage-integration
+
+      - name: Merge coverage (unit + integration)
+        run: pnpm coverage:merge
+
+      - name: Upload coverage to Codecov
+        if: always()
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./packages/auth/coverage/lcov.info,./packages/common/coverage/lcov.info,./packages/feature-flags/coverage/lcov.info,./packages/notifications/coverage/lcov.info,./packages/organizations/coverage/lcov.info,./packages/rbac/coverage/lcov.info,./packages/users/coverage/lcov.info,./packages/webhooks/coverage/lcov.info,./services/api/coverage/lcov.info,./services/web/coverage/lcov.info
+          disable_search: true
+          fail_ci_if_error: false
+          token: ${{ secrets.CODECOV_TOKEN }}

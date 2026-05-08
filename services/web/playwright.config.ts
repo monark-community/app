@@ -20,12 +20,31 @@ export default defineConfig({
       use: { ...devices["Desktop Chrome"] },
     },
   ],
+  // Wait on BOTH the web server (3000) and the api (4000/health) before
+  // launching tests. An earlier version only waited on 3000 ; turbo
+  // runs `dev` for both packages in parallel, so web can come up
+  // while the api is still booting. The seeded sign-in flow calls
+  // the api via tRPC (trusted-device recognize, totp challenge check,
+  // etc.) and intermittently bounces back to /signin when the api
+  // isn't ready in time. Two webServer entries make Playwright block
+  // until both respond. The second entry sets
+  // `reuseExistingServer: true` because the first entry already
+  // started `pnpm dev` ; we just want it to wait for the api's
+  // /health endpoint.
   webServer: process.env.CI
-    ? {
-        command: "pnpm dev",
-        url: "http://localhost:3000",
-        reuseExistingServer: false,
-        timeout: 120_000,
-      }
+    ? [
+        {
+          command: "pnpm dev",
+          url: "http://localhost:3000",
+          reuseExistingServer: false,
+          timeout: 120_000,
+        },
+        {
+          command: "pnpm dev",
+          url: "http://localhost:4000/health",
+          reuseExistingServer: true,
+          timeout: 120_000,
+        },
+      ]
     : undefined,
 })
