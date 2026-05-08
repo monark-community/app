@@ -141,8 +141,13 @@ jobs:
       - name: Run database migrations
         run: pnpm db:migrate
 
+      # `@playwright/test` is a devDep of `services/web` only ; from
+      # the repo root `pnpm exec` resolves bins against the root
+      # package's node_modules (which has no playwright there). Use
+      # `--filter web exec` so pnpm cd's into the web workspace
+      # before launching the binary.
       - name: Install Playwright browsers
-        run: pnpm exec playwright install --with-deps chromium firefox webkit
+        run: pnpm --filter web exec playwright install --with-deps chromium firefox webkit
 
       - name: Run end-to-end suite
         run: pnpm test:e2e
