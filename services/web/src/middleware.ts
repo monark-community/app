@@ -1,14 +1,14 @@
-import { NextResponse, type NextRequest } from "next/server"
-import { createServerClient, type CookieOptions } from "@supabase/ssr"
-import { getRequestOrigin } from "@/lib/request-origin"
-import { SUPABASE_AUTH_STORAGE_KEY } from "@/lib/supabase/storage-key"
+import { NextResponse, type NextRequest } from "next/server";
+import { createServerClient, type CookieOptions } from "@supabase/ssr";
+import { getRequestOrigin } from "@/lib/request-origin";
+import { SUPABASE_AUTH_STORAGE_KEY } from "@/lib/supabase/storage-key";
 
-type CookieToSet = { name: string; value: string; options: CookieOptions }
+type CookieToSet = { name: string; value: string; options: CookieOptions };
 
 // Routes that must stay reachable even while a TOTP challenge is pending,
 // so the user can finish the gate or escape via sign-out.
-const TOTP_BYPASS_PREFIXES = ["/signin", "/signup", "/auth/"]
-const TOTP_PENDING_COOKIE = "monark_totp_pending"
+const TOTP_BYPASS_PREFIXES = ["/signin", "/signup", "/auth/"];
+const TOTP_PENDING_COOKIE = "monark_totp_pending";
 
 // Refreshes the Supabase session cookies on every request so server
 // components see a live session, and redirects any in-flight request to
@@ -21,10 +21,10 @@ export async function middleware(request: NextRequest) {
   // both read this to make routing decisions (e.g. redirecting
   // deletion-pending users to /account/danger when they navigate
   // elsewhere).
-  request.headers.set("x-pathname", request.nextUrl.pathname)
+  request.headers.set("x-pathname", request.nextUrl.pathname);
   let response = NextResponse.next({
     request: { headers: request.headers },
-  })
+  });
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -36,62 +36,47 @@ export async function middleware(request: NextRequest) {
       auth: { storageKey: SUPABASE_AUTH_STORAGE_KEY },
       cookies: {
         getAll() {
-          return request.cookies.getAll()
+          return request.cookies.getAll();
         },
         setAll(cookiesToSet: CookieToSet[]) {
           for (const { name, value } of cookiesToSet) {
-            request.cookies.set(name, value)
+            request.cookies.set(name, value);
           }
-          response = NextResponse.next({ request })
+          response = NextResponse.next({ request });
           for (const { name, value, options } of cookiesToSet) {
-            response.cookies.set(name, value, options)
+            response.cookies.set(name, value, options);
           }
         },
       },
     },
-  )
+  );
 
-  await supabase.auth.getUser()
+  await supabase.auth.getUser();
 
-  // Opt into User-Agent Client Hints. Modern Chrome / Edge on Android
-  // freeze the User-Agent's device-model field to "K" by default for
-  // privacy ; without this header we'd see "Pixel 7" reduced to "K" in
-  // the trusted-device list. The hints below are sent on the *next*
-  // request after the browser sees this header (a one-page warm-up
-  // delay), but persist for as long as the browser caches the policy.
-  // No effect on browsers that don't implement UA-CH (Firefox, Safari) ;
-  // we keep the UA-string fallback in the parser for those.
-  response.headers.append(
-    "Accept-CH",
-    "Sec-CH-UA-Model, Sec-CH-UA-Platform-Version, Sec-CH-UA-Full-Version-List",
-  )
-  // Tells the browser this hint policy applies to the whole site so it
-  // doesn't have to be re-requested on every navigation.
-  response.headers.append(
-    "Critical-CH",
-    "Sec-CH-UA-Model, Sec-CH-UA-Platform-Version",
-  )
-  response.headers.append(
-    "Permissions-Policy",
-    "ch-ua-model=(self), ch-ua-platform-version=(self), ch-ua-full-version-list=(self)",
-  )
+  // Note : `Accept-CH`, `Critical-CH`, `Permissions-Policy`, plus the
+  // CSP / HSTS / X-Frame-Options / X-Content-Type-Options /
+  // Referrer-Policy headers all live in [next.config.ts](../next.config.ts)'s
+  // `headers()` config. That puts them on the edge cache so Vercel
+  // can serve them without booting middleware on every request, and
+  // keeps middleware focused on auth state — supabase session
+  // refresh + the TOTP-pending redirect.
 
-  const totpPending = request.cookies.get(TOTP_PENDING_COOKIE)?.value
+  const totpPending = request.cookies.get(TOTP_PENDING_COOKIE)?.value;
   if (totpPending) {
-    const path = request.nextUrl.pathname
+    const path = request.nextUrl.pathname;
     const bypass = TOTP_BYPASS_PREFIXES.some(
       (prefix) => path === prefix || path.startsWith(prefix + "/") || path.startsWith(prefix),
-    )
+    );
     if (!bypass) {
       // Build from the Host header rather than `request.url` so a
       // user mid-TOTP-pending on a LAN device gets redirected to
       // their host, not loopback. Same reasoning as /auth/confirm.
-      const redirectUrl = new URL("/signin/totp", getRequestOrigin(request))
-      return NextResponse.redirect(redirectUrl)
+      const redirectUrl = new URL("/signin/totp", getRequestOrigin(request));
+      return NextResponse.redirect(redirectUrl);
     }
   }
 
-  return response
+  return response;
 }
 
 export const config = {
@@ -99,4 +84,4 @@ export const config = {
     // Skip static assets and Next internals; match everything else.
     "/((?!_next/static|_next/image|favicon.ico|.*\\.svg$).*)",
   ],
-}
+};

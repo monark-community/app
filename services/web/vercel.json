@@ -1,0 +1,8 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "nextjs",
+  "buildCommand": "cd ../.. && pnpm gen && pnpm --filter web build",
+  "installCommand": "cd ../.. && pnpm install --frozen-lockfile",
+  "outputDirectory": ".next",
+  "ignoreCommand": "git diff HEAD^ HEAD --quiet -- ./ ../../packages/auth ../../packages/branding ../../packages/common ../../packages/components ../../packages/feature-flags ../../packages/notifications ../../packages/organizations ../../packages/rbac ../../packages/users ../../packages/webhooks ../../package.json ../../pnpm-lock.yaml ../../turbo.json"
+}

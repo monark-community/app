@@ -1,30 +1,30 @@
-export { webhooksRouter } from "./router"
-export { registerWebhooksPermissions } from "./permissions"
-export {
-  registerWebhookSubscribers,
-  _resetWebhookSubscribersForTesting,
-} from "./subscribers"
+export { webhooksRouter } from "./router";
+export { registerWebhooksPermissions } from "./permissions";
+export { registerWebhookSubscribers, _resetWebhookSubscribersForTesting } from "./subscribers";
 export {
   startWebhookDeliveryWorker,
   stopWebhookDeliveryWorker,
   tickOnce,
   deliverOne,
   WEBHOOK_WORKER_INTERVAL_MS,
-} from "./worker"
+} from "./worker";
 export {
   setWebhookSecretStore,
+  setWebhookSecretResolver,
+  makeEnvVarSecretResolver,
   rememberSecret,
   resolveSecret,
   forgetSecret,
   type SecretStore,
-} from "./secret-store"
+  type WebhookSecretResolver,
+} from "./secret-store";
 export {
   hashSecret,
   mintSecret,
   signBody,
   buildDeliveryHeaders,
   computeIdempotencyKey,
-} from "./secrets"
+} from "./secrets";
 export {
   findEndpointById,
   listEndpointsForOrg,
@@ -51,5 +51,5 @@ export {
   type DeliveryWithEndpoint,
   type AttemptRow,
   type SubscriptionInput,
-} from "./data"
-export * from "../contracts/index"
+} from "./data";
+export * from "../contracts/index";

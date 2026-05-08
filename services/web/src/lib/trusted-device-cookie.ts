@@ -1,9 +1,9 @@
-import "server-only"
-import { cookies, headers } from "next/headers"
-import { createServerTrpcClient } from "./trpc-server"
+import "server-only";
+import { cookies, headers } from "next/headers";
+import { createServerTrpcClient } from "./trpc-server";
 
-export const DEVICE_COOKIE_NAME = "monark_device_id"
-const MAX_AGE_SECONDS = 60 * 60 * 24 * 400
+export const DEVICE_COOKIE_NAME = "monark_device_id";
+const MAX_AGE_SECONDS = 60 * 60 * 24 * 400;
 
 // Per-request enforcement: returns true when the request comes from a
 // device the user has actively trusted (cookie present + matches a non-
@@ -19,23 +19,23 @@ const MAX_AGE_SECONDS = 60 * 60 * 24 * 400
 // is killswitched. The flag check goes through the same tRPC channel
 // used elsewhere ; cheap because the resolver caches per-request.
 export async function isCurrentDeviceTrusted(input: {
-  accessToken: string
-  userId: string
+  accessToken: string;
+  userId: string;
 }): Promise<boolean> {
-  const api = createServerTrpcClient(input.accessToken)
+  const api = createServerTrpcClient(input.accessToken);
   const flagOn = await api.featureFlags.get
     .query({ key: "auth.trusted-devices", scope: { userId: input.userId } })
-    .catch(() => true)
-  if (!flagOn) return true
+    .catch(() => true);
+  if (!flagOn) return true;
 
-  const cookieStore = await cookies()
-  const cookieValue = cookieStore.get(DEVICE_COOKIE_NAME)?.value ?? null
-  if (!cookieValue) return false
+  const cookieStore = await cookies();
+  const cookieValue = cookieStore.get(DEVICE_COOKIE_NAME)?.value ?? null;
+  if (!cookieValue) return false;
 
   const matched = await api.auth.trustedDevices.currentDeviceId
     .query({ cookieValue })
-    .catch(() => null)
-  return matched !== null
+    .catch(() => null);
+  return matched !== null;
 }
 
 // No-verify JWT claim extraction. Safe because the api verifies the same
@@ -43,13 +43,13 @@ export async function isCurrentDeviceTrusted(input: {
 // reading a claim we already trust to scope the per-device session record.
 function extractSessionId(accessToken: string): string | null {
   try {
-    const payload = accessToken.split(".")[1]
-    if (!payload) return null
-    const json = Buffer.from(payload, "base64url").toString("utf8")
-    const claims = JSON.parse(json) as { session_id?: unknown }
-    return typeof claims.session_id === "string" ? claims.session_id : null
+    const payload = accessToken.split(".")[1];
+    if (!payload) return null;
+    const json = Buffer.from(payload, "base64url").toString("utf8");
+    const claims = JSON.parse(json) as { session_id?: unknown };
+    return typeof claims.session_id === "string" ? claims.session_id : null;
   } catch {
-    return null
+    return null;
   }
 }
 
@@ -59,7 +59,7 @@ function extractSessionId(accessToken: string): string | null {
 // as "no IP" and let the card render its dev-mode "Local development"
 // fallback.
 function isLoopbackIp(ip: string): boolean {
-  return ip === "::1" || ip === "127.0.0.1" || ip === "::ffff:127.0.0.1"
+  return ip === "::1" || ip === "127.0.0.1" || ip === "::ffff:127.0.0.1";
 }
 
 // Hosting-platform edge headers carrying the request's country code.
@@ -68,20 +68,20 @@ function isLoopbackIp(ip: string): boolean {
 // (no header set) and the column stays null in the DB until a GeoIP
 // lookup is wired.
 const EDGE_COUNTRY_HEADERS = [
-  "x-vercel-ip-country",      // Vercel
-  "cf-ipcountry",             // Cloudflare
+  "x-vercel-ip-country", // Vercel
+  "cf-ipcountry", // Cloudflare
   "cloudfront-viewer-country", // AWS CloudFront
-  "x-country-code",           // Generic / Render / Fly proxies
-]
+  "x-country-code", // Generic / Render / Fly proxies
+];
 
 function readCountryFromHeaders(hdrs: Headers): string | null {
   for (const name of EDGE_COUNTRY_HEADERS) {
-    const value = hdrs.get(name)?.trim().toUpperCase()
+    const value = hdrs.get(name)?.trim().toUpperCase();
     // Vercel returns "XX" when the lookup fails ; treat that the same
     // as missing rather than persisting it as a real country code.
-    if (value && value.length === 2 && value !== "XX") return value
+    if (value && value.length === 2 && value !== "XX") return value;
   }
-  return null
+  return null;
 }
 
 // Reads the User-Agent Client Hints the middleware opted into via
@@ -92,23 +92,26 @@ function readCountryFromHeaders(hdrs: Headers): string | null {
 // per the spec ; strip the wrapping quotes here too so downstream
 // consumers see the bare model string.
 type ClientHints = {
-  model?: string
-  platformVersion?: string
-  fullVersionList?: string
-}
+  model?: string;
+  platformVersion?: string;
+  fullVersionList?: string;
+};
 
 function unquote(value: string | null | undefined): string | undefined {
-  if (!value) return undefined
-  const trimmed = value.trim().replace(/^"(.*)"$/, "$1").trim()
-  return trimmed.length > 0 ? trimmed : undefined
+  if (!value) return undefined;
+  const trimmed = value
+    .trim()
+    .replace(/^"(.*)"$/, "$1")
+    .trim();
+  return trimmed.length > 0 ? trimmed : undefined;
 }
 
 function readClientHints(hdrs: Headers): ClientHints | null {
-  const model = unquote(hdrs.get("sec-ch-ua-model"))
-  const platformVersion = unquote(hdrs.get("sec-ch-ua-platform-version"))
-  const fullVersionList = unquote(hdrs.get("sec-ch-ua-full-version-list"))
-  if (!model && !platformVersion && !fullVersionList) return null
-  return { model, platformVersion, fullVersionList }
+  const model = unquote(hdrs.get("sec-ch-ua-model"));
+  const platformVersion = unquote(hdrs.get("sec-ch-ua-platform-version"));
+  const fullVersionList = unquote(hdrs.get("sec-ch-ua-full-version-list"));
+  if (!model && !platformVersion && !fullVersionList) return null;
+  return { model, platformVersion, fullVersionList };
 }
 
 // Reads request metadata + the existing device cookie, calls the recognize
@@ -119,9 +122,9 @@ function readClientHints(hdrs: Headers): ClientHints | null {
 // after a Supabase session cookie has been set.
 export async function recognizeDeviceAfterAuth(accessToken: string): Promise<string | null> {
   try {
-    const [cookieStore, hdrs] = await Promise.all([cookies(), headers()])
-    const existingCookieValue = cookieStore.get(DEVICE_COOKIE_NAME)?.value ?? null
-    const userAgent = hdrs.get("user-agent")
+    const [cookieStore, hdrs] = await Promise.all([cookies(), headers()]);
+    const existingCookieValue = cookieStore.get(DEVICE_COOKIE_NAME)?.value ?? null;
+    const userAgent = hdrs.get("user-agent");
     // Geolocation is meaningless in dev — there's no reverse proxy to
     // surface a real client IP, no edge geo header to surface a
     // country, and a phone hitting the dev server over the LAN
@@ -131,16 +134,14 @@ export async function recognizeDeviceAfterAuth(accessToken: string): Promise<str
     // `NODE_ENV !== "production"` + null IP + null country). UA-CH is
     // still captured because it's useful for testing the model
     // detection path locally.
-    const isProd = process.env.NODE_ENV === "production"
-    const rawIp = isProd
-      ? (hdrs.get("x-forwarded-for") ?? "").split(",")[0]?.trim() || null
-      : null
-    const ip = rawIp && !isLoopbackIp(rawIp) ? rawIp : null
-    const country = isProd ? readCountryFromHeaders(hdrs) : null
-    const clientHints = readClientHints(hdrs)
-    const supabaseSessionId = extractSessionId(accessToken)
+    const isProd = process.env.NODE_ENV === "production";
+    const rawIp = isProd ? (hdrs.get("x-forwarded-for") ?? "").split(",")[0]?.trim() || null : null;
+    const ip = rawIp && !isLoopbackIp(rawIp) ? rawIp : null;
+    const country = isProd ? readCountryFromHeaders(hdrs) : null;
+    const clientHints = readClientHints(hdrs);
+    const supabaseSessionId = extractSessionId(accessToken);
 
-    const api = createServerTrpcClient(accessToken)
+    const api = createServerTrpcClient(accessToken);
     const result = await api.auth.trustedDevices.recognize.mutate({
       userAgent,
       ip,
@@ -148,21 +149,32 @@ export async function recognizeDeviceAfterAuth(accessToken: string): Promise<str
       clientHints,
       existingCookieValue,
       supabaseSessionId,
-    })
+    });
 
     if (result.rawCookieValue) {
+      const isProd = process.env.NODE_ENV === "production";
       cookieStore.set(DEVICE_COOKIE_NAME, result.rawCookieValue, {
         httpOnly: true,
-        sameSite: "lax",
-        secure: process.env.NODE_ENV === "production",
+        // `strict` in production : the cookie is the device-recognition
+        // signal the (authed) layout reads on every page navigation, so
+        // CSRF-style cross-site attacks shouldn't be able to ride along
+        // with it. `lax` in dev because the LAN / phone-from-laptop dev
+        // flow does cross-origin navigation (laptop:3000 ↔ LAN-IP:3000)
+        // and `strict` would drop the cookie on those nav events. The
+        // session cookie's CSRF protection is separate (Supabase's
+        // own SameSite default + the action's origin check) ; flipping
+        // this one to strict tightens defence-in-depth without breaking
+        // the dev surface.
+        sameSite: isProd ? "strict" : "lax",
+        secure: isProd,
         path: "/",
         maxAge: MAX_AGE_SECONDS,
-      })
+      });
     }
-    return result.deviceId
+    return result.deviceId;
   } catch {
     // Trusted-device recognition is best-effort; never block the sign-in
     // flow on its failure.
-    return null
+    return null;
   }
 }
