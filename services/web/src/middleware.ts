@@ -53,28 +53,13 @@ export async function middleware(request: NextRequest) {
 
   await supabase.auth.getUser()
 
-  // Opt into User-Agent Client Hints. Modern Chrome / Edge on Android
-  // freeze the User-Agent's device-model field to "K" by default for
-  // privacy ; without this header we'd see "Pixel 7" reduced to "K" in
-  // the trusted-device list. The hints below are sent on the *next*
-  // request after the browser sees this header (a one-page warm-up
-  // delay), but persist for as long as the browser caches the policy.
-  // No effect on browsers that don't implement UA-CH (Firefox, Safari) ;
-  // we keep the UA-string fallback in the parser for those.
-  response.headers.append(
-    "Accept-CH",
-    "Sec-CH-UA-Model, Sec-CH-UA-Platform-Version, Sec-CH-UA-Full-Version-List",
-  )
-  // Tells the browser this hint policy applies to the whole site so it
-  // doesn't have to be re-requested on every navigation.
-  response.headers.append(
-    "Critical-CH",
-    "Sec-CH-UA-Model, Sec-CH-UA-Platform-Version",
-  )
-  response.headers.append(
-    "Permissions-Policy",
-    "ch-ua-model=(self), ch-ua-platform-version=(self), ch-ua-full-version-list=(self)",
-  )
+  // Note : `Accept-CH`, `Critical-CH`, `Permissions-Policy`, plus the
+  // CSP / HSTS / X-Frame-Options / X-Content-Type-Options /
+  // Referrer-Policy headers all live in [next.config.ts](../next.config.ts)'s
+  // `headers()` config. That puts them on the edge cache so Vercel
+  // can serve them without booting middleware on every request, and
+  // keeps middleware focused on auth state — supabase session
+  // refresh + the TOTP-pending redirect.
 
   const totpPending = request.cookies.get(TOTP_PENDING_COOKIE)?.value
   if (totpPending) {

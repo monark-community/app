@@ -151,10 +151,21 @@ export async function recognizeDeviceAfterAuth(accessToken: string): Promise<str
     })
 
     if (result.rawCookieValue) {
+      const isProd = process.env.NODE_ENV === "production"
       cookieStore.set(DEVICE_COOKIE_NAME, result.rawCookieValue, {
         httpOnly: true,
-        sameSite: "lax",
-        secure: process.env.NODE_ENV === "production",
+        // `strict` in production : the cookie is the device-recognition
+        // signal the (authed) layout reads on every page navigation, so
+        // CSRF-style cross-site attacks shouldn't be able to ride along
+        // with it. `lax` in dev because the LAN / phone-from-laptop dev
+        // flow does cross-origin navigation (laptop:3000 ↔ LAN-IP:3000)
+        // and `strict` would drop the cookie on those nav events. The
+        // session cookie's CSRF protection is separate (Supabase's
+        // own SameSite default + the action's origin check) ; flipping
+        // this one to strict tightens defence-in-depth without breaking
+        // the dev surface.
+        sameSite: isProd ? "strict" : "lax",
+        secure: isProd,
         path: "/",
         maxAge: MAX_AGE_SECONDS,
       })

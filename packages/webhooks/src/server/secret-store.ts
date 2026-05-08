@@ -137,6 +137,104 @@ export function setWebhookSecretStore(store: SecretStore): void {
   activeStore = store
 }
 
+/**
+ * Read-only resolver registered at api boot. Called by the worker
+ * before signing each delivery. Returns the plaintext secret for
+ * the endpoint or `null` when it can't be sourced (rotated, deleted,
+ * deploy-out-of-sync) ; null records a delivery error and the
+ * endpoint eventually auto-disables.
+ *
+ * The resolver runs AFTER the in-memory cache (a freshly minted /
+ * rotated secret is always live for the current process without
+ * waiting for the operator to update env vars) and AFTER the
+ * `activeStore` (the legacy SecretStore path that the dev file-
+ * backed store uses). Only consulted when neither earlier source
+ * has a value, so wiring `setWebhookSecretResolver` doesn't break
+ * dev's file-backed flow or in-memory just-rotated secrets.
+ *
+ * Backing-store choices + the operator rotation flow are documented
+ * in [docs/technical-documentation/webhook-secret-resolver.md](../../../docs/technical-documentation/webhook-secret-resolver.md).
+ */
+export type WebhookSecretResolver = (
+  endpointId: string,
+) => Promise<string | null>
+
+let activeResolver: WebhookSecretResolver | null = null
+
+export function setWebhookSecretResolver(
+  resolver: WebhookSecretResolver | null,
+): void {
+  activeResolver = resolver
+}
+
+/**
+ * Built-in env-var resolver. Reads `WEBHOOK_SECRETS_JSON` (a JSON
+ * map of `{ endpointId: plaintext }`) once on first call and falls
+ * back to per-endpoint `WEBHOOK_SECRET_<endpointId>` env vars when
+ * the map doesn't carry the requested id. Lets a single-tenant
+ * deploy ship without an external secret manager :
+ *
+ *   WEBHOOK_SECRETS_JSON='{"clx9z…":"whsec_AbC123…"}'
+ *   # — or —
+ *   WEBHOOK_SECRET_clx9zEndpointId=whsec_AbC123…
+ *
+ * `endpointId` is validated against `^[a-z0-9]+$` defensively
+ * before being interpolated into the env-var lookup so a hostile
+ * id can't reach into unrelated env vars (the cuid() format is
+ * alphanumeric anyway). Cache is keyed off the JSON string so a
+ * platform that sets / unsets WEBHOOK_SECRETS_JSON live (Vercel,
+ * Render's "save and redeploy") picks up the change without an api
+ * restart — Render redeploys anyway, but the cache rebuild is
+ * cheap enough to not bother optimising.
+ */
+const ENDPOINT_ID_PATTERN = /^[a-z0-9]+$/i
+const ENV_VAR_PREFIX = "WEBHOOK_SECRET_"
+
+let parsedJsonCache: { source: string; map: Record<string, string> } | null =
+  null
+
+function loadJsonMap(): Record<string, string> {
+  const raw = process.env.WEBHOOK_SECRETS_JSON
+  if (!raw) {
+    parsedJsonCache = null
+    return {}
+  }
+  if (parsedJsonCache && parsedJsonCache.source === raw) {
+    return parsedJsonCache.map
+  }
+  try {
+    const parsed = JSON.parse(raw) as unknown
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      throw new Error("WEBHOOK_SECRETS_JSON must be a JSON object")
+    }
+    const map: Record<string, string> = {}
+    for (const [key, value] of Object.entries(parsed as Record<string, unknown>)) {
+      if (typeof value !== "string") continue
+      map[key] = value
+    }
+    parsedJsonCache = { source: raw, map }
+    return map
+  } catch (err) {
+    logger.error(
+      { err },
+      "WEBHOOK_SECRETS_JSON failed to parse ; treating as empty",
+    )
+    parsedJsonCache = { source: raw, map: {} }
+    return {}
+  }
+}
+
+export function makeEnvVarSecretResolver(): WebhookSecretResolver {
+  return async (endpointId) => {
+    if (!ENDPOINT_ID_PATTERN.test(endpointId)) return null
+    const fromJson = loadJsonMap()[endpointId]
+    if (typeof fromJson === "string" && fromJson.length > 0) return fromJson
+    const fromVar = process.env[`${ENV_VAR_PREFIX}${endpointId}`]
+    if (typeof fromVar === "string" && fromVar.length > 0) return fromVar
+    return null
+  }
+}
+
 export async function rememberSecret(
   endpointId: string,
   plaintext: string,
@@ -150,9 +248,27 @@ export async function resolveSecret(
 ): Promise<string | null> {
   const cached = inMemoryCache.get(endpointId)
   if (cached !== undefined) return cached
-  const value = await activeStore.get(endpointId)
-  if (value !== null) inMemoryCache.set(endpointId, value)
-  return value
+  const fromStore = await activeStore.get(endpointId)
+  if (fromStore !== null) {
+    inMemoryCache.set(endpointId, fromStore)
+    return fromStore
+  }
+  if (activeResolver) {
+    const fromResolver = await activeResolver(endpointId).catch(
+      (err: unknown) => {
+        logger.error(
+          { err, endpointId },
+          "webhook secret resolver threw ; treating as null",
+        )
+        return null
+      },
+    )
+    if (fromResolver !== null) {
+      inMemoryCache.set(endpointId, fromResolver)
+      return fromResolver
+    }
+  }
+  return null
 }
 
 export async function forgetSecret(endpointId: string): Promise<void> {
@@ -163,4 +279,6 @@ export async function forgetSecret(endpointId: string): Promise<void> {
 export function _resetSecretStoreForTesting(): void {
   inMemoryCache.clear()
   activeStore = new InMemoryStore()
+  activeResolver = null
+  parsedJsonCache = null
 }

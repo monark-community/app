@@ -34,8 +34,10 @@ import {
   registerUsersPermissions,
 } from "@monark/users/server"
 import {
+  makeEnvVarSecretResolver,
   registerWebhookSubscribers,
   registerWebhooksPermissions,
+  setWebhookSecretResolver,
   startWebhookDeliveryWorker,
   tickOnce as webhookWorkerTick,
 } from "@monark/webhooks/server"
@@ -101,6 +103,19 @@ registerWebhookSubscribers()
 // writes (the testcontainer provisions its own state).
 const isEntrypoint = process.argv[1] === fileURLToPath(import.meta.url)
 function startBackgroundWork(): void {
+  // Wire the webhook secret resolver BEFORE the worker so the first
+  // delivery already has a path to the plaintext secret. The built-in
+  // env-var resolver reads `WEBHOOK_SECRETS_JSON` (a JSON map) +
+  // per-endpoint `WEBHOOK_SECRET_<endpointId>` env vars ; production
+  // deploys that need a managed secret store (AWS Secrets Manager,
+  // Vault, etc.) replace this call with their own
+  // `setWebhookSecretResolver(...)`. Wiring is done unconditionally
+  // — if neither env var is set, the resolver returns null and
+  // deliveries record the "no plaintext secret available" error in
+  // the admin UI, which is exactly the right surface for the misconfig.
+  // See [docs/technical-documentation/webhook-secret-resolver.md](../../docs/technical-documentation/webhook-secret-resolver.md).
+  setWebhookSecretResolver(makeEnvVarSecretResolver())
+
   // Webhook delivery worker drains the outbox on a setInterval. The
   // `/cron/sweep-webhook-deliveries` endpoint below is an external
   // fallback (Vercel Cron, GitHub Actions, k8s CronJob) so a single

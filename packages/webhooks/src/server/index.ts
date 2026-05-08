@@ -13,10 +13,13 @@ export {
 } from "./worker"
 export {
   setWebhookSecretStore,
+  setWebhookSecretResolver,
+  makeEnvVarSecretResolver,
   rememberSecret,
   resolveSecret,
   forgetSecret,
   type SecretStore,
+  type WebhookSecretResolver,
 } from "./secret-store"
 export {
   hashSecret,

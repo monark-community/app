@@ -9,6 +9,8 @@
     "node": ">=22"
   },
   "scripts": {
+    "bootstrap": "tsx tools/bootstrap.ts",
+    "prepare": "simple-git-hooks",
     "dev": "turbo run dev",
     "dev:tools": "tsx tools/open-tool.ts",
     "dev:tools:mail": "tsx tools/open-tool.ts mail",
@@ -52,11 +54,25 @@
     "istanbul-lib-coverage": "^3.2.2",
     "istanbul-lib-report": "^3.0.1",
     "istanbul-reports": "^3.2.0",
+    "lint-staged": "^17.0.0",
     "prettier": "^3.4.0",
+    "simple-git-hooks": "^2.13.0",
     "supabase": "^2.95.4",
     "tsx": "^4.21.0",
     "turbo": "^2.9.10",
     "typescript": "^5.7.0",
     "typescript-eslint": "^8.59.2"
+  },
+  "simple-git-hooks": {
+    "pre-commit": "pnpm exec lint-staged"
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "eslint --fix --max-warnings=0",
+      "prettier --write"
+    ],
+    "*.{js,mjs,cjs,json,yaml,yml,md}": [
+      "prettier --write"
+    ]
   }
 }

@@ -12,7 +12,7 @@
     }
   },
   "scripts": {
-    "postinstall": "prisma generate",
+    "postinstall": "node scripts/postinstall.mjs",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src",
     "db:generate": "prisma generate",
