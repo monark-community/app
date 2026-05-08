@@ -86,6 +86,34 @@ jobs:
   e2e:
     runs-on: ubuntu-latest
     needs: verify
+    # `.env` files are gitignored, so CI has nothing to read at the
+    # filesystem level. Set the local-stack defaults at the JOB level
+    # so every step (Prisma migrate + the api/web processes that
+    # Playwright spins up via `pnpm dev`) inherits them. Values match
+    # what `supabase start` boots locally — fixed credentials baked
+    # into the Supabase CLI's dev stack ; safe to hardcode because
+    # the stack only listens on localhost and never leaves CI.
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:54322/postgres
+      DIRECT_URL: postgresql://postgres:postgres@localhost:54322/postgres
+      SUPABASE_URL: http://127.0.0.1:54321
+      SUPABASE_PUBLISHABLE_KEY: sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH
+      SUPABASE_SECRET_KEY: sb_secret_N7UND0UgjKTVK-Uodkm0Hg_xSvEMPvz
+      NEXT_PUBLIC_APP_URL: http://localhost:3000
+      NEXT_PUBLIC_API_URL: http://localhost:4000
+      NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH
+      WEB_ORIGIN: http://localhost:3000
+      APP_URL: http://localhost:3000
+      # Supabase's bundled Inbucket SMTP listener.
+      SMTP_URL: smtp://localhost:54325
+      SMTP_FROM: "Monark <noreply@monark.io>"
+      # Deterministic test value ; never used outside the e2e job.
+      TOTP_ENCRYPTION_KEY: d371e31288d4f5e19dd6e192ad7ab8edb3b2143695b23c70afba4d59ad8584c7
+      # Single-tenant bootstrap so `/setup` finishes provisioning the
+      # singleton org before any e2e spec hits a protected route.
+      INITIAL_ORG_SLUG: monark
+      INITIAL_ORG_NAME: Monark
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -119,12 +147,10 @@ jobs:
       - name: Run end-to-end suite
         run: pnpm test:e2e
         env:
-          # Inbucket SMTP listener (catches outbound mail so the
-          # specs can poll for verification codes + reset tokens).
-          SMTP_URL: smtp://localhost:54325
-          # Standard local-dev URLs ; the playwright config + the
-          # web/api .env defaults agree on these ports.
-          APP_URL: http://localhost:3000
+          # `API_URL` is the only spec-only var that isn't already on
+          # the job-level env block (which carries `APP_URL` since the
+          # api process needs it for cross-origin checks). Specs use
+          # this to reach the api directly.
           API_URL: http://localhost:4000
 
       # Always upload the Playwright HTML report so failures are
