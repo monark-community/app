@@ -1,5 +1,26 @@
-import { describe, expect, it } from "vitest"
+import { afterEach, beforeEach, describe, expect, it } from "vitest"
+import { _resetNotificationRegistryForTesting } from "../src/contracts/registry"
+import {
+  _resetCoreKindsRegisteredForTesting,
+  registerCoreNotificationKinds,
+} from "../src/server/register-core-kinds"
 import { resolveChannelEnabled, type PrefRow } from "../src/server/prefs"
+
+// `resolveChannelEnabled` looks the kind up via `getNotificationKindDef`,
+// which means the registry has to be populated before the resolver
+// can return anything other than `false`. Mirrors the bootstrap
+// `registry.test.ts` does so the suite reflects how the runtime
+// actually wires kinds at api boot.
+beforeEach(() => {
+  _resetNotificationRegistryForTesting()
+  _resetCoreKindsRegisteredForTesting()
+  registerCoreNotificationKinds()
+})
+
+afterEach(() => {
+  _resetNotificationRegistryForTesting()
+  _resetCoreKindsRegisteredForTesting()
+})
 
 describe("notifications/prefs.resolveChannelEnabled", () => {
   it("uses the registry default when no override row exists", () => {
