@@ -64,12 +64,13 @@
     "typescript-eslint": "^8.59.2"
   },
   "simple-git-hooks": {
-    "pre-commit": "pnpm exec lint-staged"
+    "pre-commit": "pnpm exec lint-staged",
+    "pre-push": "pnpm lint"
   },
   "lint-staged": {
     "*.{ts,tsx}": [
-      "eslint --fix --max-warnings=0",
-      "prettier --write"
+      "prettier --write",
+      "eslint --fix --max-warnings=0"
     ],
     "*.{js,mjs,cjs,json,yaml,yml,md}": [
       "prettier --write"
