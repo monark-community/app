@@ -112,7 +112,7 @@ jobs:
       # bundles every package's `coverage/unit/` so the downstream
       # job has a single download to do.
       - name: Upload unit coverage
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-unit
           path: |
@@ -148,7 +148,7 @@ jobs:
         run: pnpm test:integration:coverage
 
       - name: Upload integration coverage
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-integration
           path: |
