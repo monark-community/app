@@ -15,23 +15,22 @@
 // .mjs (not .ts) so it runs without depending on tsx — postinstall
 // can fire during a partial install where transitive devDeps (like
 // tsx) haven't been linked yet.
-import { spawnSync } from "node:child_process"
+import { spawnSync } from "node:child_process";
 
 const result = spawnSync("prisma", ["generate"], {
   stdio: ["inherit", "inherit", "pipe"],
   shell: true,
   encoding: "utf8",
-})
+});
 
-const stderr = result.stderr ?? ""
-process.stderr.write(stderr)
+const stderr = result.stderr ?? "";
+process.stderr.write(stderr);
 
 if (result.status === 0) {
-  process.exit(0)
+  process.exit(0);
 }
 
-const looksLikeWindowsLock =
-  process.platform === "win32" && /EPERM|EBUSY|EACCES/i.test(stderr)
+const looksLikeWindowsLock = process.platform === "win32" && /EPERM|EBUSY|EACCES/i.test(stderr);
 
 if (looksLikeWindowsLock) {
   console.warn(
@@ -39,8 +38,8 @@ if (looksLikeWindowsLock) {
       "the query engine DLL is held open (dev server running?). The existing " +
       "generated client is still usable ; stop `pnpm dev` and run " +
       "`pnpm db:generate` after a schema change.\n",
-  )
-  process.exit(0)
+  );
+  process.exit(0);
 }
 
-process.exit(result.status ?? 1)
+process.exit(result.status ?? 1);

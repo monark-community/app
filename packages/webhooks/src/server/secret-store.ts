@@ -1,6 +1,6 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs"
-import { dirname, resolve } from "node:path"
-import { logger } from "@monark/common"
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { logger } from "@monark/common";
 
 /**
  * Secret store for webhook signing keys. Production deploys swap the
@@ -16,73 +16,73 @@ import { logger } from "@monark/common"
  * store on the hot path.
  */
 export type SecretStore = {
-  put(endpointId: string, plaintext: string): Promise<void>
-  get(endpointId: string): Promise<string | null>
-  delete(endpointId: string): Promise<void>
-}
+  put(endpointId: string, plaintext: string): Promise<void>;
+  get(endpointId: string): Promise<string | null>;
+  delete(endpointId: string): Promise<void>;
+};
 
-const inMemoryCache = new Map<string, string>()
+const inMemoryCache = new Map<string, string>();
 
 class InMemoryStore implements SecretStore {
   async put(endpointId: string, plaintext: string): Promise<void> {
-    inMemoryCache.set(endpointId, plaintext)
+    inMemoryCache.set(endpointId, plaintext);
   }
   async get(endpointId: string): Promise<string | null> {
-    return inMemoryCache.get(endpointId) ?? null
+    return inMemoryCache.get(endpointId) ?? null;
   }
   async delete(endpointId: string): Promise<void> {
-    inMemoryCache.delete(endpointId)
+    inMemoryCache.delete(endpointId);
   }
 }
 
 class FileBackedStore implements SecretStore {
   constructor(private readonly path: string) {
     if (!existsSync(this.path)) {
-      mkdirSync(dirname(this.path), { recursive: true })
-      writeFileSync(this.path, "{}", { encoding: "utf8", mode: 0o600 })
+      mkdirSync(dirname(this.path), { recursive: true });
+      writeFileSync(this.path, "{}", { encoding: "utf8", mode: 0o600 });
     }
   }
   private read(): Record<string, string> {
     try {
-      const raw = readFileSync(this.path, "utf8")
-      const parsed = JSON.parse(raw) as unknown
+      const raw = readFileSync(this.path, "utf8");
+      const parsed = JSON.parse(raw) as unknown;
       if (parsed && typeof parsed === "object") {
-        return parsed as Record<string, string>
+        return parsed as Record<string, string>;
       }
     } catch (err) {
       logger.error(
         { err, path: this.path },
         "webhook secrets file parse failed ; treating as empty",
-      )
+      );
     }
-    return {}
+    return {};
   }
   private write(map: Record<string, string>): void {
     writeFileSync(this.path, JSON.stringify(map, null, 2), {
       encoding: "utf8",
       mode: 0o600,
-    })
+    });
   }
   async put(endpointId: string, plaintext: string): Promise<void> {
-    inMemoryCache.set(endpointId, plaintext)
-    const map = this.read()
-    map[endpointId] = plaintext
-    this.write(map)
+    inMemoryCache.set(endpointId, plaintext);
+    const map = this.read();
+    map[endpointId] = plaintext;
+    this.write(map);
   }
   async get(endpointId: string): Promise<string | null> {
-    const cached = inMemoryCache.get(endpointId)
-    if (cached !== undefined) return cached
-    const map = this.read()
-    const value = map[endpointId]
-    if (value !== undefined) inMemoryCache.set(endpointId, value)
-    return value ?? null
+    const cached = inMemoryCache.get(endpointId);
+    if (cached !== undefined) return cached;
+    const map = this.read();
+    const value = map[endpointId];
+    if (value !== undefined) inMemoryCache.set(endpointId, value);
+    return value ?? null;
   }
   async delete(endpointId: string): Promise<void> {
-    inMemoryCache.delete(endpointId)
-    const map = this.read()
+    inMemoryCache.delete(endpointId);
+    const map = this.read();
     if (endpointId in map) {
-      delete map[endpointId]
-      this.write(map)
+      delete map[endpointId];
+      this.write(map);
     }
   }
 }
@@ -92,15 +92,11 @@ class FileBackedStore implements SecretStore {
 // repo's top-level `.cache/` rule. Operators who want a different
 // path (shared across multiple processes, or pinned to an absolute
 // location) override via `MONARK_DEV_WEBHOOK_SECRETS_FILE`.
-const DEFAULT_DEV_PATH = resolve(
-  process.cwd(),
-  ".cache",
-  "monark-webhook-secrets.json",
-)
+const DEFAULT_DEV_PATH = resolve(process.cwd(), ".cache", "monark-webhook-secrets.json");
 
 let activeStore: SecretStore = (() => {
-  const explicit = process.env.MONARK_DEV_WEBHOOK_SECRETS_FILE
-  const isProd = process.env.NODE_ENV === "production"
+  const explicit = process.env.MONARK_DEV_WEBHOOK_SECRETS_FILE;
+  const isProd = process.env.NODE_ENV === "production";
 
   // Production : never auto-engage a file-backed store. The deploy
   // is expected to wire `setWebhookSecretStore()` to AWS Secrets
@@ -114,10 +110,10 @@ let activeStore: SecretStore = (() => {
       logger.warn(
         { path: explicit },
         "webhook secret store : file-backed in production via MONARK_DEV_WEBHOOK_SECRETS_FILE — consider migrating to a managed secret store",
-      )
-      return new FileBackedStore(explicit)
+      );
+      return new FileBackedStore(explicit);
     }
-    return new InMemoryStore()
+    return new InMemoryStore();
   }
 
   // Non-production : default to file-backed so secrets survive
@@ -125,16 +121,16 @@ let activeStore: SecretStore = (() => {
   // in-memory map and existing endpoints fail with "no plaintext
   // secret available" until rotated. The default path is
   // gitignored ; setting `MONARK_DEV_WEBHOOK_SECRETS_FILE` overrides.
-  const path = explicit ?? DEFAULT_DEV_PATH
+  const path = explicit ?? DEFAULT_DEV_PATH;
   logger.info(
     { path, fromEnv: explicit !== undefined },
     "webhook secret store : file-backed (dev)",
-  )
-  return new FileBackedStore(path)
-})()
+  );
+  return new FileBackedStore(path);
+})();
 
 export function setWebhookSecretStore(store: SecretStore): void {
-  activeStore = store
+  activeStore = store;
 }
 
 /**
@@ -155,16 +151,12 @@ export function setWebhookSecretStore(store: SecretStore): void {
  * Backing-store choices + the operator rotation flow are documented
  * in [docs/technical-documentation/webhook-secret-resolver.md](../../../docs/technical-documentation/webhook-secret-resolver.md).
  */
-export type WebhookSecretResolver = (
-  endpointId: string,
-) => Promise<string | null>
+export type WebhookSecretResolver = (endpointId: string) => Promise<string | null>;
 
-let activeResolver: WebhookSecretResolver | null = null
+let activeResolver: WebhookSecretResolver | null = null;
 
-export function setWebhookSecretResolver(
-  resolver: WebhookSecretResolver | null,
-): void {
-  activeResolver = resolver
+export function setWebhookSecretResolver(resolver: WebhookSecretResolver | null): void {
+  activeResolver = resolver;
 }
 
 /**
@@ -187,98 +179,84 @@ export function setWebhookSecretResolver(
  * restart — Render redeploys anyway, but the cache rebuild is
  * cheap enough to not bother optimising.
  */
-const ENDPOINT_ID_PATTERN = /^[a-z0-9]+$/i
-const ENV_VAR_PREFIX = "WEBHOOK_SECRET_"
+const ENDPOINT_ID_PATTERN = /^[a-z0-9]+$/i;
+const ENV_VAR_PREFIX = "WEBHOOK_SECRET_";
 
-let parsedJsonCache: { source: string; map: Record<string, string> } | null =
-  null
+let parsedJsonCache: { source: string; map: Record<string, string> } | null = null;
 
 function loadJsonMap(): Record<string, string> {
-  const raw = process.env.WEBHOOK_SECRETS_JSON
+  const raw = process.env.WEBHOOK_SECRETS_JSON;
   if (!raw) {
-    parsedJsonCache = null
-    return {}
+    parsedJsonCache = null;
+    return {};
   }
   if (parsedJsonCache && parsedJsonCache.source === raw) {
-    return parsedJsonCache.map
+    return parsedJsonCache.map;
   }
   try {
-    const parsed = JSON.parse(raw) as unknown
+    const parsed = JSON.parse(raw) as unknown;
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-      throw new Error("WEBHOOK_SECRETS_JSON must be a JSON object")
+      throw new Error("WEBHOOK_SECRETS_JSON must be a JSON object");
     }
-    const map: Record<string, string> = {}
+    const map: Record<string, string> = {};
     for (const [key, value] of Object.entries(parsed as Record<string, unknown>)) {
-      if (typeof value !== "string") continue
-      map[key] = value
+      if (typeof value !== "string") continue;
+      map[key] = value;
     }
-    parsedJsonCache = { source: raw, map }
-    return map
+    parsedJsonCache = { source: raw, map };
+    return map;
   } catch (err) {
-    logger.error(
-      { err },
-      "WEBHOOK_SECRETS_JSON failed to parse ; treating as empty",
-    )
-    parsedJsonCache = { source: raw, map: {} }
-    return {}
+    logger.error({ err }, "WEBHOOK_SECRETS_JSON failed to parse ; treating as empty");
+    parsedJsonCache = { source: raw, map: {} };
+    return {};
   }
 }
 
 export function makeEnvVarSecretResolver(): WebhookSecretResolver {
   return async (endpointId) => {
-    if (!ENDPOINT_ID_PATTERN.test(endpointId)) return null
-    const fromJson = loadJsonMap()[endpointId]
-    if (typeof fromJson === "string" && fromJson.length > 0) return fromJson
-    const fromVar = process.env[`${ENV_VAR_PREFIX}${endpointId}`]
-    if (typeof fromVar === "string" && fromVar.length > 0) return fromVar
-    return null
-  }
+    if (!ENDPOINT_ID_PATTERN.test(endpointId)) return null;
+    const fromJson = loadJsonMap()[endpointId];
+    if (typeof fromJson === "string" && fromJson.length > 0) return fromJson;
+    const fromVar = process.env[`${ENV_VAR_PREFIX}${endpointId}`];
+    if (typeof fromVar === "string" && fromVar.length > 0) return fromVar;
+    return null;
+  };
 }
 
-export async function rememberSecret(
-  endpointId: string,
-  plaintext: string,
-): Promise<void> {
-  inMemoryCache.set(endpointId, plaintext)
-  await activeStore.put(endpointId, plaintext)
+export async function rememberSecret(endpointId: string, plaintext: string): Promise<void> {
+  inMemoryCache.set(endpointId, plaintext);
+  await activeStore.put(endpointId, plaintext);
 }
 
-export async function resolveSecret(
-  endpointId: string,
-): Promise<string | null> {
-  const cached = inMemoryCache.get(endpointId)
-  if (cached !== undefined) return cached
-  const fromStore = await activeStore.get(endpointId)
+export async function resolveSecret(endpointId: string): Promise<string | null> {
+  const cached = inMemoryCache.get(endpointId);
+  if (cached !== undefined) return cached;
+  const fromStore = await activeStore.get(endpointId);
   if (fromStore !== null) {
-    inMemoryCache.set(endpointId, fromStore)
-    return fromStore
+    inMemoryCache.set(endpointId, fromStore);
+    return fromStore;
   }
   if (activeResolver) {
-    const fromResolver = await activeResolver(endpointId).catch(
-      (err: unknown) => {
-        logger.error(
-          { err, endpointId },
-          "webhook secret resolver threw ; treating as null",
-        )
-        return null
-      },
-    )
+    const fromResolver = await activeResolver(endpointId).catch((err: unknown) => {
+      logger.error({ err, endpointId }, "webhook secret resolver threw ; treating as null");
+      return null;
+    });
     if (fromResolver !== null) {
-      inMemoryCache.set(endpointId, fromResolver)
-      return fromResolver
+      inMemoryCache.set(endpointId, fromResolver);
+      return fromResolver;
     }
   }
-  return null
+  return null;
 }
 
 export async function forgetSecret(endpointId: string): Promise<void> {
-  inMemoryCache.delete(endpointId)
-  await activeStore.delete(endpointId)
+  inMemoryCache.delete(endpointId);
+  await activeStore.delete(endpointId);
 }
 
 export function _resetSecretStoreForTesting(): void {
-  inMemoryCache.clear()
-  activeStore = new InMemoryStore()
-  activeResolver = null
-  parsedJsonCache = null
+  inMemoryCache.clear();
+  activeStore = new InMemoryStore();
+  activeResolver = null;
+  parsedJsonCache = null;
 }

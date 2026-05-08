@@ -1,38 +1,32 @@
-import { fileURLToPath } from "node:url"
-import express from "express"
-import cors from "cors"
-import { createExpressMiddleware } from "@trpc/server/adapters/express"
-import { logger } from "@monark/common"
+import { fileURLToPath } from "node:url";
+import express from "express";
+import cors from "cors";
+import { createExpressMiddleware } from "@trpc/server/adapters/express";
+import { logger } from "@monark/common";
 import {
   processExpiredDeletions,
   registerAuthEventTypes,
   registerAuthFeatureFlags,
-} from "@monark/auth/server"
+} from "@monark/auth/server";
 import {
   registerFeatureFlagsEventTypes,
   registerFeatureFlagsPermissions,
   syncFlagsToDatabase,
-} from "@monark/feature-flags/server"
+} from "@monark/feature-flags/server";
 import {
   registerCoreNotificationKinds,
   registerNotificationsEventTypes,
   registerNotificationSubscribers,
-} from "@monark/notifications/server"
+} from "@monark/notifications/server";
 import {
   ensureSingletonOrganizationFromInput,
   registerOrganizationsEventTypes,
   registerOrganizationsFeatureFlags,
   registerOrganizationsPermissions,
   registerOrganizationsSubscribers,
-} from "@monark/organizations/server"
-import {
-  registerRbacEventTypes,
-  registerRbacPermissions,
-} from "@monark/rbac/server"
-import {
-  registerUsersEventTypes,
-  registerUsersPermissions,
-} from "@monark/users/server"
+} from "@monark/organizations/server";
+import { registerRbacEventTypes, registerRbacPermissions } from "@monark/rbac/server";
+import { registerUsersEventTypes, registerUsersPermissions } from "@monark/users/server";
 import {
   makeEnvVarSecretResolver,
   registerWebhookSubscribers,
@@ -40,12 +34,12 @@ import {
   setWebhookSecretResolver,
   startWebhookDeliveryWorker,
   tickOnce as webhookWorkerTick,
-} from "@monark/webhooks/server"
-import { evaluateCronAuth } from "./lib/cron-auth"
-import { env } from "./lib/env"
-import { httpLogger } from "./lib/http-logger"
-import { appRouter } from "./trpc/router"
-import { createContext } from "./trpc/context"
+} from "@monark/webhooks/server";
+import { evaluateCronAuth } from "./lib/cron-auth";
+import { env } from "./lib/env";
+import { httpLogger } from "./lib/http-logger";
+import { appRouter } from "./trpc/router";
+import { createContext } from "./trpc/context";
 
 // ── Boot-time module registrations ───────────────────────────────────
 // Every module that owns flags or permissions registers them here, in
@@ -58,14 +52,14 @@ import { createContext } from "./trpc/context"
 // `register<Module>Permissions()` calls in here too. The
 // `registerFromManifest()`-style codegen lands in a later phase ; for
 // now the manifest is hand-maintained.
-registerAuthFeatureFlags()
-registerOrganizationsFeatureFlags()
+registerAuthFeatureFlags();
+registerOrganizationsFeatureFlags();
 
-registerFeatureFlagsPermissions()
-registerOrganizationsPermissions()
-registerRbacPermissions()
-registerUsersPermissions()
-registerWebhooksPermissions()
+registerFeatureFlagsPermissions();
+registerOrganizationsPermissions();
+registerRbacPermissions();
+registerUsersPermissions();
+registerWebhooksPermissions();
 
 // Event-type registrations feed the webhook admin UI's guided
 // subscription picker. Order doesn't matter ; the registry is a flat
@@ -73,17 +67,17 @@ registerWebhooksPermissions()
 // event types (`webhook.*`) intentionally aren't registered — the
 // subscriber filter skips them to avoid recursion, so showing them
 // in the picker would be misleading.
-registerAuthEventTypes()
-registerFeatureFlagsEventTypes()
-registerNotificationsEventTypes()
-registerOrganizationsEventTypes()
-registerRbacEventTypes()
-registerUsersEventTypes()
+registerAuthEventTypes();
+registerFeatureFlagsEventTypes();
+registerNotificationsEventTypes();
+registerOrganizationsEventTypes();
+registerRbacEventTypes();
+registerUsersEventTypes();
 
 // Notification kinds + templates need to be registered before any
 // subscriber can call `notify()` ; subscriber registration follows
 // kind registration.
-registerCoreNotificationKinds()
+registerCoreNotificationKinds();
 
 // Domain event listeners are registered once at process boot. Add new ones
 // here as more event-driven side-effects come online. The organizations
@@ -92,16 +86,16 @@ registerCoreNotificationKinds()
 // bus before webhook routing decides which org-scoped endpoints
 // receive a derived event. The webhook subscriber registers last so
 // its outbox writer sees a stable event-bus configuration.
-registerOrganizationsSubscribers()
-registerNotificationSubscribers()
-registerWebhookSubscribers()
+registerOrganizationsSubscribers();
+registerNotificationSubscribers();
+registerWebhookSubscribers();
 
 // Background work that should only fire when this file is the
 // process entrypoint — the integration suite imports `app` to drive
 // supertest-style requests and doesn't want the worker setInterval
 // (would leak handles + log noise) or the bootstrap / flag-sync DB
 // writes (the testcontainer provisions its own state).
-const isEntrypoint = process.argv[1] === fileURLToPath(import.meta.url)
+const isEntrypoint = process.argv[1] === fileURLToPath(import.meta.url);
 function startBackgroundWork(): void {
   // Wire the webhook secret resolver BEFORE the worker so the first
   // delivery already has a path to the plaintext secret. The built-in
@@ -114,13 +108,13 @@ function startBackgroundWork(): void {
   // deliveries record the "no plaintext secret available" error in
   // the admin UI, which is exactly the right surface for the misconfig.
   // See [docs/technical-documentation/webhook-secret-resolver.md](../../docs/technical-documentation/webhook-secret-resolver.md).
-  setWebhookSecretResolver(makeEnvVarSecretResolver())
+  setWebhookSecretResolver(makeEnvVarSecretResolver());
 
   // Webhook delivery worker drains the outbox on a setInterval. The
   // `/cron/sweep-webhook-deliveries` endpoint below is an external
   // fallback (Vercel Cron, GitHub Actions, k8s CronJob) so a single
   // api crash doesn't strand the outbox.
-  startWebhookDeliveryWorker()
+  startWebhookDeliveryWorker();
 
   // Sync the merged flag registry into the FeatureFlag table so the
   // /admin/feature-flags surface can read definitions, and overrides
@@ -128,7 +122,7 @@ function startBackgroundWork(): void {
   // Fire-and-forget : a DB hiccup here doesn't block the api process.
   void syncFlagsToDatabase().catch((err) =>
     logger.error({ err }, "syncFlagsToDatabase failed at boot"),
-  )
+  );
 }
 
 // Single-tenant bootstrap. When the `tenancy.multi-tenant` flag is OFF
@@ -151,33 +145,33 @@ export async function maybeBootstrapSingletonOrg(): Promise<void> {
       hasColor: Boolean(env.INITIAL_ORG_PRIMARY_COLOR),
     },
     "Single-tenant bootstrap : evaluating boot-time hook",
-  )
+  );
   const result = await ensureSingletonOrganizationFromInput({
     slug: env.INITIAL_ORG_SLUG ?? null,
     displayName: env.INITIAL_ORG_NAME ?? null,
     primaryColor: env.INITIAL_ORG_PRIMARY_COLOR ?? null,
     actorId: "system:bootstrap",
-  })
+  });
   if (result.ok) {
     if (result.created) {
       logger.info(
         { organizationId: result.organizationId, slug: env.INITIAL_ORG_SLUG },
         "Single-tenant bootstrap : created singleton organization",
-      )
+      );
     } else {
       logger.info(
         { organizationId: result.organizationId },
         "Single-tenant bootstrap : singleton already exists, no-op",
-      )
+      );
     }
-    return
+    return;
   }
-  const detail = "detail" in result ? result.detail : undefined
+  const detail = "detail" in result ? result.detail : undefined;
   if (result.reason === "already-multi-tenant") {
     logger.info(
       "Single-tenant bootstrap : tenancy.multi-tenant is ON, skipping env-driven provision",
-    )
-    return
+    );
+    return;
   }
   if (result.reason === "env-not-set") {
     logger.warn(
@@ -186,16 +180,16 @@ export async function maybeBootstrapSingletonOrg(): Promise<void> {
         hasName: Boolean(env.INITIAL_ORG_NAME),
       },
       "Single-tenant bootstrap : INITIAL_ORG_SLUG / INITIAL_ORG_NAME not set, /setup will stay stuck",
-    )
-    return
+    );
+    return;
   }
   logger.error(
     { reason: result.reason, detail },
     "Single-tenant bootstrap failed ; /setup will stay stuck",
-  )
+  );
 }
 
-export const app = express()
+export const app = express();
 
 // Dev-only CORS escape hatch : allow any RFC 1918 / loopback origin so
 // a phone (or other LAN device) can hit the api at the developer's
@@ -204,26 +198,26 @@ export const app = express()
 // the same scenario. Production stays strict (only exact `WEB_ORIGIN`
 // entries are allowed) so we don't ship permissive CORS by accident.
 const PRIVATE_HOST_RE =
-  /^(localhost|127\.0\.0\.1|\[::1\]|10(?:\.\d{1,3}){3}|192\.168(?:\.\d{1,3}){2}|172\.(?:1[6-9]|2\d|3[01])(?:\.\d{1,3}){2})$/
+  /^(localhost|127\.0\.0\.1|\[::1\]|10(?:\.\d{1,3}){3}|192\.168(?:\.\d{1,3}){2}|172\.(?:1[6-9]|2\d|3[01])(?:\.\d{1,3}){2})$/;
 
 function isAllowedOrigin(origin: string): boolean {
-  if (env.WEB_ORIGIN.includes(origin)) return true
-  if (env.NODE_ENV !== "development") return false
+  if (env.WEB_ORIGIN.includes(origin)) return true;
+  if (env.NODE_ENV !== "development") return false;
   try {
-    const url = new URL(origin)
-    return PRIVATE_HOST_RE.test(url.hostname)
+    const url = new URL(origin);
+    return PRIVATE_HOST_RE.test(url.hostname);
   } catch {
-    return false
+    return false;
   }
 }
 
-app.use(httpLogger)
+app.use(httpLogger);
 app.use(
   cors({
     origin: (origin, callback) => {
       // allow tools / server-to-server calls with no Origin header
-      if (!origin) return callback(null, true)
-      if (isAllowedOrigin(origin)) return callback(null, true)
+      if (!origin) return callback(null, true);
+      if (isAllowedOrigin(origin)) return callback(null, true);
       // In dev, surface the rejection prominently so a developer
       // testing from a LAN device sees why their request was blocked
       // instead of just an opaque 500. Production stays quiet.
@@ -231,18 +225,18 @@ app.use(
         logger.warn(
           { origin, allowList: env.WEB_ORIGIN },
           "CORS rejected non-private origin in dev — add it to WEB_ORIGIN if intentional",
-        )
+        );
       }
-      return callback(new Error(`CORS: origin not allowed: ${origin}`))
+      return callback(new Error(`CORS: origin not allowed: ${origin}`));
     },
     credentials: true,
   }),
-)
-app.use(express.json())
+);
+app.use(express.json());
 
 app.get("/health", (_req, res) => {
-  res.json({ status: "ok", service: "api" })
-})
+  res.json({ status: "ok", service: "api" });
+});
 
 // Cron endpoints. Auth is `Authorization: Bearer ${CRON_SECRET}` so any
 // scheduler that can hit an HTTPS URL works (Vercel Cron, GitHub Actions,
@@ -256,28 +250,28 @@ function checkCronSecret(req: express.Request, res: express.Response): boolean {
   const result = evaluateCronAuth({
     authorizationHeader: req.header("authorization"),
     cronSecret: env.CRON_SECRET,
-  })
-  if (result.ok) return true
+  });
+  if (result.ok) return true;
   if (result.reason === "not-configured") {
-    logger.error("CRON_SECRET is not configured ; refusing cron request")
-    res.status(503).json({ ok: false, error: "not-configured" })
-    return false
+    logger.error("CRON_SECRET is not configured ; refusing cron request");
+    res.status(503).json({ ok: false, error: "not-configured" });
+    return false;
   }
-  res.status(401).json({ ok: false, error: "unauthorized" })
-  return false
+  res.status(401).json({ ok: false, error: "unauthorized" });
+  return false;
 }
 
 app.post("/cron/process-account-deletions", async (req, res) => {
-  if (!checkCronSecret(req, res)) return
+  if (!checkCronSecret(req, res)) return;
   try {
-    const result = await processExpiredDeletions()
-    logger.info({ ...result }, "processExpiredDeletions sweep complete")
-    res.json({ ok: true, ...result })
+    const result = await processExpiredDeletions();
+    logger.info({ ...result }, "processExpiredDeletions sweep complete");
+    res.json({ ok: true, ...result });
   } catch (error) {
-    logger.error({ err: error }, "processExpiredDeletions sweep failed")
-    res.status(500).json({ ok: false, error: "internal" })
+    logger.error({ err: error }, "processExpiredDeletions sweep failed");
+    res.status(500).json({ ok: false, error: "internal" });
   }
-})
+});
 
 // External fallback for the in-process webhook delivery worker. The
 // in-process loop runs every few seconds while the api is healthy ;
@@ -285,16 +279,16 @@ app.post("/cron/process-account-deletions", async (req, res) => {
 // outbox draining if every api replica is wedged. Idempotent — the
 // worker's `tickOnce()` skips when another tick is in flight.
 app.post("/cron/sweep-webhook-deliveries", async (req, res) => {
-  if (!checkCronSecret(req, res)) return
+  if (!checkCronSecret(req, res)) return;
   try {
-    const result = await webhookWorkerTick()
-    logger.info({ ...result }, "webhook delivery sweep complete")
-    res.json({ ok: true, ...result })
+    const result = await webhookWorkerTick();
+    logger.info({ ...result }, "webhook delivery sweep complete");
+    res.json({ ok: true, ...result });
   } catch (error) {
-    logger.error({ err: error }, "webhook delivery sweep failed")
-    res.status(500).json({ ok: false, error: "internal" })
+    logger.error({ err: error }, "webhook delivery sweep failed");
+    res.status(500).json({ ok: false, error: "internal" });
   }
-})
+});
 
 app.use(
   "/trpc",
@@ -308,7 +302,7 @@ app.use(
     // tRPC error code so the access log can stay focused on the request /
     // response shape and this line carries the diagnostic detail.
     onError: ({ error, type, path, input, ctx }) => {
-      const code = error.code
+      const code = error.code;
       // Expected client-side errors stay at warn ; only unhandled / server
       // failures escalate to error so alert pipelines on 5xx-equivalents
       // can branch on level.
@@ -319,8 +313,8 @@ app.use(
         code === "BAD_REQUEST" ||
         code === "CONFLICT" ||
         code === "PRECONDITION_FAILED" ||
-        code === "TOO_MANY_REQUESTS"
-      const level = isExpected ? "warn" : "error"
+        code === "TOO_MANY_REQUESTS";
+      const level = isExpected ? "warn" : "error";
       logger[level](
         {
           procedure: path,
@@ -337,10 +331,10 @@ app.use(
           hasInput: input !== undefined,
         },
         `trpc ${type} ${path} ${code}: ${error.message}`,
-      )
+      );
     },
   }),
-)
+);
 
 // Entrypoint guard : `pnpm dev` / `pnpm start` runs this file as the
 // process entrypoint and lights up the listen + background work ;
@@ -349,14 +343,14 @@ app.use(
 // against `process.argv[1]` (which holds the entrypoint script's
 // path under both tsx and node).
 if (isEntrypoint) {
-  void maybeBootstrapSingletonOrg()
-  startBackgroundWork()
+  void maybeBootstrapSingletonOrg();
+  startBackgroundWork();
   // Explicit 0.0.0.0 bind so the api is reachable from other devices
   // on the LAN (phone testing) without depending on Node's IPv4/IPv6
   // dual-stack defaulting. Production deploys behind a reverse proxy
   // don't care which interface we bind to ; the proxy talks to
   // localhost inside the container.
   app.listen(env.PORT, "0.0.0.0", () => {
-    logger.info({ port: env.PORT }, "api listening")
-  })
+    logger.info({ port: env.PORT }, "api listening");
+  });
 }

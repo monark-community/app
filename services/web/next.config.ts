@@ -1,7 +1,7 @@
-import type { NextConfig } from "next"
-import createNextIntlPlugin from "next-intl/plugin"
+import type { NextConfig } from "next";
+import createNextIntlPlugin from "next-intl/plugin";
 
-const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts")
+const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
 // Production security + UA-CH headers. Dev returns an empty array
 // because the strict CSP would block Next's HMR runtime + the
@@ -13,8 +13,8 @@ const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts")
 // running middleware on each request, and middleware stays focused
 // on auth + supabase session refresh + TOTP redirects.
 async function buildHeaders() {
-  const isProd = process.env.NODE_ENV === "production"
-  if (!isProd) return []
+  const isProd = process.env.NODE_ENV === "production";
+  if (!isProd) return [];
 
   // CSP needs the api + supabase origins in connect-src so the
   // browser can call the api's tRPC endpoint and the supabase
@@ -22,12 +22,12 @@ async function buildHeaders() {
   // env Vercel injects ; if either isn't set the resulting CSP is
   // still safe (just `'self'` + nothing else, which would break the
   // app — surfacing the misconfiguration immediately).
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? ""
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? ""
-  const supabaseWss = supabaseUrl.replace(/^https/, "wss")
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "";
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
+  const supabaseWss = supabaseUrl.replace(/^https/, "wss");
   const connectSrc = ["'self'", apiUrl, supabaseUrl, supabaseWss]
     .filter((s) => s.length > 0)
-    .join(" ")
+    .join(" ");
 
   // CSP design notes :
   //   - `script-src 'unsafe-inline'` is unfortunate but Next ships
@@ -57,7 +57,7 @@ async function buildHeaders() {
     "form-action 'self'",
     "object-src 'none'",
     "upgrade-insecure-requests",
-  ].join("; ")
+  ].join("; ");
 
   // Permissions-Policy carries both the lockdown for surfaces we
   // never use (camera / microphone / geolocation / payment, all
@@ -72,7 +72,7 @@ async function buildHeaders() {
     "ch-ua-model=(self)",
     "ch-ua-platform-version=(self)",
     "ch-ua-full-version-list=(self)",
-  ].join(", ")
+  ].join(", ");
 
   return [
     {
@@ -97,8 +97,7 @@ async function buildHeaders() {
         // site-wide so it doesn't have to re-prompt on every nav.
         {
           key: "Accept-CH",
-          value:
-            "Sec-CH-UA-Model, Sec-CH-UA-Platform-Version, Sec-CH-UA-Full-Version-List",
+          value: "Sec-CH-UA-Model, Sec-CH-UA-Platform-Version, Sec-CH-UA-Full-Version-List",
         },
         {
           key: "Critical-CH",
@@ -107,7 +106,7 @@ async function buildHeaders() {
         { key: "Content-Security-Policy", value: csp },
       ],
     },
-  ]
+  ];
 }
 
 const config: NextConfig = {
@@ -127,6 +126,6 @@ const config: NextConfig = {
   // correctly without webpack trying to bundle the worker entry.
   serverExternalPackages: ["pino", "pino-pretty"],
   headers: buildHeaders,
-}
+};
 
-export default withNextIntl(config)
+export default withNextIntl(config);
