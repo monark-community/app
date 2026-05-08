@@ -10,12 +10,6 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
-env:
-  # Opt every JavaScript action into Node 24. Drop this once
-  # actions/checkout, actions/setup-node, and pnpm/action-setup publish
-  # v5 tags that default to Node 24 natively.
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
-
 # CI is split into four parallel jobs (lint+typecheck, unit, integration,
 # repo-checks) plus a final coverage-upload job that depends on the two
 # test jobs. Wall time is the slowest leg + the upload step, instead of
@@ -34,13 +28,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version-file: .nvmrc
           cache: pnpm
@@ -61,13 +55,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version-file: .nvmrc
           cache: pnpm
@@ -90,13 +84,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version-file: .nvmrc
           cache: pnpm
@@ -112,7 +106,7 @@ jobs:
       # bundles every package's `coverage/unit/` so the downstream
       # job has a single download to do.
       - name: Upload unit coverage
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-unit
           path: |
@@ -130,13 +124,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version-file: .nvmrc
           cache: pnpm
@@ -148,7 +142,7 @@ jobs:
         run: pnpm test:integration:coverage
 
       - name: Upload integration coverage
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-integration
           path: |
@@ -175,13 +169,13 @@ jobs:
     if: always()
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version-file: .nvmrc
           cache: pnpm
@@ -194,12 +188,12 @@ jobs:
       # (`packages/X/coverage/unit/...`), so a download with no
       # explicit path restores the same tree.
       - name: Download unit coverage
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: coverage-unit
 
       - name: Download integration coverage
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: coverage-integration
 
@@ -208,7 +202,7 @@ jobs:
 
       - name: Upload coverage to Codecov
         if: always()
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v6
         with:
           files: ./packages/auth/coverage/lcov.info,./packages/common/coverage/lcov.info,./packages/feature-flags/coverage/lcov.info,./packages/notifications/coverage/lcov.info,./packages/organizations/coverage/lcov.info,./packages/rbac/coverage/lcov.info,./packages/users/coverage/lcov.info,./packages/webhooks/coverage/lcov.info,./services/api/coverage/lcov.info,./services/web/coverage/lcov.info
           disable_search: true
