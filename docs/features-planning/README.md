@@ -62,12 +62,25 @@ Coupled; ship together. Anything after Phase 1 assumes the full core is live.
 - [`phase-1/auth-aesthetics.md`](phase-1/auth-aesthetics.md)
 - [`phase-1/notifications-system.md`](phase-1/notifications-system.md)
 
-### Phase 2 — Extended modules: user acquisition
+### Phase 1.5 — Extended modules: CRM / Living Data
 
-Get users in the door. Depends on the full core.
+Replace Notion as the operational system of record. Depends on the full Phase 1 core.
+
+- [`phase-1.5/phase-planning.md`](phase-1.5/phase-planning.md) — implementation order and exit criteria
+- [`phase-1.5/notion-database-audit.md`](phase-1.5/notion-database-audit.md) — which Notion DBs to extract, defer, or keep
+- [`phase-1.5/crm-ux-design.md`](phase-1.5/crm-ux-design.md) — design principles, navigation, interaction patterns
+- [`phase-1.5/crm-data-model.md`](phase-1.5/crm-data-model.md) — Prisma schemas, migration strategy, RBAC permissions, domain events
+- [`phase-1.5/project-directory.md`](phase-1.5/project-directory.md) — `@monark/projects` spec
+- [`phase-1.5/contacts-partners.md`](phase-1.5/contacts-partners.md) — `@monark/contacts` spec
+- [`phase-1.5/student-teams.md`](phase-1.5/student-teams.md) — `@monark/teams` spec
+- [`phase-1.5/apps-hub.md`](phase-1.5/apps-hub.md) — Apps Hub / service directory
+
+### Phase 2 — Extended modules: outreach & marketing
+
+Marketing automation and referral growth. Depends on Phase 1.5 CRM data.
 
 - [`phase-2/phase-planning.md`](phase-2/phase-planning.md) — implementation order
-- [`phase-2/user-onboarding.md`](phase-2/user-onboarding.md)
+- [`phase-2/user-onboarding.md`](phase-2/user-onboarding.md) — moved to Phase 3
 - [`phase-2/referral-system.md`](phase-2/referral-system.md)
 
 ### Phase 3 — Extended modules: engagement & governance
@@ -94,15 +107,23 @@ phase-1 (core modules, all coupled)
                            extended modules emit events it dispatches)
    │
    ▼
-phase-2 (extended: acquisition)
-   ├── user-onboarding   ← depends on: auth, orgs, users, rbac
-   └── referral-system   ← depends on: users, orgs; integrates with external system
+phase-1.5 (extended: CRM / living data)  ← replaces Notion as system of record
+   ├── projects    ← depends on: core
+   ├── contacts    ← depends on: core
+   ├── teams       ← depends on: core; emits events consumed by marketing
+   └── apps-hub    ← config-level; no module
    │
    ▼
-phase-3 (extended: engagement)
-   ├── voting-system              ← depends on: users, rbac; emits events to analytics
-   └── contribution-estimation    ← depends on: users, rbac; consumes activity events
-                                    from onboarding (progress), voting (participation),
+phase-2 (extended: outreach & marketing)
+   ├── marketing   ← depends on: core + CRM events via webhooks
+   └── referral    ← depends on: users, orgs; integrates with Reffinity
+   │
+   ▼
+phase-3 (extended: engagement & governance)
+   ├── onboarding             ← depends on: auth, orgs, users, rbac
+   ├── voting-system          ← depends on: users, rbac; emits events to analytics
+   └── contribution-estimation ← depends on: users, rbac; consumes activity events
+                                   from onboarding (progress), voting (participation),
                                     and external systems (GitHub, reviews, etc.)
 ```
 
