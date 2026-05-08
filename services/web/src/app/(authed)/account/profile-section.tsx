@@ -71,7 +71,7 @@ export function ProfileSection() {
   const [themeDraft, setThemeDraft] = useState<string>("system")
   const [mounted, setMounted] = useState(false)
   const [isSaving, startSaveTransition] = useTransition()
-  const [, startLocaleTransition] = useTransition()
+  const [, _startLocaleTransition] = useTransition()
   const [isAvatarPending, startAvatarTransition] = useTransition()
   const [avatarError, setAvatarError] = useState<UploadAvatarErrorCode | null>(null)
   // Source file user picked, awaiting crop. When non-null the crop dialog

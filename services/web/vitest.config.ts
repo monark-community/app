@@ -25,6 +25,10 @@ export default mergeConfig(
     resolve: {
       alias: {
         "@": resolve(__dirname, "./src"),
+        // `server-only` is a Next.js build-time guard ; stub it as
+        // empty so action tests that transitively import server
+        // modules don't crash in vitest's jsdom environment.
+        "server-only": resolve(__dirname, "./tests/__mocks__/server-only.ts"),
       },
     },
     test: {

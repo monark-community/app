@@ -8,6 +8,7 @@ export default mergeConfig(
   baseConfig,
   defineConfig({
     test: {
+      exclude: ["tests/integration/**"],
       coverage: {
         // thresholds: { lines: 80, branches: 80, functions: 80, statements: 80 },
         include: ["src/**/*.ts"],

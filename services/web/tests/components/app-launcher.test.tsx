@@ -98,9 +98,9 @@ describe("<AppLauncher>", () => {
     await user.click(screen.getByRole("button", { name: /switch app/i }))
     // `appBar.apps.title` = "Monark apps" ; subtitle gets rendered
     // below the heading.
-    expect(
-      screen.getByRole("heading", { name: /monark apps/i }),
-    ).toBeInTheDocument()
+    // SheetTitle renders an sr-only h2 + the component renders a visible h2.
+    const headings = screen.getAllByRole("heading", { name: /monark apps/i })
+    expect(headings.length).toBeGreaterThanOrEqual(1)
     expect(screen.getByText(/switch between monark products/i)).toBeInTheDocument()
   })
 })
