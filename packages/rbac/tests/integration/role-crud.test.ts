@@ -35,39 +35,40 @@ beforeAll(async () => {
     },
     update: {},
   })
-  await db.role.upsert({
-    where: { key_organizationId: { key: SYSADMIN_ROLE_KEY, organizationId: null as never } },
-    create: {
-      key: SYSADMIN_ROLE_KEY,
-      name: "System Administrator",
-      builtIn: true,
-      organizationId: null,
-    },
-    update: {},
-  })
-  await db.role.upsert({
-    where: { key_organizationId: { key: ADMIN_ROLE_KEY, organizationId: null as never } },
-    create: {
-      key: ADMIN_ROLE_KEY,
-      name: "Administrator",
-      builtIn: true,
-      organizationId: null,
-    },
-    update: {},
-  })
+  await ensureBuiltInRole(SYSADMIN_ROLE_KEY, "System Administrator")
+  await ensureBuiltInRole(ADMIN_ROLE_KEY, "Administrator")
 })
+
+// Find-or-create for built-in roles. Prisma rejects null in compound-
+// unique `where` clauses ; `findFirst` allows it. See
+// `write.test.ts` / `read.test.ts` for the same pattern.
+async function ensureBuiltInRole(key: string, name: string): Promise<void> {
+  const db = getDb()
+  const existing = await db.role.findFirst({
+    where: { key, organizationId: null },
+    select: { id: true },
+  })
+  if (existing) return
+  await db.role.create({
+    data: { key, name, builtIn: true, organizationId: null },
+  })
+}
 
 afterEach(async () => {
   // Clear only the role-related tables ; the seeded built-ins +
   // org row stay so the next test doesn't re-seed.
+  // Order matters : the migration declares RoleAssignment_roleId_fkey
+  // ON DELETE RESTRICT (the prisma schema says Cascade but the
+  // migration won the drift), so RoleAssignment must clear before
+  // Role + RolePermission. Users go last because RoleAssignment FKs
+  // userId + grantedById to User.
   const db = getDb()
-  // Drop custom roles + their permissions + every assignment row.
-  // CASCADE handles the rest.
+  await db.roleAssignment.deleteMany({})
   await db.rolePermission.deleteMany({
     where: { role: { builtIn: false } },
   })
   await db.role.deleteMany({ where: { builtIn: false } })
-  await db.roleAssignment.deleteMany({})
+  await db.user.deleteMany({})
 })
 
 describe("rbac/data findRoleById", () => {
@@ -292,6 +293,16 @@ describe("rbac/data countActiveAssignmentsForRole", () => {
       description: null,
       color: null,
       permissions: [],
+    })
+    // Seed users + the granter — `RoleAssignment.userId` and
+    // `grantedById` both FK to User.
+    await db.user.createMany({
+      data: [
+        { id: "u1", email: "u1@test.local" },
+        { id: "u2", email: "u2@test.local" },
+        { id: "u3", email: "u3@test.local" },
+        { id: "g1", email: "g1@test.local" },
+      ],
     })
     // Seed three assignments : two active, one revoked. The count
     // should ignore the revoked one.

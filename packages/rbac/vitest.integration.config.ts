@@ -31,6 +31,15 @@ export default mergeConfig(
       // a-time so the seed-test-teardown cycle is deterministic
       // across files even as the suite grows.
       fileParallelism: false,
+      coverage: {
+        // Integration run lands its coverage in `coverage/integration/`
+        // so `tools/merge-coverage.ts` can fuse with the unit run's
+        // `coverage/unit/`. The merged result lives at
+        // `coverage/coverage-final.json` + `coverage/lcov.info` and is
+        // what Codecov + (future) per-package thresholds read.
+        reportsDirectory: "coverage/integration",
+        include: ["src/**/*.ts"],
+      },
     },
   }),
 )

@@ -30,6 +30,13 @@ export default mergeConfig(
       // files. `sequence.concurrent: false` already covers
       // within-file serial.
       fileParallelism: false,
+      coverage: {
+        // Integration run writes to `coverage/integration/` ; merged
+        // with the unit run's `coverage/unit/` by
+        // `tools/merge-coverage.ts`.
+        reportsDirectory: "coverage/integration",
+        include: ["src/**/*.ts"],
+      },
     },
   }),
 )

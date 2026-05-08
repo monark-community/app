@@ -118,7 +118,7 @@ describe("signUpAction", () => {
   it("returns emailInUse when the API throws a CONFLICT", async () => {
     mockSignUp.mockRejectedValueOnce(
       new TRPCClientError("Email already in use", {
-        result: { data: { code: "CONFLICT" } } as never,
+        result: { error: { data: { code: "CONFLICT" } } } as never,
       } as never),
     )
     const result = await signUpAction({
@@ -131,7 +131,7 @@ describe("signUpAction", () => {
   it("returns weakPassword when the API throws a BAD_REQUEST", async () => {
     mockSignUp.mockRejectedValueOnce(
       new TRPCClientError("Password too weak", {
-        result: { data: { code: "BAD_REQUEST" } } as never,
+        result: { error: { data: { code: "BAD_REQUEST" } } } as never,
       } as never),
     )
     const result = await signUpAction({
@@ -144,7 +144,7 @@ describe("signUpAction", () => {
   it("returns fallback for unknown TRPCClientError shapes", async () => {
     mockSignUp.mockRejectedValueOnce(
       new TRPCClientError("Internal server error", {
-        result: { data: { code: "INTERNAL_SERVER_ERROR" } } as never,
+        result: { error: { data: { code: "INTERNAL_SERVER_ERROR" } } } as never,
       } as never),
     )
     const result = await signUpAction({

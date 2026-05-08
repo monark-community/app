@@ -10,7 +10,6 @@ import {
   getPermissionDef,
   isKnownPermission,
   listPermissions,
-  listPermissionDescriptors,
   permissionsByCategory,
   type Permission,
 } from "../contracts/permissions"

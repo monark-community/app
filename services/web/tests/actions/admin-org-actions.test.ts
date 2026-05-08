@@ -1,28 +1,53 @@
 import { describe, expect, it, vi, beforeEach } from "vitest"
 
-const mockSharp = vi.fn(() => mockSharpChain)
-const mockSharpChain = {
-  rotate: () => mockSharpChain,
-  resize: () => mockSharpChain,
-  webp: () => mockSharpChain,
-  toBuffer: vi.fn(async () => Buffer.from("processed-bytes")),
-}
+// vi.hoisted runs before vi.mock factories so references are
+// available when the hoisted mock factories execute.
+const {
+  mockSharp,
+  mockSharpToBuffer,
+  mockSharpChain,
+  mockGetSession,
+  mockAdminUpload,
+  mockGetPublicUrl,
+  mockAdminGet,
+  mockAdminUpdate,
+} = vi.hoisted(() => {
+  // sharp chain
+  const toBuffer = vi.fn(async () => Buffer.from("processed-bytes"))
+  const chain: Record<string, any> = {}
+  chain.rotate = () => chain
+  chain.resize = () => chain
+  chain.webp = () => chain
+  chain.toBuffer = toBuffer
+
+  return {
+    mockSharp: vi.fn(() => chain),
+    mockSharpToBuffer: toBuffer,
+    mockSharpChain: chain,
+    mockGetSession: vi.fn(async () => ({
+      data: { session: { access_token: "tok" } },
+    })),
+    mockAdminUpload: vi.fn(async () => ({ data: null, error: null })),
+    mockGetPublicUrl: vi.fn(() => ({
+      data: { publicUrl: "https://supabase.local/storage/v1/avatars/path" },
+    })),
+    mockAdminGet: vi.fn(async () => ({
+      id: "org-1",
+      slug: "acme",
+      displayName: "Acme",
+      logoUrl: null,
+    })),
+    mockAdminUpdate: vi.fn(async () => ({ id: "org-1" })),
+  }
+})
+
 vi.mock("sharp", () => ({
   default: mockSharp,
-}))
-
-const mockGetSession = vi.fn(async () => ({
-  data: { session: { access_token: "tok" } },
 }))
 vi.mock("@/lib/supabase/server", () => ({
   createSupabaseServerClient: async () => ({
     auth: { getSession: () => mockGetSession() },
   }),
-}))
-
-const mockAdminUpload = vi.fn(async () => ({ data: null, error: null }))
-const mockGetPublicUrl = vi.fn(() => ({
-  data: { publicUrl: "https://supabase.local/storage/v1/avatars/path" },
 }))
 vi.mock("@/lib/supabase/admin", () => ({
   createSupabaseAdminClient: () => ({
@@ -35,14 +60,6 @@ vi.mock("@/lib/supabase/admin", () => ({
     },
   }),
 }))
-
-const mockAdminGet = vi.fn(async () => ({
-  id: "org-1",
-  slug: "acme",
-  displayName: "Acme",
-  logoUrl: null,
-}))
-const mockAdminUpdate = vi.fn(async () => ({ id: "org-1" }))
 vi.mock("@/lib/trpc-server", () => ({
   createServerTrpcClient: (_t?: string) => ({
     organizations: {

@@ -242,3 +242,13 @@ async function resolveEndpointUrl(endpointId: string): Promise<string> {
   })
   return row?.url ?? "(deleted endpoint)"
 }
+
+/**
+ * Resets the idempotency flag so the integration suite can re-bind
+ * subscribers in `beforeEach`. Production callers never need this —
+ * `registerNotificationSubscribers()` is invoked once at api boot
+ * and is no-op on subsequent calls.
+ */
+export function _resetSubscribersForTesting(): void {
+  registered = false
+}

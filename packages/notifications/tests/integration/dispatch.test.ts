@@ -8,6 +8,10 @@ import {
   resetPreferences,
   setPreference,
 } from "../../src/server/prefs"
+import {
+  registerCoreNotificationKinds,
+  _resetCoreKindsRegisteredForTesting,
+} from "../../src/server/register-core-kinds"
 import { _resetTransportCacheForTesting } from "../../src/server/transport/email"
 
 // Integration tests for the dispatch + prefs path. The SMTP transport
@@ -28,6 +32,12 @@ const USER_DELETED = "user-deleted"
 beforeAll(async () => {
   delete process.env.SMTP_URL
   _resetTransportCacheForTesting()
+  // The kind registry is module-global ; tests don't run a real api
+  // boot so nothing else would call this. The reset + re-register
+  // pair makes the test resilient to other specs (or vite-node
+  // module caching) priming the registry first.
+  _resetCoreKindsRegisteredForTesting()
+  registerCoreNotificationKinds()
   const db = getDb()
   await db.user.upsert({
     where: { id: USER_EN },

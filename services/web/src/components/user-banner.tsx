@@ -141,8 +141,7 @@ export function UserBanner({
   // The banner image rendering is identical across editable / read-only
   // ; only the wrapping element (button vs. div) changes.
   const bannerImage = bannerUrl ? (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
+      <img
       src={bannerUrl}
       alt=""
       className="absolute inset-0 h-full w-full object-cover"

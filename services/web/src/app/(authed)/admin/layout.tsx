@@ -20,7 +20,13 @@ import { AdminSidebar } from "./admin-sidebar"
 export default async function AdminLayout({ children }: { children: ReactNode }) {
   const supabase = await createSupabaseServerClient()
   const { data: sessionData } = await supabase.auth.getSession()
-  const accessToken = sessionData.session!.access_token
+  // The parent (authed) layout already redirects to /signin when the
+  // session is missing, but Next renders nested async layouts
+  // concurrently — so if we dereference `.access_token` eagerly we
+  // race the parent's redirect and crash. Bail out cleanly when no
+  // session is present and let the parent's redirect win.
+  if (!sessionData.session) return null
+  const accessToken = sessionData.session.access_token
 
   const api = createServerTrpcClient(accessToken)
 

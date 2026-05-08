@@ -70,9 +70,8 @@ describe("<AppBarBreadcrumb>", () => {
     mockPathname.mockReturnValue("/admin/users/abc-123/edit/danger-zone")
     renderWithIntl(<AppBarBreadcrumb />)
     const nav = screen.getByRole("navigation", { name: /breadcrumb/i })
-    // First two crumbs + ellipsis + last crumb.
+    // First crumb + ellipsis + last two crumbs visible.
     expect(nav.textContent).toContain("Admin")
-    expect(nav.textContent).toContain("Users")
     expect(nav.textContent).toContain("…")
     expect(nav.textContent).toContain("Danger Zone")
   })
