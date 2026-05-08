@@ -45,6 +45,11 @@ export default mergeConfig(
         "tests/e2e/**",
       ],
       coverage: {
+        // The web service has no integration suite ; the unit run
+        // already produces the canonical report. Subdir kept
+        // consistent with the rest of the workspace so the merge
+        // script's discovery walks one shape.
+        reportsDirectory: "coverage/unit",
         // thresholds: { lines: 75, branches: 75, functions: 75, statements: 75 },
         include: ["src/**/*.{ts,tsx}"],
         exclude: [

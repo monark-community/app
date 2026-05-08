@@ -22,6 +22,13 @@ export default mergeConfig(
       // testcontainer Postgres ; force serial across files so a
       // future spec's TRUNCATE doesn't race a sibling's spec body.
       fileParallelism: false,
+      coverage: {
+        // Integration run writes to `coverage/integration/` ; merged
+        // with the unit run's `coverage/unit/` by
+        // `tools/merge-coverage.ts`.
+        reportsDirectory: "coverage/integration",
+        include: ["src/**/*.ts"],
+      },
     },
   }),
 )

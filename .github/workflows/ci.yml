@@ -56,12 +56,32 @@ jobs:
       - name: Test (with coverage)
         run: pnpm test:coverage
 
-      # Each package emits its own `coverage/lcov.info` ; we hand
-      # them all to Codecov which aggregates into a single repo-level
-      # number. Per-package coverage thresholds enforced inside vitest
-      # are the actual gate ; Codecov is just for the badge + the
-      # PR-level diff annotation. `fail_ci_if_error: false` keeps the
-      # build green when CODECOV_TOKEN isn't set on a fork's CI.
+      # Integration suites under each package's `tests/integration/`.
+      # Each one boots its own Postgres testcontainer (~5 s amortised
+      # across the file) ; Docker is available on `ubuntu-latest`
+      # without extra setup. Packages without an integration config
+      # `--passWithNoTests` so this stays cheap to add to. Runs with
+      # coverage so `coverage/integration/coverage-final.json` lands
+      # next to the unit run for the merge step below.
+      - name: Test (integration, with coverage)
+        run: pnpm test:integration:coverage
+
+      # Fuse each package's `coverage/unit/coverage-final.json` and
+      # `coverage/integration/coverage-final.json` into a single
+      # `coverage/coverage-final.json` + `coverage/lcov.info`. Most
+      # data-layer code only runs under integration ; without this
+      # step Codecov sees the unit-only lcov and reports artificially
+      # low numbers.
+      - name: Merge coverage (unit + integration)
+        run: pnpm coverage:merge
+
+      # Each package emits its own `coverage/lcov.info` (regenerated
+      # by `coverage:merge` above) ; we hand them all to Codecov which
+      # aggregates into a single repo-level number. Per-package
+      # coverage thresholds enforced inside vitest are the actual
+      # gate ; Codecov is just for the badge + the PR-level diff
+      # annotation. `fail_ci_if_error: false` keeps the build green
+      # when CODECOV_TOKEN isn't set on a fork's CI.
       - name: Upload coverage to Codecov
         if: always()
         uses: codecov/codecov-action@v4
@@ -114,6 +134,19 @@ jobs:
       # singleton org before any e2e spec hits a protected route.
       INITIAL_ORG_SLUG: monark
       INITIAL_ORG_NAME: Monark
+      # Opt every gated e2e spec into running.
+      E2E_FULL_STACK: "1"
+      INBUCKET_URL: http://localhost:54324
+      # Seeded test accounts. The seed step below provisions both
+      # users + grants ADMIN at the singleton org to the admin one.
+      # Passwords are deterministic test values — the runner only
+      # listens on localhost and the stack is torn down at job end.
+      # Strong-enough to clear the password-rule validator (>=12
+      # chars, mixed classes, no obvious dictionary words).
+      E2E_USER_EMAIL: e2e-user@monark.test
+      E2E_USER_PASSWORD: "Tg7!hP9q*xLb-user"
+      E2E_ADMIN_EMAIL: e2e-admin@monark.test
+      E2E_ADMIN_PASSWORD: "Tg7!hP9q*xLb-admin"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -140,6 +173,15 @@ jobs:
 
       - name: Run database migrations
         run: pnpm db:migrate
+
+      # Provision the e2e test accounts the gated specs sign in as.
+      # Idempotent ; safe on CI re-runs and on the rare local
+      # invocation. Bootstraps the singleton org along the way so
+      # the ADMIN grant has somewhere to scope to (the api process
+      # would do this at boot anyway, but Playwright doesn't start
+      # the api until after this step).
+      - name: Seed e2e test users
+        run: pnpm tsx tools/seed-e2e-users.ts
 
       # `@playwright/test` is a devDep of `services/web` only ; from
       # the repo root `pnpm exec` resolves bins against the root

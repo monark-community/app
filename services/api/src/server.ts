@@ -1,3 +1,4 @@
+import { fileURLToPath } from "node:url"
 import express from "express"
 import cors from "cors"
 import { createExpressMiddleware } from "@trpc/server/adapters/express"
@@ -93,19 +94,27 @@ registerOrganizationsSubscribers()
 registerNotificationSubscribers()
 registerWebhookSubscribers()
 
-// Webhook delivery worker drains the outbox on a setInterval. The
-// `/cron/sweep-webhook-deliveries` endpoint below is an external
-// fallback (Vercel Cron, GitHub Actions, k8s CronJob) so a single
-// api crash doesn't strand the outbox.
-startWebhookDeliveryWorker()
+// Background work that should only fire when this file is the
+// process entrypoint — the integration suite imports `app` to drive
+// supertest-style requests and doesn't want the worker setInterval
+// (would leak handles + log noise) or the bootstrap / flag-sync DB
+// writes (the testcontainer provisions its own state).
+const isEntrypoint = process.argv[1] === fileURLToPath(import.meta.url)
+function startBackgroundWork(): void {
+  // Webhook delivery worker drains the outbox on a setInterval. The
+  // `/cron/sweep-webhook-deliveries` endpoint below is an external
+  // fallback (Vercel Cron, GitHub Actions, k8s CronJob) so a single
+  // api crash doesn't strand the outbox.
+  startWebhookDeliveryWorker()
 
-// Sync the merged flag registry into the FeatureFlag table so the
-// /admin/feature-flags surface can read definitions, and overrides
-// pin to real flag rows. Idempotent — safe to re-run on every boot.
-// Fire-and-forget : a DB hiccup here doesn't block the api process.
-void syncFlagsToDatabase().catch((err) =>
-  logger.error({ err }, "syncFlagsToDatabase failed at boot"),
-)
+  // Sync the merged flag registry into the FeatureFlag table so the
+  // /admin/feature-flags surface can read definitions, and overrides
+  // pin to real flag rows. Idempotent — safe to re-run on every boot.
+  // Fire-and-forget : a DB hiccup here doesn't block the api process.
+  void syncFlagsToDatabase().catch((err) =>
+    logger.error({ err }, "syncFlagsToDatabase failed at boot"),
+  )
+}
 
 // Single-tenant bootstrap. When the `tenancy.multi-tenant` flag is OFF
 // (default) and the deploy is missing its singleton organization, read
@@ -119,7 +128,7 @@ void syncFlagsToDatabase().catch((err) =>
 // `pnpm dev:api` output can tell why a bootstrap was a no-op (env
 // missing? feature flag flipped? org already there?) without strapping
 // on a debugger.
-async function maybeBootstrapSingletonOrg(): Promise<void> {
+export async function maybeBootstrapSingletonOrg(): Promise<void> {
   logger.info(
     {
       hasSlug: Boolean(env.INITIAL_ORG_SLUG),
@@ -171,9 +180,7 @@ async function maybeBootstrapSingletonOrg(): Promise<void> {
   )
 }
 
-void maybeBootstrapSingletonOrg()
-
-const app = express()
+export const app = express()
 
 // Dev-only CORS escape hatch : allow any RFC 1918 / loopback origin so
 // a phone (or other LAN device) can hit the api at the developer's
@@ -320,11 +327,21 @@ app.use(
   }),
 )
 
-// Explicit 0.0.0.0 bind so the api is reachable from other devices on
-// the LAN (phone testing) without depending on Node's IPv4/IPv6
-// dual-stack defaulting. Production deploys behind a reverse proxy
-// don't care which interface we bind to ; the proxy talks to localhost
-// inside the container.
-app.listen(env.PORT, "0.0.0.0", () => {
-  logger.info({ port: env.PORT }, "api listening")
-})
+// Entrypoint guard : `pnpm dev` / `pnpm start` runs this file as the
+// process entrypoint and lights up the listen + background work ;
+// the integration suite imports `app` to drive supertest-style
+// requests and stays inert. The check compares the resolved file URL
+// against `process.argv[1]` (which holds the entrypoint script's
+// path under both tsx and node).
+if (isEntrypoint) {
+  void maybeBootstrapSingletonOrg()
+  startBackgroundWork()
+  // Explicit 0.0.0.0 bind so the api is reachable from other devices
+  // on the LAN (phone testing) without depending on Node's IPv4/IPv6
+  // dual-stack defaulting. Production deploys behind a reverse proxy
+  // don't care which interface we bind to ; the proxy talks to
+  // localhost inside the container.
+  app.listen(env.PORT, "0.0.0.0", () => {
+    logger.info({ port: env.PORT }, "api listening")
+  })
+}

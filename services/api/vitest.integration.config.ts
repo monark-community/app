@@ -1,6 +1,13 @@
 import { mergeConfig, defineConfig } from "vitest/config"
 import baseConfig from "../../vitest.shared"
 
+// Same shape as the package-level integration configs ; runs every
+// spec under `tests/integration/` against a fresh Postgres
+// testcontainer booted in `globalSetup`. The api integration
+// suite imports `app` from `src/server.ts` and drives requests via
+// supertest ; the entrypoint guard inside server.ts means importing
+// the module does NOT call `app.listen()` or start the webhook
+// worker.
 export default mergeConfig(
   baseConfig,
   defineConfig({
@@ -10,10 +17,6 @@ export default mergeConfig(
       testTimeout: 30_000,
       hookTimeout: 60_000,
       sequence: { concurrent: false },
-      // Spec files share the same Postgres testcontainer ; running
-      // them in parallel workers races concurrent TRUNCATEs against
-      // each others' spec bodies. Force serial across files so each
-      // file's beforeAll seed survives until its afterAll teardown.
       fileParallelism: false,
       coverage: {
         // Integration run writes to `coverage/integration/` ; merged

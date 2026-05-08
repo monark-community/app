@@ -18,8 +18,19 @@ export default mergeConfig(
     test: {
       exclude: [...configDefaults.exclude, "tests/integration/**"],
       coverage: {
-        // thresholds: { lines: 80, branches: 80, functions: 80, statements: 80 },
+        // Unit run writes to `coverage/unit/` ; the integration
+        // config writes to `coverage/integration/`. The merge
+        // script at `tools/merge-coverage.ts` fuses both into
+        // `coverage/coverage-final.json` + `coverage/lcov.info`
+        // so Codecov + the per-package threshold gate (in a follow-
+        // up commit) read the union of unit + integration coverage.
+        reportsDirectory: "coverage/unit",
         include: ["src/**/*.ts"],
+        // Test-plan target : 80 % across all four metrics. Flipped
+        // on once the merge script's first CI run produces the
+        // baseline numbers ; the script's threshold check is the
+        // canonical gate, not vitest's.
+        // thresholds: { lines: 80, branches: 80, functions: 80, statements: 80 },
       },
     },
   }),

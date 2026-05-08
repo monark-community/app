@@ -19,6 +19,13 @@ export default mergeConfig(
       // others' spec bodies. Force one-file-at-a-time so each
       // file's beforeAll seed survives.
       fileParallelism: false,
+      coverage: {
+        // Integration run writes to `coverage/integration/` ; merged
+        // with the unit run's `coverage/unit/` by
+        // `tools/merge-coverage.ts`.
+        reportsDirectory: "coverage/integration",
+        include: ["src/**/*.ts"],
+      },
     },
   }),
 )

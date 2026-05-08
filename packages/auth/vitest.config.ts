@@ -17,6 +17,10 @@ export default mergeConfig(
     test: {
       exclude: [...configDefaults.exclude, "tests/integration/**"],
       coverage: {
+        // Unit run writes to `coverage/unit/` ; the merge script at
+        // `tools/merge-coverage.ts` fuses with `coverage/integration/`
+        // into a single per-package `coverage-final.json` + `lcov.info`.
+        reportsDirectory: "coverage/unit",
         // thresholds: { lines: 80, branches: 80, functions: 80, statements: 80 },
         include: ["src/**/*.ts"],
       },

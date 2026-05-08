@@ -7,7 +7,10 @@ export {
   setPreference,
   type PrefRow,
 } from "./prefs"
-export { registerNotificationSubscribers } from "./subscribers"
+export {
+  registerNotificationSubscribers,
+  _resetSubscribersForTesting,
+} from "./subscribers"
 export { sendMail, type MailMessage, type MailDeliveryResult } from "./transport/email"
 export { notificationsRouter } from "./router"
 export { registerCoreNotificationKinds } from "./register-core-kinds"

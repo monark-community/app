@@ -22,8 +22,13 @@ import { TrustedDevicesSection } from "../trusted-devices-section"
 export default async function AccountSecurityPage() {
   const supabase = await createSupabaseServerClient()
   const { data: sessionData } = await supabase.auth.getSession()
-  // Session guaranteed by parent (authed) layout.
-  const session = sessionData.session!
+  // The parent (authed) layout's session-gate redirect runs in
+  // parallel with this page render ; bail out cleanly when no
+  // session is present so we don't race the redirect with a
+  // TypeError on `.access_token`. The redirect lands either way ;
+  // returning null avoids the noisy server log line.
+  if (!sessionData.session) return null
+  const session = sessionData.session
   const cookieStore = await cookies()
   const deviceCookieValue = cookieStore.get(DEVICE_COOKIE_NAME)?.value ?? null
   const api = createServerTrpcClient(session.access_token)

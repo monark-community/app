@@ -41,9 +41,16 @@ export default async function AccountLayout({
 }) {
   const supabase = await createSupabaseServerClient()
   const { data: sessionData } = await supabase.auth.getSession()
-  // Session presence guaranteed by parent (authed) layout ; the !
-  // carries that invariant into the type system.
-  const accessToken = sessionData.session!.access_token
+  // Next.js renders nested layouts concurrently as async server
+  // components ; the parent (authed) layout's session-gate redirect
+  // throws on the same microtask we run on. If we eagerly
+  // dereference `session.access_token` while that redirect is still
+  // in flight, the child throws a TypeError that surfaces in server
+  // logs even though the response ultimately becomes the parent's
+  // 307. Bail out cleanly when no session is present and let the
+  // parent's redirect land.
+  if (!sessionData.session) return null
+  const accessToken = sessionData.session.access_token
   const api = createServerTrpcClient(accessToken)
   const me = await api.users.me.query().catch(() => null)
   if (me?.deletedAt) {

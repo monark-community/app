@@ -37,14 +37,20 @@ async function seedUser(overrides: Partial<{
   createdAt: Date
 }> = {}) {
   const db = getDb()
+  // `??` short-circuits on null AND undefined ; using it on the
+  // nullable fields below would silently flip an explicit `null`
+  // override into a default value (e.g. `emailVerifiedAt: null`
+  // becoming `new Date()`), which breaks the
+  // `filters by emailVerified=false` case. Use `'key' in overrides`
+  // to distinguish "caller passed null" from "caller didn't pass".
   return db.user.create({
     data: {
       id: overrides.id ?? `u-${Math.random().toString(36).slice(2, 10)}`,
       email: overrides.email ?? `${Math.random().toString(36).slice(2, 8)}@x.io`,
-      displayName: overrides.displayName ?? "Test User",
-      emailVerifiedAt: overrides.emailVerifiedAt ?? new Date(),
-      disabledAt: overrides.disabledAt ?? null,
-      deletedAt: overrides.deletedAt ?? null,
+      displayName: "displayName" in overrides ? overrides.displayName : "Test User",
+      emailVerifiedAt: "emailVerifiedAt" in overrides ? overrides.emailVerifiedAt : new Date(),
+      disabledAt: "disabledAt" in overrides ? overrides.disabledAt : null,
+      deletedAt: "deletedAt" in overrides ? overrides.deletedAt : null,
       createdAt: overrides.createdAt ?? new Date(),
     },
   })

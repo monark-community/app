@@ -132,11 +132,12 @@ export async function updateEndpointPatch(input: {
 export async function rotateEndpointSecret(input: {
   id: string
   secretHash: string
-}): Promise<void> {
+}): Promise<EndpointWithSubs> {
   const db = getDb()
-  await db.webhookEndpoint.update({
+  return db.webhookEndpoint.update({
     where: { id: input.id },
     data: { secretHash: input.secretHash },
+    include: { subscriptions: true },
   })
 }
 

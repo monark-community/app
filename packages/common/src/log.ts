@@ -18,7 +18,7 @@ const usePretty = !isProd && isTty
  * Paths use pino's redact syntax: `a.b.c` for nested keys, `*.foo` for
  * `foo` on any first-level child.
  */
-const REDACT_PATHS = [
+export const REDACT_PATHS = [
   // HTTP request headers.
   "req.headers.authorization",
   "req.headers.cookie",

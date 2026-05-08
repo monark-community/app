@@ -13,7 +13,8 @@
     "lint": "eslint src",
     "test": "vitest run --passWithNoTests",
     "test:coverage": "vitest run --coverage --passWithNoTests",
-    "test:integration": "vitest run --config vitest.integration.config.ts --passWithNoTests"
+    "test:integration": "vitest run --config vitest.integration.config.ts --passWithNoTests",
+    "test:integration:coverage": "vitest run --config vitest.integration.config.ts --coverage --passWithNoTests"
   },
   "dependencies": {
     "@monark/auth": "workspace:*",

@@ -17,6 +17,16 @@
       "dependsOn": ["^build"],
       "outputs": ["coverage/**"]
     },
+    "test:integration": {
+      "dependsOn": ["^build"],
+      "outputs": [],
+      "env": ["DOCKER_HOST", "TESTCONTAINERS_*"]
+    },
+    "test:integration:coverage": {
+      "dependsOn": ["^build"],
+      "outputs": ["coverage/**"],
+      "env": ["DOCKER_HOST", "TESTCONTAINERS_*"]
+    },
     "dev": {
       "cache": false,
       "persistent": true

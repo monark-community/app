@@ -34,7 +34,12 @@ export default defineConfig({
     passWithNoTests: true,
     coverage: {
       provider: "v8",
-      reporter: ["text", "lcov", "html"],
+      // `json` lands `coverage-final.json` per run ; the merge script
+      // at `tools/merge-coverage.ts` reads those to fuse the unit +
+      // integration runs into a single per-package report. `lcov`
+      // is what Codecov ingests ; `text` gives a quick summary in
+      // the terminal ; `html` is the local-dev drill-down.
+      reporter: ["text", "lcov", "html", "json"],
       // Files that exist purely as re-exports / type declarations /
       // generated code never carry meaningful behaviour ; excluding
       // them keeps the coverage number honest.

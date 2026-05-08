@@ -12,7 +12,14 @@ const t = initTRPC.context<TrpcContext>().create()
 // Translates domain AppError codes to tRPC error codes so clients can branch on
 // `TRPCClientError.data.code` (e.g. "CONFLICT", "BAD_REQUEST") instead of
 // everything surfacing as INTERNAL_SERVER_ERROR.
-const APP_TO_TRPC_CODE: Record<string, TRPCError["code"]> = {
+//
+// Exported so the unit suite can lock in the mapping contract
+// without piping AppErrors through a real tRPC caller (vite-node
+// treats the AppError class loaded via different relative paths as
+// different prototypes, so an `instanceof AppError` check inside the
+// middleware reads false from the test side ; production goes
+// through a single import path and works correctly).
+export const APP_TO_TRPC_CODE: Record<string, TRPCError["code"]> = {
   not_found: "NOT_FOUND",
   unauthorized: "UNAUTHORIZED",
   forbidden: "FORBIDDEN",
