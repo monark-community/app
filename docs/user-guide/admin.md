@@ -2,7 +2,7 @@
 
 For operators of an organization — anyone with a Monark `ADMIN` (org-tier) or `SYSADMIN` (platform-tier) role. Visible to non-admins as a missing affordance : the admin pin doesn't appear in the primary navigation drawer, and `/admin` URLs redirect to the home page.
 
-The admin section lives at `/admin/*` and ships three tabs : **Organizations**, **Users**, **Roles & permissions**.
+The admin section lives at `/admin/*` and ships four tabs : **Organizations**, **Users**, **Roles & permissions**, **Webhooks**.
 
 ## Reaching `/admin`
 
@@ -10,7 +10,7 @@ The admin section lives at `/admin/*` and ships three tabs : **Organizations**, 
 - Click it. You land on the first tab (Organizations).
 - Or type `/admin` in the URL ; it redirects to the same place.
 
-The admin layout pins a sidebar with the three tab links. On wide viewports it sits to the left of the content ; on narrow viewports it collapses to a horizontal strip across the top.
+The admin layout pins a sidebar with the four tab links. On wide viewports it sits to the left of the content ; on narrow viewports it collapses to a horizontal strip across the top.
 
 ## A note on tenancy
 
@@ -184,6 +184,100 @@ Admins have to enrol in two-factor authentication within 7 days of signing in. T
 
 Once you enrol the banners disappear immediately and admin routes unlock without a refresh.
 
+## Webhooks
+
+`/admin/webhooks`. Register HTTP endpoints that receive a POST for every domain event the platform emits. Use webhooks to push lifecycle events (role changes, user sign-ins, org updates) into external systems ; social-media automation, SIEM ingestion, audit-log sinks, or anything else that can accept a signed HTTP POST.
+
+Webhooks are gated by three permissions registered at boot : `webhooks.read` (view endpoints + deliveries), `webhooks.write` (create / edit / delete / rotate), and `webhooks.retry` (manually retry a failed delivery). Org-scoped endpoints check the permission against the endpoint's organization ; platform-tier endpoints require the permission at the platform tier (sysadmins).
+
+### Endpoint list
+
+The list page shows every endpoint for a given scope (one organization, or platform-tier). Each row carries :
+
+- The endpoint URL.
+- A **status badge** : Active (green), Disabled (amber), or Deleted (muted).
+- A **consecutive failures** warning when the count is non-zero.
+- A **subscription count** showing how many event types the endpoint listens to.
+
+A search bar at the top filters by URL.
+
+### Creating an endpoint
+
+Click **New endpoint**. The create form asks for :
+
+- **URL** ; HTTPS only in production. In development the validator also accepts HTTP for localhost, `127.0.0.1`, `[::1]`, and RFC 1918 private hosts (`10.x`, `172.16-31.x`, `192.168.x`). Anything else (public host over HTTP, `file://`, `ws://`) is rejected.
+- **Description** (optional) ; a human-readable note for your team.
+- **Subscriptions** ; a categorized picker driven by the runtime event-type registry. Each module that emits domain events gets a collapsible group with :
+  - A **tri-state header checkbox** (none / some / all) to bulk-toggle every event in the module.
+  - A **count chip** on the right showing `selected / total`.
+  - One labelled checkbox per event type ; mono-font key + plain-language description.
+
+  Ticking the header writes a single prefix subscription when every event in the module shares a common dotted prefix (e.g. `rbac.`) ; otherwise it writes N exact subscriptions.
+
+Submitting creates the endpoint and reveals the **signing secret** in a green banner at the top of the edit page. **This is the only time the plaintext secret is visible.** Copy it now ; once you navigate away the only recovery path is rotating the secret (which generates a new one).
+
+### Editing an endpoint
+
+Click any row to land on the edit page. You can change :
+
+- URL, description, and subscriptions (same rules as create).
+- **Status** ; toggle between Active and Disabled. A disabled endpoint stops receiving new deliveries but pre-existing pending rows still drain.
+- **Rotate secret** ; generates a new signing secret and shows it once. The old secret becomes invalid immediately ; update your receiver before rotating.
+- **Delete** ; removes the endpoint permanently.
+
+Subscriptions that were saved in a previous deploy but no longer appear in the current event registry show as removable chips above the module groups.
+
+### Delivery history
+
+`/admin/webhooks/<id>/deliveries`. A paged list of every delivery attempted for this endpoint. Each row shows :
+
+- The event type.
+- Status : **Delivered** (green), **Pending** (amber), **Failed** (red).
+- Attempt count.
+- Last error (if any).
+- Timestamp.
+
+### Delivery detail
+
+`/admin/webhooks/<id>/deliveries/<deliveryId>`. Two sections :
+
+- **Payload** ; the full JSON body that was (or would be) sent, pretty-printed.
+- **Attempt log** ; one row per attempt showing HTTP status code (or network error), duration, and timestamp.
+
+A **Retry now** button at the top fires one synchronous delivery attempt so you get immediate feedback. Subsequent retries go through the worker as usual.
+
+### Auto-disable
+
+After 5 consecutive failed deliveries the endpoint flips to Disabled automatically. The failure counter resets on the next successful delivery. When auto-disabled :
+
+- The endpoint appears with a Disabled badge + a warning showing the failure count.
+- New events stop generating deliveries for this endpoint.
+- Pre-existing pending deliveries still drain.
+- An in-app + email notification is sent to admins.
+
+To re-enable : open the endpoint's edit page and set status back to Active.
+
+### Signing
+
+Every outgoing request carries five headers your receiver can use to verify authenticity :
+
+| Header | Value |
+|---|---|
+| `Webhook-Delivery-Id` | The delivery row's unique id. |
+| `Webhook-Delivery-Idempotency-Key` | Stable per (endpoint, event, correlation) ; use it to dedupe retries. |
+| `Webhook-Event-Type` | The source event's type (e.g. `rbac.role-created`). |
+| `Webhook-Timestamp` | Unix seconds ; recomputed per attempt. |
+| `Webhook-Signature` | `v1=<hex hmac-sha256(secret, "<timestamp>.<body>")>` |
+
+Receivers verify by recomputing the HMAC over `<timestamp>.<body>` using their stored copy of the shared secret and a constant-time compare. Including the timestamp in the signed payload defeats replay attacks outside a tolerance window (suggested ±5 minutes).
+
+### Routing
+
+Endpoints can be scoped to a single organization or to the entire platform :
+
+- **Platform-tier** (no organization selected) ; receives every matching event regardless of source org. Use for sysadmin / SIEM / audit-log integrations.
+- **Org-scoped** ; receives events that carry a matching `organizationId`, plus user-tied events (sign-in, password change, TOTP changes) for users who are members of that org.
+
 ## Audit + observability
 
 Every admin write — role assigned, role revoked, user deletion requested, organization renamed, invite sent / revoked — emits a domain event. Today the event hits the notifications subscriber + the application logs. Phase-2 wires an admin-side audit log surface ; until then, the operator's logging stack (ELK, Sentry, etc.) is the system of record.
@@ -194,3 +288,5 @@ Every admin write — role assigned, role revoked, user deletion requested, orga
 - **Bulk operations** (bulk assign role, bulk delete, bulk invite). Single-row only.
 - **Cross-org role copying.** Each org's roles are scoped to the org ; recreating the same role in another org is a manual exercise.
 - **Audit / activity feed.** No timeline view yet ; rely on logs.
+- **Webhook delivery rate limiting per endpoint.** A receiver returning 429 retries with backoff but doesn't pause sibling deliveries to the same endpoint.
+- **Webhook delivery log export.** No CSV or JSON download of delivery history.

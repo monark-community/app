@@ -76,6 +76,7 @@ You almost never need to type these in directly — every link in the chrome tak
 - `/account/notifications` — notification preferences.
 - `/account/danger` — schedule (or cancel) deletion.
 - `/admin` — the admin section ; redirects to its first tab.
+- `/admin/webhooks` — webhook endpoint management, delivery history, and manual retries.
 - `/admin/organizations` — list / edit organizations.
 - `/admin/users` — list / invite / edit users.
 - `/admin/rbac` — system admins roster + per-org roles.

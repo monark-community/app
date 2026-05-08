@@ -2,6 +2,12 @@
 
 Open follow-up items. See [README.md](README.md) for the convention. Strike items as they ship ; the CHANGELOG carries the history.
 
+## Webhooks
+
+- [ ] **[2026-05-08] Default env-var secret resolver.** Ship a `WEBHOOK_SECRETS` JSON env-var backed resolver as the default so single-tenant deploys work without integrating an external secret store. See [webhook-secret-resolver.md](../technical-documentation/webhook-secret-resolver.md) for the contract.
+- [ ] **[2026-05-08] Per-endpoint rate limiting.** A receiver returning 429 today retries with backoff but doesn't pause sibling deliveries to the same endpoint. A token bucket per endpoint would be kinder.
+- [ ] **[2026-05-08] Delivery log export.** No CSV or JSON download of delivery history from the admin UI. Operators who need bulk audit data rely on the database directly.
+
 ## RBAC custom roles ; ~~design locked, ready to implement~~ shipped 2026-05-04
 
 Shipped. See the CHANGELOG entry dated 2026-05-04. Out-of-scope items below remain open.

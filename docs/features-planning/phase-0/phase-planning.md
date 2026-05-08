@@ -1,3 +1,5 @@
+> **Status: Shipped.** Phase 0 is complete. These documents are retained as historical specifications. For current developer documentation, see [technical-documentation/](../../technical-documentation/).
+
 # Phase 0 — Implementation order
 
 ## Goal
