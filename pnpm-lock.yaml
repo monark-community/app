@@ -8,9 +8,15 @@ importers:
 
   .:
     dependencies:
+      '@monark/auth':
+        specifier: workspace:*
+        version: link:packages/auth
       '@monark/db':
         specifier: workspace:*
         version: link:packages/db
+      '@monark/organizations':
+        specifier: workspace:*
+        version: link:packages/organizations
       '@monark/rbac':
         specifier: workspace:*
         version: link:packages/rbac

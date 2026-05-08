@@ -1,4 +1,4 @@
-import { readdir, readFile, mkdir, writeFile, stat } from "node:fs/promises"
+import { readdir, readFile, mkdir, rm, writeFile, stat } from "node:fs/promises"
 import { dirname, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
 import libCoverage, { type CoverageMap, type FileCoverageData } from "istanbul-lib-coverage"
@@ -141,6 +141,18 @@ async function writeMerged(pkg: PackageDir, map: CoverageMap): Promise<void> {
   // entrypoints we use here ; the `execute` API accepts the context
   // produced by `libReport.createContext` directly.
   lcovReport.execute(context as unknown as Parameters<typeof lcovReport.execute>[0])
+
+  // Delete the per-run subdirs once the merged output is in place.
+  // Codecov v4's auto-discovery walks every `coverage/` subdir and
+  // would otherwise upload `coverage/{unit,integration}/lcov.info`
+  // alongside the merged `coverage/lcov.info`, leading to three
+  // conflicting reports per package on the dashboard. Removing them
+  // here is belt-and-suspenders even with `disable_search: true` on
+  // the action — if a future workflow change re-enables search, the
+  // upload still stays clean.
+  for (const subdir of ["unit", "integration"]) {
+    await rm(resolve(outDir, subdir), { recursive: true, force: true })
+  }
 }
 
 async function main(): Promise<void> {

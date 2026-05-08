@@ -82,20 +82,22 @@ jobs:
       # gate ; Codecov is just for the badge + the PR-level diff
       # annotation. `fail_ci_if_error: false` keeps the build green
       # when CODECOV_TOKEN isn't set on a fork's CI.
+      #
+      # `files` is comma-separated — codecov-action v4 takes the YAML
+      # value verbatim and passes it as one CLI arg, so a `files: |`
+      # block (newline-separated) lands as a single string with
+      # literal `\n` chars and matches no real path. The action's
+      # auto-discovery fallback would then walk every `coverage/`
+      # subdir and upload the per-run lcov.info + coverage-final.json
+      # files alongside the merged one, leading to three conflicting
+      # numbers per package on the dashboard. `disable_search: true`
+      # locks down the upload to exactly the listed files.
       - name: Upload coverage to Codecov
         if: always()
         uses: codecov/codecov-action@v4
         with:
-          files: |
-            ./packages/auth/coverage/lcov.info
-            ./packages/branding/coverage/lcov.info
-            ./packages/common/coverage/lcov.info
-            ./packages/feature-flags/coverage/lcov.info
-            ./packages/notifications/coverage/lcov.info
-            ./packages/organizations/coverage/lcov.info
-            ./packages/rbac/coverage/lcov.info
-            ./packages/users/coverage/lcov.info
-            ./services/api/coverage/lcov.info
+          files: ./packages/auth/coverage/lcov.info,./packages/common/coverage/lcov.info,./packages/feature-flags/coverage/lcov.info,./packages/notifications/coverage/lcov.info,./packages/organizations/coverage/lcov.info,./packages/rbac/coverage/lcov.info,./packages/users/coverage/lcov.info,./packages/webhooks/coverage/lcov.info,./services/api/coverage/lcov.info,./services/web/coverage/lcov.info
+          disable_search: true
           fail_ci_if_error: false
           token: ${{ secrets.CODECOV_TOKEN }}
 

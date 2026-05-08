@@ -38,7 +38,9 @@
     "webhook-receiver": "tsx tools/webhook-receiver.ts"
   },
   "dependencies": {
+    "@monark/auth": "workspace:*",
     "@monark/db": "workspace:*",
+    "@monark/organizations": "workspace:*",
     "@monark/rbac": "workspace:*"
   },
   "devDependencies": {
