@@ -1,14 +1,17 @@
-import { mergeConfig } from "vitest/config"
-import { defineConfig } from "vitest/config"
+import { configDefaults, defineConfig, mergeConfig } from "vitest/config"
 import baseConfig from "../../vitest.shared"
 
 // Target threshold per test-plan : 80 %. Currently placeholder ;
 // data + bootstrap + slug-rotation + invites suites need to land.
+//
+// `test.exclude` REPLACES Vitest's defaults instead of merging into
+// them, so we re-spread `configDefaults.exclude` to keep
+// `**/node_modules/**` out of the test glob.
 export default mergeConfig(
   baseConfig,
   defineConfig({
     test: {
-      exclude: ["tests/integration/**"],
+      exclude: [...configDefaults.exclude, "tests/integration/**"],
       coverage: {
         // thresholds: { lines: 80, branches: 80, functions: 80, statements: 80 },
         include: ["src/**/*.ts"],
