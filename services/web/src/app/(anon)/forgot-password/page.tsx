@@ -1,10 +1,10 @@
-import Link from "next/link"
-import { getTranslations } from "next-intl/server"
-import { BrandedAppLogo } from "@/components/branded-app-logo"
-import { ForgotPasswordForm } from "./forgot-password-form"
+import Link from "next/link";
+import { getTranslations } from "next-intl/server";
+import { BrandedAppLogo } from "@/components/branded-app-logo";
+import { ForgotPasswordForm } from "./forgot-password-form";
 
 export default async function ForgotPasswordPage() {
-  const t = await getTranslations("auth.forgotPassword")
+  const t = await getTranslations("auth.forgotPassword");
   return (
     <main className="flex min-h-screen items-center justify-center p-8">
       <div className="w-full max-w-sm">
@@ -22,5 +22,5 @@ export default async function ForgotPasswordPage() {
         </p>
       </div>
     </main>
-  )
+  );
 }

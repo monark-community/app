@@ -1,17 +1,17 @@
-import { redirect } from "next/navigation"
-import { getTranslations } from "next-intl/server"
-import { BrandedAppLogo } from "@/components/branded-app-logo"
-import { readTotpPending } from "@/lib/totp-pending-cookie"
-import { TotpForm } from "./totp-form"
+import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
+import { BrandedAppLogo } from "@/components/branded-app-logo";
+import { readTotpPending } from "@/lib/totp-pending-cookie";
+import { TotpForm } from "./totp-form";
 
 // If no challenge is pending, the user landed here by accident (or the cookie
 // expired); bounce them back to /signin rather than showing a blank form.
 export default async function TotpChallengePage() {
-  const pending = await readTotpPending()
+  const pending = await readTotpPending();
   if (!pending.pending) {
-    redirect("/signin")
+    redirect("/signin");
   }
-  const t = await getTranslations("auth.totpChallenge")
+  const t = await getTranslations("auth.totpChallenge");
   return (
     <main className="flex min-h-screen items-center justify-center p-8">
       <div className="w-full max-w-sm">
@@ -23,9 +23,9 @@ export default async function TotpChallengePage() {
         <TotpForm />
         <form
           action={async () => {
-            "use server"
-            const { signOutAction } = await import("../actions")
-            await signOutAction("local")
+            "use server";
+            const { signOutAction } = await import("../actions");
+            await signOutAction("local");
           }}
         >
           <button
@@ -37,5 +37,5 @@ export default async function TotpChallengePage() {
         </form>
       </div>
     </main>
-  )
+  );
 }

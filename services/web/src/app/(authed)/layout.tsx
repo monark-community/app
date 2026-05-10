@@ -1,11 +1,11 @@
-import { headers } from "next/headers"
-import { redirect } from "next/navigation"
-import type { ReactNode } from "react"
-import { RecoveryCodeReminder } from "@/components/recovery-code-reminder"
-import { isSystemBootstrapped } from "@/lib/bootstrap-gate"
-import { createSupabaseServerClient } from "@/lib/supabase/server"
-import { createServerTrpcClient } from "@/lib/trpc-server"
-import { isCurrentDeviceTrusted } from "@/lib/trusted-device-cookie"
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
+import type { ReactNode } from "react";
+import { RecoveryCodeReminder } from "@/components/recovery-code-reminder";
+import { isSystemBootstrapped } from "@/lib/bootstrap-gate";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createServerTrpcClient } from "@/lib/trpc-server";
+import { isCurrentDeviceTrusted } from "@/lib/trusted-device-cookie";
 
 // Diagnostic logging gate. Set MONARK_AUTH_GATE_DEBUG=1 in CI to
 // surface which (authed) gate path is firing on each redirect. The
@@ -14,13 +14,10 @@ import { isCurrentDeviceTrusted } from "@/lib/trusted-device-cookie"
 // was the session check or the trusted-device check pulling the
 // trigger. Cheap enough to leave in ; production logs stay quiet
 // unless an operator explicitly opts in.
-const DEBUG_GATE = process.env.MONARK_AUTH_GATE_DEBUG === "1"
+const DEBUG_GATE = process.env.MONARK_AUTH_GATE_DEBUG === "1";
 function debugRedirect(reason: string, extra?: Record<string, unknown>): void {
-  if (!DEBUG_GATE) return
-  console.error(
-    `[(authed)/layout] redirect: ${reason}`,
-    extra ? JSON.stringify(extra) : "",
-  )
+  if (!DEBUG_GATE) return;
+  console.error(`[(authed)/layout] redirect: ${reason}`, extra ? JSON.stringify(extra) : "");
 }
 
 /**
@@ -55,11 +52,11 @@ export default async function AuthedLayout({ children }: { children: ReactNode }
   // sitting on /setup doesn't briefly hit Supabase for a user who
   // can't actually do anything yet. Mirrors the (anon) layout's gate.
   if (!(await isSystemBootstrapped())) {
-    debugRedirect("not-bootstrapped → /setup")
-    redirect("/setup")
+    debugRedirect("not-bootstrapped → /setup");
+    redirect("/setup");
   }
 
-  const supabase = await createSupabaseServerClient()
+  const supabase = await createSupabaseServerClient();
   // `getUser()` round-trips to the Supabase Auth server to validate the
   // JWT before returning the user record ; `getSession()` reads the
   // cookie directly and Supabase warns against trusting `.session.user`
@@ -71,28 +68,28 @@ export default async function AuthedLayout({ children }: { children: ReactNode }
   const [userResult, sessionResult] = await Promise.all([
     supabase.auth.getUser(),
     supabase.auth.getSession(),
-  ])
+  ]);
   if (userResult.error || !userResult.data.user) {
     debugRedirect("getUser failed → /signin", {
       hasError: !!userResult.error,
       errorMessage: userResult.error?.message,
-    })
-    redirect("/signin")
+    });
+    redirect("/signin");
   }
   if (!sessionResult.data.session) {
-    debugRedirect("no session → /signin")
-    redirect("/signin")
+    debugRedirect("no session → /signin");
+    redirect("/signin");
   }
 
   const trusted = await isCurrentDeviceTrusted({
     accessToken: sessionResult.data.session.access_token,
     userId: userResult.data.user.id,
-  })
+  });
   if (!trusted) {
     debugRedirect("trusted-device check failed → /auth/sign-out-stale", {
       userId: userResult.data.user.id,
-    })
-    redirect("/auth/sign-out-stale")
+    });
+    redirect("/auth/sign-out-stale");
   }
 
   // Deletion-grace lockdown : when the user has requested account
@@ -105,17 +102,14 @@ export default async function AuthedLayout({ children }: { children: ReactNode }
   // keeps users out of the routes the account layout can't gate
   // (admin, inbox, future module pages). Pathname comes from the
   // `x-pathname` request header that middleware sets on every request.
-  const me = await createServerTrpcClient(
-    sessionResult.data.session.access_token,
-  )
+  const me = await createServerTrpcClient(sessionResult.data.session.access_token)
     .users.me.query()
-    .catch(() => null)
+    .catch(() => null);
   if (me?.deletedAt) {
-    const hdrs = await headers()
-    const pathname = hdrs.get("x-pathname") ?? ""
-    const onAccount =
-      pathname === "/account" || pathname.startsWith("/account/")
-    if (!onAccount) redirect("/account/danger")
+    const hdrs = await headers();
+    const pathname = hdrs.get("x-pathname") ?? "";
+    const onAccount = pathname === "/account" || pathname.startsWith("/account/");
+    if (!onAccount) redirect("/account/danger");
   }
 
   return (
@@ -127,5 +121,5 @@ export default async function AuthedLayout({ children }: { children: ReactNode }
           handling it re-prompts on the next sign-in. */}
       <RecoveryCodeReminder />
     </>
-  )
+  );
 }

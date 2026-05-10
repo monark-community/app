@@ -1,10 +1,10 @@
-import Link from "next/link"
-import { getTranslations } from "next-intl/server"
-import { BrandedAppLogo } from "@/components/branded-app-logo"
-import { Button } from "@/components/ui/button"
+import Link from "next/link";
+import { getTranslations } from "next-intl/server";
+import { BrandedAppLogo } from "@/components/branded-app-logo";
+import { Button } from "@/components/ui/button";
 
 export default async function NotFound() {
-  const t = await getTranslations("notFound")
+  const t = await getTranslations("notFound");
   return (
     <main className="flex min-h-screen items-center justify-center px-4 py-10">
       <div className="w-full max-w-sm space-y-6 text-center">
@@ -26,5 +26,5 @@ export default async function NotFound() {
         </div>
       </div>
     </main>
-  )
+  );
 }

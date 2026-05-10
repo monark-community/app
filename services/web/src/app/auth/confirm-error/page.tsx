@@ -1,24 +1,24 @@
-import Link from "next/link"
-import { getTranslations } from "next-intl/server"
-import { Button } from "@/components/ui/button"
-import { BrandedAppLogo } from "@/components/branded-app-logo"
+import Link from "next/link";
+import { getTranslations } from "next-intl/server";
+import { Button } from "@/components/ui/button";
+import { BrandedAppLogo } from "@/components/branded-app-logo";
 
 type Props = {
-  searchParams: Promise<{ reason?: string }>
-}
+  searchParams: Promise<{ reason?: string }>;
+};
 
 function reasonKey(
   reason: string | undefined,
 ): "reasonMissing" | "reasonExpired" | "reasonInvalid" {
-  if (reason === "missing") return "reasonMissing"
-  if (reason === "otp_expired") return "reasonExpired"
-  return "reasonInvalid"
+  if (reason === "missing") return "reasonMissing";
+  if (reason === "otp_expired") return "reasonExpired";
+  return "reasonInvalid";
 }
 
 export default async function ConfirmErrorPage({ searchParams }: Props) {
-  const params = await searchParams
-  const t = await getTranslations("auth.confirmError")
-  const key = reasonKey(params.reason)
+  const params = await searchParams;
+  const t = await getTranslations("auth.confirmError");
+  const key = reasonKey(params.reason);
 
   return (
     <main className="flex min-h-screen items-center justify-center p-8">
@@ -33,5 +33,5 @@ export default async function ConfirmErrorPage({ searchParams }: Props) {
         </Button>
       </div>
     </main>
-  )
+  );
 }

@@ -1,9 +1,9 @@
-import { getTranslations } from "next-intl/server"
-import { BrandedAppLogo } from "@/components/branded-app-logo"
-import { SignUpForm } from "./signup-form"
+import { getTranslations } from "next-intl/server";
+import { BrandedAppLogo } from "@/components/branded-app-logo";
+import { SignUpForm } from "./signup-form";
 
 export default async function SignUpPage() {
-  const t = await getTranslations("auth.signUp")
+  const t = await getTranslations("auth.signUp");
   return (
     <main className="flex min-h-screen items-center justify-center p-8">
       <div className="w-full max-w-sm">
@@ -21,5 +21,5 @@ export default async function SignUpPage() {
         </p>
       </div>
     </main>
-  )
+  );
 }

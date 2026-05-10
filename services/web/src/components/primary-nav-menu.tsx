@@ -1,19 +1,16 @@
-"use client"
+"use client";
 
-import Link from "next/link"
-import { usePathname } from "next/navigation"
-import { useState } from "react"
-import { useTranslations } from "next-intl"
-import { Menu, ShieldCheck } from "lucide-react"
-import {
-  BrandedAppLogoView,
-  type BrandedAppLogoData,
-} from "@/components/branded-app-logo"
-import { Button } from "@/components/ui/button"
-import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
-import { PRIMARY_NAV } from "@/config/primary-nav"
-import { trpc } from "@/lib/trpc"
-import { cn } from "@/lib/utils"
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useState } from "react";
+import { useTranslations } from "next-intl";
+import { Menu, ShieldCheck } from "lucide-react";
+import { BrandedAppLogoView, type BrandedAppLogoData } from "@/components/branded-app-logo-view";
+import { Button } from "@/components/ui/button";
+import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { PRIMARY_NAV } from "@/config/primary-nav";
+import { trpc } from "@/lib/trpc";
+import { cn } from "@/lib/utils";
 
 /**
  * Hamburger trigger + slide-in drawer that holds the app's *primary*
@@ -38,13 +35,13 @@ export function PrimaryNavMenu({
   // Resolved by the server-rendered `AppBar` parent so the drawer
   // header renders the same brand mark as the AppBar without a second
   // tRPC roundtrip from this client component.
-  brandedLogoData: BrandedAppLogoData
+  brandedLogoData: BrandedAppLogoData;
 }) {
-  const t = useTranslations("appBar.primaryNav")
-  const tItems = useTranslations("appBar.primaryNav.items")
-  const tBreadcrumb = useTranslations("appBar.breadcrumb")
-  const pathname = usePathname()
-  const [open, setOpen] = useState(false)
+  const t = useTranslations("appBar.primaryNav");
+  const tItems = useTranslations("appBar.primaryNav.items");
+  const tBreadcrumb = useTranslations("appBar.breadcrumb");
+  const pathname = usePathname();
+  const [open, setOpen] = useState(false);
   // Only fetched when the drawer's parent is mounted (i.e. on every
   // authed page). `staleTime: Infinity` because admin status doesn't
   // flip mid-session in any flow we care about ; the link's visibility
@@ -54,10 +51,9 @@ export function PrimaryNavMenu({
   const adminQuery = trpc.rbac.isAdmin.useQuery(undefined, {
     refetchOnWindowFocus: false,
     staleTime: Infinity,
-  })
-  const isAdmin = adminQuery.data === true
-  const adminActive =
-    pathname === "/admin" || pathname.startsWith("/admin/")
+  });
+  const isAdmin = adminQuery.data === true;
+  const adminActive = pathname === "/admin" || pathname.startsWith("/admin/");
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
@@ -95,9 +91,7 @@ export function PrimaryNavMenu({
           className="flex h-14 shrink-0 items-center gap-2 border-b border-border px-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary"
         >
           <BrandedAppLogoView data={brandedLogoData} size={28} />
-          <span className="text-base font-semibold tracking-tight">
-            {t("brandWordmark")}
-          </span>
+          <span className="text-base font-semibold tracking-tight">{t("brandWordmark")}</span>
         </Link>
         {/*
           Middle region : the registered module entries. `flex-1` claims
@@ -112,14 +106,13 @@ export function PrimaryNavMenu({
             </p>
           ) : (
             PRIMARY_NAV.map((entry) => {
-              const Icon = entry.icon
+              const Icon = entry.icon;
               // Special-case the root: `pathname.startsWith("/")` matches
               // every path, so a "/" entry would always show as active.
               const active =
                 entry.href === "/"
                   ? pathname === "/"
-                  : pathname === entry.href ||
-                    pathname.startsWith(`${entry.href}/`)
+                  : pathname === entry.href || pathname.startsWith(`${entry.href}/`);
               return (
                 <Link
                   key={entry.id}
@@ -136,7 +129,7 @@ export function PrimaryNavMenu({
                   <Icon className="h-4 w-4" aria-hidden />
                   <span>{tItems(entry.id)}</span>
                 </Link>
-              )
+              );
             })
           )}
         </nav>
@@ -166,5 +159,5 @@ export function PrimaryNavMenu({
         )}
       </SheetContent>
     </Sheet>
-  )
+  );
 }

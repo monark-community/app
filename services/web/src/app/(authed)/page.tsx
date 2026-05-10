@@ -1,13 +1,13 @@
-import { getTranslations } from "next-intl/server"
-import { AppBar } from "@/components/app-bar"
-import { BrandedAppLogo } from "@/components/branded-app-logo"
+import { getTranslations } from "next-intl/server";
+import { AppBar } from "@/components/app-bar";
+import { BrandedAppLogo } from "@/components/branded-app-logo";
 
 export default async function Home() {
   // Auth check happens once in `app/(authed)/layout.tsx`; pages under the
   // group can assume a session exists. Primary navigation now lives in the
   // AppBar's hamburger drawer, so this page only renders the activity-feed
   // content (placeholder welcome block for now).
-  const t = await getTranslations("home")
+  const t = await getTranslations("home");
   return (
     <>
       <AppBar />
@@ -17,5 +17,5 @@ export default async function Home() {
         <p className="mt-3 text-muted-foreground">{t("subheading")}</p>
       </main>
     </>
-  )
+  );
 }

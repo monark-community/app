@@ -1,7 +1,7 @@
-import { Building2 } from "lucide-react"
-import { cn } from "@/lib/utils"
+import { Building2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
-type Size = "xs" | "sm" | "md" | "lg"
+type Size = "xs" | "sm" | "md" | "lg";
 
 const SIZE_CLASSES: Record<Size, { box: string; icon: string }> = {
   // 28px slot for the AppBar logo. Replaces the static brand mark with
@@ -17,7 +17,7 @@ const SIZE_CLASSES: Record<Size, { box: string; icon: string }> = {
   md: { box: "h-16 w-16 rounded-md", icon: "h-7 w-7" },
   // 80px headline size on the detail page, paired with `OrganizationLogoEditor`.
   lg: { box: "h-20 w-20 rounded-lg", icon: "h-8 w-8" },
-}
+};
 
 /**
  * Square display surface for an Organization's logo. Purpose-built for
@@ -36,12 +36,12 @@ export function OrganizationLogo({
   alt = "",
   className,
 }: {
-  logoUrl: string | null | undefined
-  size?: Size
-  alt?: string
-  className?: string
+  logoUrl: string | null | undefined;
+  size?: Size;
+  alt?: string;
+  className?: string;
 }) {
-  const sizeClasses = SIZE_CLASSES[size]
+  const sizeClasses = SIZE_CLASSES[size];
   return (
     <span
       className={cn(
@@ -51,14 +51,10 @@ export function OrganizationLogo({
       )}
     >
       {logoUrl ? (
-        <img
-          src={logoUrl}
-          alt={alt}
-          className="h-full w-full object-cover"
-        />
+        <img src={logoUrl} alt={alt} className="h-full w-full object-cover" />
       ) : (
         <Building2 className={sizeClasses.icon} aria-hidden />
       )}
     </span>
-  )
+  );
 }

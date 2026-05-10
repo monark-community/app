@@ -1,15 +1,12 @@
-import Link from "next/link"
-import { getTranslations } from "next-intl/server"
-import { AppBarBreadcrumb } from "@/components/app-bar-breadcrumb"
-import { AppLauncher } from "@/components/app-launcher"
-import {
-  BrandedAppLogoView,
-  type BrandedAppLogoData,
-} from "@/components/branded-app-logo"
-import { NotificationsBell } from "@/components/notifications-bell"
-import { PrimaryNavMenu } from "@/components/primary-nav-menu"
-import { UserMenu } from "@/components/user-menu"
-import { createServerTrpcClient } from "@/lib/trpc-server"
+import Link from "next/link";
+import { getTranslations } from "next-intl/server";
+import { AppBarBreadcrumb } from "@/components/app-bar-breadcrumb";
+import { AppLauncher } from "@/components/app-launcher";
+import { BrandedAppLogoView, type BrandedAppLogoData } from "@/components/branded-app-logo-view";
+import { NotificationsBell } from "@/components/notifications-bell";
+import { PrimaryNavMenu } from "@/components/primary-nav-menu";
+import { UserMenu } from "@/components/user-menu";
+import { createServerTrpcClient } from "@/lib/trpc-server";
 
 /**
  * Global application bar shown across all *authenticated* surfaces
@@ -33,7 +30,7 @@ import { createServerTrpcClient } from "@/lib/trpc-server"
  * round-trip.
  */
 export async function AppBar() {
-  const t = await getTranslations("appBar")
+  const t = await getTranslations("appBar");
 
   // Single source of truth for the brand mark : `bootstrapStatus`.
   // Public procedure, no auth roundtrip needed even though we're in
@@ -41,14 +38,13 @@ export async function AppBar() {
   // starter-template brand on api failure.
   const status = await createServerTrpcClient()
     .organizations.bootstrapStatus.query()
-    .catch(() => null)
+    .catch(() => null);
 
   const brandedLogoData: BrandedAppLogoData = {
     singletonLogoUrl: status?.singletonLogoUrl ?? null,
     singletonDisplayName: status?.singletonDisplayName ?? null,
-    isSingleTenantBootstrapped:
-      status?.mode === "single" && Boolean(status?.bootstrapped),
-  }
+    isSingleTenantBootstrapped: status?.mode === "single" && Boolean(status?.bootstrapped),
+  };
 
   return (
     <header className="sticky top-0 z-30 border-b border-border bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/70">
@@ -87,5 +83,5 @@ export async function AppBar() {
         </div>
       </div>
     </header>
-  )
+  );
 }
