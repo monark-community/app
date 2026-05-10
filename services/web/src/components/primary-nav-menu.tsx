@@ -5,7 +5,10 @@ import { usePathname } from "next/navigation"
 import { useState } from "react"
 import { useTranslations } from "next-intl"
 import { Menu, ShieldCheck } from "lucide-react"
-import { BrandLogo } from "@/components/brand-logo"
+import {
+  BrandedAppLogoView,
+  type BrandedAppLogoData,
+} from "@/components/branded-app-logo"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { PRIMARY_NAV } from "@/config/primary-nav"
@@ -29,7 +32,14 @@ import { cn } from "@/lib/utils"
  * *secondary* nav (sub-routes inside the module surface) ; the
  * primary drawer is strictly top-level.
  */
-export function PrimaryNavMenu() {
+export function PrimaryNavMenu({
+  brandedLogoData,
+}: {
+  // Resolved by the server-rendered `AppBar` parent so the drawer
+  // header renders the same brand mark as the AppBar without a second
+  // tRPC roundtrip from this client component.
+  brandedLogoData: BrandedAppLogoData
+}) {
   const t = useTranslations("appBar.primaryNav")
   const tItems = useTranslations("appBar.primaryNav.items")
   const tBreadcrumb = useTranslations("appBar.breadcrumb")
@@ -84,7 +94,7 @@ export function PrimaryNavMenu() {
           aria-label={t("brandHomeAria")}
           className="flex h-14 shrink-0 items-center gap-2 border-b border-border px-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary"
         >
-          <BrandLogo size={28} />
+          <BrandedAppLogoView data={brandedLogoData} size={28} />
           <span className="text-base font-semibold tracking-tight">
             {t("brandWordmark")}
           </span>

@@ -17,7 +17,6 @@ import { isCurrentDeviceTrusted } from "@/lib/trusted-device-cookie"
 const DEBUG_GATE = process.env.MONARK_AUTH_GATE_DEBUG === "1"
 function debugRedirect(reason: string, extra?: Record<string, unknown>): void {
   if (!DEBUG_GATE) return
-  // eslint-disable-next-line no-console
   console.error(
     `[(authed)/layout] redirect: ${reason}`,
     extra ? JSON.stringify(extra) : "",

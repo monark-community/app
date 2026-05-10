@@ -39,18 +39,26 @@ describe("getBootstrapStatus", () => {
       bootstrapped: false,
       organizationCount: 0,
       singletonOrganizationId: null,
+      singletonDisplayName: null,
+      singletonLogoUrl: null,
     })
   })
 
-  it("reports bootstrapped + the singleton id when exactly one org exists", async () => {
+  it("reports bootstrapped + the singleton id + branding when exactly one org exists", async () => {
     const db = getDb()
     const row = await db.organization.create({
-      data: { slug: "acme", displayName: "Acme" },
+      data: {
+        slug: "acme",
+        displayName: "Acme",
+        logoUrl: "https://example.com/acme.png",
+      },
     })
     const status = await getBootstrapStatus()
     expect(status.bootstrapped).toBe(true)
     expect(status.organizationCount).toBe(1)
     expect(status.singletonOrganizationId).toBe(row.id)
+    expect(status.singletonDisplayName).toBe("Acme")
+    expect(status.singletonLogoUrl).toBe("https://example.com/acme.png")
   })
 
   it("does not pin singletonOrganizationId when multiple orgs exist", async () => {

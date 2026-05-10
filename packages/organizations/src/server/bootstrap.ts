@@ -35,6 +35,17 @@ export type BootstrapStatus = {
    * stop on the redirect-only `/admin/organizations` URL.
    */
   singletonOrganizationId: string | null
+  /**
+   * Display name + logo URL of the singleton organization. Same gate
+   * as `singletonOrganizationId` (single-tenant + exactly one org).
+   * Used by the public app chrome (AppBar logo + pre-auth screens) so
+   * the singleton org's branding follows the user before sign-in too.
+   * Multi-tenant pre-auth has no org context — falls back to the
+   * starter-template brand. Both fields are null when the gate
+   * doesn't fire.
+   */
+  singletonDisplayName: string | null
+  singletonLogoUrl: string | null
 }
 
 export async function getBootstrapStatus(): Promise<BootstrapStatus> {
@@ -47,6 +58,8 @@ export async function getBootstrapStatus(): Promise<BootstrapStatus> {
       bootstrapped: true,
       organizationCount,
       singletonOrganizationId: null,
+      singletonDisplayName: null,
+      singletonLogoUrl: null,
     }
   }
   // Single-tenant : look up the row only when count is exactly 1, so
@@ -54,15 +67,21 @@ export async function getBootstrapStatus(): Promise<BootstrapStatus> {
   // flipped to single after running multi) doesn't pin the sidebar to
   // an arbitrary row.
   let singletonOrganizationId: string | null = null
+  let singletonDisplayName: string | null = null
+  let singletonLogoUrl: string | null = null
   if (organizationCount === 1) {
     const singleton = await findOnlyActiveOrganization()
     singletonOrganizationId = singleton?.id ?? null
+    singletonDisplayName = singleton?.displayName ?? null
+    singletonLogoUrl = singleton?.logoUrl ?? null
   }
   return {
     mode,
     bootstrapped: organizationCount >= 1,
     organizationCount,
     singletonOrganizationId,
+    singletonDisplayName,
+    singletonLogoUrl,
   }
 }
 

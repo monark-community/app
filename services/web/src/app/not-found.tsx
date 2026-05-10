@@ -1,6 +1,6 @@
 import Link from "next/link"
 import { getTranslations } from "next-intl/server"
-import { BrandLogo } from "@/components/brand-logo"
+import { BrandedAppLogo } from "@/components/branded-app-logo"
 import { Button } from "@/components/ui/button"
 
 export default async function NotFound() {
@@ -8,7 +8,7 @@ export default async function NotFound() {
   return (
     <main className="flex min-h-screen items-center justify-center px-4 py-10">
       <div className="w-full max-w-sm space-y-6 text-center">
-        <BrandLogo size={48} className="mx-auto" />
+        <BrandedAppLogo size={48} className="mx-auto" />
         <div className="space-y-2">
           <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
             {t("eyebrow")}

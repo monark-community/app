@@ -1,6 +1,6 @@
 import { getTranslations } from "next-intl/server"
 import { AppBar } from "@/components/app-bar"
-import { BrandLogo } from "@/components/brand-logo"
+import { BrandedAppLogo } from "@/components/branded-app-logo"
 
 export default async function Home() {
   // Auth check happens once in `app/(authed)/layout.tsx`; pages under the
@@ -12,7 +12,7 @@ export default async function Home() {
     <>
       <AppBar />
       <main className="mx-auto flex w-full max-w-5xl flex-col items-center px-4 py-16 text-center sm:px-6">
-        <BrandLogo size={88} className="mb-6" />
+        <BrandedAppLogo size={88} className="mb-6" />
         <h1 className="text-4xl font-semibold tracking-tight">{t("heading")}</h1>
         <p className="mt-3 text-muted-foreground">{t("subheading")}</p>
       </main>

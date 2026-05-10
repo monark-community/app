@@ -4,14 +4,17 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useTranslations } from "next-intl"
 import { CheckCircle2, Hourglass, Loader2 } from "lucide-react"
+import type { inferRouterOutputs } from "@trpc/server"
+import type { AppRouter } from "../../../../api/src/trpc/router"
 import { trpc } from "@/lib/trpc"
 
-type Status = {
-  mode: "single" | "multi"
-  bootstrapped: boolean
-  organizationCount: number
-  singletonOrganizationId: string | null
-}
+// Derive the shape from the tRPC router so `services/web` doesn't
+// import from `@monark/*/server` (forbidden by the workspace lint
+// rule — server-only modules pull `node:*` dependencies that can't
+// reach the browser bundle). Inferring from the router is the
+// drift-proof equivalent : every field the api returns lands here
+// automatically.
+type Status = inferRouterOutputs<AppRouter>["organizations"]["bootstrapStatus"]
 
 type RowPhase = "loading" | "ok" | "stuck"
 
@@ -147,6 +150,8 @@ export function SetupStatus({ initialStatus }: { initialStatus: Status | null })
     bootstrapped: false,
     organizationCount: 0,
     singletonOrganizationId: null,
+    singletonDisplayName: null,
+    singletonLogoUrl: null,
   }
 
   // Per-row resolved state, gated by the staggered reveal. Rows still

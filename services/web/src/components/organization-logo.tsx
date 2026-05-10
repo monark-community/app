@@ -1,9 +1,14 @@
 import { Building2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
-type Size = "sm" | "md" | "lg"
+type Size = "xs" | "sm" | "md" | "lg"
 
 const SIZE_CLASSES: Record<Size, { box: string; icon: string }> = {
+  // 28px slot for the AppBar logo. Replaces the static brand mark with
+  // the active org's logo (or an empty-square placeholder until one's
+  // been uploaded). Smaller corner radius than `sm` so the shape reads
+  // as "tight square" alongside the menu hamburger + breadcrumb.
+  xs: { box: "h-7 w-7 rounded-sm", icon: "h-3.5 w-3.5" },
   // Drop-in for the 40px row icon used in lists. Logo is square + clipped to
   // a small radius ; matches the visual rhythm of the list rows.
   sm: { box: "h-10 w-10 rounded-md", icon: "h-4 w-4" },

@@ -1,6 +1,6 @@
 import Link from "next/link"
 import { getTranslations } from "next-intl/server"
-import { BrandLogo } from "@/components/brand-logo"
+import { BrandedAppLogo } from "@/components/branded-app-logo"
 import { ForgotPasswordForm } from "./forgot-password-form"
 
 export default async function ForgotPasswordPage() {
@@ -9,7 +9,7 @@ export default async function ForgotPasswordPage() {
     <main className="flex min-h-screen items-center justify-center p-8">
       <div className="w-full max-w-sm">
         <div className="mb-8 flex flex-col items-center text-center">
-          <BrandLogo size={56} className="mb-4" />
+          <BrandedAppLogo size={56} className="mb-4" />
           <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
           <p className="mt-1 text-sm text-muted-foreground">{t("subtitle")}</p>
         </div>
