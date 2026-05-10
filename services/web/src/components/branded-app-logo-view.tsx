@@ -1,7 +1,7 @@
-import { BRANDING } from "@monark/branding"
-import { Building2 } from "lucide-react"
-import Image from "next/image"
-import { cn } from "@/lib/utils"
+import { BRANDING } from "@monark/branding";
+import { Building2 } from "lucide-react";
+import Image from "next/image";
+import { cn } from "@/lib/utils";
 
 /**
  * The app's "brand" mark — singleton-org-aware (presentational layer).
@@ -33,22 +33,22 @@ import { cn } from "@/lib/utils"
  */
 
 export type BrandedAppLogoData = {
-  singletonLogoUrl: string | null
-  singletonDisplayName: string | null
+  singletonLogoUrl: string | null;
+  singletonDisplayName: string | null;
   /** True when single-tenant + bootstrapped (i.e. exactly one org exists). */
-  isSingleTenantBootstrapped: boolean
-}
+  isSingleTenantBootstrapped: boolean;
+};
 
 export function BrandedAppLogoView({
   data,
   size = 48,
   className,
 }: {
-  data: BrandedAppLogoData
-  size?: number
-  className?: string
+  data: BrandedAppLogoData;
+  size?: number;
+  className?: string;
 }) {
-  const { singletonLogoUrl, singletonDisplayName, isSingleTenantBootstrapped } = data
+  const { singletonLogoUrl, singletonDisplayName, isSingleTenantBootstrapped } = data;
 
   if (singletonLogoUrl) {
     return (
@@ -60,7 +60,7 @@ export function BrandedAppLogoView({
         className={cn("rounded-md object-cover", className)}
         style={{ width: size, height: size }}
       />
-    )
+    );
   }
 
   if (isSingleTenantBootstrapped) {
@@ -73,12 +73,9 @@ export function BrandedAppLogoView({
         style={{ width: size, height: size }}
         aria-label={singletonDisplayName ?? ""}
       >
-        <Building2
-          aria-hidden
-          style={{ width: size * 0.5, height: size * 0.5 }}
-        />
+        <Building2 aria-hidden style={{ width: size * 0.5, height: size * 0.5 }} />
       </span>
-    )
+    );
   }
 
   return (
@@ -90,5 +87,5 @@ export function BrandedAppLogoView({
       priority
       className={className}
     />
-  )
+  );
 }

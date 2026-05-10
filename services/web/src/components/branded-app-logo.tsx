@@ -1,8 +1,5 @@
-import {
-  BrandedAppLogoView,
-  type BrandedAppLogoData,
-} from "@/components/branded-app-logo-view"
-import { createServerTrpcClient } from "@/lib/trpc-server"
+import { BrandedAppLogoView, type BrandedAppLogoData } from "@/components/branded-app-logo-view";
+import { createServerTrpcClient } from "@/lib/trpc-server";
 
 /**
  * Server fetch + render wrapper around `BrandedAppLogoView`. Calls
@@ -24,18 +21,17 @@ export async function BrandedAppLogo({
   size = 48,
   className,
 }: {
-  size?: number
-  className?: string
+  size?: number;
+  className?: string;
 }) {
   const status = await createServerTrpcClient()
     .organizations.bootstrapStatus.query()
-    .catch(() => null)
+    .catch(() => null);
 
   const data: BrandedAppLogoData = {
     singletonLogoUrl: status?.singletonLogoUrl ?? null,
     singletonDisplayName: status?.singletonDisplayName ?? null,
-    isSingleTenantBootstrapped:
-      status?.mode === "single" && Boolean(status?.bootstrapped),
-  }
-  return <BrandedAppLogoView data={data} size={size} className={className} />
+    isSingleTenantBootstrapped: status?.mode === "single" && Boolean(status?.bootstrapped),
+  };
+  return <BrandedAppLogoView data={data} size={size} className={className} />;
 }
