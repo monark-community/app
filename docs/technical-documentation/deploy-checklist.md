@@ -70,10 +70,10 @@ Don't click "Apply" yet. Open the env-var prompts first.
 
 ### 1.2 Fill the `monark-cron-shared` env-var group
 
-| Key | Value |
-|---|---|
-| `CRON_SECRET` | the secret from 0.1 |
-| `API_URL` | `https://monark-api.onrender.com` ← placeholder for now ; we'll update once the api is live |
+| Key           | Value                                                                                       |
+| ------------- | ------------------------------------------------------------------------------------------- |
+| `CRON_SECRET` | the secret from 0.1                                                                         |
+| `API_URL`     | `https://monark-api.onrender.com` ← placeholder for now ; we'll update once the api is live |
 
 The api service inherits both via `fromGroup: monark-cron-shared` — no need to duplicate.
 
@@ -81,21 +81,21 @@ The api service inherits both via `fromGroup: monark-cron-shared` — no need to
 
 Most are operator-set (`sync: false` in [render.yaml](../../render.yaml)). Render prompts for them on first deploy.
 
-| Key | Value |
-|---|---|
-| `DATABASE_URL` | Supabase pooler URL (port 6543) |
-| `DIRECT_URL` | Supabase direct connection URL (port 5432) |
-| `SUPABASE_URL` | from 0.2 |
-| `SUPABASE_PUBLISHABLE_KEY` | from 0.2 |
-| `SUPABASE_SECRET_KEY` | from 0.2 |
-| `WEB_ORIGIN` | `https://monark.vercel.app` ← placeholder, updated in Phase 3 |
-| `APP_URL` | `https://monark.vercel.app` ← same |
-| `SMTP_URL` | from 0.3 |
-| `SMTP_FROM` | `Monark <noreply@yourdomain.com>` |
-| `TOTP_ENCRYPTION_KEY` | from 0.1 |
-| `INITIAL_ORG_SLUG` | `monark` (or whatever slug your singleton org should have) |
-| `INITIAL_ORG_NAME` | `Monark` (or your display name) |
-| `WEBHOOK_SECRETS_JSON` | leave blank for now — fill once you create webhook endpoints |
+| Key                        | Value                                                         |
+| -------------------------- | ------------------------------------------------------------- |
+| `DATABASE_URL`             | Supabase pooler URL (port 6543)                               |
+| `DIRECT_URL`               | Supabase direct connection URL (port 5432)                    |
+| `SUPABASE_URL`             | from 0.2                                                      |
+| `SUPABASE_PUBLISHABLE_KEY` | from 0.2                                                      |
+| `SUPABASE_SECRET_KEY`      | from 0.2                                                      |
+| `WEB_ORIGIN`               | `https://monark.vercel.app` ← placeholder, updated in Phase 3 |
+| `APP_URL`                  | `https://monark.vercel.app` ← same                            |
+| `SMTP_URL`                 | from 0.3                                                      |
+| `SMTP_FROM`                | `Monark <noreply@yourdomain.com>`                             |
+| `TOTP_ENCRYPTION_KEY`      | from 0.1                                                      |
+| `INITIAL_ORG_SLUG`         | `monark` (or whatever slug your singleton org should have)    |
+| `INITIAL_ORG_NAME`         | `Monark` (or your display name)                               |
+| `WEBHOOK_SECRETS_JSON`     | leave blank for now — fill once you create webhook endpoints  |
 
 ### 1.4 Click "Apply"
 
@@ -135,12 +135,12 @@ In the import dialog :
 
 Add these in the import dialog before clicking Deploy :
 
-| Key | Value |
-|---|---|
-| `NEXT_PUBLIC_SUPABASE_URL` | from 0.2 |
-| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | from 0.2 (the publishable / anon key, NOT secret) |
-| `NEXT_PUBLIC_API_URL` | the api URL from 1.5 |
-| `NEXT_PUBLIC_APP_URL` | placeholder for now ; we'll update in Phase 3 once we know the real Vercel URL |
+| Key                                    | Value                                                                          |
+| -------------------------------------- | ------------------------------------------------------------------------------ |
+| `NEXT_PUBLIC_SUPABASE_URL`             | from 0.2                                                                       |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | from 0.2 (the publishable / anon key, NOT secret)                              |
+| `NEXT_PUBLIC_API_URL`                  | the api URL from 1.5                                                           |
+| `NEXT_PUBLIC_APP_URL`                  | placeholder for now ; we'll update in Phase 3 once we know the real Vercel URL |
 
 Don't add `SUPABASE_SECRET_KEY` here — the web service must NEVER read the service-role key.
 
@@ -148,11 +148,11 @@ Don't add `SUPABASE_SECRET_KEY` here — the web service must NEVER read the ser
 
 Settings → Functions → Region → pick one matching the api's Render region. Cross-region tRPC calls cost 50–200 ms per round-trip ; co-locating cuts latency.
 
-| api on Render | Vercel region |
-|---|---|
-| `oregon` | `sfo1` or `pdx1` |
-| `ohio` | `iad1` or `cle1` |
-| `frankfurt` | `cdg1` or `fra1` |
+| api on Render | Vercel region    |
+| ------------- | ---------------- |
+| `oregon`      | `sfo1` or `pdx1` |
+| `ohio`        | `iad1` or `cle1` |
+| `frankfurt`   | `cdg1` or `fra1` |
 
 ### 2.4 Click Deploy
 
@@ -175,10 +175,10 @@ Once green, copy the Vercel URL — `https://monark-<hash>.vercel.app` initially
 
 Render dashboard → `monark-api` → Environment :
 
-| Key | New value |
-|---|---|
-| `WEB_ORIGIN` | the Vercel URL from 2.4 |
-| `APP_URL` | the Vercel URL from 2.4 (same) |
+| Key          | New value                      |
+| ------------ | ------------------------------ |
+| `WEB_ORIGIN` | the Vercel URL from 2.4        |
+| `APP_URL`    | the Vercel URL from 2.4 (same) |
 
 Render auto-redeploys when env vars change. ~2 min.
 
@@ -186,8 +186,8 @@ Render auto-redeploys when env vars change. ~2 min.
 
 Vercel dashboard → Project → Settings → Environment Variables :
 
-| Key | New value |
-|---|---|
+| Key                   | New value           |
+| --------------------- | ------------------- |
 | `NEXT_PUBLIC_APP_URL` | the same Vercel URL |
 
 Trigger a redeploy : Deployments → most recent → Redeploy. ~1 min (cached install).
@@ -242,17 +242,17 @@ After DNS propagates, Render provisions a TLS cert too.
 
 Render `monark-api` → Environment :
 
-| Key | New value |
-|---|---|
+| Key          | New value                    |
+| ------------ | ---------------------------- |
 | `WEB_ORIGIN` | `https://app.yourdomain.com` |
-| `APP_URL` | `https://app.yourdomain.com` |
+| `APP_URL`    | `https://app.yourdomain.com` |
 
 Update `monark-cron-shared.API_URL` to `https://api.yourdomain.com`.
 
 Vercel project → Environment Variables :
 
-| Key | New value |
-|---|---|
+| Key                   | New value                    |
+| --------------------- | ---------------------------- |
 | `NEXT_PUBLIC_API_URL` | `https://api.yourdomain.com` |
 | `NEXT_PUBLIC_APP_URL` | `https://app.yourdomain.com` |
 

@@ -120,12 +120,12 @@ file_size_limit = "50MiB"
 # allowed_mime_types = ["image/png", "image/jpeg"]
 # objects_path = "./images"
 
-# User avatars. Public-read so <img src> works without signed URLs; write is
-# RLS-gated to `avatars/<auth.uid()>/*` (policy lives in the SQL migration).
-[storage.buckets.avatars]
-public = true
-file_size_limit = "2MiB"
-allowed_mime_types = ["image/jpeg", "image/png", "image/webp"]
+# Storage buckets are NOT declared here ; they live in the Prisma
+# migration at packages/db/prisma/migrations/20260510120000_storage_avatars_bucket
+# so the same code path provisions them in dev (via `pnpm db:migrate`)
+# and in prod (via Render's `prisma migrate deploy` preDeploy step).
+# Single source of truth — no risk of dev / prod drift on bucket
+# config (file-size limit, allowed MIME types, public flag, etc).
 
 # Allow connections via S3 compatible clients
 [storage.s3_protocol]
