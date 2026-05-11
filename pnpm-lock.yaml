@@ -553,8 +553,8 @@ importers:
         specifier: ^11.17.0
         version: 11.17.0(@trpc/server@11.16.0(typescript@5.9.3))(typescript@5.9.3)
       '@trpc/react-query':
-        specifier: ^11.0.0
-        version: 11.16.0(@tanstack/react-query@5.100.1(react@19.2.5))(@trpc/client@11.17.0(@trpc/server@11.16.0(typescript@5.9.3))(typescript@5.9.3))(@trpc/server@11.16.0(typescript@5.9.3))(react@19.2.5)(typescript@5.9.3)
+        specifier: ^11.17.0
+        version: 11.17.0(@tanstack/react-query@5.100.1(react@19.2.5))(@trpc/client@11.17.0(@trpc/server@11.16.0(typescript@5.9.3))(typescript@5.9.3))(@trpc/server@11.16.0(typescript@5.9.3))(react@19.2.5)(typescript@5.9.3)
       '@trpc/server':
         specifier: ^11.0.0
         version: 11.16.0(typescript@5.9.3)
@@ -2341,12 +2341,12 @@ packages:
       '@trpc/server': 11.17.0
       typescript: '>=5.7.2'
 
-  '@trpc/react-query@11.16.0':
-    resolution: {integrity: sha512-ah6ULOu4k7lCEFAEoEgqg14YPVu1lnCVVYcz8TP7avPPKwtcB0CbFKYve3ElRP+V5DoBT75Q+G66bRdR+rQ5fg==}
+  '@trpc/react-query@11.17.0':
+    resolution: {integrity: sha512-AGcl5YAF8NnhBmyJ6PqJqKb1M5VTGSoNRNqJ3orct4o4epdcg0GWhW+qT9q6gPzs/2ImIwYCdfFpgNGdZ9yLHA==}
     peerDependencies:
       '@tanstack/react-query': ^5.80.3
-      '@trpc/client': 11.16.0
-      '@trpc/server': 11.16.0
+      '@trpc/client': 11.17.0
+      '@trpc/server': 11.17.0
       react: '>=18.2.0'
       typescript: '>=5.7.2'
 
@@ -6515,7 +6515,7 @@ snapshots:
       '@trpc/server': 11.16.0(typescript@5.9.3)
       typescript: 5.9.3
 
-  '@trpc/react-query@11.16.0(@tanstack/react-query@5.100.1(react@19.2.5))(@trpc/client@11.17.0(@trpc/server@11.16.0(typescript@5.9.3))(typescript@5.9.3))(@trpc/server@11.16.0(typescript@5.9.3))(react@19.2.5)(typescript@5.9.3)':
+  '@trpc/react-query@11.17.0(@tanstack/react-query@5.100.1(react@19.2.5))(@trpc/client@11.17.0(@trpc/server@11.16.0(typescript@5.9.3))(typescript@5.9.3))(@trpc/server@11.16.0(typescript@5.9.3))(react@19.2.5)(typescript@5.9.3)':
     dependencies:
       '@tanstack/react-query': 5.100.1(react@19.2.5)
       '@trpc/client': 11.17.0(@trpc/server@11.16.0(typescript@5.9.3))(typescript@5.9.3)
