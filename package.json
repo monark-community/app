@@ -59,7 +59,7 @@
     "simple-git-hooks": "^2.13.0",
     "supabase": "^2.95.4",
     "tsx": "^4.21.0",
-    "turbo": "^2.9.10",
+    "turbo": "^2.9.14",
     "typescript": "^5.7.0",
     "typescript-eslint": "^8.59.2"
   },
