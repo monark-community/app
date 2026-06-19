@@ -24,7 +24,7 @@
     "@monark/rbac": "workspace:*",
     "@monark/users": "workspace:*",
     "@monark/webhooks": "workspace:*",
-    "nodemailer": "^8.0.7",
+    "nodemailer": "^9.0.1",
     "zod": "^3.25.76"
   },
   "peerDependencies": {
