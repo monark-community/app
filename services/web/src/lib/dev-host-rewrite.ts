@@ -25,37 +25,37 @@
  * already and `localhost` resolves correctly.
  */
 export function rewriteForCurrentHost(configured: string): string {
-  if (typeof window === "undefined") return configured
-  let url: URL
+  if (typeof window === "undefined") return configured;
+  let url: URL;
   try {
-    url = new URL(configured)
+    url = new URL(configured);
   } catch {
-    return configured
+    return configured;
   }
   const isConfiguredLoopback =
     url.hostname === "localhost" ||
     url.hostname === "127.0.0.1" ||
     url.hostname === "[::1]" ||
-    url.hostname === "::1"
-  if (!isConfiguredLoopback) return configured
-  const currentHost = window.location.hostname
+    url.hostname === "::1";
+  if (!isConfiguredLoopback) return configured;
+  const currentHost = window.location.hostname;
   const isOnLoopback =
     currentHost === "localhost" ||
     currentHost === "127.0.0.1" ||
     currentHost === "[::1]" ||
-    currentHost === "::1"
-  if (isOnLoopback) return configured
-  url.hostname = currentHost
+    currentHost === "::1";
+  if (isOnLoopback) return configured;
+  url.hostname = currentHost;
   // toString preserves the original port + protocol + path the env var
   // declared, which is exactly what we want : same service, same port,
   // just relocate from loopback to the LAN host the browser is on.
-  const rewritten = url.toString().replace(/\/$/, "")
+  const rewritten = url.toString().replace(/\/$/, "");
   // Surface the swap in the dev console so a developer testing from a
   // phone can verify the URL their browser will hit. Stays out of
   // production : `process.env.NODE_ENV` is statically inlined at
   // build time and the dead branch is dropped by the bundler.
   if (process.env.NODE_ENV !== "production") {
-    console.info(`[dev-host-rewrite] ${configured} → ${rewritten}`)
+    console.info(`[dev-host-rewrite] ${configured} → ${rewritten}`);
   }
-  return rewritten
+  return rewritten;
 }

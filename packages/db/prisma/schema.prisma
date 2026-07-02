@@ -28,6 +28,14 @@ model User {
   bannerUrl        String?
   bio              String?
   localePreference String    @default("en")
+  // How long a recognised TrustedDevice stays trusted before it has to
+  // re-prove itself (TOTP re-challenge + new-device email on next
+  // sign-in). Configured by the user in /account/security ; values
+  // exposed in the UI are 30 / 60 / 90 days. Default 90 because most
+  // users sign in often enough that even the longest option doesn't
+  // force a re-challenge in practice ; the RFC 6265bis 400-day cookie
+  // ceiling still acts as a hard upper bound enforced by the browser.
+  trustedDeviceTtlDays Int   @default(90)
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
   deletedAt        DateTime? // self-initiated, grace period applies
@@ -120,12 +128,29 @@ model TrustedDevice {
   lastSeenAt      DateTime  @default(now())
   country         String?
   revokedAt       DateTime?
+  // DB-side trust expiry. The browser cookie's `Max-Age` is already
+  // capped at 400 days by RFC 6265bis, so an inactive device naturally
+  // falls out of the cookie store after that ; this column adds a
+  // belt-and-suspenders gate so a row whose cookie somehow outlives the
+  // browser (manual restore, attacker-copied cookie, browser bug) still
+  // gets rejected at lookup time. Slides forward to `now + 400 days`
+  // every time the device is recognised on a fresh sign-in. The
+  // `dbgenerated` default matches the app-side TTL constant in
+  // `packages/auth/src/server/trusted-devices.ts` so DB inserts that
+  // skip the column (legacy test fixtures, ad-hoc psql) still land a
+  // sane value.
+  expiresAt       DateTime  @default(dbgenerated("(now() + INTERVAL '400 days')"))
   // Stamped when the user clears a TOTP challenge on this device; the
   // sign-in gate checks this to decide whether to re-challenge.
   totpVerifiedAt  DateTime?
   sessions        DeviceSession[]
 
   @@index([userId])
+  // Single-column index on expiresAt powers the planned sweep cron
+  // (`WHERE expiresAt < now()`). Cheap on the typical fleet size + the
+  // alternative full-scan would be visible once the table grows past
+  // a few thousand rows.
+  @@index([expiresAt])
 }
 
 // Maps Supabase session ids to the trusted device they were issued from,
@@ -213,6 +238,7 @@ model Role {
   assignments    RoleAssignment[]
   invites        Invite[]
   flagOverrides  FeatureFlagOverride[]
+  calendarAccess CalendarRoleAccess[]
 
   // Each org can have its own list of role keys ; the built-in ADMIN
   // row's `(ADMIN, null)` slot is enforced uniquely too. PostgreSQL's
@@ -293,6 +319,10 @@ model Organization {
   roles           Role[]
   metadata        OrganizationMetadata[]
   webhookEndpoints WebhookEndpoint[]
+  projects         Project[]
+  calendars        Calendar[]
+  calendarEvents   CalendarEvent[]
+  calendarEventReminders CalendarEventReminder[]
 }
 
 // Same shape as UserMetadata, scoped to an organization. Powers
@@ -322,6 +352,8 @@ model OrganizationMembership {
 
   joinedAt DateTime  @default(now())
   leftAt   DateTime?
+
+  projectContributions ProjectContributor[]
 
   @@unique([userId, organizationId])
   @@index([organizationId])
@@ -636,4 +668,175 @@ model WebhookDeliveryAttempt {
   durationMs   Int?
 
   @@index([deliveryId])
+}
+
+// ── MODULE: projects ─────────────────────────────────────
+// Application-tier feature on top of the core platform. Tracks
+// pre-launch / shipped work owned by an organization, with public
+// status for outward-facing surfaces and a free-form keyword list +
+// many-to-many tags onto Industry. Contributors are existing
+// OrganizationMembership rows so a project's people are always
+// scoped to the org's actual roster (no orphan-actor problem when a
+// member leaves).
+
+enum ProjectPublicStatus {
+  IDEA
+  PROTOTYPE_AVAILABLE
+  IN_PROGRESS
+  QA
+  COMPLETED
+}
+
+model Project {
+  id             String   @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  // Human-readable title. Required. Used as the primary heading on
+  // both admin + public surfaces.
+  title          String
+  // URL-friendly slug derived from title on create, editable on
+  // update. Scoped per-org so two orgs can both have a "atlas"
+  // project without colliding ; the @@unique below enforces that.
+  slug           String
+  // Optional external URL of the project (marketing page, live demo,
+  // GitHub repo, etc.). Idea-stage projects don't always have one.
+  url            String?
+  // Free-form markdown description, rendered downstream. Stored raw —
+  // no server-side sanitisation here ; the rendering layer handles
+  // safe-HTML escaping.
+  description    String?
+  publicStatus   ProjectPublicStatus @default(IDEA)
+  // Free-form keyword list. Postgres text[] ; the admin form
+  // tokenises on commas + whitespace. Order matters for display.
+  keywords       String[] @default([])
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  deletedAt      DateTime?
+
+  industries     Industry[]           @relation("ProjectIndustries")
+  contributors   ProjectContributor[]
+
+  @@unique([organizationId, slug])
+  @@index([organizationId, publicStatus])
+  @@index([organizationId, deletedAt])
+}
+
+// Reference data for the industry taxonomy. Seeded with the
+// canonical 22-industry list in the projects migration ; admins can
+// rename / add / soft-delete via /admin/industries. Soft-delete via
+// `deletedAt` so a delete on an in-use industry doesn't strand the
+// project_industries rows ; the admin UI hides deleted rows from
+// pickers but the M2M relation stays intact for historical accuracy.
+model Industry {
+  id          String   @id @default(cuid())
+  // URL-safe identifier ("agriculture", "media-entertainment-and-sport").
+  // Derived from displayName on create ; stable thereafter so a rename
+  // doesn't break any external links the public surface might mint.
+  slug        String   @unique
+  displayName String
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deletedAt   DateTime?
+
+  projects    Project[] @relation("ProjectIndustries")
+
+  @@index([deletedAt])
+}
+
+// Join row between Project and OrganizationMembership. Keeping the
+// link to the membership (not directly to User) means a contributor's
+// org context is implicit + a membership-removal cascades the
+// contributor row out automatically. The UNIQUE constraint stops
+// double-adds at the DB level.
+model ProjectContributor {
+  id            String   @id @default(cuid())
+  projectId     String
+  project       Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  membershipId  String
+  membership    OrganizationMembership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+
+  createdAt     DateTime @default(now())
+
+  @@unique([projectId, membershipId])
+  @@index([membershipId])
+}
+
+// ── MODULE: calendar ──────────────────────────────────────
+model Calendar {
+  id             String   @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String
+  description    String?
+  color          String?
+  isPersonal     Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  deletedAt      DateTime?
+
+  events         CalendarEvent[]
+  roleAccess     CalendarRoleAccess[]
+
+  @@index([organizationId])
+}
+
+// Per-calendar RBAC: a role whose id appears here can see this calendar.
+// Users with `calendar.manage` bypass this table and see all org calendars.
+model CalendarRoleAccess {
+  calendarId String
+  calendar   Calendar @relation(fields: [calendarId], references: [id], onDelete: Cascade)
+  roleId     String
+  role       Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([calendarId, roleId])
+  @@index([roleId])
+}
+
+enum CalendarEventType {
+  STANDARD
+  PUNCTUAL
+  ALL_DAY
+}
+
+model CalendarEvent {
+  id             String            @id @default(cuid())
+  calendarId     String
+  calendar       Calendar          @relation(fields: [calendarId], references: [id], onDelete: Cascade)
+  organizationId String
+  organization   Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  title          String
+  description    String?
+  location       String?
+  participants   String[]
+  startAt        DateTime
+  endAt          DateTime
+  eventType      CalendarEventType @default(STANDARD)
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  deletedAt      DateTime?
+
+  reminders      CalendarEventReminder[]
+
+  @@index([calendarId])
+  @@index([organizationId])
+  @@index([startAt])
+}
+
+model CalendarEventReminder {
+  id              String        @id @default(cuid())
+  calendarEventId String
+  calendarEvent   CalendarEvent @relation(fields: [calendarEventId], references: [id], onDelete: Cascade)
+  organizationId  String
+  organization    Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  minutesBefore   Int
+  scheduledFor    DateTime
+  notifiedAt      DateTime?
+  createdAt       DateTime      @default(now())
+
+  @@index([scheduledFor, notifiedAt])
+  @@index([calendarEventId])
+  @@index([organizationId])
 }

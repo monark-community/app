@@ -1,7 +1,7 @@
-import { redirect } from "next/navigation"
-import { getTranslations } from "next-intl/server"
-import { createServerTrpcClient } from "@/lib/trpc-server"
-import { SetupStatus } from "./setup-status"
+import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
+import { createServerTrpcClient } from "@/lib/trpc-server";
+import { SetupStatus } from "./setup-status";
 
 // `/setup` is the only route that must remain reachable while the
 // system is not yet bootstrapped (single-tenant deploys without an
@@ -14,17 +14,15 @@ import { SetupStatus } from "./setup-status"
 // behaviour of "first-run wizards" elsewhere — visible only when
 // applicable.
 export default async function SetupPage() {
-  const t = await getTranslations("setup")
+  const t = await getTranslations("setup");
   // Public tRPC procedure ; no auth needed since the gate that brings
   // users here also runs without a session.
-  const api = createServerTrpcClient()
-  const status = await api.organizations.bootstrapStatus
-    .query()
-    .catch(() => null)
+  const api = createServerTrpcClient();
+  const status = await api.organizations.bootstrapStatus.query().catch(() => null);
 
   if (status?.bootstrapped) {
     // System is already up. Don't keep showing the boot screen.
-    redirect("/")
+    redirect("/");
   }
 
   return (
@@ -54,5 +52,5 @@ export default async function SetupPage() {
         <SetupStatus initialStatus={status ?? null} />
       </div>
     </main>
-  )
+  );
 }

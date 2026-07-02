@@ -1,4 +1,4 @@
-import { registerEventTypes } from "@monark/common"
+import { registerEventTypes } from "@monark/common";
 
 const RBAC_EVENT_TYPES = {
   "rbac.role-assigned": {
@@ -12,15 +12,14 @@ const RBAC_EVENT_TYPES = {
     description: "An admin created a custom role inside their organization.",
   },
   "rbac.role-updated": {
-    description:
-      "A custom role's name / description / color / permission set was edited.",
+    description: "A custom role's name / description / color / permission set was edited.",
   },
   "rbac.role-deleted": {
     description:
       "A custom role was deleted. Only fires when no active assignments remain — the API hard-blocks deletion otherwise.",
   },
-} as const
+} as const;
 
 export function registerRbacEventTypes(): void {
-  registerEventTypes("rbac", RBAC_EVENT_TYPES)
+  registerEventTypes("rbac", RBAC_EVENT_TYPES);
 }

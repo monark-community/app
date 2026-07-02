@@ -1,50 +1,50 @@
-import { randomBytes } from "node:crypto"
-import bcrypt from "bcryptjs"
-import { authenticator } from "otplib"
-import qrcode from "qrcode"
-import { BRANDING } from "@monark/branding"
-import { emit, ConflictError, ValidationError } from "@monark/common"
-import { getDb } from "@monark/db"
-import { isEnabled } from "@monark/feature-flags/server"
-import { adminAssignmentSummary } from "@monark/rbac/server"
+import { randomBytes } from "node:crypto";
+import bcrypt from "bcryptjs";
+import { authenticator } from "otplib";
+import qrcode from "qrcode";
+import { BRANDING } from "@monark/branding";
+import { emit, ConflictError, ValidationError } from "@monark/common";
+import { getDb } from "@monark/db";
+import { isEnabled } from "@monark/feature-flags/server";
+import { adminAssignmentSummary } from "@monark/rbac/server";
 import type {
   TotpDisabledEvent,
   TotpEnabledEvent,
   TotpRecoveryCodeUsedEvent,
-} from "../contracts/events"
-import { decryptSecret, encryptSecret } from "./crypto"
-const RECOVERY_CODE_COUNT = 10
+} from "../contracts/events";
+import { decryptSecret, encryptSecret } from "./crypto";
+const RECOVERY_CODE_COUNT = 10;
 // A ±1 window (30 sec either side) catches mild client clock skew without
 // opening the door to brute force beyond what the 6-digit code already allows.
-authenticator.options = { window: 1 }
+authenticator.options = { window: 1 };
 
 export type TotpStatus =
   | { enrolled: false }
-  | { enrolled: true; activatedAt: Date | null; remainingRecoveryCodes: number }
+  | { enrolled: true; activatedAt: Date | null; remainingRecoveryCodes: number };
 
 export async function getTotpStatus(userId: string): Promise<TotpStatus> {
-  const db = getDb()
+  const db = getDb();
   const secret = await db.totpSecret.findUnique({
     where: { userId },
     include: {
       recoveryCodes: { where: { usedAt: null } },
     },
-  })
-  if (!secret) return { enrolled: false }
+  });
+  if (!secret) return { enrolled: false };
   return {
     enrolled: true,
     activatedAt: secret.activatedAt,
     remainingRecoveryCodes: secret.recoveryCodes.length,
-  }
+  };
 }
 
 export async function isTotpActive(userId: string): Promise<boolean> {
-  const db = getDb()
+  const db = getDb();
   const secret = await db.totpSecret.findUnique({
     where: { userId },
     select: { activatedAt: true },
-  })
-  return Boolean(secret?.activatedAt)
+  });
+  return Boolean(secret?.activatedAt);
 }
 
 // Returns the secret + an inline SVG QR pointing at `otpauth://...`.
@@ -58,34 +58,34 @@ export async function isTotpActive(userId: string): Promise<boolean> {
 // `text-foreground` element makes it black on light themes, white on
 // dark, with no `<img>` filter trick.
 export async function beginTotpEnrollment(input: {
-  userId: string
-  accountLabel: string
+  userId: string;
+  accountLabel: string;
 }): Promise<{ secret: string; qrSvg: string }> {
-  const db = getDb()
-  const existing = await db.totpSecret.findUnique({ where: { userId: input.userId } })
+  const db = getDb();
+  const existing = await db.totpSecret.findUnique({ where: { userId: input.userId } });
   if (existing?.activatedAt) {
-    throw new ConflictError("TOTP is already active; disable it before re-enrolling.")
+    throw new ConflictError("TOTP is already active; disable it before re-enrolling.");
   }
 
-  const secret = authenticator.generateSecret()
-  const otpauth = authenticator.keyuri(input.accountLabel, BRANDING.totpIssuer, secret)
+  const secret = authenticator.generateSecret();
+  const otpauth = authenticator.keyuri(input.accountLabel, BRANDING.totpIssuer, secret);
   const rawSvg = await qrcode.toString(otpauth, {
     type: "svg",
     margin: 1,
     color: { dark: "#000000ff", light: "#00000000" },
-  })
+  });
   // qrcode's SVG bakes the dark color as a literal `#000000` attribute on
   // the path ; swap to `currentColor` so the foreground tracks the
   // surrounding text colour. The transparent background is already there
   // from the `light: "#00000000"` option above.
-  const qrSvg = rawSvg.replace(/#000000/g, "currentColor")
-  const encrypted = encryptSecret(secret)
+  const qrSvg = rawSvg.replace(/#000000/g, "currentColor");
+  const encrypted = encryptSecret(secret);
 
   if (existing) {
     await db.$transaction([
       db.recoveryCode.deleteMany({ where: { totpSecretId: existing.id } }),
       db.totpSecret.delete({ where: { id: existing.id } }),
-    ])
+    ]);
   }
   await db.totpSecret.create({
     data: {
@@ -94,45 +94,45 @@ export async function beginTotpEnrollment(input: {
       secretIv: Uint8Array.from(encrypted.iv),
       secretTag: Uint8Array.from(encrypted.tag),
     },
-  })
+  });
 
-  return { secret, qrSvg }
+  return { secret, qrSvg };
 }
 
 function generateRecoveryCode(): string {
   // 12 hex chars (6 bytes) split into XXXX-XXXX-XXXX.
-  const raw = randomBytes(6).toString("hex").toUpperCase()
-  return `${raw.slice(0, 4)}-${raw.slice(4, 8)}-${raw.slice(8, 12)}`
+  const raw = randomBytes(6).toString("hex").toUpperCase();
+  return `${raw.slice(0, 4)}-${raw.slice(4, 8)}-${raw.slice(8, 12)}`;
 }
 
 // Called once the user has entered the first 6-digit code from their
 // authenticator. On success, activates the enrollment and mints 10 one-time
 // recovery codes (plaintext returned exactly once).
 export async function confirmTotpEnrollment(input: {
-  userId: string
-  code: string
+  userId: string;
+  code: string;
 }): Promise<{ recoveryCodes: string[] }> {
-  const db = getDb()
-  const secret = await db.totpSecret.findUnique({ where: { userId: input.userId } })
+  const db = getDb();
+  const secret = await db.totpSecret.findUnique({ where: { userId: input.userId } });
   if (!secret) {
-    throw new ValidationError("No enrollment in progress; start with beginTotpEnrollment.")
+    throw new ValidationError("No enrollment in progress; start with beginTotpEnrollment.");
   }
   if (secret.activatedAt) {
-    throw new ConflictError("TOTP is already active.")
+    throw new ConflictError("TOTP is already active.");
   }
 
   const plaintext = decryptSecret({
     cipher: Buffer.from(secret.secretCipher),
     iv: Buffer.from(secret.secretIv),
     tag: Buffer.from(secret.secretTag),
-  })
-  const ok = authenticator.check(input.code.trim(), plaintext)
+  });
+  const ok = authenticator.check(input.code.trim(), plaintext);
   if (!ok) {
-    throw new ValidationError("That code is invalid. Check the time on your device.")
+    throw new ValidationError("That code is invalid. Check the time on your device.");
   }
 
-  const recoveryCodes = Array.from({ length: RECOVERY_CODE_COUNT }, generateRecoveryCode)
-  const hashes = await Promise.all(recoveryCodes.map((c) => bcrypt.hash(c, 10)))
+  const recoveryCodes = Array.from({ length: RECOVERY_CODE_COUNT }, generateRecoveryCode);
+  const hashes = await Promise.all(recoveryCodes.map((c) => bcrypt.hash(c, 10)));
 
   await db.$transaction([
     db.totpSecret.update({
@@ -142,75 +142,72 @@ export async function confirmTotpEnrollment(input: {
     db.recoveryCode.createMany({
       data: hashes.map((codeHash) => ({ totpSecretId: secret.id, codeHash })),
     }),
-  ])
+  ]);
 
   const event: TotpEnabledEvent = {
     type: "totp.enabled",
     userId: input.userId,
     occurredAt: new Date(),
-  }
-  await emit(event)
+  };
+  await emit(event);
 
-  return { recoveryCodes }
+  return { recoveryCodes };
 }
 
 // Per-user, per-minute cap on `verifyTotpCode`. Sliding-window logic lives
 // in the standalone `totp-rate-limit.ts` module (single-process, in-memory)
 // so the unit suite can exercise it without pulling in Prisma/Supabase.
-import { recordVerifyAttempt, TotpRateLimitError } from "./totp-rate-limit"
+import { recordVerifyAttempt, TotpRateLimitError } from "./totp-rate-limit";
 
-export { TotpRateLimitError } from "./totp-rate-limit"
+export { TotpRateLimitError } from "./totp-rate-limit";
 
-export async function verifyTotpCode(input: {
-  userId: string
-  code: string
-}): Promise<boolean> {
-  const limit = recordVerifyAttempt(input.userId)
-  if (!limit.allowed) throw new TotpRateLimitError()
-  const db = getDb()
-  const secret = await db.totpSecret.findUnique({ where: { userId: input.userId } })
-  if (!secret?.activatedAt) return false
+export async function verifyTotpCode(input: { userId: string; code: string }): Promise<boolean> {
+  const limit = recordVerifyAttempt(input.userId);
+  if (!limit.allowed) throw new TotpRateLimitError();
+  const db = getDb();
+  const secret = await db.totpSecret.findUnique({ where: { userId: input.userId } });
+  if (!secret?.activatedAt) return false;
   const plaintext = decryptSecret({
     cipher: Buffer.from(secret.secretCipher),
     iv: Buffer.from(secret.secretIv),
     tag: Buffer.from(secret.secretTag),
-  })
-  return authenticator.check(input.code.trim(), plaintext)
+  });
+  return authenticator.check(input.code.trim(), plaintext);
 }
 
 // Consumes one unused recovery code (bcrypt-compared). Returns true if the
 // code matched and was just now marked used.
 export async function verifyRecoveryCode(input: {
-  userId: string
-  code: string
+  userId: string;
+  code: string;
 }): Promise<boolean> {
-  const db = getDb()
+  const db = getDb();
   const secret = await db.totpSecret.findUnique({
     where: { userId: input.userId },
     include: { recoveryCodes: { where: { usedAt: null } } },
-  })
-  if (!secret) return false
+  });
+  if (!secret) return false;
 
-  const candidate = input.code.trim().toUpperCase()
+  const candidate = input.code.trim().toUpperCase();
   for (const row of secret.recoveryCodes) {
-    const match = await bcrypt.compare(candidate, row.codeHash)
-    if (!match) continue
+    const match = await bcrypt.compare(candidate, row.codeHash);
+    if (!match) continue;
     const updated = await db.recoveryCode.updateMany({
       where: { id: row.id, usedAt: null },
       data: { usedAt: new Date() },
-    })
-    if (updated.count === 0) return false
-    const remaining = secret.recoveryCodes.length - 1
+    });
+    if (updated.count === 0) return false;
+    const remaining = secret.recoveryCodes.length - 1;
     const event: TotpRecoveryCodeUsedEvent = {
       type: "totp.recovery-code-used",
       userId: input.userId,
       remainingCodes: remaining,
       occurredAt: new Date(),
-    }
-    await emit(event)
-    return true
+    };
+    await emit(event);
+    return true;
   }
-  return false
+  return false;
 }
 
 // Recovery-code regeneration always requires a fresh TOTP code as
@@ -225,24 +222,24 @@ export async function verifyRecoveryCode(input: {
 // lost-authenticator user proceeds via account recovery (support /
 // ID verification), not via in-app self-service.
 export async function regenerateRecoveryCodes(input: {
-  userId: string
-  code: string
+  userId: string;
+  code: string;
 }): Promise<string[]> {
-  const ok = await verifyTotpCode(input)
-  if (!ok) throw new ValidationError("Invalid TOTP code.")
-  const db = getDb()
-  const secret = await db.totpSecret.findUnique({ where: { userId: input.userId } })
-  if (!secret) throw new ValidationError("TOTP is not enrolled.")
+  const ok = await verifyTotpCode(input);
+  if (!ok) throw new ValidationError("Invalid TOTP code.");
+  const db = getDb();
+  const secret = await db.totpSecret.findUnique({ where: { userId: input.userId } });
+  if (!secret) throw new ValidationError("TOTP is not enrolled.");
 
-  const recoveryCodes = Array.from({ length: RECOVERY_CODE_COUNT }, generateRecoveryCode)
-  const hashes = await Promise.all(recoveryCodes.map((c) => bcrypt.hash(c, 10)))
+  const recoveryCodes = Array.from({ length: RECOVERY_CODE_COUNT }, generateRecoveryCode);
+  const hashes = await Promise.all(recoveryCodes.map((c) => bcrypt.hash(c, 10)));
   await db.$transaction([
     db.recoveryCode.deleteMany({ where: { totpSecretId: secret.id } }),
     db.recoveryCode.createMany({
       data: hashes.map((codeHash) => ({ totpSecretId: secret.id, codeHash })),
     }),
-  ])
-  return recoveryCodes
+  ]);
+  return recoveryCodes;
 }
 
 // Read surface for the post-sign-in reminder modal. Returns the data
@@ -255,15 +252,15 @@ export async function regenerateRecoveryCodes(input: {
 // `remainingCodes === 0` makes the modal blocking. The callers compose
 // the mode from these primitives.
 export type RecoveryCodeStatus = {
-  enrolled: boolean
-  hasUnacknowledgedUse: boolean
+  enrolled: boolean;
+  hasUnacknowledgedUse: boolean;
   /** Most recent used+unacked timestamp, for "you used a code on …" copy. */
-  lastUnacknowledgedUseAt: Date | null
-  remainingCodes: number
-}
+  lastUnacknowledgedUseAt: Date | null;
+  remainingCodes: number;
+};
 
 export async function getRecoveryCodeStatus(userId: string): Promise<RecoveryCodeStatus> {
-  const db = getDb()
+  const db = getDb();
   const secret = await db.totpSecret.findUnique({
     where: { userId },
     select: {
@@ -272,28 +269,25 @@ export async function getRecoveryCodeStatus(userId: string): Promise<RecoveryCod
         select: { id: true, usedAt: true, acknowledgedAt: true },
       },
     },
-  })
+  });
   if (!secret || !secret.activatedAt) {
     return {
       enrolled: false,
       hasUnacknowledgedUse: false,
       lastUnacknowledgedUseAt: null,
       remainingCodes: 0,
-    }
+    };
   }
-  const remaining = secret.recoveryCodes.filter((row) => row.usedAt === null).length
+  const remaining = secret.recoveryCodes.filter((row) => row.usedAt === null).length;
   const unacked = secret.recoveryCodes
     .filter((row) => row.usedAt !== null && row.acknowledgedAt === null)
-    .sort(
-      (a, b) =>
-        (b.usedAt?.getTime() ?? 0) - (a.usedAt?.getTime() ?? 0),
-    )
+    .sort((a, b) => (b.usedAt?.getTime() ?? 0) - (a.usedAt?.getTime() ?? 0));
   return {
     enrolled: true,
     hasUnacknowledgedUse: unacked.length > 0,
     lastUnacknowledgedUseAt: unacked[0]?.usedAt ?? null,
     remainingCodes: remaining,
-  }
+  };
 }
 
 // Marks every used+unacked recovery row for the user as acknowledged.
@@ -301,7 +295,7 @@ export async function getRecoveryCodeStatus(userId: string): Promise<RecoveryCod
 // triggers this when they confirm they've struck the spent code from
 // their saved list.
 export async function acknowledgeRecoveryCodeUse(userId: string): Promise<void> {
-  const db = getDb()
+  const db = getDb();
   await db.recoveryCode.updateMany({
     where: {
       usedAt: { not: null },
@@ -309,102 +303,106 @@ export async function acknowledgeRecoveryCodeUse(userId: string): Promise<void> 
       totpSecret: { userId },
     },
     data: { acknowledgedAt: new Date() },
-  })
+  });
 }
 
 // Requires a current TOTP code to confirm intent. Password re-entry is
 // enforced upstream by the calling server action (which has the Supabase
 // client in its scope).
-export async function disableTotp(input: {
-  userId: string
-  code: string
-}): Promise<void> {
-  const ok = await verifyTotpCode(input)
-  if (!ok) throw new ValidationError("Invalid TOTP code.")
-  const db = getDb()
-  await db.totpSecret.delete({ where: { userId: input.userId } })
+export async function disableTotp(input: { userId: string; code: string }): Promise<void> {
+  const ok = await verifyTotpCode(input);
+  if (!ok) throw new ValidationError("Invalid TOTP code.");
+  const db = getDb();
+  await db.totpSecret.delete({ where: { userId: input.userId } });
   const event: TotpDisabledEvent = {
     type: "totp.disabled",
     userId: input.userId,
     triggeredBy: "user",
     occurredAt: new Date(),
-  }
-  await emit(event)
+  };
+  await emit(event);
 }
 
 // True when the user has activated TOTP AND the current device hasn't
 // already cleared a TOTP challenge (or the trust-devices flag is off).
 export async function requiresTotpChallenge(input: {
-  userId: string
-  trustedDeviceId: string | null
+  userId: string;
+  trustedDeviceId: string | null;
 }): Promise<boolean> {
-  const active = await isTotpActive(input.userId)
-  if (!active) return false
+  const active = await isTotpActive(input.userId);
+  if (!active) return false;
 
   const trustDevicesFlag = await isEnabled("auth.totp-trust-devices", {
     userId: input.userId,
-  })
-  if (!trustDevicesFlag) return true
-  if (!input.trustedDeviceId) return true
+  });
+  if (!trustDevicesFlag) return true;
+  if (!input.trustedDeviceId) return true;
 
-  const db = getDb()
+  const db = getDb();
   const device = await db.trustedDevice.findFirst({
     where: {
       id: input.trustedDeviceId,
       userId: input.userId,
       revokedAt: null,
+      // An expired device shouldn't carry forward its prior TOTP-cleared
+      // state ; treat it as "no trusted device" so the challenge fires.
+      expiresAt: { gt: new Date() },
     },
     select: { totpVerifiedAt: true },
-  })
-  return !device?.totpVerifiedAt
+  });
+  return !device?.totpVerifiedAt;
 }
 
 // Stamped once the user clears a TOTP challenge on this device. Subsequent
 // sign-ins from the same device skip the challenge.
 export async function markDeviceTotpVerified(input: {
-  userId: string
-  trustedDeviceId: string
+  userId: string;
+  trustedDeviceId: string;
 }): Promise<void> {
-  const db = getDb()
+  const db = getDb();
   await db.trustedDevice.updateMany({
     where: {
       id: input.trustedDeviceId,
       userId: input.userId,
       revokedAt: null,
+      // Don't stamp totpVerifiedAt on an expired row — it'd be ignored
+      // by the trust check anyway, but updating it would mask the
+      // expiry in audit logs.
+      expiresAt: { gt: new Date() },
     },
     data: { totpVerifiedAt: new Date() },
-  })
+  });
 }
 
 // Hours after which an unactivated TOTP enrollment is considered stale and
 // safe to drop. Lets the user start enrollment, walk away for a coffee, and
 // pick up where they left off; anything beyond a day is almost certainly
 // abandoned.
-const STALE_ENROLLMENT_HOURS = 24
+const STALE_ENROLLMENT_HOURS = 24;
 
 // Drops `TotpSecret` rows where `activatedAt` is null and `enrolledAt` is
 // older than `STALE_ENROLLMENT_HOURS`. Idempotent; intended to be called
 // from a daily cron once one is wired. Returns the number of rows dropped
 // so the caller can log + alert if a sudden spike appears.
 export async function cleanupStaleTotpEnrollments(): Promise<{ dropped: number }> {
-  const db = getDb()
-  const cutoff = new Date(Date.now() - STALE_ENROLLMENT_HOURS * 60 * 60 * 1000)
+  const db = getDb();
+  const cutoff = new Date(Date.now() - STALE_ENROLLMENT_HOURS * 60 * 60 * 1000);
   const result = await db.totpSecret.deleteMany({
     where: {
       activatedAt: null,
       enrolledAt: { lt: cutoff },
     },
-  })
-  return { dropped: result.count }
+  });
+  return { dropped: result.count };
 }
 
 // Days from first admin assignment after which the soft-wall escalates to
 // a hard-wall covering all routes (not just /admin/**). Per spec.
-const ADMIN_TOTP_HARDWALL_DAYS = 7
+const ADMIN_TOTP_HARDWALL_DAYS = 7;
 
 export type AdminTotpEnforcement =
   | { required: false }
-  | { required: true; mode: "soft" | "hard"; daysOverdue: number }
+  | { required: true; mode: "soft" | "hard"; daysOverdue: number };
 
 // Decides whether an admin user must enroll TOTP and at what enforcement
 // strength. Used by the /admin route guard and the /account banner.
@@ -414,20 +412,17 @@ export type AdminTotpEnforcement =
 // - "hard": redirect from EVERY route except /account, /signin, /signout to
 //   the same place. Triggered after `ADMIN_TOTP_HARDWALL_DAYS` from the
 //   earliest admin grant.
-export async function adminTotpEnforcement(
-  userId: string,
-): Promise<AdminTotpEnforcement> {
-  const flagOn = await isEnabled("auth.totp-required-admin", { userId })
-  if (!flagOn) return { required: false }
-  const summary = await adminAssignmentSummary(userId)
-  if (!summary.hasAdmin) return { required: false }
-  const totpOn = await isTotpActive(userId)
-  if (totpOn) return { required: false }
-  const grantedAt = summary.earliestGrantedAt ?? new Date()
-  const ageMs = Date.now() - grantedAt.getTime()
-  const daysSince = Math.floor(ageMs / (24 * 60 * 60 * 1000))
-  const mode: "soft" | "hard" =
-    daysSince >= ADMIN_TOTP_HARDWALL_DAYS ? "hard" : "soft"
-  const daysOverdue = Math.max(0, daysSince - ADMIN_TOTP_HARDWALL_DAYS)
-  return { required: true, mode, daysOverdue }
+export async function adminTotpEnforcement(userId: string): Promise<AdminTotpEnforcement> {
+  const flagOn = await isEnabled("auth.totp-required-admin", { userId });
+  if (!flagOn) return { required: false };
+  const summary = await adminAssignmentSummary(userId);
+  if (!summary.hasAdmin) return { required: false };
+  const totpOn = await isTotpActive(userId);
+  if (totpOn) return { required: false };
+  const grantedAt = summary.earliestGrantedAt ?? new Date();
+  const ageMs = Date.now() - grantedAt.getTime();
+  const daysSince = Math.floor(ageMs / (24 * 60 * 60 * 1000));
+  const mode: "soft" | "hard" = daysSince >= ADMIN_TOTP_HARDWALL_DAYS ? "hard" : "soft";
+  const daysOverdue = Math.max(0, daysSince - ADMIN_TOTP_HARDWALL_DAYS);
+  return { required: true, mode, daysOverdue };
 }

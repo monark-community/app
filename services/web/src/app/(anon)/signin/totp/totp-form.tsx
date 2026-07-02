@@ -1,40 +1,37 @@
-"use client"
+"use client";
 
-import { useState, useTransition, type FormEvent } from "react"
-import { useTranslations } from "next-intl"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
+import { useState, useTransition, type FormEvent } from "react";
+import { useTranslations } from "next-intl";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import {
   InputOTP,
   InputOTPGroup,
   InputOTPSeparator,
   InputOTPSlot,
-} from "@/components/ui/input-otp"
-import { Label } from "@/components/ui/label"
-import { Separator } from "@/components/ui/separator"
-import {
-  verifyTotpChallengeAction,
-  type TotpChallengeErrorCode,
-} from "./actions"
+} from "@/components/ui/input-otp";
+import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
+import { verifyTotpChallengeAction, type TotpChallengeErrorCode } from "./actions";
 
 export function TotpForm() {
-  const t = useTranslations("auth.totpChallenge")
-  const [mode, setMode] = useState<"totp" | "recovery">("totp")
-  const [code, setCode] = useState("")
-  const [errorCode, setErrorCode] = useState<TotpChallengeErrorCode | null>(null)
-  const [isPending, startTransition] = useTransition()
+  const t = useTranslations("auth.totpChallenge");
+  const [mode, setMode] = useState<"totp" | "recovery">("totp");
+  const [code, setCode] = useState("");
+  const [errorCode, setErrorCode] = useState<TotpChallengeErrorCode | null>(null);
+  const [isPending, startTransition] = useTransition();
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    setErrorCode(null)
+    event.preventDefault();
+    setErrorCode(null);
     startTransition(async () => {
       const result = await verifyTotpChallengeAction({
         code: code.trim(),
         mode,
-      })
-      if (result && !result.ok) setErrorCode(result.errorCode)
-    })
+      });
+      if (result && !result.ok) setErrorCode(result.errorCode);
+    });
   }
 
   return (
@@ -89,15 +86,10 @@ export function TotpForm() {
               />
             </div>
           )}
-          {errorCode && (
-            <p className="text-sm text-destructive">{t(`errors.${errorCode}`)}</p>
-          )}
+          {errorCode && <p className="text-sm text-destructive">{t(`errors.${errorCode}`)}</p>}
           <Button
             type="submit"
-            disabled={
-              isPending ||
-              (mode === "totp" ? code.length < 6 : code.length === 0)
-            }
+            disabled={isPending || (mode === "totp" ? code.length < 6 : code.length === 0)}
             className="w-full"
           >
             {isPending ? t("submitting") : t("submit")}
@@ -106,9 +98,7 @@ export function TotpForm() {
 
         <div className="my-4 flex items-center gap-3">
           <Separator className="flex-1" />
-          <span className="text-xs uppercase tracking-wider text-muted-foreground">
-            {t("or")}
-          </span>
+          <span className="text-xs uppercase tracking-wider text-muted-foreground">{t("or")}</span>
           <Separator className="flex-1" />
         </div>
 
@@ -116,9 +106,9 @@ export function TotpForm() {
           type="button"
           variant="ghost"
           onClick={() => {
-            setMode((current) => (current === "totp" ? "recovery" : "totp"))
-            setCode("")
-            setErrorCode(null)
+            setMode((current) => (current === "totp" ? "recovery" : "totp"));
+            setCode("");
+            setErrorCode(null);
           }}
           className="w-full text-sm text-muted-foreground"
         >
@@ -126,5 +116,5 @@ export function TotpForm() {
         </Button>
       </CardContent>
     </Card>
-  )
+  );
 }

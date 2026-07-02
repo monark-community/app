@@ -1,4 +1,4 @@
-export { notify, notifyMany, type DispatchResult } from "./dispatch"
+export { notify, notifyMany, type DispatchResult } from "./dispatch";
 export {
   isChannelEnabled,
   listPreferences,
@@ -6,15 +6,12 @@ export {
   resetPreferences,
   setPreference,
   type PrefRow,
-} from "./prefs"
-export {
-  registerNotificationSubscribers,
-  _resetSubscribersForTesting,
-} from "./subscribers"
-export { sendMail, type MailMessage, type MailDeliveryResult } from "./transport/email"
-export { notificationsRouter } from "./router"
-export { registerCoreNotificationKinds } from "./register-core-kinds"
-export { registerNotificationsEventTypes } from "./event-types"
+} from "./prefs";
+export { registerNotificationSubscribers, _resetSubscribersForTesting } from "./subscribers";
+export { sendMail, type MailMessage, type MailDeliveryResult } from "./transport/email";
+export { notificationsRouter } from "./router";
+export { registerCoreNotificationKinds } from "./register-core-kinds";
+export { registerNotificationsEventTypes } from "./event-types";
 export {
   registerNotificationKind,
   getNotificationKindDef,
@@ -22,10 +19,10 @@ export {
   isKnownNotificationKind,
   listNotificationKinds,
   listNotificationKindDescriptors,
-} from "../contracts/registry"
+} from "../contracts/registry";
 export type {
   NotificationKind,
   NotificationKindDef,
   NotificationDataMap,
   NotificationDataRegistry,
-} from "../contracts/registry"
+} from "../contracts/registry";

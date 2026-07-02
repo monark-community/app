@@ -1,4 +1,4 @@
-import { registerFlags } from "@monark/feature-flags/server"
+import { registerFlags } from "@monark/feature-flags/server";
 
 // Feature flags owned by the auth module. Registered at api boot via
 // `registerAuthFeatureFlags()` ; the flag namespace `auth.*` is owned
@@ -17,12 +17,11 @@ const AUTH_FLAGS = {
     defaultOn: true,
   },
   "totp-required-admin": {
-    description:
-      "Enforce TOTP enrollment for admin roles within 7 days of first sign-in.",
+    description: "Enforce TOTP enrollment for admin roles within 7 days of first sign-in.",
     defaultOn: true,
   },
-} as const
+} as const;
 
 export function registerAuthFeatureFlags(): void {
-  registerFlags("auth", AUTH_FLAGS)
+  registerFlags("auth", AUTH_FLAGS);
 }

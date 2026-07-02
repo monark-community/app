@@ -1,8 +1,8 @@
-import Link from "next/link"
-import { ArrowLeft } from "lucide-react"
-import { getTranslations } from "next-intl/server"
-import { createServerTrpcClient } from "@/lib/trpc-server"
-import { RoleEditor } from "../../role-editor"
+import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
+import { getTranslations } from "next-intl/server";
+import { createServerTrpcClient } from "@/lib/trpc-server";
+import { RoleEditor } from "../../role-editor";
 
 /**
  * Create-role page. The org id arrives via the `?org=` query param
@@ -19,24 +19,24 @@ import { RoleEditor } from "../../role-editor"
 export default async function AdminRbacNewRolePage({
   searchParams,
 }: {
-  searchParams: Promise<Record<string, string | string[] | undefined>>
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const params = await searchParams
-  const t = await getTranslations("admin.rbac.editor")
-  const orgParam = typeof params.org === "string" ? params.org.trim() : ""
+  const params = await searchParams;
+  const t = await getTranslations("admin.rbac.editor");
+  const orgParam = typeof params.org === "string" ? params.org.trim() : "";
 
   // Even when the operator types the URL by hand, we want to confirm
   // the org exists before the form opens. Bootstrap status carries
   // the singleton id in single-tenant deploys ; multi-tenant requires
   // an explicit `?org=` (the manager always sends one).
-  const api = createServerTrpcClient()
-  const status = await api.organizations.bootstrapStatus.query().catch(() => null)
+  const api = createServerTrpcClient();
+  const status = await api.organizations.bootstrapStatus.query().catch(() => null);
   const fallbackOrgId =
     status?.mode !== "multi" && status?.singletonOrganizationId
       ? status.singletonOrganizationId
-      : null
+      : null;
 
-  const orgId = orgParam || fallbackOrgId
+  const orgId = orgParam || fallbackOrgId;
 
   if (!orgId) {
     return (
@@ -54,12 +54,12 @@ export default async function AdminRbacNewRolePage({
           {t("missingOrg")}
         </p>
       </section>
-    )
+    );
   }
 
   return (
     <section>
       <RoleEditor mode="create" organizationId={orgId} />
     </section>
-  )
+  );
 }

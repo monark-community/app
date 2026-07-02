@@ -1,9 +1,9 @@
-import { cookies } from "next/headers"
-import { redirect } from "next/navigation"
-import type { ReactNode } from "react"
-import { isSystemBootstrapped } from "@/lib/bootstrap-gate"
-import { createSupabaseServerClient } from "@/lib/supabase/server"
-import { TOTP_PENDING_COOKIE } from "@/lib/totp-pending-cookie"
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
+import type { ReactNode } from "react";
+import { isSystemBootstrapped } from "@/lib/bootstrap-gate";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { TOTP_PENDING_COOKIE } from "@/lib/totp-pending-cookie";
 
 /**
  * Inverse of `(authed)/layout.tsx`: pages under `(anon)/...` are sign-in /
@@ -25,14 +25,22 @@ export default async function AnonLayout({ children }: { children: ReactNode }) 
   // isn't yet ready (single-tenant deploy without an initial org), even
   // sign-in / sign-up surfaces would be misleading — there's no app to
   // sign into yet — so everyone gets bounced to /setup.
-  if (!(await isSystemBootstrapped())) redirect("/setup")
+  if (!(await isSystemBootstrapped())) redirect("/setup");
 
-  const supabase = await createSupabaseServerClient()
-  const { data } = await supabase.auth.getSession()
-  if (data.session) {
-    const cookieStore = await cookies()
-    const totpPending = cookieStore.get(TOTP_PENDING_COOKIE)?.value
-    if (!totpPending) redirect("/")
+  const supabase = await createSupabaseServerClient();
+  // `getUser()` round-trips to Supabase Auth and validates the JWT
+  // against the auth server's signing key ; `getSession()` only parses
+  // the local cookie. The (authed) layout uses `getUser()` (per Supabase's
+  // own guidance — `.session.user` is untrusted), so if we used the
+  // cheaper `getSession()` here, a stale / cross-project cookie that
+  // *parses* but doesn't *validate* would have us redirect to `/` while
+  // (authed) bounces back to `/signin`, looping forever. Pay the
+  // round-trip here so both layouts agree on the answer.
+  const { data: userData, error: userErr } = await supabase.auth.getUser();
+  if (!userErr && userData.user) {
+    const cookieStore = await cookies();
+    const totpPending = cookieStore.get(TOTP_PENDING_COOKIE)?.value;
+    if (!totpPending) redirect("/");
   }
-  return <>{children}</>
+  return <>{children}</>;
 }

@@ -1,19 +1,16 @@
-import { ValidationError } from "@monark/common"
-import {
-  ADMIN_ROLE_KEY,
-  BUILTIN_ALL_PERMISSIONS_KEYS,
-} from "../contracts/role"
-import { parsePermissionKey } from "../contracts/permissions"
+import { ValidationError } from "@monark/common";
+import { ADMIN_ROLE_KEY, BUILTIN_ALL_PERMISSIONS_KEYS } from "../contracts/role";
+import { parsePermissionKey } from "../contracts/permissions";
 import {
   findActiveAssignments,
   findAllActiveAssignments,
   countActiveOrgAdmins,
   hasAnyAdminAssignment,
   type AssignmentWithRole,
-} from "./data"
-import { getDb } from "@monark/db"
+} from "./data";
+import { getDb } from "@monark/db";
 
-const ALL_PERMISSIONS_KEY_SET = new Set<string>(BUILTIN_ALL_PERMISSIONS_KEYS)
+const ALL_PERMISSIONS_KEY_SET = new Set<string>(BUILTIN_ALL_PERMISSIONS_KEYS);
 
 // ── Role helpers ─────────────────────────────────────────────────
 
@@ -24,27 +21,25 @@ export async function getUserRoles(
   userId: string,
   orgId?: string,
 ): Promise<AssignmentWithRole["role"][]> {
-  const assignments = await findActiveAssignments(userId, orgId)
+  const assignments = await findActiveAssignments(userId, orgId);
   // De-dup by roleId — a user could (in theory) have the same role
   // assigned at platform AND org tier. The presentation surface
   // doesn't care which assignment surfaced it.
-  const seen = new Set<string>()
-  const out: AssignmentWithRole["role"][] = []
+  const seen = new Set<string>();
+  const out: AssignmentWithRole["role"][] = [];
   for (const a of assignments) {
-    if (seen.has(a.roleId)) continue
-    seen.add(a.roleId)
-    out.push(a.role)
+    if (seen.has(a.roleId)) continue;
+    seen.add(a.roleId);
+    out.push(a.role);
   }
-  return out
+  return out;
 }
 
 // Full assignment list (with role) across every org the user touches.
 // Powers admin user-detail surfaces that need to render every role +
 // its scope.
-export async function getAllAssignments(
-  userId: string,
-): Promise<AssignmentWithRole[]> {
-  return findAllActiveAssignments(userId)
+export async function getAllAssignments(userId: string): Promise<AssignmentWithRole[]> {
+  return findAllActiveAssignments(userId);
 }
 
 // Org-tier role membership check. Platform-tier (SYSADMIN) requires
@@ -58,12 +53,10 @@ export async function hasRoleKey(
   // Sysadmin is the only platform-tier role ; any other key checked
   // without an orgId would be a programming error in the caller.
   if (roleKey === ADMIN_ROLE_KEY && !orgId) {
-    throw new ValidationError(
-      `hasRoleKey(${roleKey}) requires an orgId — ADMIN is org-tier.`,
-    )
+    throw new ValidationError(`hasRoleKey(${roleKey}) requires an orgId — ADMIN is org-tier.`);
   }
-  const roles = await getUserRoles(userId, orgId)
-  return roles.some((r) => r.key === roleKey)
+  const roles = await getUserRoles(userId, orgId);
+  return roles.some((r) => r.key === roleKey);
 }
 
 // ── Permission resolution ────────────────────────────────────────
@@ -85,21 +78,21 @@ export async function hasPermission(
   dottedPermission: string,
   orgId?: string,
 ): Promise<boolean> {
-  const parsed = parsePermissionKey(dottedPermission)
+  const parsed = parsePermissionKey(dottedPermission);
   if (!parsed) {
     throw new ValidationError(
       `hasPermission expects a dotted "<module>.<key>" form ; got "${dottedPermission}".`,
-    )
+    );
   }
-  const assignments = await findActiveAssignments(userId, orgId)
-  if (assignments.length === 0) return false
+  const assignments = await findActiveAssignments(userId, orgId);
+  if (assignments.length === 0) return false;
   for (const a of assignments) {
     if (a.role.builtIn && ALL_PERMISSIONS_KEY_SET.has(a.role.key)) {
-      return true
+      return true;
     }
   }
-  const roleIds = assignments.map((a) => a.roleId)
-  const db = getDb()
+  const roleIds = assignments.map((a) => a.roleId);
+  const db = getDb();
   const granted = await db.rolePermission.findFirst({
     where: {
       roleId: { in: roleIds },
@@ -107,26 +100,23 @@ export async function hasPermission(
       permission: parsed.key,
     },
     select: { id: true },
-  })
-  return granted !== null
+  });
+  return granted !== null;
 }
 
 // Returns true when the user is the only active built-in ADMIN row in
 // the org. Used by org-management to block "last admin leaves"
 // scenarios.
-export async function isLastAdmin(
-  userId: string,
-  orgId: string,
-): Promise<boolean> {
-  const has = await hasRoleKey(userId, ADMIN_ROLE_KEY, orgId)
-  if (!has) return false
-  const count = await countActiveOrgAdmins(orgId)
-  return count <= 1
+export async function isLastAdmin(userId: string, orgId: string): Promise<boolean> {
+  const has = await hasRoleKey(userId, ADMIN_ROLE_KEY, orgId);
+  if (!has) return false;
+  const count = await countActiveOrgAdmins(orgId);
+  return count <= 1;
 }
 
 export async function adminAssignmentSummary(userId: string): Promise<{
-  hasAdmin: boolean
-  earliestGrantedAt: Date | null
+  hasAdmin: boolean;
+  earliestGrantedAt: Date | null;
 }> {
-  return hasAnyAdminAssignment(userId)
+  return hasAnyAdminAssignment(userId);
 }

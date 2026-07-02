@@ -1,22 +1,20 @@
-"use client"
+"use client";
 
-import { useTranslations } from "next-intl"
-import { RefreshCw } from "lucide-react"
-import { toast } from "sonner"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Skeleton } from "@/components/ui/skeleton"
-import { PageHeader } from "@/components/page-header"
-import { trpc } from "@/lib/trpc"
+import { useTranslations } from "next-intl";
+import { RefreshCw } from "lucide-react";
+import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { PageHeader } from "@/components/page-header";
+import { trpc } from "@/lib/trpc";
 
-type DeliveryStatus = "pending" | "delivered" | "failed"
+type DeliveryStatus = "pending" | "delivered" | "failed";
 
-function deliveryStatusVariant(
-  status: DeliveryStatus,
-): "success" | "destructive" | "warning" {
-  if (status === "delivered") return "success"
-  if (status === "failed") return "destructive"
-  return "warning"
+function deliveryStatusVariant(status: DeliveryStatus): "success" | "destructive" | "warning" {
+  if (status === "delivered") return "success";
+  if (status === "failed") return "destructive";
+  return "warning";
 }
 
 /**
@@ -38,16 +36,16 @@ export function DeliveryDetail({
   endpointId,
   deliveryId,
 }: {
-  endpointId: string
-  deliveryId: string
+  endpointId: string;
+  deliveryId: string;
 }) {
-  const t = useTranslations("admin.webhooks.delivery")
-  const tStatus = useTranslations("admin.webhooks.deliveries.status")
-  const utils = trpc.useUtils()
+  const t = useTranslations("admin.webhooks.delivery");
+  const tStatus = useTranslations("admin.webhooks.deliveries.status");
+  const utils = trpc.useUtils();
   const query = trpc.webhooks.getDelivery.useQuery(
     { id: deliveryId },
     { refetchOnWindowFocus: false },
-  )
+  );
   // Look up the event-type description from the registry so the
   // header isn't just the dotted technical id (which the operator
   // might mis-read as a missing i18n key). The query is cached
@@ -55,16 +53,16 @@ export function DeliveryDetail({
   const eventTypes = trpc.webhooks.listEventTypes.useQuery(undefined, {
     refetchOnWindowFocus: false,
     staleTime: 5 * 60 * 1000,
-  })
+  });
 
   const retryMutation = trpc.webhooks.retryDelivery.useMutation({
     onSuccess: async () => {
-      toast.success(t("retrySuccess"))
-      await utils.webhooks.getDelivery.invalidate({ id: deliveryId })
-      await utils.webhooks.listDeliveries.invalidate({ endpointId })
+      toast.success(t("retrySuccess"));
+      await utils.webhooks.getDelivery.invalidate({ id: deliveryId });
+      await utils.webhooks.listDeliveries.invalidate({ endpointId });
     },
     onError: (err) => toast.error(err.message || t("retryError")),
-  })
+  });
 
   if (query.isLoading) {
     return (
@@ -76,7 +74,7 @@ export function DeliveryDetail({
         />
         <Skeleton className="h-48 w-full" />
       </div>
-    )
+    );
   }
   if (!query.data) {
     return (
@@ -90,18 +88,18 @@ export function DeliveryDetail({
           {t("notFound")}
         </p>
       </div>
-    )
+    );
   }
 
-  const { delivery, attempts } = query.data
+  const { delivery, attempts } = query.data;
   const eventDescription = (() => {
     for (const group of eventTypes.data?.groups ?? []) {
       for (const ev of group.events) {
-        if (ev.type === delivery.eventType) return ev.description
+        if (ev.type === delivery.eventType) return ev.description;
       }
     }
-    return null
-  })()
+    return null;
+  })();
   return (
     <div className="space-y-8">
       <PageHeader
@@ -127,19 +125,15 @@ export function DeliveryDetail({
         backLabel={t("back")}
       />
 
-      <dl className="grid gap-x-6 gap-y-2 rounded-md border border-border p-4 text-sm sm:grid-cols-2">
+      <dl className="grid grid-cols-1 gap-x-6 gap-y-2 rounded-md border border-border p-4 text-sm sm:grid-cols-2">
         <div className="flex items-center gap-2">
           <dt className="text-xs uppercase tracking-wide text-muted-foreground">
             {t("idempotencyKey")}
           </dt>
-          <dd className="break-all font-mono text-xs">
-            {delivery.idempotencyKey}
-          </dd>
+          <dd className="break-all font-mono text-xs">{delivery.idempotencyKey}</dd>
         </div>
         <div className="flex items-center gap-2">
-          <dt className="text-xs uppercase tracking-wide text-muted-foreground">
-            {t("attempts")}
-          </dt>
+          <dt className="text-xs uppercase tracking-wide text-muted-foreground">{t("attempts")}</dt>
           <dd className="text-xs">{delivery.attempts}</dd>
         </div>
         <div className="flex items-center gap-2">
@@ -163,9 +157,7 @@ export function DeliveryDetail({
             <dt className="text-xs uppercase tracking-wide text-muted-foreground">
               {t("lastError")}
             </dt>
-            <dd className="text-xs text-red-700 dark:text-red-400">
-              {delivery.lastError}
-            </dd>
+            <dd className="text-xs text-red-700 dark:text-red-400">{delivery.lastError}</dd>
           </div>
         )}
       </dl>
@@ -199,17 +191,16 @@ export function DeliveryDetail({
         ) : (
           <ul className="divide-y divide-border rounded-md border border-border">
             {attempts.map((attempt) => {
-              const ok = attempt.statusCode !== null &&
+              const ok =
+                attempt.statusCode !== null &&
                 attempt.statusCode >= 200 &&
-                attempt.statusCode < 300
+                attempt.statusCode < 300;
               return (
                 <li
                   key={attempt.id}
                   className="flex flex-wrap items-center gap-2 px-4 py-2 text-xs"
                 >
-                  <span className="font-mono text-muted-foreground">
-                    #{attempt.attemptNumber}
-                  </span>
+                  <span className="font-mono text-muted-foreground">#{attempt.attemptNumber}</span>
                   <span
                     className={
                       ok
@@ -217,9 +208,7 @@ export function DeliveryDetail({
                         : "text-red-700 dark:text-red-400"
                     }
                   >
-                    {attempt.statusCode !== null
-                      ? `HTTP ${attempt.statusCode}`
-                      : t("networkError")}
+                    {attempt.statusCode !== null ? `HTTP ${attempt.statusCode}` : t("networkError")}
                   </span>
                   {attempt.durationMs !== null && (
                     <span className="text-muted-foreground">
@@ -235,11 +224,11 @@ export function DeliveryDetail({
                     </span>
                   )}
                 </li>
-              )
+              );
             })}
           </ul>
         )}
       </section>
     </div>
-  )
+  );
 }

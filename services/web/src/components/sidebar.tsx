@@ -1,27 +1,27 @@
-"use client"
+"use client";
 
-import Link from "next/link"
-import type { LucideIcon } from "lucide-react"
-import { cn } from "@/lib/utils"
+import Link from "next/link";
+import type { LucideIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 type BaseItem = {
   /** Stable key for the React list reconciliation. */
-  key: string
+  key: string;
   /** Visible label. Localised at the call site. */
-  label: string
-  icon: LucideIcon
+  label: string;
+  icon: LucideIcon;
   /** Highlights the item when truthy. */
-  active?: boolean
-}
+  active?: boolean;
+};
 
 export type SidebarItem =
   | (BaseItem & { href: string; onClick?: never })
-  | (BaseItem & { onClick: () => void; href?: never })
+  | (BaseItem & { onClick: () => void; href?: never });
 
 type SidebarProps = {
-  items: SidebarItem[]
+  items: SidebarItem[];
   /** `<nav aria-label>` ; recommended whenever there's more than one nav landmark. */
-  ariaLabel?: string
+  ariaLabel?: string;
   /**
    * `vertical` (default) renders a stacked column ; intended for the
    * left rail on `xl+` viewports, slot inside `<PageLayout sidebar>`.
@@ -30,9 +30,9 @@ type SidebarProps = {
    * via negative margins ; intended for the mobile fallback when the
    * vertical rail is hidden.
    */
-  orientation?: "vertical" | "horizontal"
-  className?: string
-}
+  orientation?: "vertical" | "horizontal";
+  className?: string;
+};
 
 /**
  * The standard in-content sidebar. Mirrors the design of the primary-nav
@@ -50,12 +50,7 @@ type SidebarProps = {
  * `<button>`s (declare `onClick`). Mixed lists are allowed ; the
  * component picks the right element per-item.
  */
-export function Sidebar({
-  items,
-  ariaLabel,
-  orientation = "vertical",
-  className,
-}: SidebarProps) {
+export function Sidebar({ items, ariaLabel, orientation = "vertical", className }: SidebarProps) {
   return (
     <nav
       aria-label={ariaLabel}
@@ -68,20 +63,20 @@ export function Sidebar({
       )}
     >
       {items.map((item) => {
-        const Icon = item.icon
+        const Icon = item.icon;
         const itemClass = cn(
           "flex cursor-pointer items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
           orientation === "horizontal" && "shrink-0 whitespace-nowrap",
           item.active
             ? "bg-muted text-foreground"
             : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
-        )
+        );
         const inner = (
           <>
             <Icon className="h-4 w-4" aria-hidden />
             <span>{item.label}</span>
           </>
-        )
+        );
         if ("href" in item && item.href) {
           return (
             <Link
@@ -92,7 +87,7 @@ export function Sidebar({
             >
               {inner}
             </Link>
-          )
+          );
         }
         return (
           <button
@@ -104,8 +99,8 @@ export function Sidebar({
           >
             {inner}
           </button>
-        )
+        );
       })}
     </nav>
-  )
+  );
 }

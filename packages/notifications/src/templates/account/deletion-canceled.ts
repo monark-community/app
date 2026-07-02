@@ -1,4 +1,4 @@
-import type { KindMessages } from "../types"
+import type { KindMessages } from "../types";
 
 // IN_APP only ; cancellation reverses the deletion path so the user is
 // already in-app to take the action — no email needed.
@@ -23,6 +23,6 @@ const messages: KindMessages = {
       link: "/account",
     },
   },
-}
+};
 
-export default messages
+export default messages;

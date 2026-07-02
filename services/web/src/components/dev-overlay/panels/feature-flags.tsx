@@ -1,27 +1,26 @@
-"use client"
+"use client";
 
-import { useTranslations } from "next-intl"
-import { listFlagKeys } from "@monark/feature-flags/contracts"
-import { Button } from "@/components/ui/button"
-import { trpc } from "@/lib/trpc"
-import { CollapsibleSection } from "../collapsible-section"
+import { useTranslations } from "next-intl";
+import { listFlagKeys } from "@monark/feature-flags/contracts";
+import { Button } from "@/components/ui/button";
+import { trpc } from "@/lib/trpc";
+import { CollapsibleSection } from "../collapsible-section";
 
-const KEYS = listFlagKeys()
+const KEYS = listFlagKeys();
 
 export function FeatureFlagsPanel() {
-  const t = useTranslations("devOverlay")
-  const { data, isLoading, error, refetch, isFetching } =
-    trpc.featureFlags.getMany.useQuery(
-      { keys: KEYS, scope: {} },
-      { refetchOnWindowFocus: false },
-    )
+  const t = useTranslations("devOverlay");
+  const { data, isLoading, error, refetch, isFetching } = trpc.featureFlags.getMany.useQuery(
+    { keys: KEYS, scope: {} },
+    { refetchOnWindowFocus: false },
+  );
 
-  const onCount = data ? KEYS.filter((k) => data[k]).length : 0
+  const onCount = data ? KEYS.filter((k) => data[k]).length : 0;
   const badge = data ? (
     <span className="rounded-full bg-border px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
       {t("badges.flagsOn", { on: onCount, total: KEYS.length })}
     </span>
-  ) : null
+  ) : null;
 
   return (
     <CollapsibleSection title={t("sections.featureFlags")} badge={badge}>
@@ -56,5 +55,5 @@ export function FeatureFlagsPanel() {
         </Button>
       </div>
     </CollapsibleSection>
-  )
+  );
 }

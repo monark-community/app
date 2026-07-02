@@ -1,4 +1,4 @@
-import type { KindMessages } from "../types"
+import type { KindMessages } from "../types";
 
 // IN_APP only ; Supabase already mails both addresses on the change.
 // We carry an in-app receipt so the user has the history entry inside the app.
@@ -23,6 +23,6 @@ const messages: KindMessages = {
       link: "/account",
     },
   },
-}
+};
 
-export default messages
+export default messages;

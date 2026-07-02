@@ -1,7 +1,7 @@
-import { cookies } from "next/headers"
-import { getRequestConfig } from "next-intl/server"
-import { BRANDING } from "@monark/branding"
-import { DEFAULT_LOCALE, isLocale } from "./config"
+import { cookies } from "next/headers";
+import { getRequestConfig } from "next-intl/server";
+import { BRANDING } from "@monark/branding";
+import { DEFAULT_LOCALE, isLocale } from "./config";
 
 // Reads the user's preferred locale from the `NEXT_LOCALE` cookie (set by the
 // locale switcher) and falls back to English. Called on every request by the
@@ -10,7 +10,7 @@ import { DEFAULT_LOCALE, isLocale } from "./config"
 const BRAND_PLACEHOLDERS: Record<string, string> = {
   "{appName}": BRANDING.appName,
   "{supportEmail}": BRANDING.supportEmail,
-}
+};
 
 /**
  * Walks the loaded message tree and replaces brand placeholders with the
@@ -32,34 +32,34 @@ const BRAND_PLACEHOLDERS: Record<string, string> = {
  */
 function substituteBranding(value: unknown): unknown {
   if (typeof value === "string") {
-    let out = value
+    let out = value;
     for (const [placeholder, replacement] of Object.entries(BRAND_PLACEHOLDERS)) {
       if (out.includes(placeholder)) {
-        out = out.split(placeholder).join(replacement)
+        out = out.split(placeholder).join(replacement);
       }
     }
-    return out
+    return out;
   }
   if (Array.isArray(value)) {
-    return value.map((item) => substituteBranding(item))
+    return value.map((item) => substituteBranding(item));
   }
   if (value && typeof value === "object") {
-    const out: Record<string, unknown> = {}
+    const out: Record<string, unknown> = {};
     for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
-      out[key] = substituteBranding(child)
+      out[key] = substituteBranding(child);
     }
-    return out
+    return out;
   }
-  return value
+  return value;
 }
 
 export default getRequestConfig(async () => {
-  const cookieStore = await cookies()
-  const raw = cookieStore.get("NEXT_LOCALE")?.value
-  const locale = isLocale(raw) ? raw : DEFAULT_LOCALE
+  const cookieStore = await cookies();
+  const raw = cookieStore.get("NEXT_LOCALE")?.value;
+  const locale = isLocale(raw) ? raw : DEFAULT_LOCALE;
 
-  const messages = (await import(`../messages/${locale}.json`)).default
-  const branded = substituteBranding(messages) as typeof messages
+  const messages = (await import(`../messages/${locale}.json`)).default;
+  const branded = substituteBranding(messages) as typeof messages;
 
-  return { locale, messages: branded }
-})
+  return { locale, messages: branded };
+});

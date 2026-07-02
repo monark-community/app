@@ -12,4 +12,4 @@
  * apps share a domain) ; defaults to a short generic value.
  */
 export const SUPABASE_AUTH_STORAGE_KEY =
-  process.env.NEXT_PUBLIC_AUTH_STORAGE_KEY ?? "sb-app-auth-token"
+  process.env.NEXT_PUBLIC_AUTH_STORAGE_KEY ?? "sb-app-auth-token";

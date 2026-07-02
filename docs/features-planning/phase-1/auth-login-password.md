@@ -56,29 +56,29 @@ Sessions are handled entirely by Supabase (stored in its own `auth.sessions` tab
 
 ```ts
 // packages/auth/src/server/procedures/sign-up.ts
-"use server"
-export async function signUp(input: SignUpInput): Promise<SignUpResult>
+"use server";
+export async function signUp(input: SignUpInput): Promise<SignUpResult>;
 
 // packages/auth/src/server/procedures/sign-in.ts
-"use server"
-export async function signIn(input: SignInInput): Promise<SignInResult>
+("use server");
+export async function signIn(input: SignInInput): Promise<SignInResult>;
 
 // packages/auth/src/server/procedures/sign-out.ts
-"use server"
-export async function signOut(): Promise<void>
+("use server");
+export async function signOut(): Promise<void>;
 
 // packages/auth/src/server/procedures/password-reset.ts
-"use server"
-export async function requestPasswordReset(email: string): Promise<void>  // idempotent — always returns success for security
-export async function completePasswordReset(token: string, newPassword: string): Promise<void>
+("use server");
+export async function requestPasswordReset(email: string): Promise<void>; // idempotent — always returns success for security
+export async function completePasswordReset(token: string, newPassword: string): Promise<void>;
 ```
 
 ### Read interface (exposed to other modules)
 
 ```ts
 // packages/auth/src/server/index.ts
-export async function getCurrentUser(): Promise<User | null>
-export async function requireUser(): Promise<User>  // throws/redirects to /signin if null
+export async function getCurrentUser(): Promise<User | null>;
+export async function requireUser(): Promise<User>; // throws/redirects to /signin if null
 ```
 
 ### Zod schemas
@@ -86,15 +86,15 @@ export async function requireUser(): Promise<User>  // throws/redirects to /sign
 ```ts
 const SignUpInput = z.object({
   email: z.string().email(),
-  password: z.string().min(12),   // see auth-password-strength.md for the real rules
+  password: z.string().min(12), // see auth-password-strength.md for the real rules
   displayName: z.string().min(1).max(80).optional(),
-  referralCode: z.string().optional(),   // wired through to phase-2/referral
-})
+  referralCode: z.string().optional(), // wired through to phase-2/referral
+});
 
 const SignInInput = z.object({
   email: z.string().email(),
-  password: z.string().min(1),   // don't leak min-length on sign-in
-})
+  password: z.string().min(1), // don't leak min-length on sign-in
+});
 ```
 
 ## UI flows
@@ -148,27 +148,27 @@ const SignInInput = z.object({
 ### Events emitted
 
 ```ts
-export const USER_SIGNED_UP = "user.signed-up"
+export const USER_SIGNED_UP = "user.signed-up";
 export type UserSignedUpEvent = {
-  userId: string
-  email: string
-  referralCode?: string
-  at: Date
-}
+  userId: string;
+  email: string;
+  referralCode?: string;
+  at: Date;
+};
 
-export const USER_SIGNED_IN = "user.signed-in"
+export const USER_SIGNED_IN = "user.signed-in";
 export type UserSignedInEvent = {
-  userId: string
-  at: Date
-  trustedDeviceId?: string    // if this device was recognized
-}
+  userId: string;
+  at: Date;
+  trustedDeviceId?: string; // if this device was recognized
+};
 
-export const PASSWORD_CHANGED = "user.password-changed"
+export const PASSWORD_CHANGED = "user.password-changed";
 export type PasswordChangedEvent = {
-  userId: string
-  at: Date
-  triggeredBy: "user" | "reset"
-}
+  userId: string;
+  at: Date;
+  triggeredBy: "user" | "reset";
+};
 ```
 
 The referral module (phase 2) listens to `USER_SIGNED_UP` to attribute; the trusted-devices module listens to `USER_SIGNED_IN` to update last-seen.

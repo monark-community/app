@@ -1,9 +1,9 @@
-"use server"
+"use server";
 
-import sharp from "sharp"
-import { getRequestAppUrl } from "@/lib/request-app-url"
-import { createSupabaseServerClient } from "@/lib/supabase/server"
-import { createServerTrpcClient } from "@/lib/trpc-server"
+import sharp from "sharp";
+import { getRequestAppUrl } from "@/lib/request-app-url";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createServerTrpcClient } from "@/lib/trpc-server";
 
 // Admin-side server actions for the `/admin/users/[id]` surface. Mirrors
 // the self-service flows in `(authed)/account/actions.ts` but every action
@@ -17,15 +17,15 @@ export type AdminUploadAvatarErrorCode =
   | "invalidType"
   | "tooLarge"
   | "notAuthenticated"
-  | "upstream"
+  | "upstream";
 
 export type AdminUploadAvatarResult =
   | { ok: true; avatarUrl: string }
-  | { ok: false; errorCode: AdminUploadAvatarErrorCode }
+  | { ok: false; errorCode: AdminUploadAvatarErrorCode };
 
-const AVATAR_ALLOWED_MIME = new Set(["image/jpeg", "image/png", "image/webp"])
-const AVATAR_MAX_BYTES = 2 * 1024 * 1024
-const AVATAR_TARGET_PX = 512
+const AVATAR_ALLOWED_MIME = new Set(["image/jpeg", "image/png", "image/webp"]);
+const AVATAR_MAX_BYTES = 2 * 1024 * 1024;
+const AVATAR_TARGET_PX = 512;
 
 // Uploads to the same `avatars` bucket the self-service flow uses, but
 // under the *target* user's folder so the file's path is consistent
@@ -35,104 +35,102 @@ const AVATAR_TARGET_PX = 512
 export async function adminUploadAvatarAction(
   formData: FormData,
 ): Promise<AdminUploadAvatarResult> {
-  const file = formData.get("file")
-  const targetUserId = formData.get("userId")
+  const file = formData.get("file");
+  const targetUserId = formData.get("userId");
   if (typeof targetUserId !== "string" || !targetUserId) {
-    return { ok: false, errorCode: "upstream" }
+    return { ok: false, errorCode: "upstream" };
   }
   if (!(file instanceof File)) {
-    return { ok: false, errorCode: "invalidType" }
+    return { ok: false, errorCode: "invalidType" };
   }
   if (!AVATAR_ALLOWED_MIME.has(file.type)) {
-    return { ok: false, errorCode: "invalidType" }
+    return { ok: false, errorCode: "invalidType" };
   }
   if (file.size > AVATAR_MAX_BYTES) {
-    return { ok: false, errorCode: "tooLarge" }
+    return { ok: false, errorCode: "tooLarge" };
   }
 
-  const supabase = await createSupabaseServerClient()
-  const { data: sessionData } = await supabase.auth.getSession()
-  const accessToken = sessionData.session?.access_token
-  if (!accessToken) return { ok: false, errorCode: "notAuthenticated" }
+  const supabase = await createSupabaseServerClient();
+  const { data: sessionData } = await supabase.auth.getSession();
+  const accessToken = sessionData.session?.access_token;
+  if (!accessToken) return { ok: false, errorCode: "notAuthenticated" };
 
-  let processed: Buffer
+  let processed: Buffer;
   try {
-    const inputBuffer = Buffer.from(await file.arrayBuffer())
+    const inputBuffer = Buffer.from(await file.arrayBuffer());
     processed = await sharp(inputBuffer)
       .rotate()
       .resize(AVATAR_TARGET_PX, AVATAR_TARGET_PX, { fit: "cover", position: "centre" })
       .webp({ quality: 80 })
-      .toBuffer()
+      .toBuffer();
   } catch {
-    return { ok: false, errorCode: "invalidType" }
+    return { ok: false, errorCode: "invalidType" };
   }
 
-  const timestamp = Date.now()
-  const path = `${targetUserId}/${timestamp}.webp`
-  const { error: uploadError } = await supabase.storage
-    .from("avatars")
-    .upload(path, processed, {
-      contentType: "image/webp",
-      cacheControl: "3600",
-      upsert: false,
-    })
+  const timestamp = Date.now();
+  const path = `${targetUserId}/${timestamp}.webp`;
+  const { error: uploadError } = await supabase.storage.from("avatars").upload(path, processed, {
+    contentType: "image/webp",
+    cacheControl: "3600",
+    upsert: false,
+  });
   if (uploadError) {
-    return { ok: false, errorCode: "upstream" }
+    return { ok: false, errorCode: "upstream" };
   }
 
-  const { data: publicData } = supabase.storage.from("avatars").getPublicUrl(path)
-  const avatarUrl = `${publicData.publicUrl}?v=${timestamp}`
+  const { data: publicData } = supabase.storage.from("avatars").getPublicUrl(path);
+  const avatarUrl = `${publicData.publicUrl}?v=${timestamp}`;
 
   try {
-    const api = createServerTrpcClient(accessToken)
-    await api.users.adminUpdateProfile.mutate({ userId: targetUserId, avatarUrl })
+    const api = createServerTrpcClient(accessToken);
+    await api.users.adminUpdateProfile.mutate({ userId: targetUserId, avatarUrl });
   } catch {
-    return { ok: false, errorCode: "upstream" }
+    return { ok: false, errorCode: "upstream" };
   }
-  return { ok: true, avatarUrl }
+  return { ok: true, avatarUrl };
 }
 
 export type AdminUploadBannerErrorCode =
   | "invalidType"
   | "tooLarge"
   | "notAuthenticated"
-  | "upstream"
+  | "upstream";
 
 export type AdminUploadBannerResult =
   | { ok: true; bannerUrl: string }
-  | { ok: false; errorCode: AdminUploadBannerErrorCode }
+  | { ok: false; errorCode: AdminUploadBannerErrorCode };
 
-const BANNER_ALLOWED_MIME = new Set(["image/jpeg", "image/png", "image/webp"])
-const BANNER_MAX_BYTES = 5 * 1024 * 1024
-const BANNER_TARGET_WIDTH = 1500
-const BANNER_TARGET_HEIGHT = 500
+const BANNER_ALLOWED_MIME = new Set(["image/jpeg", "image/png", "image/webp"]);
+const BANNER_MAX_BYTES = 5 * 1024 * 1024;
+const BANNER_TARGET_WIDTH = 1500;
+const BANNER_TARGET_HEIGHT = 500;
 
 export async function adminUploadBannerAction(
   formData: FormData,
 ): Promise<AdminUploadBannerResult> {
-  const file = formData.get("file")
-  const targetUserId = formData.get("userId")
+  const file = formData.get("file");
+  const targetUserId = formData.get("userId");
   if (typeof targetUserId !== "string" || !targetUserId) {
-    return { ok: false, errorCode: "upstream" }
+    return { ok: false, errorCode: "upstream" };
   }
   if (!(file instanceof File)) {
-    return { ok: false, errorCode: "invalidType" }
+    return { ok: false, errorCode: "invalidType" };
   }
   if (!BANNER_ALLOWED_MIME.has(file.type)) {
-    return { ok: false, errorCode: "invalidType" }
+    return { ok: false, errorCode: "invalidType" };
   }
   if (file.size > BANNER_MAX_BYTES) {
-    return { ok: false, errorCode: "tooLarge" }
+    return { ok: false, errorCode: "tooLarge" };
   }
 
-  const supabase = await createSupabaseServerClient()
-  const { data: sessionData } = await supabase.auth.getSession()
-  const accessToken = sessionData.session?.access_token
-  if (!accessToken) return { ok: false, errorCode: "notAuthenticated" }
+  const supabase = await createSupabaseServerClient();
+  const { data: sessionData } = await supabase.auth.getSession();
+  const accessToken = sessionData.session?.access_token;
+  if (!accessToken) return { ok: false, errorCode: "notAuthenticated" };
 
-  let processed: Buffer
+  let processed: Buffer;
   try {
-    const inputBuffer = Buffer.from(await file.arrayBuffer())
+    const inputBuffer = Buffer.from(await file.arrayBuffer());
     processed = await sharp(inputBuffer)
       .rotate()
       .resize(BANNER_TARGET_WIDTH, BANNER_TARGET_HEIGHT, {
@@ -140,39 +138,37 @@ export async function adminUploadBannerAction(
         position: "centre",
       })
       .webp({ quality: 82 })
-      .toBuffer()
+      .toBuffer();
   } catch {
-    return { ok: false, errorCode: "invalidType" }
+    return { ok: false, errorCode: "invalidType" };
   }
 
-  const timestamp = Date.now()
-  const path = `${targetUserId}/banners/${timestamp}.webp`
-  const { error: uploadError } = await supabase.storage
-    .from("avatars")
-    .upload(path, processed, {
-      contentType: "image/webp",
-      cacheControl: "3600",
-      upsert: false,
-    })
+  const timestamp = Date.now();
+  const path = `${targetUserId}/banners/${timestamp}.webp`;
+  const { error: uploadError } = await supabase.storage.from("avatars").upload(path, processed, {
+    contentType: "image/webp",
+    cacheControl: "3600",
+    upsert: false,
+  });
   if (uploadError) {
-    return { ok: false, errorCode: "upstream" }
+    return { ok: false, errorCode: "upstream" };
   }
 
-  const { data: publicData } = supabase.storage.from("avatars").getPublicUrl(path)
-  const bannerUrl = `${publicData.publicUrl}?v=${timestamp}`
+  const { data: publicData } = supabase.storage.from("avatars").getPublicUrl(path);
+  const bannerUrl = `${publicData.publicUrl}?v=${timestamp}`;
 
   try {
-    const api = createServerTrpcClient(accessToken)
-    await api.users.adminUpdateProfile.mutate({ userId: targetUserId, bannerUrl })
+    const api = createServerTrpcClient(accessToken);
+    await api.users.adminUpdateProfile.mutate({ userId: targetUserId, bannerUrl });
   } catch {
-    return { ok: false, errorCode: "upstream" }
+    return { ok: false, errorCode: "upstream" };
   }
-  return { ok: true, bannerUrl }
+  return { ok: true, bannerUrl };
 }
 
 export type AdminPasswordResetResult =
   | { ok: true }
-  | { ok: false; errorCode: "notAuthenticated" | "forbidden" | "upstream" }
+  | { ok: false; errorCode: "notAuthenticated" | "forbidden" | "upstream" };
 
 // Admin-initiated password reset. Triggers Supabase's standard
 // `resetPasswordForEmail` against the target user's address ; the user
@@ -188,34 +184,34 @@ export type AdminPasswordResetResult =
 // already anonymized. If that lookup throws (UNAUTHORIZED / FORBIDDEN /
 // NOT_FOUND), we surface a clean error to the caller.
 export async function adminSendPasswordResetAction(input: {
-  userId: string
+  userId: string;
 }): Promise<AdminPasswordResetResult> {
-  const supabase = await createSupabaseServerClient()
-  const { data: sessionData } = await supabase.auth.getSession()
-  const accessToken = sessionData.session?.access_token
-  if (!accessToken) return { ok: false, errorCode: "notAuthenticated" }
+  const supabase = await createSupabaseServerClient();
+  const { data: sessionData } = await supabase.auth.getSession();
+  const accessToken = sessionData.session?.access_token;
+  if (!accessToken) return { ok: false, errorCode: "notAuthenticated" };
 
-  let email: string
+  let email: string;
   try {
-    const api = createServerTrpcClient(accessToken)
-    const result = await api.users.adminGetUser.query({ userId: input.userId })
-    email = result.user.email
+    const api = createServerTrpcClient(accessToken);
+    const result = await api.users.adminGetUser.query({ userId: input.userId });
+    email = result.user.email;
   } catch (error) {
     const code =
       typeof error === "object" && error !== null && "data" in error
         ? (error as { data?: { code?: string } }).data?.code
-        : undefined
+        : undefined;
     if (code === "UNAUTHORIZED" || code === "FORBIDDEN") {
-      return { ok: false, errorCode: "forbidden" }
+      return { ok: false, errorCode: "forbidden" };
     }
-    return { ok: false, errorCode: "upstream" }
+    return { ok: false, errorCode: "upstream" };
   }
 
   // Build the redirect URL from the request's actual Host header so a
   // user clicking the link from a LAN/preview deployment lands back on
   // the same host the admin triggered this from. The /auth/confirm
   // route forwards `recovery` tokens to /auth/reset-password.
-  const appUrl = await getRequestAppUrl()
+  const appUrl = await getRequestAppUrl();
   await supabase.auth
     .resetPasswordForEmail(email, {
       redirectTo: `${appUrl}/auth/confirm?type=recovery`,
@@ -225,6 +221,6 @@ export async function adminSendPasswordResetAction(input: {
       // forgot-password flow ; we don't surface "didn't send" because
       // we already confirmed the user exists, the only reason this
       // can fail is upstream Supabase transport.
-    })
-  return { ok: true }
+    });
+  return { ok: true };
 }

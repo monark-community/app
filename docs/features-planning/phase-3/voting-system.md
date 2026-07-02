@@ -140,56 +140,59 @@ Edits to a proposal after it goes `OPEN` are recorded as amendments, not mutatio
 ```ts
 // packages/voting/src/server/procedures/proposals.ts
 
-"use server"
+"use server";
 export async function createProposal(input: {
-  title: string
-  body: string
-  summary?: string
-  openAt: Date
-  closeAt: Date
-  eligibilityRoles: Role[]
-  eligibilityMinContributionScore?: number
-  weightFunction?: string
-}): Promise<Proposal>
+  title: string;
+  body: string;
+  summary?: string;
+  openAt: Date;
+  closeAt: Date;
+  eligibilityRoles: Role[];
+  eligibilityMinContributionScore?: number;
+  weightFunction?: string;
+}): Promise<Proposal>;
 
-"use server"
-export async function updateProposalDraft(id: string, patch: Partial<Proposal>): Promise<Proposal>
+("use server");
+export async function updateProposalDraft(id: string, patch: Partial<Proposal>): Promise<Proposal>;
 //   Only works while state === DRAFT.
 
-"use server"
-export async function openProposal(id: string): Promise<void>
+("use server");
+export async function openProposal(id: string): Promise<void>;
 //   Transition DRAFT → OPEN (if openAt <= now); otherwise scheduled.
 
-"use server"
-export async function amendProposal(id: string, newBody: string, rationale: string): Promise<void>
+("use server");
+export async function amendProposal(id: string, newBody: string, rationale: string): Promise<void>;
 //   Only for OPEN proposals; records a ProposalAmendment.
 
-"use server"
-export async function forceClose(id: string, reason: string): Promise<void>
+("use server");
+export async function forceClose(id: string, reason: string): Promise<void>;
 //   Admin-only; transitions to ARCHIVED with reason logged.
 
 // packages/voting/src/server/procedures/ballots.ts
-"use server"
+("use server");
 export async function castBallot(input: {
-  proposalId: string
-  choice: Choice
-  comment?: string
-}): Promise<{ receiptHash: string }>
+  proposalId: string;
+  choice: Choice;
+  comment?: string;
+}): Promise<{ receiptHash: string }>;
 
-"use server"
+("use server");
 export async function changeBallot(input: {
-  proposalId: string
-  choice: Choice
-  comment?: string
-}): Promise<{ receiptHash: string }>
+  proposalId: string;
+  choice: Choice;
+  comment?: string;
+}): Promise<{ receiptHash: string }>;
 //   Allowed only while the proposal is OPEN. New receipt issued, old ballot
 //   superseded (keep history in a BallotHistory table for audit).
 
 // Read
-export async function listProposals(filter?: { state?: ProposalState; orgId?: string }): Promise<ProposalView[]>
-export async function getProposal(id: string): Promise<ProposalDetail>
-export async function getMyBallot(proposalId: string): Promise<Ballot | null>
-export async function getTally(proposalId: string): Promise<Tally | null>
+export async function listProposals(filter?: {
+  state?: ProposalState;
+  orgId?: string;
+}): Promise<ProposalView[]>;
+export async function getProposal(id: string): Promise<ProposalDetail>;
+export async function getMyBallot(proposalId: string): Promise<Ballot | null>;
+export async function getTally(proposalId: string): Promise<Tally | null>;
 ```
 
 ### Permissions
@@ -209,14 +212,14 @@ Registered in code:
 export const WEIGHT_FUNCTIONS = {
   "one-voter-one-vote": async (user, proposal) => 1,
   "contribution-weighted": async (user, proposal) => {
-    const score = await contributions.getScore(user.id, proposal.organizationId)
-    return Math.min(10, Math.log2(1 + score))
+    const score = await contributions.getScore(user.id, proposal.organizationId);
+    return Math.min(10, Math.log2(1 + score));
   },
   "role-weighted": async (user, proposal) => {
-    const role = await rbac.primaryRole(user.id, proposal.organizationId)
-    return { ADMIN: 2, DEVELOPER: 1.5, AMBASSADOR: 1, STUDENT: 0.5 }[role] ?? 0
+    const role = await rbac.primaryRole(user.id, proposal.organizationId);
+    return { ADMIN: 2, DEVELOPER: 1.5, AMBASSADOR: 1, STUDENT: 0.5 }[role] ?? 0;
   },
-} as const
+} as const;
 ```
 
 The proposal creator picks from the available functions; new ones ship behind feature flags.
@@ -271,21 +274,21 @@ The proposal creator picks from the available functions; new ones ship behind fe
 ### Events emitted
 
 ```ts
-export const PROPOSAL_CREATED = "voting.proposal-created"
-export const PROPOSAL_OPENED = "voting.proposal-opened"
-export const PROPOSAL_CLOSED = "voting.proposal-closed"
-export const PROPOSAL_AMENDED = "voting.proposal-amended"
-export const BALLOT_CAST = "voting.ballot-cast"
-export const BALLOT_CHANGED = "voting.ballot-changed"
-export const TALLY_PUBLISHED = "voting.tally-published"
+export const PROPOSAL_CREATED = "voting.proposal-created";
+export const PROPOSAL_OPENED = "voting.proposal-opened";
+export const PROPOSAL_CLOSED = "voting.proposal-closed";
+export const PROPOSAL_AMENDED = "voting.proposal-amended";
+export const BALLOT_CAST = "voting.ballot-cast";
+export const BALLOT_CHANGED = "voting.ballot-changed";
+export const TALLY_PUBLISHED = "voting.tally-published";
 
 export type BallotCastEvent = {
-  proposalId: string
-  voterId: string
-  choice: Choice
-  weight: number
-  at: Date
-}
+  proposalId: string;
+  voterId: string;
+  choice: Choice;
+  weight: number;
+  at: Date;
+};
 ```
 
 Contribution-estimation consumes ballot events to award participation points (configurable; only counts for "cast ballot," not for choice).
@@ -293,6 +296,7 @@ Contribution-estimation consumes ballot events to award participation points (co
 ### Scheduled transitions
 
 A cron runs every 5 minutes:
+
 - DRAFT → OPEN: if `openAt <= now`.
 - OPEN → CLOSED: if `closeAt <= now`.
 - CLOSED → TALLIED: computes the tally, signs it, stores. Emits `TALLY_PUBLISHED`.

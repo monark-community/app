@@ -1,21 +1,16 @@
-"use client"
+"use client";
 
-import Link from "next/link"
-import { useState, useTransition } from "react"
-import { useTranslations } from "next-intl"
-import { ChevronRight, LogOut, User } from "lucide-react"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Button } from "@/components/ui/button"
-import {
-  Sheet,
-  SheetContent,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet"
-import { signOutAction } from "@/app/(anon)/signin/actions"
-import { rewriteForCurrentHost } from "@/lib/dev-host-rewrite"
-import { trpc } from "@/lib/trpc"
-import { cn } from "@/lib/utils"
+import Link from "next/link";
+import { useState, useTransition } from "react";
+import { useTranslations } from "next-intl";
+import { ChevronRight, LogOut, User } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { signOutAction } from "@/app/(anon)/signin/actions";
+import { rewriteForCurrentHost } from "@/lib/dev-host-rewrite";
+import { trpc } from "@/lib/trpc";
+import { cn } from "@/lib/utils";
 
 // "About you" links land on the four account-shell sub-routes. Each
 // tab is its own URL segment now ; clicking lands the user directly
@@ -24,20 +19,20 @@ const ABOUT_YOU_LINKS = [
   { id: "profile" as const, href: "/account/profile" },
   { id: "security" as const, href: "/account/security" },
   { id: "notifications" as const, href: "/account/notifications" },
-]
+];
 
 function initialsFromName(
   name: string | null | undefined,
   email: string | null | undefined,
 ): string {
-  const source = (name ?? email ?? "").trim()
-  if (!source) return "?"
-  const parts = source.split(/\s+/).filter(Boolean)
+  const source = (name ?? email ?? "").trim();
+  if (!source) return "?";
+  const parts = source.split(/\s+/).filter(Boolean);
   if (parts.length >= 2 && parts[0] && parts[1]) {
-    return (parts[0][0]! + parts[1][0]!).toUpperCase()
+    return (parts[0][0]! + parts[1][0]!).toUpperCase();
   }
-  const first = parts[0] ?? source
-  return first.slice(0, 2).toUpperCase()
+  const first = parts[0] ?? source;
+  return first.slice(0, 2).toUpperCase();
 }
 
 /**
@@ -59,29 +54,25 @@ function initialsFromName(
  * the user-identity drawer.
  */
 export function UserMenu() {
-  const t = useTranslations("appBar.userMenu")
-  const me = trpc.users.me.useQuery(undefined, { refetchOnWindowFocus: false })
-  const [open, setOpen] = useState(false)
-  const [isSigningOut, startSignOut] = useTransition()
+  const t = useTranslations("appBar.userMenu");
+  const me = trpc.users.me.useQuery(undefined, { refetchOnWindowFocus: false });
+  const [open, setOpen] = useState(false);
+  const [isSigningOut, startSignOut] = useTransition();
 
   // Rewrites a loopback Supabase Storage URL to the current LAN host
   // so phone-from-LAN dev sessions can actually load the avatar ;
   // no-op in production. See `lib/dev-host-rewrite.ts`.
-  const avatarUrl = me.data?.avatarUrl
-    ? rewriteForCurrentHost(me.data.avatarUrl)
-    : null
-  const bannerUrl = me.data?.bannerUrl
-    ? rewriteForCurrentHost(me.data.bannerUrl)
-    : null
-  const displayName = me.data?.displayName ?? null
-  const email = me.data?.email ?? null
-  const initials = initialsFromName(displayName, email)
-  const headline = displayName ?? email ?? ""
+  const avatarUrl = me.data?.avatarUrl ? rewriteForCurrentHost(me.data.avatarUrl) : null;
+  const bannerUrl = me.data?.bannerUrl ? rewriteForCurrentHost(me.data.bannerUrl) : null;
+  const displayName = me.data?.displayName ?? null;
+  const email = me.data?.email ?? null;
+  const initials = initialsFromName(displayName, email);
+  const headline = displayName ?? email ?? "";
 
   function onSignOut() {
     startSignOut(async () => {
-      await signOutAction("local")
-    })
+      await signOutAction("local");
+    });
   }
 
   return (
@@ -98,7 +89,7 @@ export function UserMenu() {
               className={
                 avatarUrl
                   ? "text-[11px]"
-                  : "bg-[linear-gradient(135deg,var(--brand-primary)_0%,var(--brand-accent)_100%)] text-white"
+                  : "bg-[linear-gradient(135deg,var(--brand-primary)_0%,var(--brand-accent)_100%)] text-(--brand-foreground)"
               }
             >
               {avatarUrl ? initials : <User className="h-4 w-4" aria-hidden />}
@@ -140,11 +131,7 @@ export function UserMenu() {
           */}
           <div className="relative h-32 shrink-0">
             {bannerUrl ? (
-              <img
-                src={bannerUrl}
-                alt=""
-                className="absolute inset-0 h-full w-full object-cover"
-              />
+              <img src={bannerUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />
             ) : (
               <div className="absolute inset-0 bg-[linear-gradient(135deg,var(--brand-primary)_0%,var(--brand-accent)_100%)] opacity-30" />
             )}
@@ -168,19 +155,17 @@ export function UserMenu() {
                 className={
                   avatarUrl
                     ? "text-sm"
-                    : "bg-[linear-gradient(135deg,var(--brand-primary)_0%,var(--brand-accent)_100%)] text-white"
+                    : "bg-[linear-gradient(135deg,var(--brand-primary)_0%,var(--brand-accent)_100%)] text-(--brand-foreground)"
                 }
               >
                 {avatarUrl ? initials : <User className="h-5 w-5" aria-hidden />}
               </AvatarFallback>
             </Avatar>
-            <p className="truncate text-lg font-semibold tracking-tight">
-              {headline}
-            </p>
+            <p className="truncate text-lg font-semibold tracking-tight">{headline}</p>
           </div>
 
           <div className="mt-4 flex flex-col gap-4 px-4">
-          {/*
+            {/*
             Phase 2 placeholder cards. The Monark-specific surfaces
             (rank, achievements, etc.) live here once they ship ;
             until then we render empty "coming soon" cards so the
@@ -188,40 +173,35 @@ export function UserMenu() {
             promises. Two side-by-side cards + one full-width card,
             mirroring the eventual rank-pair + achievements shape.
           */}
-          <div className="grid grid-cols-2 gap-3">
-            <ComingSoonCard />
-            <ComingSoonCard />
-          </div>
-          <ComingSoonCard className="h-20" />
+            <div className="grid grid-cols-2 gap-3">
+              <ComingSoonCard />
+              <ComingSoonCard />
+            </div>
+            <ComingSoonCard className="h-20" />
 
-          {/* "About you" : the three account-shell tabs lifted onto
+            {/* "About you" : the three account-shell tabs lifted onto
               the drawer for one-tap access. Closes the drawer on
               click so the user lands cleanly on the destination.
               Borderless rows separated by a thin top divider on the
               section ; each row keeps a hover background so the click
               target still reads. */}
-          <div className="mt-2 space-y-2">
-            <p className="text-xs font-medium text-muted-foreground">
-              {t("aboutYou")}
-            </p>
-            <ul className="border-t border-border pt-2">
-              {ABOUT_YOU_LINKS.map((link) => (
-                <li key={link.id}>
-                  <Link
-                    href={link.href}
-                    onClick={() => setOpen(false)}
-                    className="flex items-center justify-between rounded-md px-2 py-3 text-sm transition-colors hover:bg-muted/40 focus:outline-none focus-visible:bg-muted/40"
-                  >
-                    <span>{t(`links.${link.id}` as const)}</span>
-                    <ChevronRight
-                      className="h-4 w-4 text-muted-foreground"
-                      aria-hidden
-                    />
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
+            <div className="mt-2 space-y-2">
+              <p className="text-xs font-medium text-muted-foreground">{t("aboutYou")}</p>
+              <ul className="border-t border-border pt-2">
+                {ABOUT_YOU_LINKS.map((link) => (
+                  <li key={link.id}>
+                    <Link
+                      href={link.href}
+                      onClick={() => setOpen(false)}
+                      className="flex items-center justify-between rounded-md px-2 py-3 text-sm transition-colors hover:bg-muted/40 focus:outline-none focus-visible:bg-muted/40"
+                    >
+                      <span>{t(`links.${link.id}` as const)}</span>
+                      <ChevronRight className="h-4 w-4 text-muted-foreground" aria-hidden />
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
         </div>
 
@@ -242,7 +222,7 @@ export function UserMenu() {
         </div>
       </SheetContent>
     </Sheet>
-  )
+  );
 }
 
 function ComingSoonCard({ className }: { className?: string }) {
@@ -251,7 +231,7 @@ function ComingSoonCard({ className }: { className?: string }) {
   // surfaces (rank, achievements, …) the phase-2 work will fill in.
   // No labels here on purpose : we don't want to commit copy to the
   // future shape until the modules actually ship.
-  const t = useTranslations("appBar.userMenu")
+  const t = useTranslations("appBar.userMenu");
   return (
     <div
       className={cn(
@@ -259,9 +239,7 @@ function ComingSoonCard({ className }: { className?: string }) {
         className,
       )}
     >
-      <p className="text-[11px] italic text-muted-foreground">
-        {t("comingSoon")}
-      </p>
+      <p className="text-[11px] italic text-muted-foreground">{t("comingSoon")}</p>
     </div>
-  )
+  );
 }

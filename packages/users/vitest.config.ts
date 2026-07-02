@@ -1,5 +1,5 @@
-import { configDefaults, defineConfig, mergeConfig } from "vitest/config"
-import baseConfig from "../../vitest.shared"
+import { configDefaults, defineConfig, mergeConfig } from "vitest/config";
+import baseConfig from "../../vitest.shared";
 
 // Target threshold per test-plan : 80 %. Currently placeholder ;
 // data + profile + deletion integration suites need to land before
@@ -20,4 +20,4 @@ export default mergeConfig(
       },
     },
   }),
-)
+);

@@ -1,16 +1,16 @@
-import authNewDevice from "../templates/auth/new-device"
-import authPasswordChanged from "../templates/auth/password-changed"
-import authTotpEnabled from "../templates/auth/totp-enabled"
-import authTotpDisabled from "../templates/auth/totp-disabled"
-import authAllDevicesRevoked from "../templates/auth/all-devices-revoked"
-import accountEmailChanged from "../templates/account/email-changed"
-import accountDeletionScheduled from "../templates/account/deletion-scheduled"
-import accountDeletionCanceled from "../templates/account/deletion-canceled"
-import webhooksDeliveryPermanentlyFailed from "../templates/webhooks/delivery-permanently-failed"
-import webhooksEndpointAutoDisabled from "../templates/webhooks/endpoint-auto-disabled"
-import { registerNotificationKind } from "../contracts/registry"
+import authNewDevice from "../templates/auth/new-device";
+import authPasswordChanged from "../templates/auth/password-changed";
+import authTotpEnabled from "../templates/auth/totp-enabled";
+import authTotpDisabled from "../templates/auth/totp-disabled";
+import authAllDevicesRevoked from "../templates/auth/all-devices-revoked";
+import accountEmailChanged from "../templates/account/email-changed";
+import accountDeletionScheduled from "../templates/account/deletion-scheduled";
+import accountDeletionCanceled from "../templates/account/deletion-canceled";
+import webhooksDeliveryPermanentlyFailed from "../templates/webhooks/delivery-permanently-failed";
+import webhooksEndpointAutoDisabled from "../templates/webhooks/endpoint-auto-disabled";
+import { registerNotificationKind } from "../contracts/registry";
 
-let registered = false
+let registered = false;
 
 /**
  * Registers the eight core notification kinds (auth + account)
@@ -24,8 +24,8 @@ let registered = false
  * own `register<Module>NotificationKinds()` helper.
  */
 export function registerCoreNotificationKinds(): void {
-  if (registered) return
-  registered = true
+  if (registered) return;
+  registered = true;
 
   registerNotificationKind(
     "auth.new-device",
@@ -37,7 +37,7 @@ export function registerCoreNotificationKinds(): void {
       template: "auth/new-device",
     },
     authNewDevice,
-  )
+  );
 
   registerNotificationKind(
     "auth.password-changed",
@@ -49,7 +49,7 @@ export function registerCoreNotificationKinds(): void {
       template: "auth/password-changed",
     },
     authPasswordChanged,
-  )
+  );
 
   registerNotificationKind(
     "auth.totp-enabled",
@@ -61,7 +61,7 @@ export function registerCoreNotificationKinds(): void {
       template: "auth/totp-enabled",
     },
     authTotpEnabled,
-  )
+  );
 
   registerNotificationKind(
     "auth.totp-disabled",
@@ -73,7 +73,7 @@ export function registerCoreNotificationKinds(): void {
       template: "auth/totp-disabled",
     },
     authTotpDisabled,
-  )
+  );
 
   registerNotificationKind(
     "auth.all-devices-revoked",
@@ -85,7 +85,7 @@ export function registerCoreNotificationKinds(): void {
       template: "auth/all-devices-revoked",
     },
     authAllDevicesRevoked,
-  )
+  );
 
   registerNotificationKind(
     "account.email-changed",
@@ -99,7 +99,7 @@ export function registerCoreNotificationKinds(): void {
       template: "account/email-changed",
     },
     accountEmailChanged,
-  )
+  );
 
   registerNotificationKind(
     "account.deletion-scheduled",
@@ -111,7 +111,7 @@ export function registerCoreNotificationKinds(): void {
       template: "account/deletion-scheduled",
     },
     accountDeletionScheduled,
-  )
+  );
 
   registerNotificationKind(
     "account.deletion-canceled",
@@ -123,7 +123,7 @@ export function registerCoreNotificationKinds(): void {
       template: "account/deletion-canceled",
     },
     accountDeletionCanceled,
-  )
+  );
 
   // Webhook operator alerts. SECURITY-category because they're
   // infrastructure-integrity signals an operator never wants to miss
@@ -143,7 +143,7 @@ export function registerCoreNotificationKinds(): void {
       template: "webhooks/delivery-permanently-failed",
     },
     webhooksDeliveryPermanentlyFailed,
-  )
+  );
 
   registerNotificationKind(
     "webhooks.endpoint-auto-disabled",
@@ -155,9 +155,9 @@ export function registerCoreNotificationKinds(): void {
       template: "webhooks/endpoint-auto-disabled",
     },
     webhooksEndpointAutoDisabled,
-  )
+  );
 }
 
 export function _resetCoreKindsRegisteredForTesting(): void {
-  registered = false
+  registered = false;
 }

@@ -20,14 +20,14 @@ Five extension points cover every common need. None of them require touching a c
 ### 1. Feature flags
 
 ```ts
-import { registerFlags } from "@monark/feature-flags/server"
+import { registerFlags } from "@monark/feature-flags/server";
 
 registerFlags("posts", {
   "drafts-enabled": {
     description: "Allow saving posts as drafts before publishing.",
     defaultOn: true,
   },
-})
+});
 ```
 
 - Identity is `(module, key)`. Two modules can declare the same key suffix — `posts.publish` and `events.publish` coexist because the DB unique key is the pair.
@@ -37,12 +37,12 @@ registerFlags("posts", {
 ### 2. Permissions
 
 ```ts
-import { registerPermissions } from "@monark/rbac/server"
+import { registerPermissions } from "@monark/rbac/server";
 
 registerPermissions("posts", {
-  publish:  { description: "Publish a draft.", category: "posts" },
+  publish: { description: "Publish a draft.", category: "posts" },
   moderate: { description: "Hide / unhide flagged posts.", category: "posts" },
-})
+});
 ```
 
 - Identity is `(module, key)`. Same collision-free guarantees as flags.
@@ -53,22 +53,38 @@ registerPermissions("posts", {
 ### 3. Notification kinds + templates
 
 ```ts
-import { registerNotificationKind } from "@monark/notifications/server"
+import { registerNotificationKind } from "@monark/notifications/server";
 
 declare module "@monark/notifications/contracts" {
   interface NotificationDataRegistry {
-    "posts.published": { postId: string; authorId: string; publishedAt: Date }
+    "posts.published": { postId: string; authorId: string; publishedAt: Date };
   }
 }
 
 registerNotificationKind(
   "posts.published",
-  { category: "ACTIVITY", channels: ["IN_APP"], defaultEnabled: { IN_APP: true }, requiredEmail: false, template: "posts/published" },
   {
-    en: { subject: "Your post is live", html: "...", text: "...", inapp: { subject: "Live", body: "{{ postId }} is published" } },
-    fr: { subject: "Votre publication est en ligne", html: "...", text: "...", inapp: { subject: "En ligne", body: "{{ postId }} est publié" } },
+    category: "ACTIVITY",
+    channels: ["IN_APP"],
+    defaultEnabled: { IN_APP: true },
+    requiredEmail: false,
+    template: "posts/published",
   },
-)
+  {
+    en: {
+      subject: "Your post is live",
+      html: "...",
+      text: "...",
+      inapp: { subject: "Live", body: "{{ postId }} is published" },
+    },
+    fr: {
+      subject: "Votre publication est en ligne",
+      html: "...",
+      text: "...",
+      inapp: { subject: "En ligne", body: "{{ postId }} est publié" },
+    },
+  },
+);
 ```
 
 - The `declare module` block keeps `notify("posts.published", { userId }, { postId, authorId, publishedAt })` typed at call sites.
@@ -79,14 +95,14 @@ registerNotificationKind(
 
 ```ts
 // On the server :
-import { setUserMetadataValue } from "@monark/users/server"
-import { setOrganizationMetadataValue } from "@monark/organizations/server"
+import { setUserMetadataValue } from "@monark/users/server";
+import { setOrganizationMetadataValue } from "@monark/organizations/server";
 
 // Set a per-user preference :
-await setUserMetadataValue({ userId, module: "posts", key: "feed-density", value: "compact" })
+await setUserMetadataValue({ userId, module: "posts", key: "feed-density", value: "compact" });
 
 // Or via tRPC :
-trpc.users.metadata.set.mutate({ userId, module: "posts", key: "feed-density", value: "compact" })
+trpc.users.metadata.set.mutate({ userId, module: "posts", key: "feed-density", value: "compact" });
 ```
 
 - Identity is `(parent_id, module, key)` ; the value is JSON.
@@ -108,7 +124,7 @@ The compile-time `DomainEvent` union (extension point #5) is invisible to operat
 
 ```ts
 // packages/posts/src/server/event-types.ts
-import { registerEventTypes } from "@monark/common"
+import { registerEventTypes } from "@monark/common";
 
 const POSTS_EVENT_TYPES = {
   "posts.published": {
@@ -117,10 +133,10 @@ const POSTS_EVENT_TYPES = {
   "posts.unpublished": {
     description: "An admin un-published a previously-live post (moderation).",
   },
-} as const
+} as const;
 
 export function registerPostsEventTypes(): void {
-  registerEventTypes("posts", POSTS_EVENT_TYPES)
+  registerEventTypes("posts", POSTS_EVENT_TYPES);
 }
 ```
 
@@ -152,7 +168,7 @@ These are the boundaries an extended module must not cross. Crossing them means 
 1. Permission registrations, in alphabetical module order. (`registerWebhooksPermissions`, `registerOrganizationsPermissions`, …, `registerPostsPermissions`.)
 2. Feature-flag registrations, same alphabetical order.
 3. Notification-kind registrations (`registerCoreNotificationKinds()` + each extended module's helper).
-4. Subscriber registrations (`registerNotificationSubscribers()` ; `registerWebhookSubscribers()` last so the outbox writer is the *last* wildcard handler to fire).
+4. Subscriber registrations (`registerNotificationSubscribers()` ; `registerWebhookSubscribers()` last so the outbox writer is the _last_ wildcard handler to fire).
 5. `syncFlagsToDatabase()` upserts every registered flag's `FeatureFlag` row.
 6. Worker starts (`startWebhookDeliveryWorker()`).
 7. Express app comes up.
@@ -175,5 +191,5 @@ A test that exercises one extension point in isolation calls the matching reset 
 
 - **Per-module schema fragments.** A wrapper around `prisma generate` that concatenates per-module `prisma/<module>.prisma` files into the root schema before generation. Lets an extended module ship indexed columns + FK relations without modifying core.
 - **Codegen for boot wiring.** A `pnpm gen:boot` script that scans the manifest and emits a `services/api/src/boot-registrations.generated.ts` file with every module's `register*()` calls. Removes the hand-maintained list in `services/api/src/server.ts`.
-- **Persisted event bus.** The in-memory bus loses events on a process crash *between* `emit()` and the wildcard subscriber's outbox write. Today the window is the same Prisma transaction so the source-mutation rollback covers it ; if subscribers ever go async-after-commit we'd want a real outbox at the bus level.
+- **Persisted event bus.** The in-memory bus loses events on a process crash _between_ `emit()` and the wildcard subscriber's outbox write. Today the window is the same Prisma transaction so the source-mutation rollback covers it ; if subscribers ever go async-after-commit we'd want a real outbox at the bus level.
 - **Receiver-side webhook verifier package.** A tiny `@monark/webhooks/verifier` that wraps the HMAC compare + timestamp tolerance for hand-rolled receivers.

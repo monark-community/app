@@ -1,18 +1,18 @@
-import { headers } from "next/headers"
-import { redirect } from "next/navigation"
-import type { ReactNode } from "react"
-import { AppBar } from "@/components/app-bar"
-import { PageLayout } from "@/components/page-layout"
-import { createSupabaseServerClient } from "@/lib/supabase/server"
-import { createServerTrpcClient } from "@/lib/trpc-server"
-import { AccountSidebar } from "./account-sidebar"
-import { AdminTotpBanner } from "./admin-totp-banner"
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
+import type { ReactNode } from "react";
+import { AppBar } from "@/components/app-bar";
+import { PageLayout } from "@/components/page-layout";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createServerTrpcClient } from "@/lib/trpc-server";
+import { AccountSidebar } from "./account-sidebar";
+import { AdminTotpBanner } from "./admin-totp-banner";
 
 const GRACE_ALLOWED_PATHS: ReadonlySet<string> = new Set([
   "/account",
   "/account/profile",
   "/account/danger",
-])
+]);
 
 /**
  * Shared shell for every `/account/*` sub-route. Mounts the AppBar +
@@ -34,13 +34,9 @@ const GRACE_ALLOWED_PATHS: ReadonlySet<string> = new Set([
  *     `?totpRequired=1` is preserved by the redirect from /admin and
  *     gets cleaned up client-side after first paint.
  */
-export default async function AccountLayout({
-  children,
-}: {
-  children: ReactNode
-}) {
-  const supabase = await createSupabaseServerClient()
-  const { data: sessionData } = await supabase.auth.getSession()
+export default async function AccountLayout({ children }: { children: ReactNode }) {
+  const supabase = await createSupabaseServerClient();
+  const { data: sessionData } = await supabase.auth.getSession();
   // Next.js renders nested layouts concurrently as async server
   // components ; the parent (authed) layout's session-gate redirect
   // throws on the same microtask we run on. If we eagerly
@@ -49,15 +45,15 @@ export default async function AccountLayout({
   // logs even though the response ultimately becomes the parent's
   // 307. Bail out cleanly when no session is present and let the
   // parent's redirect land.
-  if (!sessionData.session) return null
-  const accessToken = sessionData.session.access_token
-  const api = createServerTrpcClient(accessToken)
-  const me = await api.users.me.query().catch(() => null)
+  if (!sessionData.session) return null;
+  const accessToken = sessionData.session.access_token;
+  const api = createServerTrpcClient(accessToken);
+  const me = await api.users.me.query().catch(() => null);
   if (me?.deletedAt) {
-    const hdrs = await headers()
-    const pathname = hdrs.get("x-pathname") ?? ""
+    const hdrs = await headers();
+    const pathname = hdrs.get("x-pathname") ?? "";
     if (!GRACE_ALLOWED_PATHS.has(pathname)) {
-      redirect("/account/danger")
+      redirect("/account/danger");
     }
   }
 
@@ -80,5 +76,5 @@ export default async function AccountLayout({
         </PageLayout>
       </main>
     </>
-  )
+  );
 }

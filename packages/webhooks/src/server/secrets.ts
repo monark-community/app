@@ -1,11 +1,11 @@
-import { createHash, createHmac, randomBytes } from "node:crypto"
+import { createHash, createHmac, randomBytes } from "node:crypto";
 import {
   WEBHOOK_DELIVERY_ID_HEADER,
   WEBHOOK_EVENT_TYPE_HEADER,
   WEBHOOK_IDEMPOTENCY_HEADER,
   WEBHOOK_SIGNATURE_HEADER,
   WEBHOOK_TIMESTAMP_HEADER,
-} from "../contracts/index"
+} from "../contracts/index";
 
 /**
  * Generates a fresh signing secret + its SHA-256 hash. The plaintext
@@ -14,14 +14,14 @@ import {
  * a database leak doesn't compromise endpoint signatures.
  */
 export function mintSecret(): { plaintext: string; hash: string } {
-  const plaintext = `whsec_${randomBytes(32).toString("base64url")}`
-  const hash = createHash("sha256").update(plaintext).digest("hex")
-  return { plaintext, hash }
+  const plaintext = `whsec_${randomBytes(32).toString("base64url")}`;
+  const hash = createHash("sha256").update(plaintext).digest("hex");
+  return { plaintext, hash };
 }
 
 /** Reproducibly hashes a plaintext secret for a constant-time compare. */
 export function hashSecret(plaintext: string): string {
-  return createHash("sha256").update(plaintext).digest("hex")
+  return createHash("sha256").update(plaintext).digest("hex");
 }
 
 /**
@@ -33,14 +33,10 @@ export function hashSecret(plaintext: string): string {
  * the timestamp in the signed payload prevents replay outside the
  * receiver's tolerance window (we suggest ±5 minutes).
  */
-export function signBody(input: {
-  secret: string
-  timestamp: number
-  body: string
-}): string {
-  const signed = `${input.timestamp}.${input.body}`
-  const mac = createHmac("sha256", input.secret).update(signed).digest("hex")
-  return `v1=${mac}`
+export function signBody(input: { secret: string; timestamp: number; body: string }): string {
+  const signed = `${input.timestamp}.${input.body}`;
+  const mac = createHmac("sha256", input.secret).update(signed).digest("hex");
+  return `v1=${mac}`;
 }
 
 /**
@@ -50,19 +46,19 @@ export function signBody(input: {
  * doesn't carry a stale stamp through retries.
  */
 export function buildDeliveryHeaders(input: {
-  secret: string
-  body: string
-  deliveryId: string
-  idempotencyKey: string
-  eventType: string
-  timestamp?: number
+  secret: string;
+  body: string;
+  deliveryId: string;
+  idempotencyKey: string;
+  eventType: string;
+  timestamp?: number;
 }): Record<string, string> {
-  const timestamp = input.timestamp ?? Math.floor(Date.now() / 1000)
+  const timestamp = input.timestamp ?? Math.floor(Date.now() / 1000);
   const signature = signBody({
     secret: input.secret,
     timestamp,
     body: input.body,
-  })
+  });
   return {
     "Content-Type": "application/json",
     "User-Agent": "monark-webhooks/1",
@@ -71,7 +67,7 @@ export function buildDeliveryHeaders(input: {
     [WEBHOOK_DELIVERY_ID_HEADER]: input.deliveryId,
     [WEBHOOK_IDEMPOTENCY_HEADER]: input.idempotencyKey,
     [WEBHOOK_EVENT_TYPE_HEADER]: input.eventType,
-  }
+  };
 }
 
 /**
@@ -82,16 +78,15 @@ export function buildDeliveryHeaders(input: {
  * retry of the same row reuses the same key.
  */
 export function computeIdempotencyKey(input: {
-  endpointId: string
-  eventType: string
-  correlationId?: string
-  payload: unknown
+  endpointId: string;
+  eventType: string;
+  correlationId?: string;
+  payload: unknown;
 }): string {
   const basis =
-    input.correlationId ??
-    createHash("sha256").update(JSON.stringify(input.payload)).digest("hex")
+    input.correlationId ?? createHash("sha256").update(JSON.stringify(input.payload)).digest("hex");
   return createHash("sha256")
     .update(`${input.endpointId}:${input.eventType}:${basis}`)
     .digest("hex")
-    .slice(0, 48)
+    .slice(0, 48);
 }

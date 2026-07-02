@@ -1,10 +1,9 @@
 ---
 name: Spike / Investigation
 about: Time-boxed technical research task
-title: 'spike - '
+title: "spike - "
 labels: ["spike"]
-assignees: ''
-
+assignees: ""
 ---
 
 ## Question

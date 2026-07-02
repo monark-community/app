@@ -112,44 +112,44 @@ model ScoreSnapshot {
 ```ts
 // packages/contributions/src/server/index.ts
 
-export async function getScore(userId: string, orgId: string): Promise<number>
+export async function getScore(userId: string, orgId: string): Promise<number>;
 //   Sum of appliedPoints across non-reversed signals.
 //   Cached in ScoreSnapshot for yesterday + sum of today's signals live.
 
 export async function getBreakdown(
   userId: string,
   orgId: string,
-  opts?: { range?: { from: Date; to: Date } }
-): Promise<ScoreBreakdown>
+  opts?: { range?: { from: Date; to: Date } },
+): Promise<ScoreBreakdown>;
 //   Per-rule totals, time series by day/week/month.
 
 export async function listTopContributors(
   orgId: string,
-  opts?: { limit?: number; range?: { from: Date; to: Date } }
-): Promise<LeaderboardEntry[]>
+  opts?: { limit?: number; range?: { from: Date; to: Date } },
+): Promise<LeaderboardEntry[]>;
 //   Admin-only at launch; public leaderboard deferred.
 ```
 
 ### Write (internal only)
 
-Signals are *only* captured by the event-consumer pipeline, never by direct API calls from other modules. This keeps the "what earns points" logic centralized.
+Signals are _only_ captured by the event-consumer pipeline, never by direct API calls from other modules. This keeps the "what earns points" logic centralized.
 
 ```ts
 // packages/contributions/src/server/domain/capture.ts (internal)
 
 export async function captureSignal(input: {
-  userId: string
-  organizationId: string
-  ruleKey: string
-  sourceEvent: string
-  sourceEventId?: string
-  metadata: Record<string, unknown>
-  at: Date
-}): Promise<Signal | null>
+  userId: string;
+  organizationId: string;
+  ruleKey: string;
+  sourceEvent: string;
+  sourceEventId?: string;
+  metadata: Record<string, unknown>;
+  at: Date;
+}): Promise<Signal | null>;
 //   Resolves the active Rule for this key, applies its points, writes.
 //   Returns null if no active rule exists for that key (signal ignored).
 
-export async function reverseSignal(signalId: string, reason: string): Promise<void>
+export async function reverseSignal(signalId: string, reason: string): Promise<void>;
 //   For corrections (e.g., spam referral retroactively disqualified).
 ```
 
@@ -158,24 +158,29 @@ export async function reverseSignal(signalId: string, reason: string): Promise<v
 ```ts
 // packages/contributions/src/server/procedures/admin.ts
 
-"use server"
-export async function createRule(input: RuleInput): Promise<Rule>
+"use server";
+export async function createRule(input: RuleInput): Promise<Rule>;
 
-"use server"
-export async function supersedeRule(key: string, newInput: RuleInput): Promise<Rule>
+("use server");
+export async function supersedeRule(key: string, newInput: RuleInput): Promise<Rule>;
 //   Creates Rule{key, version: N+1} with new points; doesn't retroactively
 //   change existing signals. effectiveFrom can be backdated only with
 //   MonarkAdmin permission.
 
-"use server"
-export async function deactivateRule(key: string): Promise<void>
+("use server");
+export async function deactivateRule(key: string): Promise<void>;
 //   Sets active=false; future signals of this key are dropped.
 
-"use server"
+("use server");
 export async function reverseSignalsAdmin(
-  filter: { userId?: string; orgId?: string; ruleKey?: string; dateRange?: { from: Date; to: Date } },
-  reason: string
-): Promise<number>
+  filter: {
+    userId?: string;
+    orgId?: string;
+    ruleKey?: string;
+    dateRange?: { from: Date; to: Date };
+  },
+  reason: string,
+): Promise<number>;
 //   Bulk reversal with audit trail.
 ```
 
@@ -193,19 +198,19 @@ export async function GET(request: Request) {
 
 ## Rule catalog (initial)
 
-| Key | Category | Points | Trigger |
-|---|---|---|---|
-| `onboarding.completed` | EDUCATION | 50 | `onboarding.completed` event |
-| `onboarding.first-task` | EDUCATION | 20 | `onboarding.step-completed` where stepKey === "first-task" |
-| `voting.ballot-cast` | PARTICIPATION | 5 | `voting.ballot-cast` |
-| `voting.proposal-created` | PARTICIPATION | 25 | `voting.proposal-created` + later boost on passage |
-| `voting.proposal-passed` | PARTICIPATION | 100 | `voting.tally-published` with YES majority |
-| `referral.converted` | REFERRAL | 200 | `referral.converted` → accrues to referrer |
-| `referral.payout-confirmed` | REFERRAL | 50 (bonus) | `referral.payout-confirmed` |
-| `github.merged-pr` | CONTRIBUTION | 100 | External (GitHub webhook) — Phase 3 stretch |
-| `github.reviewed-pr` | CONTRIBUTION | 20 | External — stretch |
-| `mentor.session-completed` | EDUCATION | 30 | User-reported + counter-signed by mentor (future) |
-| `abuse.reported` | PENALTY | -500 | Admin action |
+| Key                         | Category      | Points     | Trigger                                                    |
+| --------------------------- | ------------- | ---------- | ---------------------------------------------------------- |
+| `onboarding.completed`      | EDUCATION     | 50         | `onboarding.completed` event                               |
+| `onboarding.first-task`     | EDUCATION     | 20         | `onboarding.step-completed` where stepKey === "first-task" |
+| `voting.ballot-cast`        | PARTICIPATION | 5          | `voting.ballot-cast`                                       |
+| `voting.proposal-created`   | PARTICIPATION | 25         | `voting.proposal-created` + later boost on passage         |
+| `voting.proposal-passed`    | PARTICIPATION | 100        | `voting.tally-published` with YES majority                 |
+| `referral.converted`        | REFERRAL      | 200        | `referral.converted` → accrues to referrer                 |
+| `referral.payout-confirmed` | REFERRAL      | 50 (bonus) | `referral.payout-confirmed`                                |
+| `github.merged-pr`          | CONTRIBUTION  | 100        | External (GitHub webhook) — Phase 3 stretch                |
+| `github.reviewed-pr`        | CONTRIBUTION  | 20         | External — stretch                                         |
+| `mentor.session-completed`  | EDUCATION     | 30         | User-reported + counter-signed by mentor (future)          |
+| `abuse.reported`            | PENALTY       | -500       | Admin action                                               |
 
 Values are tunable; the catalog above is a starting point. Each rule has a reviewable page in the admin UI.
 
@@ -255,10 +260,10 @@ This module is a subscriber, not a publisher, for most flows:
 ### Events emitted
 
 ```ts
-export const SIGNAL_CAPTURED = "contributions.signal-captured"
-export const SIGNAL_REVERSED = "contributions.signal-reversed"
-export const RULE_UPDATED = "contributions.rule-updated"
-export const PAYOUT_PERIOD_CLOSED = "contributions.payout-period-closed"
+export const SIGNAL_CAPTURED = "contributions.signal-captured";
+export const SIGNAL_REVERSED = "contributions.signal-reversed";
+export const RULE_UPDATED = "contributions.rule-updated";
+export const PAYOUT_PERIOD_CLOSED = "contributions.payout-period-closed";
 ```
 
 `PAYOUT_PERIOD_CLOSED` is emitted by a monthly cron that snapshots scores and notifies the external payout system; that system then pays out and signals back via the referral webhook pattern.

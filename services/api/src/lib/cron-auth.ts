@@ -7,16 +7,16 @@
 
 export type CronAuthResult =
   | { ok: true }
-  | { ok: false; reason: "not-configured" | "unauthorized" }
+  | { ok: false; reason: "not-configured" | "unauthorized" };
 
 export function evaluateCronAuth(input: {
-  authorizationHeader: string | undefined | null
-  cronSecret: string | undefined | null
+  authorizationHeader: string | undefined | null;
+  cronSecret: string | undefined | null;
 }): CronAuthResult {
-  if (!input.cronSecret) return { ok: false, reason: "not-configured" }
-  const expected = `Bearer ${input.cronSecret}`
+  if (!input.cronSecret) return { ok: false, reason: "not-configured" };
+  const expected = `Bearer ${input.cronSecret}`;
   if ((input.authorizationHeader ?? "") !== expected) {
-    return { ok: false, reason: "unauthorized" }
+    return { ok: false, reason: "unauthorized" };
   }
-  return { ok: true }
+  return { ok: true };
 }

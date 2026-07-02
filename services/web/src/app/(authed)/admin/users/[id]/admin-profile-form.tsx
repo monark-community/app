@@ -1,44 +1,44 @@
-"use client"
+"use client";
 
-import { type ReactNode, useEffect, useState, useTransition } from "react"
-import { useTranslations } from "next-intl"
-import { toast } from "sonner"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+import { type ReactNode, useEffect, useState, useTransition } from "react";
+import { useTranslations } from "next-intl";
+import { toast } from "sonner";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
-import { Textarea } from "@/components/ui/textarea"
-import { UserBanner, type UserBannerEditConfig } from "@/components/user-banner"
-import { rewriteForCurrentHost } from "@/lib/dev-host-rewrite"
-import { trpc } from "@/lib/trpc"
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { UserBanner, type UserBannerEditConfig } from "@/components/user-banner";
+import { rewriteForCurrentHost } from "@/lib/dev-host-rewrite";
+import { trpc } from "@/lib/trpc";
 import {
   adminUploadAvatarAction,
   adminUploadBannerAction,
   type AdminUploadAvatarErrorCode,
   type AdminUploadBannerErrorCode,
-} from "../admin-actions"
+} from "../admin-actions";
 
-const BIO_MAX = 400
+const BIO_MAX = 400;
 const LOCALES = [
   { value: "en", key: "en" as const },
   { value: "fr", key: "fr" as const },
-]
+];
 
 type User = {
-  id: string
-  email: string
-  displayName: string | null
-  bio: string | null
-  avatarUrl: string | null
-  bannerUrl: string | null
-  localePreference: string
-  deletedAt: Date | string | null
-}
+  id: string;
+  email: string;
+  displayName: string | null;
+  bio: string | null;
+  avatarUrl: string | null;
+  bannerUrl: string | null;
+  localePreference: string;
+  deletedAt: Date | string | null;
+};
 
 /**
  * Editable profile surface for `/admin/users/[id]`. Renders the
@@ -58,129 +58,126 @@ export function AdminProfileForm({
   backHref,
   backLabel,
 }: {
-  user: User
+  user: User;
   /** Status pills (disabled / pendingDeletion) rendered next to the headline. */
-  badges?: ReactNode
+  badges?: ReactNode;
   /** Back-button affordance rendered as an overlay in the banner's top-left. */
-  backHref?: string
-  backLabel?: string
+  backHref?: string;
+  backLabel?: string;
 }) {
-  const t = useTranslations("admin.users.profileForm")
-  const tLocale = useTranslations("account.profile.locales")
-  const utils = trpc.useUtils()
+  const t = useTranslations("admin.users.profileForm");
+  const tLocale = useTranslations("account.profile.locales");
+  const utils = trpc.useUtils();
   const updateProfile = trpc.users.adminUpdateProfile.useMutation({
-    onSuccess: () =>
-      void utils.users.adminGetUser.invalidate({ userId: user.id }),
-  })
+    onSuccess: () => void utils.users.adminGetUser.invalidate({ userId: user.id }),
+  });
 
-  const readOnly = Boolean(user.deletedAt)
+  const readOnly = Boolean(user.deletedAt);
 
-  const [displayName, setDisplayName] = useState(user.displayName ?? "")
-  const [bio, setBio] = useState(user.bio ?? "")
-  const [isAvatarPending, startAvatarTransition] = useTransition()
-  const [avatarError, setAvatarError] =
-    useState<AdminUploadAvatarErrorCode | null>(null)
-  const [isBannerPending, startBannerTransition] = useTransition()
-  const [bannerError, setBannerError] =
-    useState<AdminUploadBannerErrorCode | null>(null)
+  const [displayName, setDisplayName] = useState(user.displayName ?? "");
+  const [bio, setBio] = useState(user.bio ?? "");
+  const [isAvatarPending, startAvatarTransition] = useTransition();
+  const [avatarError, setAvatarError] = useState<AdminUploadAvatarErrorCode | null>(null);
+  const [isBannerPending, startBannerTransition] = useTransition();
+  const [bannerError, setBannerError] = useState<AdminUploadBannerErrorCode | null>(null);
 
   // Re-sync the controlled inputs whenever the underlying row changes,
   // so a successful save (or another admin's change) doesn't leave the
   // form pointing at stale text.
   useEffect(() => {
-    setDisplayName(user.displayName ?? "")
-  }, [user.displayName])
+    setDisplayName(user.displayName ?? "");
+  }, [user.displayName]);
   useEffect(() => {
-    setBio(user.bio ?? "")
-  }, [user.bio])
+    setBio(user.bio ?? "");
+  }, [user.bio]);
 
   function onBlurDisplayName() {
-    if (readOnly) return
-    const value = displayName.trim()
-    if (value === (user.displayName ?? "")) return
-    if (value.length < 1 || value.length > 80) return
+    if (readOnly) return;
+    const value = displayName.trim();
+    if (value === (user.displayName ?? "")) return;
+    if (value.length < 1 || value.length > 80) return;
     updateProfile.mutate(
       { userId: user.id, displayName: value },
       { onSuccess: () => toast.success(t("saved")) },
-    )
+    );
   }
 
   function onBlurBio() {
-    if (readOnly) return
-    if (Array.from(bio).length > BIO_MAX) return
-    const next = bio.trim()
-    const previous = (user.bio ?? "").trim()
-    if (next === previous) return
+    if (readOnly) return;
+    if (Array.from(bio).length > BIO_MAX) return;
+    const next = bio.trim();
+    const previous = (user.bio ?? "").trim();
+    if (next === previous) return;
     updateProfile.mutate(
       { userId: user.id, bio: next.length === 0 ? null : next },
       { onSuccess: () => toast.success(t("saved")) },
-    )
+    );
   }
 
   function onLocaleChange(next: string) {
-    if (readOnly) return
-    if (next === user.localePreference) return
-    if (next !== "en" && next !== "fr") return
+    if (readOnly) return;
+    if (next === user.localePreference) return;
+    if (next !== "en" && next !== "fr") return;
     updateProfile.mutate(
       { userId: user.id, localePreference: next },
       { onSuccess: () => toast.success(t("saved")) },
-    )
+    );
   }
 
   function onAvatarFile(file: File) {
-    if (readOnly) return
-    setAvatarError(null)
-    const formData = new FormData()
-    formData.append("file", file)
-    formData.append("userId", user.id)
+    if (readOnly) return;
+    setAvatarError(null);
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("userId", user.id);
     startAvatarTransition(async () => {
-      const result = await adminUploadAvatarAction(formData)
+      const result = await adminUploadAvatarAction(formData);
       if (!result.ok) {
-        setAvatarError(result.errorCode)
+        setAvatarError(result.errorCode);
       } else {
-        await utils.users.adminGetUser.invalidate({ userId: user.id })
-        toast.success(t("avatarUpdated"))
+        await utils.users.adminGetUser.invalidate({ userId: user.id });
+        toast.success(t("avatarUpdated"));
       }
-    })
+    });
   }
 
   function onAvatarRemove() {
-    if (readOnly) return
-    setAvatarError(null)
+    if (readOnly) return;
+    setAvatarError(null);
     updateProfile.mutate(
       { userId: user.id, avatarUrl: null },
       { onSuccess: () => toast.success(t("avatarRemoved")) },
-    )
+    );
   }
 
   function onBannerFile(file: File) {
-    if (readOnly) return
-    setBannerError(null)
-    const formData = new FormData()
-    formData.append("file", file)
-    formData.append("userId", user.id)
+    if (readOnly) return;
+    setBannerError(null);
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("userId", user.id);
     startBannerTransition(async () => {
-      const result = await adminUploadBannerAction(formData)
+      const result = await adminUploadBannerAction(formData);
       if (!result.ok) {
-        setBannerError(result.errorCode)
+        setBannerError(result.errorCode);
       } else {
-        await utils.users.adminGetUser.invalidate({ userId: user.id })
-        toast.success(t("bannerUpdated"))
+        await utils.users.adminGetUser.invalidate({ userId: user.id });
+        toast.success(t("bannerUpdated"));
       }
-    })
+    });
   }
 
   function onBannerRemove() {
-    if (readOnly) return
-    setBannerError(null)
+    if (readOnly) return;
+    setBannerError(null);
     updateProfile.mutate(
       { userId: user.id, bannerUrl: null },
       { onSuccess: () => toast.success(t("bannerRemoved")) },
-    )
+    );
   }
 
-  const avatarUrl = user.avatarUrl ? rewriteForCurrentHost(user.avatarUrl) : null
-  const bannerUrl = user.bannerUrl ? rewriteForCurrentHost(user.bannerUrl) : null
+  const avatarUrl = user.avatarUrl ? rewriteForCurrentHost(user.avatarUrl) : null;
+  const bannerUrl = user.bannerUrl ? rewriteForCurrentHost(user.bannerUrl) : null;
 
   const editConfig: UserBannerEditConfig = {
     onAvatarFile,
@@ -202,7 +199,7 @@ export function AdminProfileForm({
       bannerRemove: t("bannerRemove"),
       bannerUploading: t("bannerUploading"),
     },
-  }
+  };
 
   return (
     <div className="space-y-5">
@@ -220,14 +217,10 @@ export function AdminProfileForm({
       {(bannerError || avatarError) && (
         <div className="space-y-1">
           {bannerError && (
-            <p className="text-xs text-destructive">
-              {t(`bannerErrors.${bannerError}`)}
-            </p>
+            <p className="text-xs text-destructive">{t(`bannerErrors.${bannerError}`)}</p>
           )}
           {avatarError && (
-            <p className="text-xs text-destructive">
-              {t(`avatarErrors.${avatarError}`)}
-            </p>
+            <p className="text-xs text-destructive">{t(`avatarErrors.${avatarError}`)}</p>
           )}
         </div>
       )}
@@ -250,9 +243,7 @@ export function AdminProfileForm({
           <Label htmlFor="admin-bio">{t("labels.bio")}</Label>
           <span
             className={`text-xs ${
-              Array.from(bio).length > BIO_MAX
-                ? "text-destructive"
-                : "text-muted-foreground"
+              Array.from(bio).length > BIO_MAX ? "text-destructive" : "text-muted-foreground"
             }`}
             aria-live="polite"
           >
@@ -272,11 +263,7 @@ export function AdminProfileForm({
 
       <div className="grid gap-2">
         <Label htmlFor="admin-locale">{t("labels.locale")}</Label>
-        <Select
-          value={user.localePreference}
-          onValueChange={onLocaleChange}
-          disabled={readOnly}
-        >
+        <Select value={user.localePreference} onValueChange={onLocaleChange} disabled={readOnly}>
           <SelectTrigger id="admin-locale" className="w-full">
             <SelectValue />
           </SelectTrigger>
@@ -290,5 +277,5 @@ export function AdminProfileForm({
         </Select>
       </div>
     </div>
-  )
+  );
 }

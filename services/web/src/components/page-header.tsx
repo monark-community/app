@@ -1,8 +1,8 @@
-import Link from "next/link"
-import type { ReactNode } from "react"
-import { ArrowLeft } from "lucide-react"
-import { Separator } from "@/components/ui/separator"
-import { cn } from "@/lib/utils"
+import Link from "next/link";
+import type { ReactNode } from "react";
+import { ArrowLeft } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
+import { cn } from "@/lib/utils";
 
 /**
  * Standardized page header : `<h1>` + optional subtitle + optional
@@ -37,19 +37,19 @@ export function PageHeader({
   tone = "default",
   withSeparator = true,
 }: {
-  title: ReactNode
-  subtitle?: ReactNode
-  backHref?: string
-  backLabel?: string
+  title: ReactNode;
+  subtitle?: ReactNode;
+  backHref?: string;
+  backLabel?: string;
   /** Header-row right slot for a primary action button or status badge. */
-  action?: ReactNode
-  tone?: "default" | "danger"
-  withSeparator?: boolean
+  action?: ReactNode;
+  tone?: "default" | "danger";
+  withSeparator?: boolean;
 }) {
   const titleClass =
     tone === "danger"
       ? "text-2xl font-semibold tracking-tight text-destructive"
-      : "text-2xl font-semibold tracking-tight"
+      : "text-2xl font-semibold tracking-tight";
 
   return (
     <header className="space-y-4">
@@ -85,14 +85,12 @@ export function PageHeader({
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1 space-y-1">
             <h1 className={cn(titleClass, "wrap-break-word")}>{title}</h1>
-            {subtitle && (
-              <p className="text-sm text-muted-foreground">{subtitle}</p>
-            )}
+            {subtitle && <p className="text-sm text-muted-foreground">{subtitle}</p>}
           </div>
           {action && <div className="shrink-0">{action}</div>}
         </div>
       </div>
       {withSeparator && <Separator />}
     </header>
-  )
+  );
 }

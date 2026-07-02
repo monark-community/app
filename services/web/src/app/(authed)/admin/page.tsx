@@ -1,5 +1,5 @@
-import { redirect } from "next/navigation"
-import { ADMIN_TABS } from "./admin-tabs"
+import { redirect } from "next/navigation";
+import { ADMIN_TABS } from "./admin-tabs";
 
 // `/admin` is the canonical entry point ; we don't render a separate
 // dashboard yet. Forward straight to the *first* tab in the admin
@@ -16,5 +16,5 @@ import { ADMIN_TABS } from "./admin-tabs"
 // The redirect happens *after* the layout's rbac gate, so non-admins
 // are bounced to `/` before reaching here.
 export default function AdminHomePage() {
-  redirect(ADMIN_TABS[0]!.href)
+  redirect(ADMIN_TABS[0]!.href);
 }

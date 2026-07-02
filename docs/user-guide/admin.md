@@ -105,7 +105,7 @@ Today this card has a single button : **Send password reset email**. Triggers Su
 
 #### Notifications
 
-The same toggle matrix the user sees on their own preferences page, but applied to *their* row. Use it sparingly ; outside of compliance / GDPR overrides, users prefer to manage their own. The Security × Email cell is locked on for them too.
+The same toggle matrix the user sees on their own preferences page, but applied to _their_ row. Use it sparingly ; outside of compliance / GDPR overrides, users prefer to manage their own. The Security × Email cell is locked on for them too.
 
 #### Danger zone
 
@@ -261,13 +261,13 @@ To re-enable : open the endpoint's edit page and set status back to Active.
 
 Every outgoing request carries five headers your receiver can use to verify authenticity :
 
-| Header | Value |
-|---|---|
-| `Webhook-Delivery-Id` | The delivery row's unique id. |
+| Header                             | Value                                                                 |
+| ---------------------------------- | --------------------------------------------------------------------- |
+| `Webhook-Delivery-Id`              | The delivery row's unique id.                                         |
 | `Webhook-Delivery-Idempotency-Key` | Stable per (endpoint, event, correlation) ; use it to dedupe retries. |
-| `Webhook-Event-Type` | The source event's type (e.g. `rbac.role-created`). |
-| `Webhook-Timestamp` | Unix seconds ; recomputed per attempt. |
-| `Webhook-Signature` | `v1=<hex hmac-sha256(secret, "<timestamp>.<body>")>` |
+| `Webhook-Event-Type`               | The source event's type (e.g. `rbac.role-created`).                   |
+| `Webhook-Timestamp`                | Unix seconds ; recomputed per attempt.                                |
+| `Webhook-Signature`                | `v1=<hex hmac-sha256(secret, "<timestamp>.<body>")>`                  |
 
 Receivers verify by recomputing the HMAC over `<timestamp>.<body>` using their stored copy of the shared secret and a constant-time compare. Including the timestamp in the signed payload defeats replay attacks outside a tolerance window (suggested ±5 minutes).
 
@@ -282,7 +282,7 @@ Endpoints can be scoped to a single organization or to the entire platform :
 
 Every admin write — role assigned, role revoked, user deletion requested, organization renamed, invite sent / revoked — emits a domain event. Today the event hits the notifications subscriber + the application logs. Phase-2 wires an admin-side audit log surface ; until then, the operator's logging stack (ELK, Sentry, etc.) is the system of record.
 
-## What admins *can't* do today
+## What admins _can't_ do today
 
 - **Change a user's email directly.** The flow is in the [backlog](../todo/backlog.md) ; needs a design call between "direct mutation" (fast but skips user confirmation) and "pending-token with user confirmation" (safer but new infra). Until then, ask the user to change it themselves from `/account/security`.
 - **Bulk operations** (bulk assign role, bulk delete, bulk invite). Single-row only.

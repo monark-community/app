@@ -1,9 +1,8 @@
-import { registerEventTypes } from "@monark/common"
+import { registerEventTypes } from "@monark/common";
 
 const NOTIFICATIONS_EVENT_TYPES = {
   "notification.created": {
-    description:
-      "A notification row was persisted for a user (one event per delivered channel).",
+    description: "A notification row was persisted for a user (one event per delivered channel).",
   },
   "notification.delivery-failed": {
     description:
@@ -13,8 +12,8 @@ const NOTIFICATIONS_EVENT_TYPES = {
     description:
       "The user toggled a (category, channel) preference row, or an admin reset their prefs.",
   },
-} as const
+} as const;
 
 export function registerNotificationsEventTypes(): void {
-  registerEventTypes("notifications", NOTIFICATIONS_EVENT_TYPES)
+  registerEventTypes("notifications", NOTIFICATIONS_EVENT_TYPES);
 }

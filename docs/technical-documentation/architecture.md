@@ -6,10 +6,10 @@ Reference documentation for the Monark App's module architecture. Based on the s
 
 Every business domain lives in its own workspace package (`@monark/auth`, `@monark/rbac`, `@monark/webhooks`, etc.). Packages are split into two tiers :
 
-| Tier | Examples | Rules |
-|---|---|---|
-| **Core** | auth, users, organizations, rbac, feature-flags, notifications, webhooks | Coupled ; may depend on each other. Cannot be removed without breaking the app. |
-| **Extended** | referral, voting, contributions, onboarding | Self-contained ; may depend on core but never on another extended module. Removing one compiles and passes tests with zero changes to others. |
+| Tier         | Examples                                                                 | Rules                                                                                                                                         |
+| ------------ | ------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Core**     | auth, users, organizations, rbac, feature-flags, notifications, webhooks | Coupled ; may depend on each other. Cannot be removed without breaking the app.                                                               |
+| **Extended** | referral, voting, contributions, onboarding                              | Self-contained ; may depend on core but never on another extended module. Removing one compiles and passes tests with zero changes to others. |
 
 The tier assignment lives in `modules.manifest.ts` at the repo root. The `pnpm check:tiers` script enforces the dependency rules at CI time.
 
@@ -21,7 +21,7 @@ Each module package exposes exactly three subpath exports :
 - `/client` ; frontend hooks, components, API clients. Runs in `services/web`.
 - `/contracts` ; shared types, Zod schemas, domain event definitions. Importable from both sides.
 
-Anything not exported through these three paths is internal and physically unreachable from outside the package. Workspace package boundaries *are* the module boundaries.
+Anything not exported through these three paths is internal and physically unreachable from outside the package. Workspace package boundaries _are_ the module boundaries.
 
 ### Enforcement
 

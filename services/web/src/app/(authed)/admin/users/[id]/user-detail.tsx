@@ -1,37 +1,43 @@
-"use client"
+"use client";
 
-import { useLocale, useTranslations } from "next-intl"
-import { Clock, ShieldOff } from "lucide-react"
-import { Badge } from "@/components/ui/badge"
-import { Separator } from "@/components/ui/separator"
-import { Skeleton } from "@/components/ui/skeleton"
-import { PageSection } from "@/components/page-section"
-import { trpc } from "@/lib/trpc"
-import { AdminAccountActions } from "./admin-account-actions"
-import { AdminDangerZone } from "./admin-danger-zone"
-import { AdminNotifications } from "./admin-notifications"
-import { AdminProfileForm } from "./admin-profile-form"
-import { AdminRoles } from "./admin-roles"
+import { useLocale, useTranslations } from "next-intl";
+import { Clock, ShieldOff } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
+import { PageSection } from "@/components/page-section";
+import { trpc } from "@/lib/trpc";
+import { AdminAccountActions } from "./admin-account-actions";
+import { AdminDangerZone } from "./admin-danger-zone";
+import { AdminNotifications } from "./admin-notifications";
+import { AdminProfileForm } from "./admin-profile-form";
+import { AdminRoles } from "./admin-roles";
 
 function formatDate(date: Date | string | null, locale: string): string {
-  if (!date) return ""
-  const parsed = typeof date === "string" ? new Date(date) : date
-  if (Number.isNaN(parsed.getTime())) return ""
+  if (!date) return "";
+  const parsed = typeof date === "string" ? new Date(date) : date;
+  if (Number.isNaN(parsed.getTime())) return "";
   return parsed.toLocaleDateString([locale, "en"], {
     year: "numeric",
     month: "long",
     day: "numeric",
-  })
+  });
 }
 
-export function UserDetail({ userId }: { userId: string }) {
-  const t = useTranslations("admin.users.detail")
-  const tBadges = useTranslations("admin.users.badges")
-  const locale = useLocale()
-  const query = trpc.users.adminGetUser.useQuery(
-    { userId },
-    { refetchOnWindowFocus: false },
-  )
+export function UserDetail({
+  userId,
+  containment = "viewport",
+}: {
+  userId: string;
+  containment?: "viewport" | "container";
+}) {
+  const t = useTranslations("admin.users.detail");
+  const tBadges = useTranslations("admin.users.badges");
+  const locale = useLocale();
+  // In panel mode the panel's own header owns the back affordance, so the
+  // profile banner drops its back overlay.
+  const inPanel = containment === "container";
+  const query = trpc.users.adminGetUser.useQuery({ userId }, { refetchOnWindowFocus: false });
 
   if (query.isLoading) {
     return (
@@ -39,7 +45,7 @@ export function UserDetail({ userId }: { userId: string }) {
         <Skeleton className="h-40 w-full" />
         <Skeleton className="h-32 w-full" />
       </section>
-    )
+    );
   }
 
   if (query.isError || !query.data) {
@@ -49,10 +55,10 @@ export function UserDetail({ userId }: { userId: string }) {
           {t("loadError")}
         </p>
       </section>
-    )
+    );
   }
 
-  const user = query.data.user
+  const user = query.data.user;
   const badges = (
     <>
       {user.disabledAt && (
@@ -68,15 +74,15 @@ export function UserDetail({ userId }: { userId: string }) {
         </Badge>
       )}
     </>
-  )
+  );
 
   return (
     <section className="space-y-8">
       <AdminProfileForm
         user={user}
         badges={badges}
-        backHref="/admin/users"
-        backLabel={t("back")}
+        backHref={inPanel ? undefined : "/admin/users"}
+        backLabel={inPanel ? undefined : t("back")}
       />
 
       <Separator />
@@ -89,15 +95,9 @@ export function UserDetail({ userId }: { userId: string }) {
             label={t("identity.emailVerified")}
             value={user.emailVerifiedAt ? t("yes") : t("no")}
           />
-          <Row
-            label={t("identity.createdAt")}
-            value={formatDate(user.createdAt, locale)}
-          />
+          <Row label={t("identity.createdAt")} value={formatDate(user.createdAt, locale)} />
           {user.deletedAt && (
-            <Row
-              label={t("identity.deletedAt")}
-              value={formatDate(user.deletedAt, locale)}
-            />
+            <Row label={t("identity.deletedAt")} value={formatDate(user.deletedAt, locale)} />
           )}
         </dl>
       </PageSection>
@@ -112,26 +112,15 @@ export function UserDetail({ userId }: { userId: string }) {
 
       <Separator />
 
-      <AdminAccountActions
-        userId={user.id}
-        email={user.email}
-        disabled={Boolean(user.deletedAt)}
-      />
+      <AdminAccountActions userId={user.id} email={user.email} disabled={Boolean(user.deletedAt)} />
 
       <Separator />
 
-      <AdminNotifications
-        userId={user.id}
-        disabled={Boolean(user.deletedAt)}
-      />
+      <AdminNotifications userId={user.id} disabled={Boolean(user.deletedAt)} />
 
-      <AdminDangerZone
-        userId={user.id}
-        email={user.email}
-        deletedAt={user.deletedAt}
-      />
+      <AdminDangerZone userId={user.id} email={user.email} deletedAt={user.deletedAt} />
     </section>
-  )
+  );
 }
 
 function Row({ label, value }: { label: string; value: string }) {
@@ -140,5 +129,5 @@ function Row({ label, value }: { label: string; value: string }) {
       <dt className="text-muted-foreground">{label}</dt>
       <dd className="truncate text-right font-medium">{value}</dd>
     </div>
-  )
+  );
 }

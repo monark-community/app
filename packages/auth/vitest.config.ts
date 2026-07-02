@@ -1,5 +1,5 @@
-import { configDefaults, defineConfig, mergeConfig } from "vitest/config"
-import baseConfig from "../../vitest.shared"
+import { configDefaults, defineConfig, mergeConfig } from "vitest/config";
+import baseConfig from "../../vitest.shared";
 
 // Target threshold per [test-plan.md](../../docs/technical-documentation/test-plan.md) : 80 %.
 // Threshold is currently disabled while we backfill missing suites
@@ -26,4 +26,4 @@ export default mergeConfig(
       },
     },
   }),
-)
+);

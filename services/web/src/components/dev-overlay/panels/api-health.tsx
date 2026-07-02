@@ -1,16 +1,15 @@
-"use client"
+"use client";
 
-import { useTranslations } from "next-intl"
-import { Button } from "@/components/ui/button"
-import { trpc } from "@/lib/trpc"
-import { CollapsibleSection } from "../collapsible-section"
+import { useTranslations } from "next-intl";
+import { Button } from "@/components/ui/button";
+import { trpc } from "@/lib/trpc";
+import { CollapsibleSection } from "../collapsible-section";
 
 export function ApiHealthPanel() {
-  const t = useTranslations("devOverlay")
-  const { data, isLoading, error, refetch, isFetching } = trpc.auth.ping.useQuery(
-    undefined,
-    { refetchOnWindowFocus: false },
-  )
+  const t = useTranslations("devOverlay");
+  const { data, isLoading, error, refetch, isFetching } = trpc.auth.ping.useQuery(undefined, {
+    refetchOnWindowFocus: false,
+  });
 
   const badge = error ? (
     <span className="rounded-full bg-red-400/20 px-1.5 py-0.5 font-mono text-[10px] text-red-400">
@@ -20,7 +19,7 @@ export function ApiHealthPanel() {
     <span className="rounded-full bg-emerald-400/20 px-1.5 py-0.5 font-mono text-[10px] text-emerald-400">
       {t("badges.up")}
     </span>
-  ) : null
+  ) : null;
 
   return (
     <CollapsibleSection title={t("sections.apiHealth")} badge={badge}>
@@ -50,5 +49,5 @@ export function ApiHealthPanel() {
         </Button>
       </div>
     </CollapsibleSection>
-  )
+  );
 }

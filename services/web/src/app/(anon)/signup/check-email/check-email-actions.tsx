@@ -1,71 +1,68 @@
-"use client"
+"use client";
 
-import { useState, useTransition, type FormEvent } from "react"
-import { useTranslations } from "next-intl"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
+import { useState, useTransition, type FormEvent } from "react";
+import { useTranslations } from "next-intl";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   InputOTP,
   InputOTPGroup,
   InputOTPSeparator,
   InputOTPSlot,
-} from "@/components/ui/input-otp"
-import { Separator } from "@/components/ui/separator"
+} from "@/components/ui/input-otp";
+import { Separator } from "@/components/ui/separator";
 import {
   resendConfirmationAction,
   verifyOtpAction,
   type ResendErrorCode,
   type VerifyOtpErrorCode,
-} from "./actions"
+} from "./actions";
 
 type Status =
   | { kind: "idle" }
   | { kind: "sent"; remaining: number }
-  | { kind: "error"; errorCode: ResendErrorCode }
+  | { kind: "error"; errorCode: ResendErrorCode };
 
 export function CheckEmailActions({ email }: { email: string | null }) {
-  const t = useTranslations("auth.checkEmail")
-  const [status, setStatus] = useState<Status>({ kind: "idle" })
-  const [otp, setOtp] = useState("")
-  const [otpErrorCode, setOtpErrorCode] = useState<VerifyOtpErrorCode | null>(null)
-  const [isResending, startResend] = useTransition()
-  const [isVerifying, startVerify] = useTransition()
+  const t = useTranslations("auth.checkEmail");
+  const [status, setStatus] = useState<Status>({ kind: "idle" });
+  const [otp, setOtp] = useState("");
+  const [otpErrorCode, setOtpErrorCode] = useState<VerifyOtpErrorCode | null>(null);
+  const [isResending, startResend] = useTransition();
+  const [isVerifying, startVerify] = useTransition();
 
   function onResend() {
-    if (!email) return
-    setStatus({ kind: "idle" })
+    if (!email) return;
+    setStatus({ kind: "idle" });
     startResend(async () => {
-      const result = await resendConfirmationAction(email)
+      const result = await resendConfirmationAction(email);
       if (result.ok) {
-        setStatus({ kind: "sent", remaining: result.remaining })
+        setStatus({ kind: "sent", remaining: result.remaining });
       } else {
-        setStatus({ kind: "error", errorCode: result.errorCode })
+        setStatus({ kind: "error", errorCode: result.errorCode });
       }
-    })
+    });
   }
 
   function onVerify(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    if (!email || otp.length !== 6) return
-    setOtpErrorCode(null)
+    event.preventDefault();
+    if (!email || otp.length !== 6) return;
+    setOtpErrorCode(null);
     startVerify(async () => {
-      const result = await verifyOtpAction({ email, token: otp })
-      if (result && !result.ok) setOtpErrorCode(result.errorCode)
-    })
+      const result = await verifyOtpAction({ email, token: otp });
+      if (result && !result.ok) setOtpErrorCode(result.errorCode);
+    });
   }
 
   const resendMessage =
     status.kind === "sent"
       ? { tone: "success" as const, text: t("resendSuccess", { remaining: status.remaining }) }
       : status.kind === "error"
-      ? {
-          tone: "error" as const,
-          text:
-            status.errorCode === "exhausted"
-              ? t("resendExhausted")
-              : t("errors.invalidCode"),
-        }
-      : null
+        ? {
+            tone: "error" as const,
+            text: status.errorCode === "exhausted" ? t("resendExhausted") : t("errors.invalidCode"),
+          }
+        : null;
 
   return (
     <Card className="shadow-none">
@@ -107,9 +104,7 @@ export function CheckEmailActions({ email }: { email: string | null }) {
 
         <div className="flex items-center gap-3">
           <Separator className="flex-1" />
-          <span className="text-xs uppercase tracking-wider text-muted-foreground">
-            {t("or")}
-          </span>
+          <span className="text-xs uppercase tracking-wider text-muted-foreground">{t("or")}</span>
           <Separator className="flex-1" />
         </div>
 
@@ -126,9 +121,7 @@ export function CheckEmailActions({ email }: { email: string | null }) {
           {resendMessage && (
             <p
               className={
-                resendMessage.tone === "error"
-                  ? "text-sm text-destructive"
-                  : "text-sm text-primary"
+                resendMessage.tone === "error" ? "text-sm text-destructive" : "text-sm text-primary"
               }
             >
               {resendMessage.text}
@@ -137,5 +130,5 @@ export function CheckEmailActions({ email }: { email: string | null }) {
         </div>
       </CardContent>
     </Card>
-  )
+  );
 }

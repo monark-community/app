@@ -1,1 +1,1 @@
-export { cn } from "@monark/components"
+export { cn } from "@monark/components";

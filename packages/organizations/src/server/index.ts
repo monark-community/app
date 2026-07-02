@@ -1,47 +1,40 @@
-import { z } from "zod"
-import { router, publicProcedure } from "@monark/common/trpc"
+import { z } from "zod";
+import { router, publicProcedure } from "@monark/common/trpc";
 import {
   emit,
   ForbiddenError,
   NotFoundError,
   UnauthorizedError,
   ValidationError,
-} from "@monark/common"
-import { adminAssignmentSummary, requirePermission } from "@monark/rbac/server"
-import { getById as getUserById } from "@monark/users/server"
-import type { OrganizationUpdatedEvent } from "../contracts/events"
+} from "@monark/common";
+import { adminAssignmentSummary, requirePermission } from "@monark/rbac/server";
+import { getById as getUserById } from "@monark/users/server";
+import type { OrganizationUpdatedEvent } from "../contracts/events";
 import {
   findById,
   listOrganizationsForAdmin,
   listPendingInvitesForAdmin,
   listPendingInvitesForOrg,
   updateOrganizationForAdmin,
-} from "./data"
-import {
-  consumePendingInvitesForUser,
-  createInvite,
-  revokeInvite,
-} from "./invites"
-import {
-  ensureSingletonOrganizationFromInput,
-  getBootstrapStatus,
-} from "./bootstrap"
-import { getCurrentOrg, getUserOrgs } from "./read"
+} from "./data";
+import { consumePendingInvitesForUser, createInvite, revokeInvite } from "./invites";
+import { ensureSingletonOrganizationFromInput, getBootstrapStatus } from "./bootstrap";
+import { getCurrentOrg, getUserOrgs } from "./read";
 import {
   deleteOrganizationMetadataValue,
   getOrganizationMetadataValue,
   listOrganizationMetadataForModule,
   setOrganizationMetadataValue,
-} from "./metadata"
+} from "./metadata";
 
 // Mirror of the rbac.isAdmin gate the /admin layout uses, scoped to the
 // `organizations.admin*` procedures. Non-admins get FORBIDDEN before
 // they reach the data layer.
 async function requireAdmin(userId: string | null): Promise<string> {
-  if (!userId) throw new UnauthorizedError()
-  const summary = await adminAssignmentSummary(userId)
-  if (!summary.hasAdmin) throw new ForbiddenError("Admin role required.")
-  return userId
+  if (!userId) throw new UnauthorizedError();
+  const summary = await adminAssignmentSummary(userId);
+  if (!summary.hasAdmin) throw new ForbiddenError("Admin role required.");
+  return userId;
 }
 
 // Accepted slug shape : lowercase letters, digits, dashes ; 2–60 chars.
@@ -53,13 +46,11 @@ const SLUG_SCHEMA = z
   .string()
   .min(2)
   .max(60)
-  .regex(/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/, "invalid_slug")
+  .regex(/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/, "invalid_slug");
 
 // Hex color validator covering #RGB / #RRGGBB shapes. Stays lenient on
 // case so the UI can render whatever the brand picker produces.
-const HEX_COLOR_SCHEMA = z
-  .string()
-  .regex(/^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/, "invalid_color")
+const HEX_COLOR_SCHEMA = z.string().regex(/^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/, "invalid_color");
 
 const adminUpdateInput = z.object({
   id: z.string().min(1),
@@ -67,7 +58,7 @@ const adminUpdateInput = z.object({
   slug: SLUG_SCHEMA.optional(),
   logoUrl: z.string().url().nullable().optional(),
   primaryColor: HEX_COLOR_SCHEMA.nullable().optional(),
-})
+});
 
 export const organizationsRouter = router({
   current: publicProcedure.query(({ ctx }) =>
@@ -78,8 +69,8 @@ export const organizationsRouter = router({
   ),
 
   mine: publicProcedure.query(({ ctx }) => {
-    if (!ctx.userId) return []
-    return getUserOrgs(ctx.userId)
+    if (!ctx.userId) return [];
+    return getUserOrgs(ctx.userId);
   }),
 
   // Bootstrap status for the /setup page + the (anon)/(authed) layout
@@ -117,12 +108,8 @@ export const organizationsRouter = router({
     .mutation(({ input }) =>
       ensureSingletonOrganizationFromInput({
         slug: input?.slug ?? process.env.INITIAL_ORG_SLUG ?? null,
-        displayName:
-          input?.displayName ?? process.env.INITIAL_ORG_NAME ?? null,
-        primaryColor:
-          input?.primaryColor ??
-          process.env.INITIAL_ORG_PRIMARY_COLOR ??
-          null,
+        displayName: input?.displayName ?? process.env.INITIAL_ORG_NAME ?? null,
+        primaryColor: input?.primaryColor ?? process.env.INITIAL_ORG_PRIMARY_COLOR ?? null,
         logoUrl: input?.logoUrl ?? null,
         actorId: "system:bootstrap",
       }),
@@ -140,21 +127,21 @@ export const organizationsRouter = router({
       }),
     )
     .query(async ({ ctx, input }) => {
-      await requireAdmin(ctx.userId)
+      await requireAdmin(ctx.userId);
       return listOrganizationsForAdmin({
         search: input.search,
         cursor: input.cursor,
         limit: input.limit,
-      })
+      });
     }),
 
   adminGet: publicProcedure
     .input(z.object({ id: z.string().min(1) }))
     .query(async ({ ctx, input }) => {
-      await requireAdmin(ctx.userId)
-      const org = await findById(input.id)
-      if (!org) throw new NotFoundError("Organization", input.id)
-      return org
+      await requireAdmin(ctx.userId);
+      const org = await findById(input.id);
+      if (!org) throw new NotFoundError("Organization", input.id);
+      return org;
     }),
 
   // Partial update on the org profile : displayName / slug / logoUrl /
@@ -163,42 +150,40 @@ export const organizationsRouter = router({
   // ValidationError when the new slug collides with another org ;
   // surfaces a clean error rather than the underlying unique-constraint
   // violation.
-  adminUpdate: publicProcedure
-    .input(adminUpdateInput)
-    .mutation(async ({ ctx, input }) => {
-      const actorId = await requireAdmin(ctx.userId)
-      const { id, ...patch } = input
-      try {
-        const result = await updateOrganizationForAdmin(id, patch)
-        const changed: OrganizationUpdatedEvent["changed"] = []
-        if (patch.displayName !== undefined) changed.push("displayName")
-        if (patch.slug !== undefined) changed.push("slug")
-        if (patch.logoUrl !== undefined) changed.push("logoUrl")
-        if (patch.primaryColor !== undefined) changed.push("primaryColor")
-        if (changed.length > 0) {
-          const event: OrganizationUpdatedEvent = {
-            type: "organization.updated",
-            organizationId: id,
-            actorId,
-            changed,
-            previousSlug: result.previousSlug,
-            occurredAt: new Date(),
-          }
-          await emit(event).catch(() => {})
-        }
-        return result.row
-      } catch (error) {
-        if (error instanceof Error) {
-          if (error.message === "Slug already in use") {
-            throw new ValidationError("That slug is already taken.")
-          }
-          if (error.message.endsWith("not found")) {
-            throw new NotFoundError("Organization", id)
-          }
-        }
-        throw error
+  adminUpdate: publicProcedure.input(adminUpdateInput).mutation(async ({ ctx, input }) => {
+    const actorId = await requireAdmin(ctx.userId);
+    const { id, ...patch } = input;
+    try {
+      const result = await updateOrganizationForAdmin(id, patch);
+      const changed: OrganizationUpdatedEvent["changed"] = [];
+      if (patch.displayName !== undefined) changed.push("displayName");
+      if (patch.slug !== undefined) changed.push("slug");
+      if (patch.logoUrl !== undefined) changed.push("logoUrl");
+      if (patch.primaryColor !== undefined) changed.push("primaryColor");
+      if (changed.length > 0) {
+        const event: OrganizationUpdatedEvent = {
+          type: "organization.updated",
+          organizationId: id,
+          actorId,
+          changed,
+          previousSlug: result.previousSlug,
+          occurredAt: new Date(),
+        };
+        await emit(event).catch(() => {});
       }
-    }),
+      return result.row;
+    } catch (error) {
+      if (error instanceof Error) {
+        if (error.message === "Slug already in use") {
+          throw new ValidationError("That slug is already taken.");
+        }
+        if (error.message.endsWith("not found")) {
+          throw new NotFoundError("Organization", id);
+        }
+      }
+      throw error;
+    }
+  }),
 
   // Invite-flow procedures. Live under the organizations router (vs a
   // dedicated `invites` router) because the surface is intrinsically
@@ -207,8 +192,8 @@ export const organizationsRouter = router({
     adminList: publicProcedure
       .input(z.object({ organizationId: z.string().min(1) }))
       .query(async ({ ctx, input }) => {
-        await requireAdmin(ctx.userId)
-        return listPendingInvitesForOrg(input.organizationId)
+        await requireAdmin(ctx.userId);
+        return listPendingInvitesForOrg(input.organizationId);
       }),
 
     // Org-agnostic pending-invite list. Drives the "Pending" rows that
@@ -225,11 +210,11 @@ export const organizationsRouter = router({
           .optional(),
       )
       .query(async ({ ctx, input }) => {
-        await requireAdmin(ctx.userId)
+        await requireAdmin(ctx.userId);
         return listPendingInvitesForAdmin({
           search: input?.search,
           roleIds: input?.roleIds,
-        })
+        });
       }),
 
     // Generates a fresh invite, fires the email, returns the row +
@@ -253,7 +238,7 @@ export const organizationsRouter = router({
         }),
       )
       .mutation(async ({ ctx, input }) => {
-        const actorId = await requireAdmin(ctx.userId)
+        const actorId = await requireAdmin(ctx.userId);
         return createInvite({
           organizationId: input.organizationId,
           email: input.email,
@@ -261,14 +246,14 @@ export const organizationsRouter = router({
           roleId: input.roleId,
           invitedById: actorId,
           appUrl: input.appUrl ?? "http://localhost:3000",
-        })
+        });
       }),
 
     adminRevoke: publicProcedure
       .input(z.object({ inviteId: z.string().min(1) }))
       .mutation(async ({ ctx, input }) => {
-        await requireAdmin(ctx.userId)
-        await revokeInvite(input.inviteId)
+        await requireAdmin(ctx.userId);
+        await revokeInvite(input.inviteId);
       }),
 
     // Auto-accept hook fired right after sign-in / signup. Walks every
@@ -278,10 +263,10 @@ export const organizationsRouter = router({
     // this on every notifySignedIn without bookkeeping. Returns the
     // count for an optional toast.
     consumePending: publicProcedure.mutation(async ({ ctx }) => {
-      if (!ctx.userId) throw new UnauthorizedError()
-      const user = await getUserById(ctx.userId)
-      if (!user) return { accepted: 0 }
-      return consumePendingInvitesForUser(ctx.userId, user.email)
+      if (!ctx.userId) throw new UnauthorizedError();
+      const user = await getUserById(ctx.userId);
+      if (!user) return { accepted: 0 };
+      return consumePendingInvitesForUser(ctx.userId, user.email);
     }),
   }),
 
@@ -303,11 +288,8 @@ export const organizationsRouter = router({
           ctx,
           `organizations.read-metadata-for-module-${input.module}`,
           input.organizationId,
-        )
-        return listOrganizationMetadataForModule(
-          input.organizationId,
-          input.module,
-        )
+        );
+        return listOrganizationMetadataForModule(input.organizationId, input.module);
       }),
 
     get: publicProcedure
@@ -323,12 +305,8 @@ export const organizationsRouter = router({
           ctx,
           `organizations.read-metadata-for-module-${input.module}`,
           input.organizationId,
-        )
-        return getOrganizationMetadataValue(
-          input.organizationId,
-          input.module,
-          input.key,
-        )
+        );
+        return getOrganizationMetadataValue(input.organizationId, input.module, input.key);
       }),
 
     set: publicProcedure
@@ -345,13 +323,13 @@ export const organizationsRouter = router({
           ctx,
           `organizations.write-metadata-for-module-${input.module}`,
           input.organizationId,
-        )
+        );
         return setOrganizationMetadataValue({
           organizationId: input.organizationId,
           module: input.module,
           key: input.key,
           value: input.value,
-        })
+        });
       }),
 
     delete: publicProcedure
@@ -367,15 +345,11 @@ export const organizationsRouter = router({
           ctx,
           `organizations.write-metadata-for-module-${input.module}`,
           input.organizationId,
-        )
-        await deleteOrganizationMetadataValue(
-          input.organizationId,
-          input.module,
-          input.key,
-        )
+        );
+        await deleteOrganizationMetadataValue(input.organizationId, input.module, input.key);
       }),
   }),
-})
+});
 
 export {
   getById,
@@ -386,11 +360,8 @@ export {
   requireOrg,
   type Organization,
   type OrgSessionContext,
-} from "./read"
-export {
-  acceptInviteByToken,
-  consumePendingInvitesForUser,
-} from "./invites"
+} from "./read";
+export { acceptInviteByToken, consumePendingInvitesForUser } from "./invites";
 export {
   bootstrapSingletonOrganization,
   ensureSingletonOrganizationFromInput,
@@ -399,14 +370,11 @@ export {
   type BootstrapStatus,
   type EnsureBootstrapResult,
   type InitialOrgInput,
-} from "./bootstrap"
-export { registerOrganizationsFeatureFlags } from "./flags"
-export { registerOrganizationsPermissions } from "./permissions"
-export { registerOrganizationsEventTypes } from "./event-types"
-export {
-  ensureSingletonMembership,
-  registerOrganizationsSubscribers,
-} from "./auto-membership"
+} from "./bootstrap";
+export { registerOrganizationsFeatureFlags } from "./flags";
+export { registerOrganizationsPermissions } from "./permissions";
+export { registerOrganizationsEventTypes } from "./event-types";
+export { ensureSingletonMembership, registerOrganizationsSubscribers } from "./auto-membership";
 export {
   listOrganizationMetadataForModule,
   getOrganizationMetadataValue,
@@ -414,4 +382,4 @@ export {
   deleteOrganizationMetadataValue,
   deleteOrganizationMetadataForModule,
   type OrganizationMetadataRow,
-} from "./metadata"
+} from "./metadata";

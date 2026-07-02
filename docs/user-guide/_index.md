@@ -10,7 +10,7 @@ The app is split into three audiences ; pick the page that matches you :
 
 Each page is structured top-to-bottom in the order most people encounter the features. Skim the headings, jump to whatever you need.
 
-## What's *not* documented here
+## What's _not_ documented here
 
 - Anything you'd reach through the URL `/setup` ; that page is a one-time wizard the operator sees before the first organization is created. After bootstrap it disappears.
 - Internal tools (the developer's console, the dev overlay) ; those are dev-only surfaces and live in [technical-documentation](../technical-documentation/).

@@ -1,4 +1,4 @@
-import type { KindMessages } from "../types"
+import type { KindMessages } from "../types";
 
 const messages: KindMessages = {
   en: {
@@ -71,6 +71,6 @@ Inspecter les livraisons : {{ webhookDeliveriesLink }}`,
       link: "{{ webhookDeliveriesLink }}",
     },
   },
-}
+};
 
-export default messages
+export default messages;

@@ -1,12 +1,12 @@
-"use client"
+"use client";
 
-import { useTransition } from "react"
-import { useTranslations } from "next-intl"
-import { Mail } from "lucide-react"
-import { toast } from "sonner"
-import { Button } from "@/components/ui/button"
-import { PageSection } from "@/components/page-section"
-import { adminSendPasswordResetAction } from "../admin-actions"
+import { useTransition } from "react";
+import { useTranslations } from "next-intl";
+import { Mail } from "lucide-react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { PageSection } from "@/components/page-section";
+import { adminSendPasswordResetAction } from "../admin-actions";
 
 /**
  * "Send password reset email" action card on /admin/users/[id]. The
@@ -22,24 +22,24 @@ export function AdminAccountActions({
   email,
   disabled,
 }: {
-  userId: string
-  email: string
-  disabled?: boolean
+  userId: string;
+  email: string;
+  disabled?: boolean;
 }) {
-  const t = useTranslations("admin.users.actions")
-  const [isPending, startTransition] = useTransition()
+  const t = useTranslations("admin.users.actions");
+  const [isPending, startTransition] = useTransition();
 
   function onSendReset() {
     startTransition(async () => {
-      const result = await adminSendPasswordResetAction({ userId })
+      const result = await adminSendPasswordResetAction({ userId });
       if (result.ok) {
-        toast.success(t("passwordReset.success", { email }))
+        toast.success(t("passwordReset.success", { email }));
       } else if (result.errorCode === "forbidden") {
-        toast.error(t("passwordReset.forbidden"))
+        toast.error(t("passwordReset.forbidden"));
       } else {
-        toast.error(t("passwordReset.error"))
+        toast.error(t("passwordReset.error"));
       }
-    })
+    });
   }
 
   return (
@@ -52,10 +52,8 @@ export function AdminAccountActions({
         disabled={isPending || disabled}
       >
         <Mail className="h-4 w-4" aria-hidden />
-        {isPending
-          ? t("passwordReset.sending")
-          : t("passwordReset.cta")}
+        {isPending ? t("passwordReset.sending") : t("passwordReset.cta")}
       </Button>
     </PageSection>
-  )
+  );
 }

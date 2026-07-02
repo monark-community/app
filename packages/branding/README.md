@@ -6,26 +6,26 @@ Single source of truth for app brand identity. Every other package reads `BRANDI
 
 `BRANDING` is the typed object. Fields:
 
-| Field | Used by | Override env var |
-|-------|---------|------------------|
-| `appName` | i18n placeholders, email subjects + bodies, `<title>` tag | `BRANDING_APP_NAME` |
-| `tagline` | Signin/signup subtitle, `<meta description>` | `BRANDING_TAGLINE` |
-| `supportEmail` | Footer, security/coc docs | `BRANDING_SUPPORT_EMAIL` |
-| `totpIssuer` | Authenticator app label | `BRANDING_TOTP_ISSUER` |
-| `fromEmail` | SMTP envelope (when `SMTP_FROM` isn't set) | `BRANDING_FROM_EMAIL` |
-| `appUrl` | Email link templating (`accountLink`, `signInLink`, …) | `APP_URL` |
-| `brandPrimary` | NProgress bar, email CTA, accents | `BRANDING_PRIMARY` |
-| `brandAccent` | NProgress gradient pair, secondary accents | `BRANDING_ACCENT` |
-| `logoSrc` | `<MonarkLogo>` / `<BrandLogo>` component, app bar | `BRANDING_LOGO_SRC` |
+| Field          | Used by                                                   | Override env var         |
+| -------------- | --------------------------------------------------------- | ------------------------ |
+| `appName`      | i18n placeholders, email subjects + bodies, `<title>` tag | `BRANDING_APP_NAME`      |
+| `tagline`      | Signin/signup subtitle, `<meta description>`              | `BRANDING_TAGLINE`       |
+| `supportEmail` | Footer, security/coc docs                                 | `BRANDING_SUPPORT_EMAIL` |
+| `totpIssuer`   | Authenticator app label                                   | `BRANDING_TOTP_ISSUER`   |
+| `fromEmail`    | SMTP envelope (when `SMTP_FROM` isn't set)                | `BRANDING_FROM_EMAIL`    |
+| `appUrl`       | Email link templating (`accountLink`, `signInLink`, …)    | `APP_URL`                |
+| `brandPrimary` | NProgress bar, email CTA, accents                         | `BRANDING_PRIMARY`       |
+| `brandAccent`  | NProgress gradient pair, secondary accents                | `BRANDING_ACCENT`        |
+| `logoSrc`      | `<MonarkLogo>` / `<BrandLogo>` component, app bar         | `BRANDING_LOGO_SRC`      |
 
 ## Usage
 
 ```ts
 // Server, client, email templates, anywhere:
-import { BRANDING, brandingTemplateVars } from "@monark/branding"
+import { BRANDING, brandingTemplateVars } from "@monark/branding";
 
-console.log(BRANDING.appName)             // "Monark" by default
-const vars = brandingTemplateVars()       // safe-to-interpolate subset
+console.log(BRANDING.appName); // "Monark" by default
+const vars = brandingTemplateVars(); // safe-to-interpolate subset
 ```
 
 `brandingTemplateVars()` is what the notifications dispatcher merges into every template's variable map ; templates can reference `{{ appName }}`, `{{ tagline }}`, `{{ supportEmail }}`, `{{ appUrl }}`, `{{ brandPrimary }}`, `{{ brandAccent }}` without each subscriber threading them through.

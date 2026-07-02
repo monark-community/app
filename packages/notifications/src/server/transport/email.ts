@@ -1,8 +1,8 @@
-import { createTransport, type Transporter } from "nodemailer"
-import { BRANDING } from "@monark/branding"
-import { logger } from "@monark/common"
+import { createTransport, type Transporter } from "nodemailer";
+import { BRANDING } from "@monark/branding";
+import { logger } from "@monark/common";
 
-let cached: Transporter | null | undefined
+let cached: Transporter | null | undefined;
 
 /**
  * Lazy SMTP transport. Reads `SMTP_URL` once on first call (e.g.
@@ -12,26 +12,24 @@ let cached: Transporter | null | undefined
  * without running a transport.
  */
 function getTransport(): Transporter | null {
-  if (cached !== undefined) return cached
-  const url = process.env.SMTP_URL
+  if (cached !== undefined) return cached;
+  const url = process.env.SMTP_URL;
   if (!url) {
-    cached = null
-    return null
+    cached = null;
+    return null;
   }
-  cached = createTransport(url)
-  return cached
+  cached = createTransport(url);
+  return cached;
 }
 
 export type MailMessage = {
-  to: string
-  subject: string
-  text: string
-  html?: string
-}
+  to: string;
+  subject: string;
+  text: string;
+  html?: string;
+};
 
-export type MailDeliveryResult =
-  | { ok: true }
-  | { ok: false; reason: string }
+export type MailDeliveryResult = { ok: true } | { ok: false; reason: string };
 
 /**
  * Best-effort send. Logs the would-be message when SMTP is unconfigured
@@ -41,14 +39,14 @@ export type MailDeliveryResult =
  * triggering action.
  */
 export async function sendMail(message: MailMessage): Promise<MailDeliveryResult> {
-  const transport = getTransport()
-  const from = process.env.SMTP_FROM ?? BRANDING.fromEmail
+  const transport = getTransport();
+  const from = process.env.SMTP_FROM ?? BRANDING.fromEmail;
   if (!transport) {
     logger.info(
       { to: message.to, subject: message.subject },
       "[notifications/email] SMTP_URL not set; would have sent",
-    )
-    return { ok: true }
+    );
+    return { ok: true };
   }
   try {
     await transport.sendMail({
@@ -57,19 +55,19 @@ export async function sendMail(message: MailMessage): Promise<MailDeliveryResult
       subject: message.subject,
       text: message.text,
       html: message.html ?? undefined,
-    })
-    return { ok: true }
+    });
+    return { ok: true };
   } catch (err) {
-    const reason = err instanceof Error ? err.message : String(err)
+    const reason = err instanceof Error ? err.message : String(err);
     logger.error(
       { err, to: message.to, subject: message.subject },
       "[notifications/email] send failed",
-    )
-    return { ok: false, reason }
+    );
+    return { ok: false, reason };
   }
 }
 
 /** Test helper ; lets the unit suite reset the lazy cache between cases. */
 export function _resetTransportCacheForTesting(): void {
-  cached = undefined
+  cached = undefined;
 }

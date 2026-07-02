@@ -7,15 +7,15 @@ That path is the **secret resolver** — a single function the api process regis
 ## Contract
 
 ```ts
-import { setWebhookSecretResolver } from "@monark/webhooks/server"
+import { setWebhookSecretResolver } from "@monark/webhooks/server";
 
 setWebhookSecretResolver(async (endpointId: string): Promise<string | null> => {
   // Return the plaintext secret string for this endpoint, or null if
   // it isn't available (rotated, deleted, deploy-out-of-sync). Null
   // results record a delivery error ; throwing surfaces a worker
   // exception in the logs but doesn't crash the process.
-  return null
-})
+  return null;
+});
 ```
 
 The resolver is called **per attempt** (not per request boot) so a secret rotated in the backing store reaches the next outbound delivery without restarting the api. Cache aggressively if your backing store is slow ; deliveries fire on a 5 s cadence by default.
@@ -24,11 +24,11 @@ Wire the resolver in [services/api/src/server.ts](../../services/api/src/server.
 
 ```ts
 // services/api/src/server.ts
-import { setWebhookSecretResolver, startWebhookDeliveryWorker } from "@monark/webhooks/server"
-import { resolveWebhookSecret } from "./lib/webhook-secrets"
+import { setWebhookSecretResolver, startWebhookDeliveryWorker } from "@monark/webhooks/server";
+import { resolveWebhookSecret } from "./lib/webhook-secrets";
 
-setWebhookSecretResolver(resolveWebhookSecret)
-startWebhookDeliveryWorker()
+setWebhookSecretResolver(resolveWebhookSecret);
+startWebhookDeliveryWorker();
 ```
 
 ## Pick a backing store
@@ -46,28 +46,28 @@ WEBHOOK_SECRETS={"clx9z…endpoint-id":"whsec_AbC123…","clxAa…endpoint-id":"
 
 ```ts
 // services/api/src/lib/webhook-secrets.ts
-import { z } from "zod"
-import { logger } from "@monark/common"
+import { z } from "zod";
+import { logger } from "@monark/common";
 
-const SecretsMap = z.record(z.string(), z.string())
+const SecretsMap = z.record(z.string(), z.string());
 
-let cache: Record<string, string> | null = null
+let cache: Record<string, string> | null = null;
 
 function load(): Record<string, string> {
-  if (cache) return cache
-  const raw = process.env.WEBHOOK_SECRETS
-  if (!raw) return (cache = {})
+  if (cache) return cache;
+  const raw = process.env.WEBHOOK_SECRETS;
+  if (!raw) return (cache = {});
   try {
-    cache = SecretsMap.parse(JSON.parse(raw))
-    return cache
+    cache = SecretsMap.parse(JSON.parse(raw));
+    return cache;
   } catch (err) {
-    logger.error({ err }, "WEBHOOK_SECRETS env var failed to parse ; treating as empty")
-    return (cache = {})
+    logger.error({ err }, "WEBHOOK_SECRETS env var failed to parse ; treating as empty");
+    return (cache = {});
   }
 }
 
 export async function resolveWebhookSecret(endpointId: string): Promise<string | null> {
-  return load()[endpointId] ?? null
+  return load()[endpointId] ?? null;
 }
 ```
 
@@ -85,14 +85,14 @@ WEBHOOK_SECRET_clxAaEndpointIdHere=whsec_DeF456…
 
 ```ts
 // services/api/src/lib/webhook-secrets.ts
-const PREFIX = "WEBHOOK_SECRET_"
+const PREFIX = "WEBHOOK_SECRET_";
 
 export async function resolveWebhookSecret(endpointId: string): Promise<string | null> {
   // Endpoint ids are cuid()s — alphanumeric, safe to embed in an env-var name.
   // Reject anything else defensively so a hostile id can't reach into
   // unrelated env vars.
-  if (!/^[a-z0-9]+$/i.test(endpointId)) return null
-  return process.env[`${PREFIX}${endpointId}`] ?? null
+  if (!/^[a-z0-9]+$/i.test(endpointId)) return null;
+  return process.env[`${PREFIX}${endpointId}`] ?? null;
 }
 ```
 
@@ -104,30 +104,30 @@ Store one secret per endpoint in your secret manager, keyed on `webhooks/<endpoi
 
 ```ts
 // services/api/src/lib/webhook-secrets.ts
-import { SecretsManagerClient, GetSecretValueCommand } from "@aws-sdk/client-secrets-manager"
+import { SecretsManagerClient, GetSecretValueCommand } from "@aws-sdk/client-secrets-manager";
 
-const client = new SecretsManagerClient({})
-const cache = new Map<string, { value: string | null; expiresAt: number }>()
-const CACHE_TTL_MS = 5 * 60 * 1000
+const client = new SecretsManagerClient({});
+const cache = new Map<string, { value: string | null; expiresAt: number }>();
+const CACHE_TTL_MS = 5 * 60 * 1000;
 
 export async function resolveWebhookSecret(endpointId: string): Promise<string | null> {
-  const now = Date.now()
-  const hit = cache.get(endpointId)
-  if (hit && hit.expiresAt > now) return hit.value
+  const now = Date.now();
+  const hit = cache.get(endpointId);
+  if (hit && hit.expiresAt > now) return hit.value;
 
   try {
     const out = await client.send(
       new GetSecretValueCommand({ SecretId: `webhooks/${endpointId}` }),
-    )
-    const value = out.SecretString ?? null
-    cache.set(endpointId, { value, expiresAt: now + CACHE_TTL_MS })
-    return value
+    );
+    const value = out.SecretString ?? null;
+    cache.set(endpointId, { value, expiresAt: now + CACHE_TTL_MS });
+    return value;
   } catch (err) {
     if ((err as { name?: string }).name === "ResourceNotFoundException") {
-      cache.set(endpointId, { value: null, expiresAt: now + CACHE_TTL_MS })
-      return null
+      cache.set(endpointId, { value: null, expiresAt: now + CACHE_TTL_MS });
+      return null;
     }
-    throw err
+    throw err;
   }
 }
 ```

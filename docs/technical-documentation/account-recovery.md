@@ -1,6 +1,6 @@
 # Account recovery
 
-How a user gets unstuck after losing their authenticator, password, or both. This document describes the *strategy* and the industry context ; concrete implementation lives in [`packages/auth`](../../packages/auth) and the auth-related routes under [`services/web/src/app`](../../services/web/src/app).
+How a user gets unstuck after losing their authenticator, password, or both. This document describes the _strategy_ and the industry context ; concrete implementation lives in [`packages/auth`](../../packages/auth) and the auth-related routes under [`services/web/src/app`](../../services/web/src/app).
 
 ## The recovery ladder
 
@@ -8,9 +8,9 @@ Recovery is a ladder, not a single flow. Each lost factor pushes the user one ru
 
 ### 1. Recovery codes (shipped)
 
-Generated at TOTP enrollment, displayed once in [`<TotpSection>`](../../services/web/src/app/(authed)/account/totp-section.tsx) inside an amber-tinted card with a copy button. The user is expected to save them somewhere recoverable (password manager, printed copy in a desk drawer, etc.). Each is a 14-character `XXXX-XXXX-XXXX` string usable exactly once ; consumed codes are stamped `usedAt: now` server-side.
+Generated at TOTP enrollment, displayed once in [`<TotpSection>`](<../../services/web/src/app/(authed)/account/totp-section.tsx>) inside an amber-tinted card with a copy button. The user is expected to save them somewhere recoverable (password manager, printed copy in a desk drawer, etc.). Each is a 14-character `XXXX-XXXX-XXXX` string usable exactly once ; consumed codes are stamped `usedAt: now` server-side.
 
-**Where they're spent**: the `/signin/totp` page has a "use recovery code" mode that takes the 14-char code and bypasses the TOTP challenge. Implementation in [`signin/totp/totp-form.tsx`](../../services/web/src/app/(anon)/signin/totp/totp-form.tsx).
+**Where they're spent**: the `/signin/totp` page has a "use recovery code" mode that takes the 14-char code and bypasses the TOTP challenge. Implementation in [`signin/totp/totp-form.tsx`](<../../services/web/src/app/(anon)/signin/totp/totp-form.tsx>).
 
 **When they run low**: the [`<RecoveryCodeReminder>`](../../services/web/src/components/recovery-code-reminder.tsx) modal pops on next sign-in when the remaining count drops below 3 (suggest regen) or hits 0 (block until regen). Regen always requires a fresh TOTP code — see the [reasoning in CHANGELOG](../../CHANGELOG.md) under "Recovery-code regen now requires TOTP everywhere".
 
@@ -32,7 +32,7 @@ A secondary email address registered ahead of time. Recovery links + OTPs are se
 
 ### 4. Trusted-device attestation / passkeys (future)
 
-WebAuthn passkeys synced through iCloud Keychain / Google Password Manager / 1Password let the user's *other* devices act as the second factor. Apple's "Trusted Devices" + Microsoft's account-recovery codes are variants of the same idea. Increasingly the dominant pattern across the industry ; gradually replaces TOTP entirely.
+WebAuthn passkeys synced through iCloud Keychain / Google Password Manager / 1Password let the user's _other_ devices act as the second factor. Apple's "Trusted Devices" + Microsoft's account-recovery codes are variants of the same idea. Increasingly the dominant pattern across the industry ; gradually replaces TOTP entirely.
 
 **Status**: not yet planned. The shadcn registry has `passkeys-input` ; integrating with `@supabase/ssr`'s WebAuthn helpers when they ship is the natural path. Probably v3 of the auth stack, when a meaningful share of users actually have passkeys saved on multiple devices.
 
@@ -52,7 +52,7 @@ A user with TOTP enrolled who clicks the password-reset link in their email **st
 
 Industry alignment : Google, GitHub, AWS all enforce this. A user who's lost both authenticator AND recovery codes goes to rung 2 (support).
 
-Server-side gate lives in [`resetPasswordAction`](../../services/web/src/app/auth/reset-password/actions.ts), mirroring the in-account [`changePasswordAction`](../../services/web/src/app/(authed)/account/actions.ts) pattern : check `auth.totp.status`, require + verify code if enrolled.
+Server-side gate lives in [`resetPasswordAction`](../../services/web/src/app/auth/reset-password/actions.ts), mirroring the in-account [`changePasswordAction`](<../../services/web/src/app/(authed)/account/actions.ts>) pattern : check `auth.totp.status`, require + verify code if enrolled.
 
 ### Recovery-code regen requires TOTP
 
@@ -68,12 +68,12 @@ The user should be told, by email, whenever a recovery factor was used : passwor
 
 ## What the user sees today
 
-| Loss | Recovery path |
-|------|---------------|
-| Password only | `/forgot-password` → email link / OTP → `/auth/reset-password` → set new password (TOTP gate runs if enrolled) |
-| Authenticator only | `/signin` → password → `/signin/totp` → "use recovery code" mode → enter 14-char code |
-| Authenticator + recovery codes | Out-of-band support (rung 2) — not yet implemented |
-| Email + everything | Out-of-band support — not yet implemented |
+| Loss                           | Recovery path                                                                                                  |
+| ------------------------------ | -------------------------------------------------------------------------------------------------------------- |
+| Password only                  | `/forgot-password` → email link / OTP → `/auth/reset-password` → set new password (TOTP gate runs if enrolled) |
+| Authenticator only             | `/signin` → password → `/signin/totp` → "use recovery code" mode → enter 14-char code                          |
+| Authenticator + recovery codes | Out-of-band support (rung 2) — not yet implemented                                                             |
+| Email + everything             | Out-of-band support — not yet implemented                                                                      |
 
 ## Adding a new recovery factor
 

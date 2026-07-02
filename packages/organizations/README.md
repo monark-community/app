@@ -23,39 +23,39 @@ Prisma schema adds four models under `// ── MODULE: organizations ──`: `
 
 ```ts
 // From another module's server code:
-import { getCurrentOrg, requireOrg, getUserOrgs } from "@monark/organizations/server"
+import { getCurrentOrg, requireOrg, getUserOrgs } from "@monark/organizations/server";
 
-const current = await getCurrentOrg(ctx) // ctx: { userId, activeOrganizationId }
-const orgs    = await getUserOrgs(userId) // all non-deleted orgs where membership.leftAt is null
-const org     = await requireOrg(ctx)     // throws NotFoundError if none
+const current = await getCurrentOrg(ctx); // ctx: { userId, activeOrganizationId }
+const orgs = await getUserOrgs(userId); // all non-deleted orgs where membership.leftAt is null
+const org = await requireOrg(ctx); // throws NotFoundError if none
 ```
 
 ```ts
 // From the web side:
-const current = trpc.organizations.current.useQuery()  // Organization | null
-const mine    = trpc.organizations.mine.useQuery()     // Organization[]
+const current = trpc.organizations.current.useQuery(); // Organization | null
+const mine = trpc.organizations.mine.useQuery(); // Organization[]
 ```
 
 ## Public API
 
-| Import path                             | Export                | Kind |
-|-----------------------------------------|-----------------------|------|
-| `@monark/organizations/server`          | `organizationsRouter` | tRPC router mounted under `organizations.*` |
-| `@monark/organizations/server`          | `getById(id)`         | `(id) => Promise<Organization \| null>` |
-| `@monark/organizations/server`          | `getByIdOrThrow(id)`  | throws `NotFoundError` if absent |
-| `@monark/organizations/server`          | `getBySlug(slug)`     | `(slug) => Promise<Organization \| null>` |
-| `@monark/organizations/server`          | `getUserOrgs(userId)` | `(userId) => Promise<Organization[]>` |
-| `@monark/organizations/server`          | `getCurrentOrg(ctx)`  | reads `ctx.activeOrganizationId`, verifies membership |
-| `@monark/organizations/server`          | `requireOrg(ctx)`     | throws if no active org |
-| `@monark/organizations/server`          | `Organization`, `OrgSessionContext` | types |
-| `@monark/organizations/contracts`       | event types (see below) | |
+| Import path                       | Export                              | Kind                                                  |
+| --------------------------------- | ----------------------------------- | ----------------------------------------------------- |
+| `@monark/organizations/server`    | `organizationsRouter`               | tRPC router mounted under `organizations.*`           |
+| `@monark/organizations/server`    | `getById(id)`                       | `(id) => Promise<Organization \| null>`               |
+| `@monark/organizations/server`    | `getByIdOrThrow(id)`                | throws `NotFoundError` if absent                      |
+| `@monark/organizations/server`    | `getBySlug(slug)`                   | `(slug) => Promise<Organization \| null>`             |
+| `@monark/organizations/server`    | `getUserOrgs(userId)`               | `(userId) => Promise<Organization[]>`                 |
+| `@monark/organizations/server`    | `getCurrentOrg(ctx)`                | reads `ctx.activeOrganizationId`, verifies membership |
+| `@monark/organizations/server`    | `requireOrg(ctx)`                   | throws if no active org                               |
+| `@monark/organizations/server`    | `Organization`, `OrgSessionContext` | types                                                 |
+| `@monark/organizations/contracts` | event types (see below)             |                                                       |
 
 tRPC procedures under `organizations.*`:
 
-| Procedure              | Input | Output |
-|------------------------|-------|--------|
-| `organizations.current`| —     | `Organization \| null` |
-| `organizations.mine`   | —     | `Organization[]` |
+| Procedure               | Input | Output                 |
+| ----------------------- | ----- | ---------------------- |
+| `organizations.current` | —     | `Organization \| null` |
+| `organizations.mine`    | —     | `Organization[]`       |
 
 ## Dependencies
 
@@ -72,13 +72,13 @@ No seed data ships by default; the first org is created through the (not-yet-bui
 
 ## Events emitted
 
-| Event                        | When                                            | Status |
-|------------------------------|-------------------------------------------------|--------|
-| `organization.created`       | `createOrganization` mutation                   | type declared, not yet emitted |
-| `organization.member-joined` | invite accept / direct add                      | type declared |
-| `organization.member-removed`| admin removes a member                          | type declared |
-| `organization.invite-sent`   | `createInvite` mutation                         | type declared |
-| `organization.invite-accepted` | invite accept flow                             | type declared |
+| Event                          | When                          | Status                         |
+| ------------------------------ | ----------------------------- | ------------------------------ |
+| `organization.created`         | `createOrganization` mutation | type declared, not yet emitted |
+| `organization.member-joined`   | invite accept / direct add    | type declared                  |
+| `organization.member-removed`  | admin removes a member        | type declared                  |
+| `organization.invite-sent`     | `createInvite` mutation       | type declared                  |
+| `organization.invite-accepted` | invite accept flow            | type declared                  |
 
 ## Events consumed
 

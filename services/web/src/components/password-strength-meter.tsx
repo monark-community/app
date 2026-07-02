@@ -1,8 +1,8 @@
-"use client"
+"use client";
 
-import { useTranslations } from "next-intl"
+import { useTranslations } from "next-intl";
 
-type Score = 0 | 1 | 2 | 3 | 4
+type Score = 0 | 1 | 2 | 3 | 4;
 
 const SEGMENT_COLOR: Record<Score, string> = {
   0: "bg-destructive/60",
@@ -10,21 +10,15 @@ const SEGMENT_COLOR: Record<Score, string> = {
   2: "bg-chart-3",
   3: "bg-chart-4",
   4: "bg-primary",
-}
+};
 
-export function PasswordStrengthMeter({
-  score,
-  visible,
-}: {
-  score: Score
-  visible: boolean
-}) {
-  const t = useTranslations("auth.passwordStrength")
-  if (!visible) return null
+export function PasswordStrengthMeter({ score, visible }: { score: Score; visible: boolean }) {
+  const t = useTranslations("auth.passwordStrength");
+  if (!visible) return null;
 
-  const activeColor = SEGMENT_COLOR[score]
-  const filled = Math.max(1, score + 1)
-  const level = t(`levels.${score}`)
+  const activeColor = SEGMENT_COLOR[score];
+  const filled = Math.max(1, score + 1);
+  const level = t(`levels.${score}`);
 
   return (
     <div className="space-y-1" aria-live="polite">
@@ -43,5 +37,5 @@ export function PasswordStrengthMeter({
         })}
       </p>
     </div>
-  )
+  );
 }

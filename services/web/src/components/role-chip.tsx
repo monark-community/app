@@ -1,5 +1,5 @@
-import { X } from "lucide-react"
-import { cn } from "@/lib/utils"
+import { X } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 /**
  * Role label rendered as a small pill with the role's `color` driving
@@ -28,12 +28,12 @@ export function RoleChip({
   removeAriaLabel,
   removeDisabled,
 }: {
-  name: string
-  color: string | null | undefined
-  className?: string
-  onRemove?: () => void
-  removeAriaLabel?: string
-  removeDisabled?: boolean
+  name: string;
+  color: string | null | undefined;
+  className?: string;
+  onRemove?: () => void;
+  removeAriaLabel?: string;
+  removeDisabled?: boolean;
 }) {
   const tint = color
     ? {
@@ -44,7 +44,7 @@ export function RoleChip({
         // hue ; the chip background stays muted.
         color,
       }
-    : undefined
+    : undefined;
   return (
     <span
       className={cn(
@@ -56,10 +56,7 @@ export function RoleChip({
     >
       <span
         aria-hidden
-        className={cn(
-          "inline-block h-1.5 w-1.5 rounded-full",
-          color ? "" : "bg-muted-foreground",
-        )}
+        className={cn("inline-block h-1.5 w-1.5 rounded-full", color ? "" : "bg-muted-foreground")}
         style={color ? { backgroundColor: color } : undefined}
       />
       <span className="text-foreground">{name}</span>
@@ -75,5 +72,5 @@ export function RoleChip({
         </button>
       )}
     </span>
-  )
+  );
 }

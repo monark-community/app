@@ -1,4 +1,46 @@
 {
+  "fields": {
+    "noResults": "Aucun résultat.",
+    "searchPlaceholder": "Rechercher…",
+    "createOption": "Créer « {value} »",
+    "clear": "Effacer",
+    "pickDate": "Choisir une date",
+    "charCount": "{count}/{max}",
+    "selectPlaceholder": "Sélectionner…",
+    "add": "Ajouter",
+    "loading": "Chargement…",
+    "remove": "Retirer {label}",
+    "yes": "Oui",
+    "no": "Non",
+    "empty": "Vide",
+    "more": "+{count}",
+    "required": "Ce champ est obligatoire.",
+    "invalidUrl": "Saisissez une URL valide (http ou https).",
+    "invalidEmail": "Saisissez une adresse e-mail valide.",
+    "tooShort": "Doit contenir au moins {min} caractères.",
+    "tooLong": "Doit contenir au plus {max} caractères.",
+    "tooSmall": "Doit être au moins {min}.",
+    "tooLarge": "Doit être au plus {max}.",
+    "notInteger": "Doit être un nombre entier.",
+    "tooManyItems": "Sélectionnez au plus {max}.",
+    "richText": {
+      "bold": "Gras",
+      "italic": "Italique",
+      "strike": "Barré",
+      "code": "Code en ligne",
+      "heading1": "Titre 1",
+      "heading2": "Titre 2",
+      "bulletList": "Liste à puces",
+      "orderedList": "Liste numérotée",
+      "blockquote": "Citation",
+      "link": "Lien",
+      "unlink": "Retirer le lien",
+      "undo": "Annuler",
+      "redo": "Rétablir",
+      "linkUrlPlaceholder": "Collez un lien…",
+      "linkApply": "Appliquer"
+    }
+  },
   "setup": {
     "eyebrow": "Configuration de {appName}",
     "title": "Démarrage du déploiement",
@@ -21,8 +63,10 @@
     "appName": "{appName}",
     "tagline": "Au service de la collaboration au sein de la communauté Web3.",
     "cancel": "Annuler",
+    "save": "Enregistrer",
     "continue": "Continuer",
     "loading": "Chargement…",
+    "chooseColor": "Choisir une couleur",
     "unsavedChanges": "Modifications non enregistrées"
   },
   "imageCrop": {
@@ -46,7 +90,8 @@
       "rbac": "Rôles et permissions",
       "roles": "Rôles",
       "new": "Nouveau",
-      "setup": "Configuration"
+      "setup": "Configuration",
+      "calendar": "Calendrier"
     },
     "apps": {
       "triggerAria": "Changer d'application",
@@ -68,7 +113,11 @@
       "brandHomeAria": "Accueil {appName}",
       "brandWordmark": "{appName}",
       "empty": "Aucun module enregistré.",
-      "items": {}
+      "items": {
+        "calendar": "Calendrier",
+        "projects": "Projets",
+        "industries": "Industries"
+      }
     },
     "userMenu": {
       "triggerAria": "Ouvrir le menu utilisateur",
@@ -201,6 +250,22 @@
       "reasonInvalid": "Ce lien de confirmation n'est plus valide.",
       "retry": "Connectez-vous pour en demander un nouveau"
     },
+    "revokeDevice": {
+      "title": "Révoquer cet appareil ?",
+      "subtitle": "Si vous ne reconnaissez pas la connexion mentionnée dans l'email, révoquez l'appareil ici. Vous devrez vous reconnecter sur cet appareil pour utiliser l'application.",
+      "confirm": "Oui, révoquer cet appareil",
+      "revoking": "Révocation…",
+      "notYou": "Cliqué par erreur ? Vous pouvez fermer cette page sans risque.",
+      "successTitle": "Appareil révoqué",
+      "successBody": "Cet appareil a été déconnecté. Pensez à changer votre mot de passe si vous ne reconnaissez pas la connexion.",
+      "errorTitle": "Nous n'avons pas pu révoquer via ce lien",
+      "errorExpired": "Ce lien de révocation a expiré. Vous pouvez toujours révoquer l'appareil depuis Compte → Sécurité après connexion.",
+      "errorInvalid": "Ce lien de révocation n'est pas valide. Vous pouvez toujours révoquer l'appareil depuis Compte → Sécurité après connexion.",
+      "networkErrorTitle": "Une erreur est survenue",
+      "networkErrorBody": "Impossible de joindre le serveur. Réessayez ou révoquez l'appareil depuis Compte → Sécurité.",
+      "retry": "Réessayer",
+      "signin": "Aller à la connexion"
+    },
     "passwordStrength": {
       "label": "Solidité : <strong>{level}</strong>",
       "levels": {
@@ -241,6 +306,26 @@
     "home": "Accueil",
     "account": "Compte"
   },
+  "error": {
+    "eyebrow": "Une erreur est survenue",
+    "title": "Cette page a rencontré une erreur",
+    "subtitle": "Une erreur inattendue s'est produite. Vous pouvez réessayer ou revenir à l'accueil.",
+    "retry": "Réessayer",
+    "home": "Accueil"
+  },
+  "table": {
+    "columns": "Colonnes",
+    "reset": "Réinitialiser la disposition",
+    "rowActions": "Actions de la ligne",
+    "openPanel": "Ouvrir les détails",
+    "loadError": "Impossible de charger cette liste. Veuillez réessayer.",
+    "retry": "Réessayer"
+  },
+  "filters": {
+    "button": "Filtres",
+    "title": "Filtres",
+    "close": "Fermer"
+  },
   "admin": {
     "title": "Admin",
     "placeholder": "Les surfaces admin seront ajoutées ici à mesure qu'elles seront livrées.",
@@ -249,6 +334,8 @@
       "users": "Utilisateurs",
       "organizations": "Organisations",
       "organization": "Organisation",
+      "projects": "Projets",
+      "industries": "Secteurs",
       "rbac": "Rôles et permissions",
       "webhooks": "Webhooks"
     },
@@ -258,6 +345,10 @@
       "placeholder": "La gestion des utilisateurs sera ajoutée ici.",
       "searchLabel": "Rechercher des utilisateurs",
       "searchPlaceholder": "Recherchez par courriel ou nom affiché…",
+      "columns": { "user": "Utilisateur", "status": "Statut" },
+      "collapsePanel": "Réduire le panneau",
+      "openFullPage": "Ouvrir en pleine page",
+      "panelTitle": "Utilisateur",
       "empty": "Aucun utilisateur pour l'instant.",
       "emptySearch": "Aucun utilisateur ne correspond à « {query} ».",
       "loading": "Chargement…",
@@ -307,6 +398,7 @@
         "cancel": "Annuler",
         "success": "Invitation envoyée.",
         "error": "Impossible d'envoyer l'invitation.",
+        "revoke": "Révoquer l'invitation",
         "revokeAria": "Révoquer l'invitation pour {email}",
         "revokeSuccess": "Invitation révoquée.",
         "revokeError": "Impossible de révoquer cette invitation."
@@ -447,6 +539,10 @@
       "title": "Organisations",
       "subtitle": "Gérez les profils, l'image de marque et les slugs des organisations.",
       "placeholder": "L'édition des profils d'organisation sera ajoutée ici.",
+      "columns": { "name": "Organisation", "color": "Couleur" },
+      "collapsePanel": "Réduire le panneau",
+      "openFullPage": "Ouvrir en pleine page",
+      "panelTitle": "Organisation",
       "searchLabel": "Rechercher des organisations",
       "searchPlaceholder": "Recherchez par nom ou slug…",
       "empty": "Aucune organisation pour l'instant.",
@@ -514,6 +610,10 @@
         "createCta": "Nouveau rôle",
         "searchPlaceholder": "Rechercher un rôle…",
         "searchAria": "Rechercher un rôle par nom",
+        "columns": { "name": "Rôle", "type": "Type" },
+        "collapsePanel": "Réduire le panneau",
+        "openFullPage": "Ouvrir en pleine page",
+        "panelTitle": "Rôle",
         "empty": "Aucun rôle pour l'instant. Créez-en un pour commencer.",
         "emptySearch": "Aucun rôle ne correspond à « {query} ».",
         "badges": {
@@ -546,7 +646,9 @@
           "organization": "Organisation",
           "users": "Utilisateurs",
           "rbac": "Rôles et permissions",
-          "platform": "Plateforme"
+          "platform": "Plateforme",
+          "calendar": "Calendrier",
+          "projects": "Projets"
         },
         "nameRequired": "Le nom du rôle est requis.",
         "create": "Créer le rôle",
@@ -568,6 +670,186 @@
         "updateError": "Impossible de mettre à jour ce rôle."
       }
     },
+    "projects": {
+      "title": "Projets",
+      "subtitle": "Suivez chaque projet détenu par l'organisation — de l'idée à la livraison.",
+      "newProject": "Nouveau projet",
+      "actions": {
+        "edit": "Modifier",
+        "archive": "Archiver",
+        "restore": "Restaurer",
+        "delete": "Supprimer définitivement"
+      },
+      "archivedBadge": "Archivé",
+      "archivedFilterLabel": "Archivés",
+      "activeOnly": "Actifs seulement",
+      "includeArchived": "Inclure les archivés",
+      "archive": {
+        "title": "Archiver ce projet ?",
+        "description": "Le projet sera masqué de la liste. Ses données sont conservées et vous pourrez le restaurer plus tard.",
+        "cta": "Archiver",
+        "cancel": "Annuler",
+        "success": "Projet archivé.",
+        "error": "Impossible d'archiver le projet. {message}"
+      },
+      "hardDelete": {
+        "title": "Supprimer définitivement \"{name}\" ?",
+        "description": "Cela supprime l'enregistrement du projet et toutes ses données. Cette action est irréversible.",
+        "cta": "Supprimer définitivement",
+        "cancel": "Annuler",
+        "success": "Projet supprimé définitivement.",
+        "error": "Impossible de supprimer le projet. {message}"
+      },
+      "restore": {
+        "success": "Projet restauré.",
+        "error": "Impossible de restaurer le projet. {message}"
+      },
+      "searchPlaceholder": "Chercher par titre, slug ou mot-clé",
+      "filterStatusLabel": "Statut",
+      "filterStatusAll": "Tous les statuts",
+      "filterIndustryLabel": "Industrie",
+      "filterIndustryAll": "Toutes les industries",
+      "columns": {
+        "title": "Titre",
+        "status": "Statut",
+        "industries": "Industries",
+        "updated": "Mis à jour"
+      },
+      "empty": "Aucun projet pour l'instant. Créez le premier pour démarrer.",
+      "emptyArchived": "Aucun projet archivé.",
+      "emptyFiltered": "Aucun projet ne correspond à ces filtres.",
+      "notFound": "Projet introuvable.",
+      "openFullPage": "Ouvrir en plein écran",
+      "collapsePanel": "Réduire le panneau",
+      "loading": "Chargement des projets…",
+      "loadError": "Impossible de charger les projets. Réessayez.",
+      "status": {
+        "IDEA": "Idée",
+        "PROTOTYPE_AVAILABLE": "Prototype disponible",
+        "IN_PROGRESS": "En cours",
+        "QA": "QA",
+        "COMPLETED": "Terminé"
+      },
+      "form": {
+        "createTitle": "Nouveau projet",
+        "createSubtitle": "Notez l'essentiel maintenant — chaque champ ci-dessous est modifiable plus tard.",
+        "editTitle": "Modifier le projet",
+        "editSubtitle": "Ajustez les détails et enregistrez.",
+        "back": "Retour aux projets",
+        "fields": {
+          "title": "Titre",
+          "titleHelp": "Affiché comme titre principal sur les cartes et les pages de détail.",
+          "slug": "Slug",
+          "slugHelp": "Minuscules, tirets uniquement. Utilisé dans les URLs. Dérivé du titre si laissé vide.",
+          "slugPreview": "Sera enregistré sous {slug}",
+          "url": "URL",
+          "urlPlaceholder": "https://exemple.com/projet",
+          "urlHelp": "Optionnel. Lien vers une page marketing, une démo ou un dépôt.",
+          "description": "Description",
+          "descriptionHelp": "Markdown. Rendu sur les surfaces publiques quand configuré.",
+          "publicStatus": "Statut public",
+          "keywords": "Mots-clés",
+          "keywordsHelp": "Séparés par des virgules. Mis en minuscules + dé-dupliqués à l'enregistrement.",
+          "keywordsPlaceholder": "design system, accessibilité, tableau de bord",
+          "industries": "Industries",
+          "industriesHelp": "Choisissez une ou plusieurs dans la taxonomie."
+        },
+        "addIndustry": "Ajouter une industrie",
+        "removeIndustry": "Retirer {name}",
+        "noIndustries": "Aucune industrie sélectionnée.",
+        "industriesEmpty": "Toutes les industries sont déjà sélectionnées.",
+        "industriesSearchPlaceholder": "Chercher des industries",
+        "save": "Enregistrer",
+        "saving": "Enregistrement…",
+        "create": "Créer le projet",
+        "creating": "Création…",
+        "cancel": "Annuler",
+        "delete": "Supprimer",
+        "dangerTitle": "Zone sensible",
+        "dangerSubtitle": "Actions irréversibles pour ce projet.",
+        "deleteRowTitle": "Supprimer le projet",
+        "deleteRowDescription": "Supprime le projet en mode doux. Vous pouvez le restaurer depuis la liste.",
+        "deleteConfirm": "Supprimer ce projet ?",
+        "deleteDescription": "Le projet est supprimé en mode doux. Vous pouvez le restaurer depuis la liste.",
+        "deleteConfirmCta": "Supprimer le projet",
+        "createSuccess": "Projet créé.",
+        "createError": "Impossible de créer le projet. {message}",
+        "updateSuccess": "Projet enregistré.",
+        "updateError": "Impossible d'enregistrer le projet. {message}",
+        "deleteSuccess": "Projet supprimé.",
+        "deleteError": "Impossible de supprimer le projet. {message}",
+        "validationTitle": "Le titre est requis.",
+        "validationUrl": "L'URL doit être un lien complet https:// ou http://."
+      }
+    },
+    "industries": {
+      "title": "Secteurs",
+      "subtitle": "Taxonomie de la plateforme que les projets utilisent pour déclarer leur secteur de marché.",
+      "newIndustry": "Nouveau secteur",
+      "searchPlaceholder": "Chercher par nom ou slug",
+      "actions": {
+        "edit": "Modifier",
+        "archive": "Archiver",
+        "restore": "Restaurer",
+        "delete": "Supprimer définitivement"
+      },
+      "archivedBadge": "Archivé",
+      "showArchived": "Afficher les archivés",
+      "hideArchived": "Masquer les archivés",
+      "archivedFilterLabel": "Archivés",
+      "activeOnly": "Actifs seulement",
+      "includeArchived": "Inclure les archivés",
+      "columns": {
+        "name": "Nom",
+        "slug": "Slug",
+        "created": "Créé"
+      },
+      "empty": "Aucun secteur pour l'instant. Créez le premier pour commencer.",
+      "emptyArchived": "Aucun secteur archivé.",
+      "emptyFiltered": "Aucun secteur ne correspond à votre recherche.",
+      "notFound": "Secteur introuvable.",
+      "openFullPage": "Ouvrir en plein écran",
+      "collapsePanel": "Réduire le panneau",
+      "backToIndustries": "Retour aux secteurs",
+      "form": {
+        "createTitle": "Nouveau secteur",
+        "editTitle": "Modifier le secteur",
+        "displayName": "Nom",
+        "displayNameHelp": "Affiché aux utilisateurs sur les fiches projet et les menus de filtre.",
+        "slug": "Slug",
+        "slugHelp": "Dérivé automatiquement du nom si laissé vide. Minuscules et tirets uniquement.",
+        "slugPreview": "Sera enregistré sous {slug}",
+        "save": "Enregistrer",
+        "saving": "Enregistrement…",
+        "create": "Créer le secteur",
+        "creating": "Création…",
+        "cancel": "Annuler",
+        "createSuccess": "Secteur créé.",
+        "createError": "Impossible de créer le secteur. {message}",
+        "updateSuccess": "Secteur enregistré.",
+        "updateError": "Impossible d'enregistrer le secteur. {message}"
+      },
+      "archive": {
+        "title": "Archiver ce secteur ?",
+        "description": "Le secteur sera masqué des menus. Les associations aux projets existants sont conservées et vous pourrez le restaurer plus tard.",
+        "cta": "Archiver",
+        "cancel": "Annuler",
+        "success": "Secteur archivé.",
+        "error": "Impossible d'archiver le secteur. {message}"
+      },
+      "hardDelete": {
+        "title": "Supprimer définitivement \"{name}\" ?",
+        "description": "Cela supprime l'enregistrement du secteur et toutes ses associations aux projets. Cette action est irréversible.",
+        "cta": "Supprimer définitivement",
+        "cancel": "Annuler",
+        "success": "Secteur supprimé définitivement.",
+        "error": "Impossible de supprimer le secteur. {message}"
+      },
+      "restore": {
+        "success": "Secteur restauré.",
+        "error": "Impossible de restaurer le secteur. {message}"
+      }
+    },
     "webhooks": {
       "title": "Webhooks",
       "subtitle": "Points de terminaison HTTP qui reçoivent chaque événement de domaine émis par la plateforme.",
@@ -584,6 +866,14 @@
           "platform": "Plateforme (sans portée d'organisation)"
         },
         "createCta": "Nouveau point de terminaison",
+        "columns": {
+          "name": "Point de terminaison",
+          "status": "Statut",
+          "subscriptions": "Événements"
+        },
+        "collapsePanel": "Réduire le panneau",
+        "openFullPage": "Ouvrir en pleine page",
+        "panelTitle": "Point de terminaison webhook",
         "searchPlaceholder": "Rechercher par nom, URL ou description…",
         "searchAria": "Rechercher des points de terminaison de webhook",
         "empty": "Aucun point de terminaison de webhook dans cette portée pour l'instant.",
@@ -682,6 +972,7 @@
       "deliveries": {
         "back": "Retour au point de terminaison",
         "title": "Livraisons",
+        "columns": { "event": "Événement", "status": "Statut", "when": "Mise en file" },
         "empty": "Aucune livraison pour l'instant. Les points de terminaison accumulent des lignes dès qu'un événement correspondant est émis.",
         "attemptsCount": "{count, plural, =0 {Aucune tentative} one {# tentative} other {# tentatives}}",
         "createdAt": "Mise en file d'attente {date}",
@@ -845,6 +1136,7 @@
       "bannerUpdated": "Bannière mise à jour.",
       "bannerRemoved": "Bannière retirée.",
       "saved": "Enregistré.",
+      "displayNameError": "Le nom d'affichage doit comporter entre 1 et 80 caractères.",
       "save": "Enregistrer",
       "saving": "Enregistrement…",
       "readOnlyBanner": {
@@ -1042,6 +1334,14 @@
         "title": "Révoquer toutes les sessions ?",
         "description": "Cela déconnecte tous les navigateurs et appareils actuellement connectés. Utilisez cette option si vous soupçonnez que votre compte est compromis.",
         "confirm": "Tout révoquer"
+      },
+      "ttl": {
+        "label": "Fenêtre de confiance",
+        "help": "Durée pendant laquelle un appareil reconnu reste de confiance avant un nouveau défi à la connexion. Se rafraîchit à chaque connexion réussie.",
+        "option30": "30 jours",
+        "option60": "60 jours",
+        "option90": "90 jours",
+        "saveError": "Impossible de mettre à jour la fenêtre de confiance. Réessayez."
       }
     },
     "danger": {
@@ -1216,5 +1516,113 @@
       "scopeNote": "Résolu avec une portée vide (aucun userId / orgId / rôle)."
     },
     "errorPrefix": "erreur :"
+  },
+  "calendar": {
+    "title": "Calendrier",
+    "sidebar": {
+      "createEvent": "Créer",
+      "myCalendars": "Mes calendriers",
+      "addCalendar": "Ajouter un calendrier",
+      "moreOptions": "Plus d'options",
+      "editCalendar": "Modifier",
+      "archiveCalendar": "Archiver",
+      "archiveConfirmTitle": "Archiver le calendrier ?",
+      "archiveConfirmDescription": "Le calendrier est masqué de la liste. Ses événements sont conservés et vous pourrez le restaurer plus tard.",
+      "archiveConfirmAction": "Archiver",
+      "archivedSection": "Archivés",
+      "noArchived": "Aucun calendrier archivé.",
+      "restoreCalendar": "Restaurer",
+      "restoreSuccess": "Calendrier restauré.",
+      "restoreError": "Impossible de restaurer le calendrier. {message}",
+      "todayEvents": "Événements d'aujourd'hui",
+      "noEventsToday": "Aucun événement aujourd'hui"
+    },
+    "manageCalendar": {
+      "createHeading": "Nouveau calendrier",
+      "editHeading": "Modifier le calendrier",
+      "nameLabel": "Nom",
+      "namePlaceholder": "Nom du calendrier",
+      "descriptionLabel": "Description",
+      "colorLabel": "Couleur",
+      "rolesLabel": "Accessible à",
+      "rolesPlaceholder": "Sélectionner des rôles…",
+      "cancel": "Annuler",
+      "save": "Enregistrer",
+      "delete": "Archiver le calendrier"
+    },
+    "shell": {
+      "today": "Aujourd'hui",
+      "prevDay": "Jour précédent",
+      "nextDay": "Jour suivant",
+      "prevWeek": "Semaine précédente",
+      "nextWeek": "Semaine suivante",
+      "prevMonth": "Mois précédent",
+      "nextMonth": "Mois suivant",
+      "day": "Jour",
+      "week": "Semaine",
+      "month": "Mois"
+    },
+    "monthView": {
+      "more": "de plus"
+    },
+    "weekView": {
+      "today": "Aujourd'hui",
+      "prevWeek": "Semaine précédente",
+      "nextWeek": "Semaine suivante",
+      "mon": "Lun",
+      "tue": "Mar",
+      "wed": "Mer",
+      "thu": "Jeu",
+      "fri": "Ven",
+      "sat": "Sam",
+      "sun": "Dim"
+    },
+    "search": {
+      "label": "Rechercher des événements",
+      "placeholder": "Rechercher des événements…",
+      "typeToSearch": "Tapez au moins 2 caractères pour rechercher",
+      "searching": "Recherche en cours…",
+      "empty": "Aucun événement trouvé"
+    },
+    "dayView": {
+      "allDayLabel": "Toute la journée",
+      "editEvent": {
+        "heading": "Modifier l'événement",
+        "save": "Enregistrer",
+        "delete": "Supprimer",
+        "deleteConfirmLabel": "Supprimer cet événement ?"
+      },
+      "newEvent": {
+        "heading": "Nouvel événement",
+        "calendarLabel": "Calendrier",
+        "eventTypeLabel": "Type",
+        "eventTypeStandard": "Standard",
+        "eventTypePunctual": "Ponctuel",
+        "eventTypeAllDay": "Toute la journée",
+        "titleLabel": "Titre",
+        "titlePlaceholder": "Ajouter un titre",
+        "dateLabel": "Date",
+        "startDateLabel": "Date de début",
+        "startTimeLabel": "Heure de début",
+        "endTimeLabel": "Heure de fin",
+        "endDateLabel": "Date de fin",
+        "descriptionLabel": "Description",
+        "descriptionPlaceholder": "Ajouter une description",
+        "locationLabel": "Lieu",
+        "locationPlaceholder": "Ajouter un lieu",
+        "participantsLabel": "Participants",
+        "participantsPlaceholder": "Ajouter des participants",
+        "discardConfirm": "Vous avez des modifications non enregistrées. Les ignorer ?",
+        "cancel": "Annuler",
+        "create": "Créer",
+        "remindersLabel": "Rappels",
+        "reminderUnitMinutes": "minutes",
+        "reminderUnitHours": "heures",
+        "reminderUnitDays": "jours",
+        "reminderUnitWeeks": "semaines",
+        "addReminder": "Ajouter un rappel",
+        "removeReminder": "Supprimer le rappel"
+      }
+    }
   }
 }

@@ -1,4 +1,4 @@
-import type { KindMessages } from "../types"
+import type { KindMessages } from "../types";
 
 const messages: KindMessages = {
   en: {
@@ -83,6 +83,6 @@ Ouvrir le point de terminaison : {{ webhookEndpointLink }}`,
       link: "{{ webhookEndpointLink }}",
     },
   },
-}
+};
 
-export default messages
+export default messages;

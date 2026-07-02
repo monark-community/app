@@ -1,6 +1,11 @@
 # Supabase
 .branches
 .temp
+# CLI scaffolds `migrations/` + `snippets/` empty on `supabase init` ; we use
+# Prisma at `packages/db/prisma/migrations` and don't use Studio snippets.
+# Ignore so they stay invisible if regenerated.
+migrations
+snippets
 
 # dotenvx
 .env.keys

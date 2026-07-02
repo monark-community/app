@@ -41,12 +41,10 @@ Once the fork is created:
 
 - Click into it.
 - In the top right corner, copy the **RPC URL**:
-    
-    ```
-    perl
-    CopierModifier
-    https://rpc.tenderly.co/fork/xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-    ```
-    
+  ```
+  perl
+  CopierModifier
+  https://rpc.tenderly.co/fork/xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+  ```
 
 This URL can now be used just like an Ethereum JSON-RPC endpoint with MetaMask, Foundry, Hardhat, or Wagmi.

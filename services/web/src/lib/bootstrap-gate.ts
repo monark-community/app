@@ -1,4 +1,18 @@
-import { createServerTrpcClient } from "@/lib/trpc-server"
+import { cache } from "react";
+import { createServerTrpcClient } from "@/lib/trpc-server";
+
+/**
+ * Per-request memoized read of the bootstrap status from the api. Both
+ * the root layout (for the org brand color) and the (anon)/(authed)
+ * gate layouts (via {@link isSystemBootstrapped}) need this on the same
+ * request ; `cache()` collapses those into a single api round trip per
+ * request instead of one per call site. Returns `null` on any failure.
+ */
+export const getBootstrapStatus = cache(async () => {
+  return createServerTrpcClient()
+    .organizations.bootstrapStatus.query()
+    .catch(() => null);
+});
 
 /**
  * Read the bootstrap status from the api service. Returns `true` when
@@ -13,10 +27,7 @@ import { createServerTrpcClient } from "@/lib/trpc-server"
  * its display matches whatever the gate just saw.
  */
 export async function isSystemBootstrapped(): Promise<boolean> {
-  const api = createServerTrpcClient()
-  const status = await api.organizations.bootstrapStatus
-    .query()
-    .catch(() => null)
-  if (!status) return true
-  return status.bootstrapped
+  const status = await getBootstrapStatus();
+  if (!status) return true;
+  return status.bootstrapped;
 }

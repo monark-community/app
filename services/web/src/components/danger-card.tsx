@@ -1,23 +1,17 @@
-import type { ReactNode } from "react"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
+import type { ReactNode } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
-export type DangerCardTone = "danger" | "warning"
+export type DangerCardTone = "danger" | "warning";
 
 const TONE_BORDER: Record<DangerCardTone, string> = {
   danger: "border-destructive/40",
   warning: "border-amber-400/40",
-}
+};
 
 const TONE_TITLE: Record<DangerCardTone, string> = {
   danger: "text-destructive",
   warning: "text-amber-500",
-}
+};
 
 /**
  * Card-bordered "Danger Zone" wrapper used for irreversible actions on
@@ -44,11 +38,11 @@ export function DangerCard({
   children,
   className,
 }: {
-  title: ReactNode
-  subtitle?: ReactNode
-  tone?: DangerCardTone
-  children: ReactNode
-  className?: string
+  title: ReactNode;
+  subtitle?: ReactNode;
+  tone?: DangerCardTone;
+  children: ReactNode;
+  className?: string;
 }) {
   return (
     <Card className={`${TONE_BORDER[tone]} ${className ?? ""}`}>
@@ -58,7 +52,7 @@ export function DangerCard({
       </CardHeader>
       <CardContent className="space-y-4">{children}</CardContent>
     </Card>
-  )
+  );
 }
 
 /**
@@ -71,9 +65,9 @@ export function DangerRow({
   description,
   action,
 }: {
-  title: ReactNode
-  description: ReactNode
-  action: ReactNode
+  title: ReactNode;
+  description: ReactNode;
+  action: ReactNode;
 }) {
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -83,5 +77,5 @@ export function DangerRow({
       </div>
       <div className="shrink-0">{action}</div>
     </div>
-  )
+  );
 }

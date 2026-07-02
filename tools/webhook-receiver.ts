@@ -34,64 +34,58 @@
  *   GET  /healthz             — `{ ok: true }`. Lets a test wait for boot.
  */
 
-import { createServer, type IncomingMessage, type ServerResponse } from "node:http"
-import { createHmac, timingSafeEqual } from "node:crypto"
-import { parseArgs } from "node:util"
+import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
+import { createHmac, timingSafeEqual } from "node:crypto";
+import { parseArgs } from "node:util";
 
 type CapturedRequest = {
-  receivedAt: number
-  method: string
-  url: string
-  headers: Record<string, string | string[] | undefined>
-  body: string
+  receivedAt: number;
+  method: string;
+  url: string;
+  headers: Record<string, string | string[] | undefined>;
+  body: string;
   // The parsed body, if it was JSON. Saves the test from re-parsing.
-  json: unknown | null
+  json: unknown | null;
   // Verification outcome when in verify mode ; null otherwise.
-  signatureValid: boolean | null
-}
+  signatureValid: boolean | null;
+};
 
-const inbox: CapturedRequest[] = []
-let failNextOnce = false
+const inbox: CapturedRequest[] = [];
+let failNextOnce = false;
 
 function readBody(req: IncomingMessage): Promise<string> {
   return new Promise((resolve, reject) => {
-    const chunks: Buffer[] = []
-    req.on("data", (chunk: Buffer) => chunks.push(chunk))
-    req.on("end", () => resolve(Buffer.concat(chunks).toString("utf8")))
-    req.on("error", reject)
-  })
+    const chunks: Buffer[] = [];
+    req.on("data", (chunk: Buffer) => chunks.push(chunk));
+    req.on("end", () => resolve(Buffer.concat(chunks).toString("utf8")));
+    req.on("error", reject);
+  });
 }
 
 function verifySignature(input: {
-  secret: string
-  timestamp: string
-  body: string
-  signatureHeader: string
+  secret: string;
+  timestamp: string;
+  body: string;
+  signatureHeader: string;
 }): boolean {
-  if (!input.signatureHeader.startsWith("v1=")) return false
-  const provided = Buffer.from(input.signatureHeader.slice(3), "hex")
+  if (!input.signatureHeader.startsWith("v1=")) return false;
+  const provided = Buffer.from(input.signatureHeader.slice(3), "hex");
   const computed = Buffer.from(
-    createHmac("sha256", input.secret)
-      .update(`${input.timestamp}.${input.body}`)
-      .digest("hex"),
+    createHmac("sha256", input.secret).update(`${input.timestamp}.${input.body}`).digest("hex"),
     "hex",
-  )
-  if (provided.length !== computed.length) return false
-  return timingSafeEqual(provided, computed)
+  );
+  if (provided.length !== computed.length) return false;
+  return timingSafeEqual(provided, computed);
 }
 
-function jsonResponse(
-  res: ServerResponse,
-  statusCode: number,
-  body: unknown,
-): void {
-  res.statusCode = statusCode
-  res.setHeader("Content-Type", "application/json")
-  res.end(JSON.stringify(body))
+function jsonResponse(res: ServerResponse, statusCode: number, body: unknown): void {
+  res.statusCode = statusCode;
+  res.setHeader("Content-Type", "application/json");
+  res.end(JSON.stringify(body));
 }
 
 function isVerificationFailure(captured: CapturedRequest): boolean {
-  return captured.signatureValid === false
+  return captured.signatureValid === false;
 }
 
 async function handleHook(
@@ -99,26 +93,26 @@ async function handleHook(
   res: ServerResponse,
   config: { secret: string | null; failOnce: boolean; quiet: boolean },
 ): Promise<void> {
-  const body = await readBody(req)
-  let parsed: unknown = null
+  const body = await readBody(req);
+  let parsed: unknown = null;
   try {
-    parsed = body.length > 0 ? JSON.parse(body) : null
+    parsed = body.length > 0 ? JSON.parse(body) : null;
   } catch {
-    parsed = null
+    parsed = null;
   }
-  let signatureValid: boolean | null = null
+  let signatureValid: boolean | null = null;
   if (config.secret !== null) {
-    const sig = req.headers["webhook-signature"]
-    const ts = req.headers["webhook-timestamp"]
+    const sig = req.headers["webhook-signature"];
+    const ts = req.headers["webhook-timestamp"];
     if (typeof sig === "string" && typeof ts === "string") {
       signatureValid = verifySignature({
         secret: config.secret,
         timestamp: ts,
         body,
         signatureHeader: sig,
-      })
+      });
     } else {
-      signatureValid = false
+      signatureValid = false;
     }
   }
 
@@ -130,33 +124,36 @@ async function handleHook(
     body,
     json: parsed,
     signatureValid,
-  }
-  inbox.push(captured)
+  };
+  inbox.push(captured);
 
   if (!config.quiet) {
-    const status = isVerificationFailure(captured) ? "REJECTED" : "ACCEPTED"
+    const status = isVerificationFailure(captured) ? "REJECTED" : "ACCEPTED";
     process.stdout.write(
       `[receiver] ${status} ${req.method} ${req.url} ${
         captured.headers["webhook-event-type"] ?? "?"
       } ${body.length}b\n`,
-    )
+    );
   }
 
   if (isVerificationFailure(captured)) {
-    jsonResponse(res, 401, { ok: false, reason: "invalid signature" })
-    return
+    jsonResponse(res, 401, { ok: false, reason: "invalid signature" });
+    return;
   }
 
   if (config.failOnce && failNextOnce) {
-    failNextOnce = false
+    failNextOnce = false;
     if (!config.quiet) {
-      process.stdout.write("[receiver] returning 500 once for retry test\n")
+      process.stdout.write("[receiver] returning 500 once for retry test\n");
     }
-    jsonResponse(res, 500, { ok: false, reason: "synthetic failure" })
-    return
+    jsonResponse(res, 500, { ok: false, reason: "synthetic failure" });
+    return;
   }
 
-  jsonResponse(res, 200, { ok: true, idempotencyKey: captured.headers["webhook-delivery-idempotency-key"] ?? null })
+  jsonResponse(res, 200, {
+    ok: true,
+    idempotencyKey: captured.headers["webhook-delivery-idempotency-key"] ?? null,
+  });
 }
 
 async function main(): Promise<void> {
@@ -167,74 +164,66 @@ async function main(): Promise<void> {
       "fail-once": { type: "boolean", default: false },
       quiet: { type: "boolean", default: false },
     },
-  })
-  const port = Number(values.port)
-  const secret = values.secret ?? null
+  });
+  const port = Number(values.port);
+  const secret = values.secret ?? null;
   const config = {
     secret,
     failOnce: values["fail-once"] ?? false,
     quiet: values.quiet ?? false,
-  }
-  if (config.failOnce) failNextOnce = true
+  };
+  if (config.failOnce) failNextOnce = true;
 
   const server = createServer(async (req, res) => {
-    const url = req.url ?? "/"
+    const url = req.url ?? "/";
     if (req.method === "GET" && url === "/healthz") {
-      jsonResponse(res, 200, { ok: true })
-      return
+      jsonResponse(res, 200, { ok: true });
+      return;
     }
     if (req.method === "GET" && url.startsWith("/inbox")) {
-      const queryIdx = url.indexOf("?")
-      const params = new URLSearchParams(queryIdx >= 0 ? url.slice(queryIdx + 1) : "")
-      const since = Number(params.get("since") ?? "0")
-      const filtered = since > 0
-        ? inbox.filter((c) => c.receivedAt >= since)
-        : inbox
-      jsonResponse(res, 200, { count: filtered.length, captures: filtered })
-      return
+      const queryIdx = url.indexOf("?");
+      const params = new URLSearchParams(queryIdx >= 0 ? url.slice(queryIdx + 1) : "");
+      const since = Number(params.get("since") ?? "0");
+      const filtered = since > 0 ? inbox.filter((c) => c.receivedAt >= since) : inbox;
+      jsonResponse(res, 200, { count: filtered.length, captures: filtered });
+      return;
     }
     if (req.method === "DELETE" && url === "/inbox") {
-      inbox.length = 0
-      jsonResponse(res, 200, { ok: true })
-      return
+      inbox.length = 0;
+      jsonResponse(res, 200, { ok: true });
+      return;
     }
     if (req.method === "POST") {
-      await handleHook(req, res, config)
-      return
+      await handleHook(req, res, config);
+      return;
     }
-    jsonResponse(res, 404, { ok: false, reason: "no such route" })
-  })
+    jsonResponse(res, 404, { ok: false, reason: "no such route" });
+  });
 
   server.listen(port, "127.0.0.1", () => {
     if (!config.quiet) {
-      process.stdout.write(
-        `[receiver] listening on http://127.0.0.1:${port}\n`,
-      )
+      process.stdout.write(`[receiver] listening on http://127.0.0.1:${port}\n`);
       process.stdout.write(
         `[receiver] mode: ${config.secret ? "verify-signatures" : "capture-only"}${config.failOnce ? " + fail-next-once" : ""}\n`,
-      )
-      process.stdout.write(
-        `[receiver] POST /hook  GET /inbox  DELETE /inbox\n`,
-      )
+      );
+      process.stdout.write(`[receiver] POST /hook  GET /inbox  DELETE /inbox\n`);
     }
-  })
+  });
 
   // Graceful shutdown for child-process e2e harness usage. SIGTERM
   // from the test process flushes the inbox to stdout if non-empty,
   // then exits.
   const shutdown = () => {
     if (!config.quiet && inbox.length > 0) {
-      process.stdout.write(
-        `[receiver] shutting down with ${inbox.length} captured request(s)\n`,
-      )
+      process.stdout.write(`[receiver] shutting down with ${inbox.length} captured request(s)\n`);
     }
-    server.close(() => process.exit(0))
-  }
-  process.on("SIGINT", shutdown)
-  process.on("SIGTERM", shutdown)
+    server.close(() => process.exit(0));
+  };
+  process.on("SIGINT", shutdown);
+  process.on("SIGTERM", shutdown);
 }
 
 main().catch((err) => {
-  process.stderr.write(`[receiver] fatal: ${String(err)}\n`)
-  process.exit(1)
-})
+  process.stderr.write(`[receiver] fatal: ${String(err)}\n`);
+  process.exit(1);
+});

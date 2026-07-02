@@ -1,28 +1,28 @@
-"use client"
+"use client";
 
-import Link from "next/link"
-import { useState, useTransition } from "react"
-import { useTranslations } from "next-intl"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Card, CardContent } from "@/components/ui/card"
-import { signInAction, type SignInErrorCode } from "./actions"
+import Link from "next/link";
+import { useState, useTransition } from "react";
+import { useTranslations } from "next-intl";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent } from "@/components/ui/card";
+import { signInAction, type SignInErrorCode } from "./actions";
 
 export function SignInForm() {
-  const t = useTranslations("auth.signIn")
-  const [errorCode, setErrorCode] = useState<SignInErrorCode | null>(null)
-  const [isPending, startTransition] = useTransition()
+  const t = useTranslations("auth.signIn");
+  const [errorCode, setErrorCode] = useState<SignInErrorCode | null>(null);
+  const [isPending, startTransition] = useTransition();
 
   function onSubmit(formData: FormData) {
-    setErrorCode(null)
-    const email = String(formData.get("email") ?? "")
-    const password = String(formData.get("password") ?? "")
+    setErrorCode(null);
+    const email = String(formData.get("email") ?? "");
+    const password = String(formData.get("password") ?? "");
 
     startTransition(async () => {
-      const result = await signInAction({ email, password })
-      if (result && !result.ok) setErrorCode(result.errorCode)
-    })
+      const result = await signInAction({ email, password });
+      if (result && !result.ok) setErrorCode(result.errorCode);
+    });
   }
 
   return (
@@ -57,14 +57,12 @@ export function SignInForm() {
               autoComplete="current-password"
             />
           </div>
-          {errorCode && (
-            <p className="text-sm text-destructive">{t(`errors.${errorCode}`)}</p>
-          )}
+          {errorCode && <p className="text-sm text-destructive">{t(`errors.${errorCode}`)}</p>}
           <Button type="submit" disabled={isPending} className="w-full">
             {isPending ? t("submitting") : t("submit")}
           </Button>
         </form>
       </CardContent>
     </Card>
-  )
+  );
 }

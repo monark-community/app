@@ -4,7 +4,7 @@
 
 The exec brief lists "automated marketing content : runtime-produced posts and assets generated from preconfigured dynamic layouts" as a priority. The CRM-style app being built in this repo already emits domain events for the lifecycle moments worth posting about (a university gets confirmed, a new project starts, a milestone hits). Hand those events into a small posting pipeline that hydrates pre-approved templates with the event's payload, lets Claude tailor wording to each network, and pushes to the configured social accounts ; team gets an approval queue for the borderline cases, evergreen content cycles on a schedule.
 
-This is feature-flagged and modular. It depends on auth/users (operator identity for the approval queue), the existing events bus, and the notifications module's transport infrastructure (we already have an SMTP client + a registry pattern that maps to this almost 1:1). Nothing in the core app should *require* this module to be present ; if the org isn't on social, the events fire and no subscribers care.
+This is feature-flagged and modular. It depends on auth/users (operator identity for the approval queue), the existing events bus, and the notifications module's transport infrastructure (we already have an SMTP client + a registry pattern that maps to this almost 1:1). Nothing in the core app should _require_ this module to be present ; if the org isn't on social, the events fire and no subscribers care.
 
 ## Goals
 
@@ -30,7 +30,7 @@ This is feature-flagged and modular. It depends on auth/users (operator identity
 
 - **As an admin**, I connect our Twitter and LinkedIn accounts via OAuth on `/admin/social-accounts`, name each account ("Main", "Dev relations"), and see token expiry + last-success times.
 - **As an admin**, I create a template "New university confirmed" with a variable for the university's name, attach it to the `university.confirmed` event, and pick which connected accounts it posts to.
-- **As an admin**, I configure the template to *queue for review* — when the trigger fires, I see the rendered draft on `/admin/social-queue` with the event payload, and I click Approve or Reject.
+- **As an admin**, I configure the template to _queue for review_ — when the trigger fires, I see the rendered draft on `/admin/social-queue` with the event payload, and I click Approve or Reject.
 - **As an admin**, when an approved post fails to publish (rate-limited, token expired), I get an in-app notification + an email so I can reconnect the account.
 - **As a developer of the platform**, when I add a new domain event, the social-automation module discovers it through the events registry and offers it as a trigger option in the template editor without code changes here.
 - **As an admin**, I schedule a weekly "active projects digest" post on Mondays at 9am ; the schedule lane fires the same render+approve+publish pipeline as event-driven posts.
@@ -273,15 +273,15 @@ enum SocialPostStatus {
 
 Each network's auth + posting model is different enough to deserve its own integration file. The shared interface is small ; the divergence is in the OAuth flow + payload shape.
 
-| Network    | OAuth flow            | Token lifetime          | Content shape                                | Notable limits                          |
-|------------|-----------------------|-------------------------|----------------------------------------------|-----------------------------------------|
-| Twitter / X| OAuth 2.0 + PKCE      | 2h access / 6mo refresh | text 280, optional media (image, video, gif) | tier-based, paid above Basic            |
-| LinkedIn   | OAuth 2.0             | 60d access / 1y refresh | text 3000, optional image / article          | requires app review for w_organization_social |
-| Facebook   | OAuth 2.0 (page tokens)| 60d (page token)        | text + media                                 | Page Access Token, requires Meta business verification |
-| Instagram  | OAuth via Meta        | 60d                     | image required, caption 2200 chars           | image / video must be on a public URL we control |
-| Threads    | OAuth via Meta        | 60d                     | text 500                                     | Meta Threads API, in beta as of 2026     |
-| Bluesky    | App password (atproto)| no expiry until rotated | text 300, optional images                    | rate-limited but no payment tier         |
-| Mastodon   | OAuth per instance    | no expiry               | text 500 (default, instance-config'd)        | instance-specific URL ; multi-instance support needed |
+| Network     | OAuth flow              | Token lifetime          | Content shape                                | Notable limits                                         |
+| ----------- | ----------------------- | ----------------------- | -------------------------------------------- | ------------------------------------------------------ |
+| Twitter / X | OAuth 2.0 + PKCE        | 2h access / 6mo refresh | text 280, optional media (image, video, gif) | tier-based, paid above Basic                           |
+| LinkedIn    | OAuth 2.0               | 60d access / 1y refresh | text 3000, optional image / article          | requires app review for w_organization_social          |
+| Facebook    | OAuth 2.0 (page tokens) | 60d (page token)        | text + media                                 | Page Access Token, requires Meta business verification |
+| Instagram   | OAuth via Meta          | 60d                     | image required, caption 2200 chars           | image / video must be on a public URL we control       |
+| Threads     | OAuth via Meta          | 60d                     | text 500                                     | Meta Threads API, in beta as of 2026                   |
+| Bluesky     | App password (atproto)  | no expiry until rotated | text 300, optional images                    | rate-limited but no payment tier                       |
+| Mastodon    | OAuth per instance      | no expiry               | text 500 (default, instance-config'd)        | instance-specific URL ; multi-instance support needed  |
 
 **MVP scope** : Twitter, LinkedIn, Mastodon, Bluesky. Twitter for reach, LinkedIn for B2B / partner-facing, Mastodon + Bluesky as low-friction "always works" coverage that proves the architecture without paid API tiers blocking dev. Facebook / Instagram / Threads land in a follow-up since they all share the Meta Business setup and are better tackled together.
 
@@ -295,13 +295,13 @@ The LLM does three jobs at render time. Everything else is deterministic code.
 2. **Generate alternates**. The same call returns 2–3 variants so an operator approving from the queue can pick the one that reads best. Stored in `SocialPost.alternates`.
 3. **Length compression**. When a network has a hard char limit (Twitter's 280) and the hydrated template would overflow, Claude rewrites tighter. Deterministic truncation is a fallback only.
 
-**Why Claude instead of pure templates** : the alternative is per-network template variants for every trigger. That's a maintenance multiplier ; one trigger × four networks × two locales = eight strings to keep in sync. With Claude, the operator authors *one* template per trigger (or per locale), and the network adaptation is a runtime concern.
+**Why Claude instead of pure templates** : the alternative is per-network template variants for every trigger. That's a maintenance multiplier ; one trigger × four networks × two locales = eight strings to keep in sync. With Claude, the operator authors _one_ template per trigger (or per locale), and the network adaptation is a runtime concern.
 
 **Prompt caching** : the per-org "voice guide" (a free-text field on `SocialTemplate` or org-level) goes in a cache breakpoint so subsequent renders against the same template hit the warm cache. Cuts cost meaningfully on high-volume schedules. Use Claude Sonnet for renders ; templates aren't long enough to justify Opus.
 
 **Guardrails** : a small post-processor strips common LLM artefacts (leading "Sure!", trailing "Let me know if you want adjustments"), verifies length under the network limit, refuses to post if Claude returned a refusal pattern. Failures fall back to the raw template with deterministic variable substitution and surface a yellow flag in the queue UI ("AI render failed, raw template shown").
 
-**Out-of-scope LLM uses** : we do *not* have Claude generate posts from scratch (no "post about something cool today"). Every post comes from a human-authored template ; Claude's job is shaping not authoring. This keeps brand voice predictable and avoids hallucination risk.
+**Out-of-scope LLM uses** : we do _not_ have Claude generate posts from scratch (no "post about something cool today"). Every post comes from a human-authored template ; Claude's job is shaping not authoring. This keeps brand voice predictable and avoids hallucination risk.
 
 ## tRPC API surface
 
@@ -335,7 +335,7 @@ All `admin*` procedures require the appropriate `social:*` permission. `adminLis
 
 - **`/admin/social/accounts`** : table of connected accounts with network logo, label, last-used time, token expiry chip (green / yellow / red). "Connect new" button per network kicks off OAuth.
 - **`/admin/social/templates`** : list of templates filtered by trigger ; "New template" opens an editor with :
-  - Trigger picker (event key from `adminListEventKeys` *or* a cron expression with timezone).
+  - Trigger picker (event key from `adminListEventKeys` _or_ a cron expression with timezone).
   - Body editor with variable autocompletion (variables come from the event payload's TypeScript type).
   - Account multi-select.
   - Policy radio (auto / review / manual).
@@ -379,12 +379,14 @@ i18n : every visible string in en + fr per the project's standard ; locale varia
 ## Phasing
 
 **Phase A : foundation, no posting yet.**
+
 - Module scaffold, schema, encryption helpers, `SocialAccount` CRUD UI.
 - OAuth wiring for Twitter + Mastodon (no-cost, fastest to validate).
 - Token refresh cron.
 - "Test post" button on accounts page that posts a hardcoded "hello world" to verify the integration end-to-end.
 
 **Phase B : event-driven posting, manual templates, no LLM yet.**
+
 - Templates with deterministic `{{ variable }}` substitution.
 - Subscriber wiring on the events bus.
 - Queue UI for `REVIEW` policy.
@@ -392,22 +394,26 @@ i18n : every visible string in en + fr per the project's standard ; locale varia
 - LinkedIn + Bluesky integrations land here.
 
 **Phase C : Claude integration.**
+
 - Render pipeline calls Claude with template + payload + network + voice guide.
 - Alternates surfaced in the queue.
 - Length / tone tailoring.
 - Brand voice doc surface.
 
 **Phase D : schedule lane.**
+
 - Cron expressions on templates.
 - Scheduler runner.
 - "Posting paused" kill switch.
 
 **Phase E : analytics + history.**
+
 - Metrics fetch worker.
 - History page with per-post and per-template aggregates.
 - Engagement-aware sorting on the template list.
 
 **Phase F : Meta family.**
+
 - Facebook + Instagram + Threads integrations together (they share business verification).
 - Image / video handling for Instagram.
 

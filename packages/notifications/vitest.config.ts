@@ -1,5 +1,5 @@
-import { configDefaults, defineConfig, mergeConfig } from "vitest/config"
-import baseConfig from "../../vitest.shared"
+import { configDefaults, defineConfig, mergeConfig } from "vitest/config";
+import baseConfig from "../../vitest.shared";
 
 // Target threshold per test-plan : 80 %. Templates / prefs / enrich
 // are well-covered ; missing : the email-shell snapshot test
@@ -21,4 +21,4 @@ export default mergeConfig(
       },
     },
   }),
-)
+);

@@ -20,7 +20,7 @@ Some modules are core to almost every application;
 
 - Login/Password
 - Password strength validation
-- Email Validation 
+- Email Validation
 - Trusted Device
 - TOPT Application)
 
@@ -49,12 +49,8 @@ We want Monark-specific modules to be as independent as possible. They should be
 - Contribution Estimation System
 - Referral System
 
-
 ---
 
-
-
 ---
-
 
 ---

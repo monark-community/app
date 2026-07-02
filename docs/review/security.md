@@ -27,7 +27,7 @@ removeOverride: publicProcedure
 
 ### H1. TOTP is enforced only by a client cookie + web middleware ; the API accepts the bearer token regardless
 
-- **Files:** [services/web/src/app/(anon)/signin/actions.ts](../../services/web/src/app/(anon)/signin/actions.ts):40-55, [services/web/src/middleware.ts](../../services/web/src/middleware.ts):64-77, [services/api/src/trpc/context.ts](../../services/api/src/trpc/context.ts):13-28, [services/api/src/lib/supabase.ts](../../services/api/src/lib/supabase.ts):25-40
+- **Files:** [services/web/src/app/(anon)/signin/actions.ts](<../../services/web/src/app/(anon)/signin/actions.ts>):40-55, [services/web/src/middleware.ts](../../services/web/src/middleware.ts):64-77, [services/api/src/trpc/context.ts](../../services/api/src/trpc/context.ts):13-28, [services/api/src/lib/supabase.ts](../../services/api/src/lib/supabase.ts):25-40
 - **Evidence:** After `signInWithPassword`, `data.session.access_token` is already fully valid (the signin action's own comment: "the session cookie is live but the middleware pending-gate keeps the user from reaching protected routes"). The only gate is the `monark_totp_pending` cookie checked in web middleware. The API context authorizes purely on `supabase.auth.getUser(token)` ; it never checks whether a TOTP challenge was satisfied.
 - **Impact:** An attacker who has the victim's password obtains a valid access token from the password step and can (a) call the tRPC API directly with the bearer token, or (b) delete the client-controlled `monark_totp_pending` cookie — fully bypassing the second factor for all API access. TOTP provides no real protection at the authorization layer.
 - **Fix:** Enforce MFA at the token/session layer — use Supabase MFA assurance levels and require AAL2 in `verifyAccessToken`/`requirePermission` for TOTP-enrolled users, or issue a restricted session until TOTP passes. A server-side check, not a client cookie, must gate privileged procedures.
@@ -58,13 +58,13 @@ delete: publicProcedure.input(z.object({ id: z.string().min(1) }))
 
 ### H4. Global "is an admin somewhere" gate used for cross-tenant admin actions on arbitrary org/user ids
 
-- **Files:** [packages/rbac/src/server/data.ts](../../packages/rbac/src/server/data.ts):208-231 (`hasAnyAdminAssignment` matches ADMIN in *any* org), consumed by:
+- **Files:** [packages/rbac/src/server/data.ts](../../packages/rbac/src/server/data.ts):208-231 (`hasAnyAdminAssignment` matches ADMIN in _any_ org), consumed by:
   - [packages/rbac/src/server/index.ts](../../packages/rbac/src/server/index.ts):39-44 `requireAdmin` → `adminAssignRole` (L145-175, arbitrary `organizationId`/`roleId`), `adminCreateRole`/`adminUpdateRole`/`adminDeleteRole`/`adminListRoles`
   - [packages/users/src/server/index.ts](../../packages/users/src/server/index.ts):49-54 `requireAdmin` → `adminListUsers`, `adminGetUser`, `adminUpdateProfile`, `adminRequestDeletion`, `adminCancelDeletion` (all platform-wide by userId)
   - [packages/organizations/src/server/index.ts](../../packages/organizations/src/server/index.ts):40-45 → `adminList`, `adminUpdate`/`adminGet` (any org id), `invites.adminCreate` (invite into any org with any role)
   - [packages/auth/src/server/index.ts](../../packages/auth/src/server/index.ts):508-520 `adminHardDeleteUser` (any userId)
   - [packages/notifications/src/server/router.ts](../../packages/notifications/src/server/router.ts):27-32 admin prefs on any userId
-- **Evidence:** `requireAdmin` only asserts `summary.hasAdmin` (true for an ADMIN of *any single* org), then acts on the caller-supplied `organizationId`/`userId` with no check that the caller administers that specific target.
+- **Evidence:** `requireAdmin` only asserts `summary.hasAdmin` (true for an ADMIN of _any single_ org), then acts on the caller-supplied `organizationId`/`userId` with no check that the caller administers that specific target.
 - **Impact:** In multi-tenant mode (`tenancy.multi-tenant`, supported by the codebase) an org-tier ADMIN of Org A can enumerate, read, modify, and delete users and organizations across all tenants, invite into other orgs, assign roles in other orgs, and hard-delete arbitrary users — a systemic tenant-isolation and privilege-escalation break. Even single-tenant, it conflates org-admin with platform-admin.
 - **Fix:** For org-scoped procedures, gate on `requirePermission(ctx, "<module>.<key>", input.organizationId)` (org-scoped `hasPermission`) instead of a global admin flag ; for platform-wide surfaces require `hasSysadminAssignment`. For `adminAssignRole`, verify the actor administers `input.organizationId` and cannot grant roles outside it.
 
@@ -79,7 +79,7 @@ delete: publicProcedure.input(z.object({ id: z.string().min(1) }))
 
 ### M2. Email templates interpolate user-controlled values without HTML escaping
 
-- **Files:** [packages/notifications/src/server/template.ts](../../packages/notifications/src/server/template.ts):36-44 (`interpolateVars` — raw substitution), [enrich.ts](../../packages/notifications/src/server/enrich.ts):210-221 (values stringified, not escaped), [_partials/email-shell.ts](../../packages/notifications/src/templates/_partials/email-shell.ts)
+- **Files:** [packages/notifications/src/server/template.ts](../../packages/notifications/src/server/template.ts):36-44 (`interpolateVars` — raw substitution), [enrich.ts](../../packages/notifications/src/server/enrich.ts):210-221 (values stringified, not escaped), [\_partials/email-shell.ts](../../packages/notifications/src/templates/_partials/email-shell.ts)
 - **Evidence:** `interpolateVars` does `input.replace(VAR_RE, name => vars[name] ?? "")` — no entity encoding. `enrichVars` puts raw strings (calendar `eventTitle`, `previousEmail`/`newEmail`, device fields) straight into `TemplateVars`.
 - **Impact:** Stored HTML injection into outbound emails. A calendar event title (up to 200 chars of arbitrary content) is rendered into the `calendar.event.reminder` HTML email sent to other org members, enabling markup/link injection and phishing content in a trusted-looking email.
 - **Fix:** HTML-escape all interpolated variables by default in `interpolateVars`, with an explicit opt-out only for template-author-controlled fragments like `logoHtml`.

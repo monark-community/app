@@ -1,10 +1,10 @@
-"use client"
+"use client";
 
-import { useRouter } from "next/navigation"
-import { useEffect, useState, useTransition, type FormEvent } from "react"
-import { useTranslations } from "next-intl"
-import { toast } from "sonner"
-import { Button } from "@/components/ui/button"
+import { useRouter } from "next/navigation";
+import { useEffect, useState, useTransition, type FormEvent } from "react";
+import { useTranslations } from "next-intl";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -12,22 +12,22 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import {
   InputOTP,
   InputOTPGroup,
   InputOTPSeparator,
   InputOTPSlot,
-} from "@/components/ui/input-otp"
-import { Label } from "@/components/ui/label"
-import { TotpConfirmDialog } from "@/components/totp-confirm-dialog"
-import { trpc } from "@/lib/trpc"
+} from "@/components/ui/input-otp";
+import { Label } from "@/components/ui/label";
+import { TotpConfirmDialog } from "@/components/totp-confirm-dialog";
+import { trpc } from "@/lib/trpc";
 import {
   requestEmailChangeAction,
   verifyEmailChangeOtpAction,
   type ChangeEmailResult,
-} from "./actions"
+} from "./actions";
 
 type Stage =
   | { kind: "form" }
@@ -36,7 +36,7 @@ type Stage =
    * snapping back to "form") so the user can paste the 6-digit code
    * from either inbox without re-entering email + password.
    */
-  | { kind: "verify"; newEmail: string; pendingOtherSide: boolean }
+  | { kind: "verify"; newEmail: string; pendingOtherSide: boolean };
 
 /**
  * Email-change flow rendered inside a modal Dialog. The "Change
@@ -51,39 +51,37 @@ type Stage =
  * UX so the password-change-style modal lands on the same code path.
  */
 export function EmailChangeForm({ currentEmail }: { currentEmail: string }) {
-  const t = useTranslations("account.emailChange")
-  const router = useRouter()
+  const t = useTranslations("account.emailChange");
+  const router = useRouter();
   const totpStatus = trpc.auth.totp.status.useQuery(undefined, {
     refetchOnWindowFocus: false,
-  })
+  });
   const totpEnrolled = Boolean(
     totpStatus.data && "enrolled" in totpStatus.data && totpStatus.data.enrolled,
-  )
+  );
 
-  const [open, setOpen] = useState(false)
-  const [stage, setStage] = useState<Stage>({ kind: "form" })
-  const [newEmail, setNewEmail] = useState("")
-  const [currentPassword, setCurrentPassword] = useState("")
-  const [otpCode, setOtpCode] = useState("")
-  const [isSubmitting, startSubmit] = useTransition()
-  const [isVerifying, startVerify] = useTransition()
-  const [dialogOpen, setDialogOpen] = useState(false)
-  const [dialogError, setDialogError] = useState<
-    "invalidTotpCode" | "totpRequired" | null
-  >(null)
+  const [open, setOpen] = useState(false);
+  const [stage, setStage] = useState<Stage>({ kind: "form" });
+  const [newEmail, setNewEmail] = useState("");
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [otpCode, setOtpCode] = useState("");
+  const [isSubmitting, startSubmit] = useTransition();
+  const [isVerifying, startVerify] = useTransition();
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [dialogError, setDialogError] = useState<"invalidTotpCode" | "totpRequired" | null>(null);
 
   // Reset every time the dialog opens so a previous abandoned attempt
   // doesn't leak across opens. Closing the dialog mid-flow drops the
   // stage too.
   useEffect(() => {
     if (open) {
-      setStage({ kind: "form" })
-      setNewEmail("")
-      setCurrentPassword("")
-      setOtpCode("")
-      setDialogError(null)
+      setStage({ kind: "form" });
+      setNewEmail("");
+      setCurrentPassword("");
+      setOtpCode("");
+      setDialogError(null);
     }
-  }, [open])
+  }, [open]);
 
   function commitRequest(totpCode?: string) {
     startSubmit(async () => {
@@ -91,71 +89,63 @@ export function EmailChangeForm({ currentEmail }: { currentEmail: string }) {
         newEmail,
         currentPassword,
         totpCode,
-      })
+      });
       if (result.ok) {
         toast.success(t("sent"), {
           description: t("sentHint", { email: currentEmail }),
           duration: 8000,
-        })
-        setStage({ kind: "verify", newEmail, pendingOtherSide: false })
-        setCurrentPassword("")
-        setDialogOpen(false)
-        setDialogError(null)
-        return
+        });
+        setStage({ kind: "verify", newEmail, pendingOtherSide: false });
+        setCurrentPassword("");
+        setDialogOpen(false);
+        setDialogError(null);
+        return;
       }
-      if (
-        result.errorCode === "invalidTotpCode" ||
-        result.errorCode === "totpRequired"
-      ) {
-        setDialogError(result.errorCode)
-        return
+      if (result.errorCode === "invalidTotpCode" || result.errorCode === "totpRequired") {
+        setDialogError(result.errorCode);
+        return;
       }
-      toast.error(t(`errors.${result.errorCode}`))
-      setDialogOpen(false)
-      setDialogError(null)
-    })
+      toast.error(t(`errors.${result.errorCode}`));
+      setDialogOpen(false);
+      setDialogError(null);
+    });
   }
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
+    event.preventDefault();
     if (totpEnrolled) {
-      setDialogError(null)
-      setDialogOpen(true)
-      return
+      setDialogError(null);
+      setDialogOpen(true);
+      return;
     }
-    commitRequest()
+    commitRequest();
   }
 
   function onVerifyOtp(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    if (stage.kind !== "verify" || otpCode.length !== 6) return
+    event.preventDefault();
+    if (stage.kind !== "verify" || otpCode.length !== 6) return;
     startVerify(async () => {
       const result = await verifyEmailChangeOtpAction({
         newEmail: stage.newEmail,
         token: otpCode.trim(),
-      })
+      });
       if (!result.ok) {
-        toast.error(t(`errors.${result.errorCode}`))
-        return
+        toast.error(t(`errors.${result.errorCode}`));
+        return;
       }
       if (result.rotated) {
-        router.replace("/signin?emailChanged=1")
-        return
+        router.replace("/signin?emailChanged=1");
+        return;
       }
-      setStage({ ...stage, pendingOtherSide: true })
-      setOtpCode("")
-      toast.success(t("otpHalfDone"))
-    })
+      setStage({ ...stage, pendingOtherSide: true });
+      setOtpCode("");
+      toast.success(t("otpHalfDone"));
+    });
   }
 
   return (
     <>
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        onClick={() => setOpen(true)}
-      >
+      <Button type="button" variant="outline" size="sm" onClick={() => setOpen(true)}>
         {t("change")}
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
@@ -166,11 +156,7 @@ export function EmailChangeForm({ currentEmail }: { currentEmail: string }) {
           </DialogHeader>
 
           {stage.kind === "form" && (
-            <form
-              id="email-change-form"
-              onSubmit={onSubmit}
-              className="grid gap-3 py-2"
-            >
+            <form id="email-change-form" onSubmit={onSubmit} className="grid gap-3 py-2">
               <div className="grid gap-2">
                 <Label htmlFor="newEmail">{t("labels.newEmail")}</Label>
                 <Input
@@ -185,9 +171,7 @@ export function EmailChangeForm({ currentEmail }: { currentEmail: string }) {
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="currentPasswordForEmail">
-                  {t("labels.currentPassword")}
-                </Label>
+                <Label htmlFor="currentPasswordForEmail">{t("labels.currentPassword")}</Label>
                 <Input
                   id="currentPasswordForEmail"
                   type="password"
@@ -201,11 +185,7 @@ export function EmailChangeForm({ currentEmail }: { currentEmail: string }) {
           )}
 
           {stage.kind === "verify" && (
-            <form
-              id="email-change-verify-form"
-              onSubmit={onVerifyOtp}
-              className="grid gap-3 py-2"
-            >
+            <form id="email-change-verify-form" onSubmit={onVerifyOtp} className="grid gap-3 py-2">
               <p className="text-sm text-muted-foreground">
                 {stage.pendingOtherSide
                   ? t("otpPendingOther", {
@@ -256,11 +236,7 @@ export function EmailChangeForm({ currentEmail }: { currentEmail: string }) {
               {t("close")}
             </Button>
             {stage.kind === "form" && (
-              <Button
-                type="submit"
-                form="email-change-form"
-                disabled={isSubmitting}
-              >
+              <Button type="submit" form="email-change-form" disabled={isSubmitting}>
                 {isSubmitting ? t("submitting") : t("submit")}
               </Button>
             )}
@@ -280,17 +256,17 @@ export function EmailChangeForm({ currentEmail }: { currentEmail: string }) {
       <TotpConfirmDialog
         open={dialogOpen}
         onOpenChange={(next) => {
-          if (!next) setDialogError(null)
-          setDialogOpen(next)
+          if (!next) setDialogError(null);
+          setDialogOpen(next);
         }}
         onConfirm={async (code) => {
-          setDialogError(null)
-          commitRequest(code)
+          setDialogError(null);
+          commitRequest(code);
         }}
         scope="emailChange"
         errorKey={dialogError}
         pending={isSubmitting}
       />
     </>
-  )
+  );
 }

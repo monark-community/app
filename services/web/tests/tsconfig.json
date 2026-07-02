@@ -4,11 +4,6 @@
     "noEmit": true,
     "types": ["node", "vitest/globals", "@testing-library/jest-dom"]
   },
-  "include": [
-    "**/*.ts",
-    "**/*.tsx",
-    "../src/**/*.ts",
-    "../src/**/*.tsx"
-  ],
+  "include": ["**/*.ts", "**/*.tsx", "../src/**/*.ts", "../src/**/*.tsx"],
   "exclude": ["e2e/**"]
 }

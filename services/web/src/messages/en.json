@@ -1,10 +1,54 @@
 {
+  "fields": {
+    "noResults": "No results.",
+    "searchPlaceholder": "Search…",
+    "createOption": "Create \"{value}\"",
+    "clear": "Clear",
+    "pickDate": "Pick a date",
+    "charCount": "{count}/{max}",
+    "selectPlaceholder": "Select…",
+    "add": "Add",
+    "loading": "Loading…",
+    "remove": "Remove {label}",
+    "yes": "Yes",
+    "no": "No",
+    "empty": "Empty",
+    "more": "+{count}",
+    "required": "This field is required.",
+    "invalidUrl": "Enter a valid URL (http or https).",
+    "invalidEmail": "Enter a valid email address.",
+    "tooShort": "Must be at least {min} characters.",
+    "tooLong": "Must be at most {max} characters.",
+    "tooSmall": "Must be at least {min}.",
+    "tooLarge": "Must be at most {max}.",
+    "notInteger": "Must be a whole number.",
+    "tooManyItems": "Select at most {max}.",
+    "richText": {
+      "bold": "Bold",
+      "italic": "Italic",
+      "strike": "Strikethrough",
+      "code": "Inline code",
+      "heading1": "Heading 1",
+      "heading2": "Heading 2",
+      "bulletList": "Bullet list",
+      "orderedList": "Numbered list",
+      "blockquote": "Quote",
+      "link": "Link",
+      "unlink": "Remove link",
+      "undo": "Undo",
+      "redo": "Redo",
+      "linkUrlPlaceholder": "Paste a link…",
+      "linkApply": "Apply"
+    }
+  },
   "common": {
     "appName": "{appName}",
     "tagline": "Fostering collaboration within the Web3 community.",
     "cancel": "Cancel",
+    "save": "Save",
     "continue": "Continue",
     "loading": "Loading…",
+    "chooseColor": "Choose color",
     "unsavedChanges": "Unsaved changes"
   },
   "setup": {
@@ -46,7 +90,8 @@
       "rbac": "Roles & permissions",
       "roles": "Roles",
       "new": "New",
-      "setup": "Setup"
+      "setup": "Setup",
+      "calendar": "Calendar"
     },
     "apps": {
       "triggerAria": "Switch app",
@@ -68,7 +113,11 @@
       "brandHomeAria": "{appName} home",
       "brandWordmark": "{appName}",
       "empty": "No module registered.",
-      "items": {}
+      "items": {
+        "calendar": "Calendar",
+        "projects": "Projects",
+        "industries": "Industries"
+      }
     },
     "userMenu": {
       "triggerAria": "Open user menu",
@@ -201,6 +250,22 @@
       "reasonInvalid": "That confirmation link is no longer valid.",
       "retry": "Sign in to request a new one"
     },
+    "revokeDevice": {
+      "title": "Revoke this device?",
+      "subtitle": "If you didn't recognize the sign-in from your new-device email, revoke the device here. You'll need to sign in again on that device to use the app.",
+      "confirm": "Yes, revoke this device",
+      "revoking": "Revoking…",
+      "notYou": "Clicked this by accident? You can safely close this page.",
+      "successTitle": "Device revoked",
+      "successBody": "That device has been signed out. Consider changing your password if you don't recognise the sign-in.",
+      "errorTitle": "We couldn't revoke from this link",
+      "errorExpired": "This revoke link has expired. You can still revoke the device from Account → Security after signing in.",
+      "errorInvalid": "This revoke link isn't valid. You can still revoke the device from Account → Security after signing in.",
+      "networkErrorTitle": "Something went wrong",
+      "networkErrorBody": "We couldn't reach the server. Try again or revoke from Account → Security.",
+      "retry": "Try again",
+      "signin": "Go to sign-in"
+    },
     "passwordStrength": {
       "label": "Strength: <strong>{level}</strong>",
       "levels": {
@@ -241,6 +306,26 @@
     "home": "Home",
     "account": "Account"
   },
+  "error": {
+    "eyebrow": "Something went wrong",
+    "title": "This page hit an error",
+    "subtitle": "An unexpected error occurred. You can try again, or head back home.",
+    "retry": "Try again",
+    "home": "Home"
+  },
+  "table": {
+    "columns": "Columns",
+    "reset": "Reset layout",
+    "rowActions": "Row actions",
+    "openPanel": "Open details",
+    "loadError": "Couldn't load this list. Please try again.",
+    "retry": "Retry"
+  },
+  "filters": {
+    "button": "Filters",
+    "title": "Filters",
+    "close": "Close"
+  },
   "admin": {
     "title": "Admin",
     "placeholder": "Admin surfaces land here as they ship.",
@@ -249,6 +334,8 @@
       "users": "Users",
       "organizations": "Organizations",
       "organization": "Organization",
+      "projects": "Projects",
+      "industries": "Industries",
       "rbac": "Roles & permissions",
       "webhooks": "Webhooks"
     },
@@ -258,6 +345,10 @@
       "placeholder": "User management lands here.",
       "searchLabel": "Search users",
       "searchPlaceholder": "Search by email or display name…",
+      "columns": { "user": "User", "status": "Status" },
+      "collapsePanel": "Collapse panel",
+      "openFullPage": "Open full page",
+      "panelTitle": "User",
       "empty": "No users yet.",
       "emptySearch": "No users match \"{query}\".",
       "loading": "Loading…",
@@ -307,6 +398,7 @@
         "cancel": "Cancel",
         "success": "Invite sent.",
         "error": "Could not send the invite.",
+        "revoke": "Revoke invite",
         "revokeAria": "Revoke invite for {email}",
         "revokeSuccess": "Invite revoked.",
         "revokeError": "Could not revoke that invite."
@@ -447,6 +539,10 @@
       "title": "Organizations",
       "subtitle": "Manage organization profiles, branding, and slugs.",
       "placeholder": "Organization profile editing lands here.",
+      "columns": { "name": "Organization", "color": "Color" },
+      "collapsePanel": "Collapse panel",
+      "openFullPage": "Open full page",
+      "panelTitle": "Organization",
       "searchLabel": "Search organizations",
       "searchPlaceholder": "Search by name or slug…",
       "empty": "No organizations yet.",
@@ -514,6 +610,10 @@
         "createCta": "New role",
         "searchPlaceholder": "Search roles…",
         "searchAria": "Search roles by name",
+        "columns": { "name": "Role", "type": "Type" },
+        "collapsePanel": "Collapse panel",
+        "openFullPage": "Open full page",
+        "panelTitle": "Role",
         "empty": "No roles yet. Create one to get started.",
         "emptySearch": "No role matches “{query}”.",
         "badges": {
@@ -546,7 +646,9 @@
           "organization": "Organization",
           "users": "Users",
           "rbac": "Roles & permissions",
-          "platform": "Platform"
+          "platform": "Platform",
+          "calendar": "Calendar",
+          "projects": "Projects"
         },
         "nameRequired": "Role name is required.",
         "create": "Create role",
@@ -568,6 +670,186 @@
         "updateError": "Could not update that role."
       }
     },
+    "projects": {
+      "title": "Projects",
+      "subtitle": "Track every project the organization owns — idea through completed.",
+      "newProject": "New project",
+      "actions": {
+        "edit": "Edit",
+        "archive": "Archive",
+        "restore": "Restore",
+        "delete": "Delete permanently"
+      },
+      "archivedBadge": "Archived",
+      "archivedFilterLabel": "Archived",
+      "activeOnly": "Active only",
+      "includeArchived": "Include archived",
+      "archive": {
+        "title": "Archive this project?",
+        "description": "The project will be hidden from the list. Its data is kept and you can restore it later.",
+        "cta": "Archive",
+        "cancel": "Cancel",
+        "success": "Project archived.",
+        "error": "Could not archive project. {message}"
+      },
+      "hardDelete": {
+        "title": "Permanently delete \"{name}\"?",
+        "description": "This removes the project record and all of its data. This cannot be undone.",
+        "cta": "Delete permanently",
+        "cancel": "Cancel",
+        "success": "Project deleted permanently.",
+        "error": "Could not delete project. {message}"
+      },
+      "restore": {
+        "success": "Project restored.",
+        "error": "Could not restore project. {message}"
+      },
+      "searchPlaceholder": "Search by title, slug, or keyword",
+      "filterStatusLabel": "Status",
+      "filterStatusAll": "All statuses",
+      "filterIndustryLabel": "Industry",
+      "filterIndustryAll": "All industries",
+      "columns": {
+        "title": "Title",
+        "status": "Status",
+        "industries": "Industries",
+        "updated": "Updated"
+      },
+      "empty": "No projects yet. Create the first one to get started.",
+      "emptyFiltered": "No projects match these filters.",
+      "emptyArchived": "No archived projects.",
+      "notFound": "Project not found.",
+      "openFullPage": "Open full page",
+      "collapsePanel": "Collapse panel",
+      "loading": "Loading projects…",
+      "loadError": "Could not load projects. Try again.",
+      "status": {
+        "IDEA": "Idea",
+        "PROTOTYPE_AVAILABLE": "Prototype available",
+        "IN_PROGRESS": "In progress",
+        "QA": "QA",
+        "COMPLETED": "Completed"
+      },
+      "form": {
+        "createTitle": "New project",
+        "createSubtitle": "Capture the essentials now — every field below can be edited later.",
+        "editTitle": "Edit project",
+        "editSubtitle": "Adjust details and save.",
+        "back": "Back to projects",
+        "fields": {
+          "title": "Title",
+          "titleHelp": "Shown as the primary heading on cards and detail pages.",
+          "slug": "Slug",
+          "slugHelp": "Lowercase, dashes-only. Used in URLs. Auto-derived from the title if you leave it blank.",
+          "slugPreview": "Will be saved as {slug}",
+          "url": "URL",
+          "urlPlaceholder": "https://example.com/project",
+          "urlHelp": "Optional. Link to a marketing page, demo, or repository.",
+          "description": "Description",
+          "descriptionHelp": "Markdown. Rendered on public surfaces when configured.",
+          "publicStatus": "Public status",
+          "keywords": "Keywords",
+          "keywordsHelp": "Comma-separated. Lowercased + de-duplicated on save.",
+          "keywordsPlaceholder": "design system, accessibility, dashboard",
+          "industries": "Industries",
+          "industriesHelp": "Pick one or more from the taxonomy."
+        },
+        "addIndustry": "Add industry",
+        "removeIndustry": "Remove {name}",
+        "noIndustries": "No industries selected.",
+        "industriesEmpty": "All industries are already selected.",
+        "industriesSearchPlaceholder": "Search industries",
+        "save": "Save",
+        "saving": "Saving…",
+        "create": "Create project",
+        "creating": "Creating…",
+        "cancel": "Cancel",
+        "delete": "Delete",
+        "dangerTitle": "Danger zone",
+        "dangerSubtitle": "Irreversible actions for this project.",
+        "deleteRowTitle": "Delete project",
+        "deleteRowDescription": "Soft-deletes the project. You can restore it later from the list.",
+        "deleteConfirm": "Delete this project?",
+        "deleteDescription": "This soft-deletes the project. You can restore it later from the list.",
+        "deleteConfirmCta": "Delete project",
+        "createSuccess": "Project created.",
+        "createError": "Could not create project. {message}",
+        "updateSuccess": "Project saved.",
+        "updateError": "Could not save project. {message}",
+        "deleteSuccess": "Project deleted.",
+        "deleteError": "Could not delete project. {message}",
+        "validationTitle": "Title is required.",
+        "validationUrl": "URL must be a full https:// or http:// link."
+      }
+    },
+    "industries": {
+      "title": "Industries",
+      "subtitle": "Platform-wide taxonomy that projects use to declare their market sector.",
+      "newIndustry": "New industry",
+      "searchPlaceholder": "Search by name or slug",
+      "actions": {
+        "edit": "Edit",
+        "archive": "Archive",
+        "restore": "Restore",
+        "delete": "Delete permanently"
+      },
+      "archivedBadge": "Archived",
+      "showArchived": "Show archived",
+      "hideArchived": "Hide archived",
+      "archivedFilterLabel": "Archived",
+      "activeOnly": "Active only",
+      "includeArchived": "Include archived",
+      "columns": {
+        "name": "Name",
+        "slug": "Slug",
+        "created": "Created"
+      },
+      "empty": "No industries yet. Create the first one to get started.",
+      "emptyArchived": "No archived industries.",
+      "emptyFiltered": "No industries match your search.",
+      "notFound": "Industry not found.",
+      "openFullPage": "Open full page",
+      "collapsePanel": "Collapse panel",
+      "backToIndustries": "Back to industries",
+      "form": {
+        "createTitle": "New industry",
+        "editTitle": "Edit industry",
+        "displayName": "Name",
+        "displayNameHelp": "Shown to users on project cards and filter menus.",
+        "slug": "Slug",
+        "slugHelp": "Auto-derived from the name if left blank. Lowercase, dashes only.",
+        "slugPreview": "Will be saved as {slug}",
+        "save": "Save",
+        "saving": "Saving…",
+        "create": "Create industry",
+        "creating": "Creating…",
+        "cancel": "Cancel",
+        "createSuccess": "Industry created.",
+        "createError": "Could not create industry. {message}",
+        "updateSuccess": "Industry saved.",
+        "updateError": "Could not save industry. {message}"
+      },
+      "archive": {
+        "title": "Archive this industry?",
+        "description": "The industry will be hidden from menus. Existing project associations are kept and you can restore it later.",
+        "cta": "Archive",
+        "cancel": "Cancel",
+        "success": "Industry archived.",
+        "error": "Could not archive industry. {message}"
+      },
+      "hardDelete": {
+        "title": "Permanently delete \"{name}\"?",
+        "description": "This removes the industry record and all of its project associations. This cannot be undone.",
+        "cta": "Delete permanently",
+        "cancel": "Cancel",
+        "success": "Industry deleted permanently.",
+        "error": "Could not delete industry. {message}"
+      },
+      "restore": {
+        "success": "Industry restored.",
+        "error": "Could not restore industry. {message}"
+      }
+    },
     "webhooks": {
       "title": "Webhooks",
       "subtitle": "HTTP endpoints that receive every domain event the platform emits.",
@@ -584,6 +866,10 @@
           "platform": "Platform (no org scope)"
         },
         "createCta": "New endpoint",
+        "columns": { "name": "Endpoint", "status": "Status", "subscriptions": "Events" },
+        "collapsePanel": "Collapse panel",
+        "openFullPage": "Open full page",
+        "panelTitle": "Webhook endpoint",
         "searchPlaceholder": "Search by name, URL, or description…",
         "searchAria": "Search webhook endpoints",
         "empty": "No webhook endpoints in this scope yet.",
@@ -682,6 +968,7 @@
       "deliveries": {
         "back": "Back to endpoint",
         "title": "Deliveries",
+        "columns": { "event": "Event", "status": "Status", "when": "Queued" },
         "empty": "No deliveries yet. Endpoints accumulate rows as soon as a matching event fires.",
         "attemptsCount": "{count, plural, =0 {No attempts} one {# attempt} other {# attempts}}",
         "createdAt": "Queued {date}",
@@ -845,6 +1132,7 @@
       "bannerUpdated": "Banner updated.",
       "bannerRemoved": "Banner removed.",
       "saved": "Saved.",
+      "displayNameError": "Display name must be between 1 and 80 characters.",
       "save": "Save changes",
       "saving": "Saving…",
       "readOnlyBanner": {
@@ -1042,6 +1330,14 @@
         "title": "Revoke every session?",
         "description": "This signs out every browser and device you're currently signed in on. Use this if you suspect your account is compromised.",
         "confirm": "Revoke everything"
+      },
+      "ttl": {
+        "label": "Trust window",
+        "help": "How long a recognized device stays trusted before re-challenging on sign-in. Refreshes on every successful sign-in.",
+        "option30": "30 days",
+        "option60": "60 days",
+        "option90": "90 days",
+        "saveError": "Could not update the trust window. Try again."
       }
     },
     "danger": {
@@ -1216,5 +1512,113 @@
       "scopeNote": "Resolved against an empty scope (no userId / orgId / role)."
     },
     "errorPrefix": "error:"
+  },
+  "calendar": {
+    "title": "Calendar",
+    "sidebar": {
+      "createEvent": "Create",
+      "myCalendars": "My calendars",
+      "addCalendar": "Add calendar",
+      "moreOptions": "More options",
+      "editCalendar": "Edit",
+      "archiveCalendar": "Archive",
+      "archiveConfirmTitle": "Archive calendar?",
+      "archiveConfirmDescription": "The calendar is hidden from the list. Its events are kept and you can restore it later.",
+      "archiveConfirmAction": "Archive",
+      "archivedSection": "Archived",
+      "noArchived": "No archived calendars.",
+      "restoreCalendar": "Restore",
+      "restoreSuccess": "Calendar restored.",
+      "restoreError": "Could not restore calendar. {message}",
+      "todayEvents": "Today's events",
+      "noEventsToday": "No events today"
+    },
+    "manageCalendar": {
+      "createHeading": "New calendar",
+      "editHeading": "Edit calendar",
+      "nameLabel": "Name",
+      "namePlaceholder": "Calendar name",
+      "descriptionLabel": "Description",
+      "colorLabel": "Color",
+      "rolesLabel": "Accessible to",
+      "rolesPlaceholder": "Select roles…",
+      "cancel": "Cancel",
+      "save": "Save",
+      "delete": "Archive calendar"
+    },
+    "shell": {
+      "today": "Today",
+      "prevDay": "Previous day",
+      "nextDay": "Next day",
+      "prevWeek": "Previous week",
+      "nextWeek": "Next week",
+      "prevMonth": "Previous month",
+      "nextMonth": "Next month",
+      "day": "Day",
+      "week": "Week",
+      "month": "Month"
+    },
+    "monthView": {
+      "more": "more"
+    },
+    "weekView": {
+      "today": "Today",
+      "prevWeek": "Previous week",
+      "nextWeek": "Next week",
+      "mon": "Mon",
+      "tue": "Tue",
+      "wed": "Wed",
+      "thu": "Thu",
+      "fri": "Fri",
+      "sat": "Sat",
+      "sun": "Sun"
+    },
+    "search": {
+      "label": "Search events",
+      "placeholder": "Search events…",
+      "typeToSearch": "Type at least 2 characters to search",
+      "searching": "Searching…",
+      "empty": "No events found"
+    },
+    "dayView": {
+      "allDayLabel": "All day",
+      "editEvent": {
+        "heading": "Edit event",
+        "save": "Save",
+        "delete": "Delete",
+        "deleteConfirmLabel": "Delete this event?"
+      },
+      "newEvent": {
+        "heading": "New event",
+        "calendarLabel": "Calendar",
+        "eventTypeLabel": "Type",
+        "eventTypeStandard": "Standard",
+        "eventTypePunctual": "Punctual",
+        "eventTypeAllDay": "Full day",
+        "titleLabel": "Title",
+        "titlePlaceholder": "Add title",
+        "dateLabel": "Date",
+        "startDateLabel": "Start date",
+        "startTimeLabel": "Start time",
+        "endTimeLabel": "End time",
+        "endDateLabel": "End date",
+        "descriptionLabel": "Description",
+        "descriptionPlaceholder": "Add description",
+        "locationLabel": "Location",
+        "locationPlaceholder": "Add location",
+        "participantsLabel": "Participants",
+        "participantsPlaceholder": "Add participants",
+        "discardConfirm": "You have unsaved changes. Discard them?",
+        "cancel": "Cancel",
+        "create": "Create",
+        "remindersLabel": "Reminders",
+        "reminderUnitMinutes": "minutes",
+        "reminderUnitHours": "hours",
+        "reminderUnitDays": "days",
+        "reminderUnitWeeks": "weeks",
+        "addReminder": "Add reminder",
+        "removeReminder": "Remove reminder"
+      }
+    }
   }
 }

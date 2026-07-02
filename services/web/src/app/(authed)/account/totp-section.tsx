@@ -1,10 +1,10 @@
-"use client"
+"use client";
 
-import { useEffect, useRef, useState } from "react"
-import { useTranslations } from "next-intl"
-import { Check, Copy } from "lucide-react"
-import { toast } from "sonner"
-import { Button } from "@/components/ui/button"
+import { useEffect, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
+import { Check, Copy } from "lucide-react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -12,18 +12,18 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
+} from "@/components/ui/dialog";
 import {
   InputOTP,
   InputOTPGroup,
   InputOTPSeparator,
   InputOTPSlot,
-} from "@/components/ui/input-otp"
-import { Label } from "@/components/ui/label"
-import { PageSection } from "@/components/page-section"
-import { trpc } from "@/lib/trpc"
+} from "@/components/ui/input-otp";
+import { Label } from "@/components/ui/label";
+import { PageSection } from "@/components/page-section";
+import { trpc } from "@/lib/trpc";
 
-type Enrollment = { secret: string; qrSvg: string }
+type Enrollment = { secret: string; qrSvg: string };
 // Enrollment proceeds through 4 sequential stages so the dialog
 // reads as a standard wizard instead of dumping the QR + secret +
 // 6-digit input on the same screen at once :
@@ -38,10 +38,8 @@ type EnrollStage =
   | { kind: "begin" }
   | { kind: "scan"; enrollment: Enrollment }
   | { kind: "verify"; enrollment: Enrollment }
-  | { kind: "recovery"; codes: string[] }
-type ManageStage =
-  | { kind: "code" }
-  | { kind: "recovery"; codes: string[] }
+  | { kind: "recovery"; codes: string[] };
+type ManageStage = { kind: "code" } | { kind: "recovery"; codes: string[] };
 
 /**
  * Two-factor authentication card. Status + actions live on the card ;
@@ -62,26 +60,23 @@ type ManageStage =
  * attempt doesn't leak in.
  */
 export function TotpSection() {
-  const t = useTranslations("account.totp")
+  const t = useTranslations("account.totp");
   const status = trpc.auth.totp.status.useQuery(undefined, {
     refetchOnWindowFocus: false,
-  })
+  });
 
-  const data = status.data
-  const enrolled = Boolean(data && "enrolled" in data && data.enrolled)
-  const active = enrolled && data && "activatedAt" in data && Boolean(data.activatedAt)
+  const data = status.data;
+  const enrolled = Boolean(data && "enrolled" in data && data.enrolled);
+  const active = enrolled && data && "activatedAt" in data && Boolean(data.activatedAt);
   const remainingRecoveryCodes =
-    data && "remainingRecoveryCodes" in data ? data.remainingRecoveryCodes : null
+    data && "remainingRecoveryCodes" in data ? data.remainingRecoveryCodes : null;
 
-  const [enrollOpen, setEnrollOpen] = useState(false)
-  const [disableOpen, setDisableOpen] = useState(false)
-  const [regenOpen, setRegenOpen] = useState(false)
+  const [enrollOpen, setEnrollOpen] = useState(false);
+  const [disableOpen, setDisableOpen] = useState(false);
+  const [regenOpen, setRegenOpen] = useState(false);
 
   return (
-    <PageSection
-      title={t("title")}
-      subtitle={active ? t("subtitleActive") : t("subtitleInactive")}
-    >
+    <PageSection title={t("title")} subtitle={active ? t("subtitleActive") : t("subtitleInactive")}>
       {!active && (
         <Button variant="outline" onClick={() => setEnrollOpen(true)}>
           {t("enroll")}
@@ -90,17 +85,11 @@ export function TotpSection() {
       {active && (
         <div className="space-y-3">
           <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
-            <dt className="text-muted-foreground">
-              {t("fields.recoveryRemaining")}
-            </dt>
+            <dt className="text-muted-foreground">{t("fields.recoveryRemaining")}</dt>
             <dd>{remainingRecoveryCodes ?? "—"}</dd>
           </dl>
           <div className="flex flex-wrap gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setRegenOpen(true)}
-            >
+            <Button variant="outline" size="sm" onClick={() => setRegenOpen(true)}>
               {t("regenerate")}
             </Button>
             <Button
@@ -119,28 +108,28 @@ export function TotpSection() {
       <TotpDisableDialog open={disableOpen} onOpenChange={setDisableOpen} />
       <TotpRegenerateDialog open={regenOpen} onOpenChange={setRegenOpen} />
     </PageSection>
-  )
+  );
 }
 
 function TotpEnrollDialog({
   open,
   onOpenChange,
 }: {
-  open: boolean
-  onOpenChange: (open: boolean) => void
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }) {
-  const t = useTranslations("account.totp")
-  const utils = trpc.useUtils()
-  const beginEnrollment = trpc.auth.totp.beginEnrollment.useMutation()
+  const t = useTranslations("account.totp");
+  const utils = trpc.useUtils();
+  const beginEnrollment = trpc.auth.totp.beginEnrollment.useMutation();
   const confirmEnrollment = trpc.auth.totp.confirmEnrollment.useMutation({
     onSuccess: () => {
-      void utils.auth.totp.status.invalidate()
-      void utils.auth.totp.adminEnforcement.invalidate()
+      void utils.auth.totp.status.invalidate();
+      void utils.auth.totp.adminEnforcement.invalidate();
     },
-  })
+  });
 
-  const [stage, setStage] = useState<EnrollStage>({ kind: "begin" })
-  const [enrollCode, setEnrollCode] = useState("")
+  const [stage, setStage] = useState<EnrollStage>({ kind: "begin" });
+  const [enrollCode, setEnrollCode] = useState("");
   // Triggered exactly once per open transition : kicks off
   // `beginEnrollment` which mints a fresh secret + QR. The ref guard
   // ensures the network call only fires once even though the effect
@@ -151,38 +140,38 @@ function TotpEnrollDialog({
   // re-render changed `beginEnrollment`'s identity, leaving the
   // dialog frozen on "Preparing…" forever ; we deliberately let the
   // promise resolve unconditionally now.
-  const lastOpenRef = useRef(false)
+  const lastOpenRef = useRef(false);
   useEffect(() => {
     if (!open) {
-      lastOpenRef.current = false
-      return
+      lastOpenRef.current = false;
+      return;
     }
-    if (lastOpenRef.current) return
-    lastOpenRef.current = true
-    setStage({ kind: "begin" })
-    setEnrollCode("")
+    if (lastOpenRef.current) return;
+    lastOpenRef.current = true;
+    setStage({ kind: "begin" });
+    setEnrollCode("");
     beginEnrollment.mutate(undefined, {
       onSuccess: (result) => {
-        setStage({ kind: "scan", enrollment: result })
+        setStage({ kind: "scan", enrollment: result });
       },
       onError: (err) => {
-        toast.error(err.message || t("errors.enroll"))
-        onOpenChange(false)
+        toast.error(err.message || t("errors.enroll"));
+        onOpenChange(false);
       },
-    })
-  }, [open, beginEnrollment, onOpenChange, t])
+    });
+  }, [open, beginEnrollment, onOpenChange, t]);
 
   async function onConfirm() {
-    if (stage.kind !== "verify") return
+    if (stage.kind !== "verify") return;
     try {
       const result = await confirmEnrollment.mutateAsync({
         code: enrollCode.trim(),
-      })
-      setStage({ kind: "recovery", codes: result.recoveryCodes })
-      setEnrollCode("")
-      toast.success(t("enrolledSuccess"))
+      });
+      setStage({ kind: "recovery", codes: result.recoveryCodes });
+      setEnrollCode("");
+      toast.success(t("enrolledSuccess"));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : t("errors.confirm"))
+      toast.error(err instanceof Error ? err.message : t("errors.confirm"));
     }
   }
 
@@ -191,16 +180,16 @@ function TotpEnrollDialog({
   // distinct i18n pair.
   const headerCopy = (() => {
     if (stage.kind === "recovery") {
-      return { title: t("recoveryTitle"), subtitle: t("saveRecoveryHint") }
+      return { title: t("recoveryTitle"), subtitle: t("saveRecoveryHint") };
     }
     if (stage.kind === "verify") {
-      return { title: t("enrollVerifyTitle"), subtitle: t("enrollVerifySubtitle") }
+      return { title: t("enrollVerifyTitle"), subtitle: t("enrollVerifySubtitle") };
     }
     // begin + scan share the "scan" header copy : during `begin` the
     // body is just the spinner, so the operator sees a stable header
     // while the network call resolves.
-    return { title: t("enrollScanTitle"), subtitle: t("enrollScanSubtitle") }
-  })()
+    return { title: t("enrollScanTitle"), subtitle: t("enrollScanSubtitle") };
+  })();
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -211,9 +200,7 @@ function TotpEnrollDialog({
         </DialogHeader>
 
         {(stage.kind === "begin" || beginEnrollment.isPending) && (
-          <p className="py-6 text-center text-sm text-muted-foreground">
-            {t("enrolling")}
-          </p>
+          <p className="py-6 text-center text-sm text-muted-foreground">{t("enrolling")}</p>
         )}
 
         {stage.kind === "scan" && (
@@ -267,25 +254,17 @@ function TotpEnrollDialog({
           </div>
         )}
 
-        {stage.kind === "recovery" && (
-          <RecoveryCodesView codes={stage.codes} />
-        )}
+        {stage.kind === "recovery" && <RecoveryCodesView codes={stage.codes} />}
 
         <DialogFooter>
           {stage.kind === "scan" && (
             <>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => onOpenChange(false)}
-              >
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                 {t("cancel")}
               </Button>
               <Button
                 type="button"
-                onClick={() =>
-                  setStage({ kind: "verify", enrollment: stage.enrollment })
-                }
+                onClick={() => setStage({ kind: "verify", enrollment: stage.enrollment })}
               >
                 {t("continue")}
               </Button>
@@ -296,9 +275,7 @@ function TotpEnrollDialog({
               <Button
                 type="button"
                 variant="outline"
-                onClick={() =>
-                  setStage({ kind: "scan", enrollment: stage.enrollment })
-                }
+                onClick={() => setStage({ kind: "scan", enrollment: stage.enrollment })}
                 disabled={confirmEnrollment.isPending}
               >
                 {t("back")}
@@ -318,48 +295,44 @@ function TotpEnrollDialog({
             </Button>
           )}
           {stage.kind === "begin" && !beginEnrollment.isPending && (
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-            >
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               {t("cancel")}
             </Button>
           )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  )
+  );
 }
 
 function TotpDisableDialog({
   open,
   onOpenChange,
 }: {
-  open: boolean
-  onOpenChange: (open: boolean) => void
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }) {
-  const t = useTranslations("account.totp")
-  const utils = trpc.useUtils()
+  const t = useTranslations("account.totp");
+  const utils = trpc.useUtils();
   const disable = trpc.auth.totp.disable.useMutation({
     onSuccess: () => {
-      void utils.auth.totp.status.invalidate()
-      void utils.auth.totp.adminEnforcement.invalidate()
+      void utils.auth.totp.status.invalidate();
+      void utils.auth.totp.adminEnforcement.invalidate();
     },
-  })
-  const [code, setCode] = useState("")
+  });
+  const [code, setCode] = useState("");
 
   useEffect(() => {
-    if (open) setCode("")
-  }, [open])
+    if (open) setCode("");
+  }, [open]);
 
   async function onSubmit() {
     try {
-      await disable.mutateAsync({ code: code.trim() })
-      onOpenChange(false)
-      toast.success(t("disabledSuccess"))
+      await disable.mutateAsync({ code: code.trim() });
+      onOpenChange(false);
+      toast.success(t("disabledSuccess"));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : t("errors.disable"))
+      toast.error(err instanceof Error ? err.message : t("errors.disable"));
     }
   }
 
@@ -416,41 +389,41 @@ function TotpDisableDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  )
+  );
 }
 
 function TotpRegenerateDialog({
   open,
   onOpenChange,
 }: {
-  open: boolean
-  onOpenChange: (open: boolean) => void
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }) {
-  const t = useTranslations("account.totp")
-  const utils = trpc.useUtils()
+  const t = useTranslations("account.totp");
+  const utils = trpc.useUtils();
   const regenerate = trpc.auth.totp.regenerateRecoveryCodes.useMutation({
     onSuccess: () => {
-      void utils.auth.totp.status.invalidate()
+      void utils.auth.totp.status.invalidate();
     },
-  })
-  const [stage, setStage] = useState<ManageStage>({ kind: "code" })
-  const [code, setCode] = useState("")
+  });
+  const [stage, setStage] = useState<ManageStage>({ kind: "code" });
+  const [code, setCode] = useState("");
 
   useEffect(() => {
     if (open) {
-      setStage({ kind: "code" })
-      setCode("")
+      setStage({ kind: "code" });
+      setCode("");
     }
-  }, [open])
+  }, [open]);
 
   async function onSubmit() {
     try {
-      const result = await regenerate.mutateAsync({ code: code.trim() })
-      setStage({ kind: "recovery", codes: result.recoveryCodes })
-      setCode("")
-      toast.success(t("regeneratedSuccess"))
+      const result = await regenerate.mutateAsync({ code: code.trim() });
+      setStage({ kind: "recovery", codes: result.recoveryCodes });
+      setCode("");
+      toast.success(t("regeneratedSuccess"));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : t("errors.regenerate"))
+      toast.error(err instanceof Error ? err.message : t("errors.regenerate"));
     }
   }
 
@@ -459,14 +432,10 @@ function TotpRegenerateDialog({
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>
-            {stage.kind === "recovery"
-              ? t("recoveryTitle")
-              : t("regenerateTitle")}
+            {stage.kind === "recovery" ? t("recoveryTitle") : t("regenerateTitle")}
           </DialogTitle>
           <DialogDescription>
-            {stage.kind === "recovery"
-              ? t("saveRecoveryHint")
-              : t("regenerateSubtitle")}
+            {stage.kind === "recovery" ? t("saveRecoveryHint") : t("regenerateSubtitle")}
           </DialogDescription>
         </DialogHeader>
 
@@ -499,9 +468,7 @@ function TotpRegenerateDialog({
           </div>
         )}
 
-        {stage.kind === "recovery" && (
-          <RecoveryCodesView codes={stage.codes} />
-        )}
+        {stage.kind === "recovery" && <RecoveryCodesView codes={stage.codes} />}
 
         <DialogFooter>
           {stage.kind === "code" && (
@@ -531,7 +498,7 @@ function TotpRegenerateDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  )
+  );
 }
 
 function SecretCodeBlock({ secret }: { secret: string }) {
@@ -541,17 +508,17 @@ function SecretCodeBlock({ secret }: { secret: string }) {
   // codes view (sans the amber framing — the secret is sensitive but
   // not the same kind of one-shot artifact, and the dialog already
   // colour-codes the bigger surface).
-  const t = useTranslations("account.totp")
-  const [copied, setCopied] = useState(false)
+  const t = useTranslations("account.totp");
+  const [copied, setCopied] = useState(false);
 
   async function onCopy() {
     try {
-      await navigator.clipboard.writeText(secret)
-      setCopied(true)
-      toast.success(t("secretCopied"))
-      setTimeout(() => setCopied(false), 1500)
+      await navigator.clipboard.writeText(secret);
+      setCopied(true);
+      toast.success(t("secretCopied"));
+      setTimeout(() => setCopied(false), 1500);
     } catch {
-      toast.error(t("errors.copy"))
+      toast.error(t("errors.copy"));
     }
   }
 
@@ -576,30 +543,28 @@ function SecretCodeBlock({ secret }: { secret: string }) {
         )}
       </Button>
     </div>
-  )
+  );
 }
 
 function RecoveryCodesView({ codes }: { codes: string[] }) {
-  const t = useTranslations("account.totp")
-  const [copied, setCopied] = useState(false)
+  const t = useTranslations("account.totp");
+  const [copied, setCopied] = useState(false);
 
   async function onCopy() {
-    const text = codes.join("\n")
+    const text = codes.join("\n");
     try {
-      await navigator.clipboard.writeText(text)
-      setCopied(true)
-      toast.success(t("recoveryCopied"))
-      setTimeout(() => setCopied(false), 1500)
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      toast.success(t("recoveryCopied"));
+      setTimeout(() => setCopied(false), 1500);
     } catch {
-      toast.error(t("errors.copy"))
+      toast.error(t("errors.copy"));
     }
   }
 
   return (
     <div className="space-y-3 rounded-lg border border-amber-400/30 bg-amber-400/10 p-3">
-      <p className="text-sm font-semibold text-amber-500">
-        {t("saveRecovery")}
-      </p>
+      <p className="text-sm font-semibold text-amber-500">{t("saveRecovery")}</p>
       {/*
         Codeblock + copy CTA top-right. The codes are opaque tokens so
         mono + line-per-code makes them easy to scan + transcribe into
@@ -626,5 +591,5 @@ function RecoveryCodesView({ codes }: { codes: string[] }) {
         </Button>
       </div>
     </div>
-  )
+  );
 }

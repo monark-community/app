@@ -1,6 +1,6 @@
-import { createClient, type SupabaseClient } from "@supabase/supabase-js"
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
-let cached: SupabaseClient | undefined
+let cached: SupabaseClient | undefined;
 
 /**
  * Server-only Supabase client that talks to Supabase with the service-
@@ -13,16 +13,16 @@ let cached: SupabaseClient | undefined
  * with a clear message the first time a caller actually needs it.
  */
 export function createSupabaseAdminClient(): SupabaseClient {
-  if (cached) return cached
-  const url = process.env.SUPABASE_URL
-  const key = process.env.SUPABASE_SECRET_KEY
+  if (cached) return cached;
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SECRET_KEY;
   if (!url || !key) {
     throw new Error(
       "Supabase admin client requires SUPABASE_URL + SUPABASE_SECRET_KEY in the web environment.",
-    )
+    );
   }
   cached = createClient(url, key, {
     auth: { autoRefreshToken: false, persistSession: false },
-  })
-  return cached
+  });
+  return cached;
 }

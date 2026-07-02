@@ -1,9 +1,9 @@
-"use client"
+"use client";
 
-import { useRouter } from "next/navigation"
-import { useState, useTransition, type FormEvent } from "react"
-import { useTranslations } from "next-intl"
-import { Button } from "@/components/ui/button"
+import { useRouter } from "next/navigation";
+import { useState, useTransition, type FormEvent } from "react";
+import { useTranslations } from "next-intl";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -11,13 +11,10 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import {
-  requestAccountDeletionAction,
-  type DeleteAccountErrorCode,
-} from "./actions"
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { requestAccountDeletionAction, type DeleteAccountErrorCode } from "./actions";
 
 /**
  * Modal-form replacement for the previous `/account/delete` page. The
@@ -35,43 +32,42 @@ export function DeleteAccountDialog({
   onOpenChange,
   email,
 }: {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  email: string
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  email: string;
 }) {
-  const t = useTranslations("account.delete")
-  const router = useRouter()
-  const [confirmation, setConfirmation] = useState("")
-  const [errorCode, setErrorCode] = useState<DeleteAccountErrorCode | null>(null)
-  const [isPending, startTransition] = useTransition()
+  const t = useTranslations("account.delete");
+  const router = useRouter();
+  const [confirmation, setConfirmation] = useState("");
+  const [errorCode, setErrorCode] = useState<DeleteAccountErrorCode | null>(null);
+  const [isPending, startTransition] = useTransition();
 
-  const canSubmit =
-    confirmation.trim().toLowerCase() === email.toLowerCase() && !isPending
+  const canSubmit = confirmation.trim().toLowerCase() === email.toLowerCase() && !isPending;
 
   function handleClose(next: boolean) {
     if (!next && !isPending) {
       // Reset on close so re-opening doesn't show a leftover error /
       // half-typed confirmation.
-      setConfirmation("")
-      setErrorCode(null)
+      setConfirmation("");
+      setErrorCode(null);
     }
-    onOpenChange(next)
+    onOpenChange(next);
   }
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    setErrorCode(null)
+    event.preventDefault();
+    setErrorCode(null);
     startTransition(async () => {
       const result = await requestAccountDeletionAction({
         emailConfirmation: confirmation,
-      })
+      });
       if (!result.ok) {
-        setErrorCode(result.errorCode)
-        return
+        setErrorCode(result.errorCode);
+        return;
       }
-      const when = encodeURIComponent(result.deletionCompletesAt)
-      router.push(`/signin?deletionScheduledAt=${when}`)
-    })
+      const when = encodeURIComponent(result.deletionCompletesAt);
+      router.push(`/signin?deletionScheduledAt=${when}`);
+    });
   }
 
   return (
@@ -98,9 +94,7 @@ export function DeleteAccountDialog({
               autoComplete="off"
             />
           </div>
-          {errorCode && (
-            <p className="text-sm text-destructive">{t(`errors.${errorCode}`)}</p>
-          )}
+          {errorCode && <p className="text-sm text-destructive">{t(`errors.${errorCode}`)}</p>}
           <DialogFooter className="gap-2 sm:gap-2">
             <Button
               type="button"
@@ -117,5 +111,5 @@ export function DeleteAccountDialog({
         </form>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

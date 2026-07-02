@@ -42,49 +42,49 @@ app/
 
 ## Infrastructure packages
 
-| Package | Purpose |
-|---|---|
-| `@monark/db` | Prisma schema + generated client. Every module that needs the database imports from here. |
-| `@monark/common` | Event bus runtime, shared errors, `Result` type, pino logger, tRPC primitives. Backend-only. |
-| `@monark/shared` | Portable utilities with no framework dependencies. Importable from both services. |
-| `@monark/components` | App-specific UI compositions. Consumes shadcn components via the `@monark/ui` registry. |
-| `@monark/branding` | Brand config (logo path, app name, colours). Used by services and email templates. |
+| Package              | Purpose                                                                                      |
+| -------------------- | -------------------------------------------------------------------------------------------- |
+| `@monark/db`         | Prisma schema + generated client. Every module that needs the database imports from here.    |
+| `@monark/common`     | Event bus runtime, shared errors, `Result` type, pino logger, tRPC primitives. Backend-only. |
+| `@monark/shared`     | Portable utilities with no framework dependencies. Importable from both services.            |
+| `@monark/components` | App-specific UI compositions. Consumes shadcn components via the `@monark/ui` registry.      |
+| `@monark/branding`   | Brand config (logo path, app name, colours). Used by services and email templates.           |
 
 ## Codegen tools
 
 All tools live in `tools/` and run via pnpm scripts :
 
-| Command | What it does |
-|---|---|
+| Command                                        | What it does                                                                                                   |
+| ---------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
 | `pnpm gen:module <name> --tier core\|extended` | Scaffold a new module package with `/server`, `/client`, `/contracts` entry points. Registers in the manifest. |
-| `pnpm gen:events` | Regenerate `packages/common/src/contracts/events.generated.ts` from every module's event definitions. |
-| `pnpm gen:routers` | Regenerate `services/api/src/trpc/app-router.generated.ts` from every module's server router. |
-| `pnpm gen` | Run all codegen steps. |
-| `pnpm check:tiers` | Enforce the core/extended dependency rules from the manifest. |
+| `pnpm gen:events`                              | Regenerate `packages/common/src/contracts/events.generated.ts` from every module's event definitions.          |
+| `pnpm gen:routers`                             | Regenerate `services/api/src/trpc/app-router.generated.ts` from every module's server router.                  |
+| `pnpm gen`                                     | Run all codegen steps.                                                                                         |
+| `pnpm check:tiers`                             | Enforce the core/extended dependency rules from the manifest.                                                  |
 
 Add `--check` to `gen:events` or `gen:routers` in CI to fail on drift without overwriting.
 
 ## Available scripts
 
-| Script | What it does |
-|---|---|
-| `pnpm dev` | Launch web (:3000) + api (:4000) concurrently via Turbo. |
-| `pnpm build` | Topological build across the workspace. |
-| `pnpm lint` | ESLint across every package. |
-| `pnpm typecheck` | `tsc --noEmit` across every package. |
-| `pnpm test` | Vitest across every package. |
-| `pnpm test:e2e` | Playwright against running web + api. |
-| `pnpm db:migrate` | Prisma migrate deploy (via `@monark/db`). |
-| `pnpm db:reset` | Drop + reseed database. |
+| Script            | What it does                                             |
+| ----------------- | -------------------------------------------------------- |
+| `pnpm dev`        | Launch web (:3000) + api (:4000) concurrently via Turbo. |
+| `pnpm build`      | Topological build across the workspace.                  |
+| `pnpm lint`       | ESLint across every package.                             |
+| `pnpm typecheck`  | `tsc --noEmit` across every package.                     |
+| `pnpm test`       | Vitest across every package.                             |
+| `pnpm test:e2e`   | Playwright against running web + api.                    |
+| `pnpm db:migrate` | Prisma migrate deploy (via `@monark/db`).                |
+| `pnpm db:reset`   | Drop + reseed database.                                  |
 
 ## Tech stack
 
-| Layer | Technology |
-|---|---|
-| Frontend | Next.js (App Router), React, Tailwind v4, shadcn via @monark/ui |
-| Backend | Express 5, tRPC v11, pino logger |
-| Database | PostgreSQL via Supabase, Prisma ORM |
-| Auth | Supabase Auth + custom TOTP / trusted-device logic |
-| Testing | Vitest (unit/integration), Playwright (e2e), @vitest/coverage-v8 |
-| CI | GitHub Actions (lint → typecheck → test → e2e) |
-| Monorepo | pnpm workspaces, Turborepo |
+| Layer    | Technology                                                       |
+| -------- | ---------------------------------------------------------------- |
+| Frontend | Next.js (App Router), React, Tailwind v4, shadcn via @monark/ui  |
+| Backend  | Express 5, tRPC v11, pino logger                                 |
+| Database | PostgreSQL via Supabase, Prisma ORM                              |
+| Auth     | Supabase Auth + custom TOTP / trusted-device logic               |
+| Testing  | Vitest (unit/integration), Playwright (e2e), @vitest/coverage-v8 |
+| CI       | GitHub Actions (lint → typecheck → test → e2e)                   |
+| Monorepo | pnpm workspaces, Turborepo                                       |

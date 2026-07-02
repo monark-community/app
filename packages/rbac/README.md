@@ -36,53 +36,57 @@ myMutation: publicProcedure
 
 ```ts
 // Read interface from another module:
-import { hasRoleKey, isLastAdmin, ADMIN_ROLE_KEY } from "@monark/rbac/server"
+import { hasRoleKey, isLastAdmin, ADMIN_ROLE_KEY } from "@monark/rbac/server";
 
-if (await hasRoleKey(userId, ADMIN_ROLE_KEY, orgId)) { /* ... */ }
-if (await isLastAdmin(userId, orgId)) { /* block leaving */ }
+if (await hasRoleKey(userId, ADMIN_ROLE_KEY, orgId)) {
+  /* ... */
+}
+if (await isLastAdmin(userId, orgId)) {
+  /* block leaving */
+}
 ```
 
 ```ts
 // Extended-module permission registration (called once at api boot):
-import { registerPermissions } from "@monark/rbac/server"
+import { registerPermissions } from "@monark/rbac/server";
 
 export function registerPostsPermissions(): void {
   registerPermissions("posts", {
     publish: { description: "Publish a draft to readers.", category: "posts" },
     moderate: { description: "Hide / unhide flagged posts.", category: "posts" },
-  })
+  });
 }
 ```
 
 ```ts
 // Web side via tRPC:
-const roles    = trpc.rbac.myRoles.useQuery()        // role rows
-const allowed  = trpc.rbac.myPermissions.useQuery()  // dotted Permission[]
+const roles = trpc.rbac.myRoles.useQuery(); // role rows
+const allowed = trpc.rbac.myPermissions.useQuery(); // dotted Permission[]
 ```
 
 ## Public API
 
-| Import path                      | Export                  | Kind |
-|----------------------------------|-------------------------|------|
-| `@monark/rbac/server`            | `rbacRouter`            | tRPC sub-router mounted under `rbac.*` |
-| `@monark/rbac/server`            | `hasRole(userId, role, orgId?)` | `Promise<boolean>`; throws if non-platform role lacks orgId |
-| `@monark/rbac/server`            | `hasPermission(userId, permission, orgId?)` | `Promise<boolean>` |
-| `@monark/rbac/server`            | `getUserRoles(userId, orgId?)` | `Promise<Role[]>` |
-| `@monark/rbac/server`            | `primaryRole(userId, orgId)` | highest non-MONARK_ADMIN role |
-| `@monark/rbac/server`            | `isLastAdmin(userId, orgId)` | helper for org-management |
-| `@monark/rbac/server`            | `requireRole(ctx, role, orgId?)` | guard; throws `UnauthorizedError` / `ForbiddenError` |
-| `@monark/rbac/server`            | `requirePermission(ctx, permission, orgId?)` | guard |
-| `@monark/rbac/server`            | `assignRole({...})` | upserts assignment, emits `rbac.role-assigned` |
-| `@monark/rbac/server`            | `revokeRole(id, revokedById, reason?)` | sets `revokedAt`, emits `rbac.role-revoked` |
-| `@monark/rbac/contracts`         | `Role` (enum value), `Permission`, `PERMISSIONS`, event types | |
+| Import path              | Export                                                        | Kind                                                        |
+| ------------------------ | ------------------------------------------------------------- | ----------------------------------------------------------- |
+| `@monark/rbac/server`    | `rbacRouter`                                                  | tRPC sub-router mounted under `rbac.*`                      |
+| `@monark/rbac/server`    | `hasRole(userId, role, orgId?)`                               | `Promise<boolean>`; throws if non-platform role lacks orgId |
+| `@monark/rbac/server`    | `hasPermission(userId, permission, orgId?)`                   | `Promise<boolean>`                                          |
+| `@monark/rbac/server`    | `getUserRoles(userId, orgId?)`                                | `Promise<Role[]>`                                           |
+| `@monark/rbac/server`    | `primaryRole(userId, orgId)`                                  | highest non-MONARK_ADMIN role                               |
+| `@monark/rbac/server`    | `isLastAdmin(userId, orgId)`                                  | helper for org-management                                   |
+| `@monark/rbac/server`    | `requireRole(ctx, role, orgId?)`                              | guard; throws `UnauthorizedError` / `ForbiddenError`        |
+| `@monark/rbac/server`    | `requirePermission(ctx, permission, orgId?)`                  | guard                                                       |
+| `@monark/rbac/server`    | `assignRole({...})`                                           | upserts assignment, emits `rbac.role-assigned`              |
+| `@monark/rbac/server`    | `revokeRole(id, revokedById, reason?)`                        | sets `revokedAt`, emits `rbac.role-revoked`                 |
+| `@monark/rbac/contracts` | `Role` (enum value), `Permission`, `PERMISSIONS`, event types |                                                             |
 
 tRPC procedures under `rbac.*`:
 
-| Procedure              | Input | Output |
-|------------------------|-------|--------|
-| `rbac.myRoles`         | —     | `Role[]` |
-| `rbac.myPrimaryRole`   | —     | `Role \| null` |
-| `rbac.myPermissions`   | —     | `Permission[]` |
+| Procedure            | Input | Output         |
+| -------------------- | ----- | -------------- |
+| `rbac.myRoles`       | —     | `Role[]`       |
+| `rbac.myPrimaryRole` | —     | `Role \| null` |
+| `rbac.myPermissions` | —     | `Permission[]` |
 
 ## Dependencies
 
@@ -98,24 +102,24 @@ Prisma migration `20260424031451_add_rbac` adds the `Role` enum + `RoleAssignmen
 No seed data ships by default. The first MONARK_ADMIN is granted manually:
 
 ```ts
-import { assignRole } from "@monark/rbac/server"
+import { assignRole } from "@monark/rbac/server";
 
 await assignRole({
   userId: "<your supabase user uuid>",
   role: "MONARK_ADMIN",
   grantedById: "system",
   reason: "bootstrap",
-})
+});
 ```
 
 Run from a one-shot script in dev. In production this is a deploy-time operation; never bake superuser credentials into the seed file.
 
 ## Events emitted
 
-| Event                  | When                                  | Status |
-|------------------------|---------------------------------------|--------|
-| `rbac.role-assigned`   | every `assignRole` call               | emitted |
-| `rbac.role-revoked`    | every `revokeRole` call               | emitted |
+| Event                | When                    | Status  |
+| -------------------- | ----------------------- | ------- |
+| `rbac.role-assigned` | every `assignRole` call | emitted |
+| `rbac.role-revoked`  | every `revokeRole` call | emitted |
 
 Cross-org actions taken by a `MONARK_ADMIN` should be tagged in audit logs; that tagging hooks in once auth populates the session context.
 

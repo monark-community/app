@@ -1,9 +1,8 @@
-import { registerEventTypes } from "@monark/common"
+import { registerEventTypes } from "@monark/common";
 
 const USERS_EVENT_TYPES = {
   "user.profile-updated": {
-    description:
-      "Profile fields changed on a user (display name, avatar, banner, bio, locale).",
+    description: "Profile fields changed on a user (display name, avatar, banner, bio, locale).",
   },
   "user.email-changed": {
     description:
@@ -21,8 +20,8 @@ const USERS_EVENT_TYPES = {
     description:
       "Hard-delete after the 14-day grace window. Personal data was anonymized + the row was removed from Supabase Auth.",
   },
-} as const
+} as const;
 
 export function registerUsersEventTypes(): void {
-  registerEventTypes("users", USERS_EVENT_TYPES)
+  registerEventTypes("users", USERS_EVENT_TYPES);
 }

@@ -52,15 +52,51 @@ Business module packages (`@monark/auth`, `@monark/rbac`, `@monark/voting`, …)
 
 ## Getting started
 
-Requires Node 22 LTS (see [.nvmrc](.nvmrc)) and pnpm 10.
+Requires :
+
+- **Node 22 LTS** (see [.nvmrc](.nvmrc)) ; install with nvm / fnm / volta.
+- **pnpm 10** ; `corepack enable` is the simplest path (corepack ships with Node 22+ and picks up the version pinned in this repo's `packageManager` field).
+- **Docker** ; Supabase's local stack (Postgres + Auth + Inbucket mail catcher) runs in containers. Docker Desktop / OrbStack / colima all work.
+
+### First-time setup (one command)
 
 ```bash
-pnpm install              # installs workspace deps; runs prisma generate in @monark/db
-pnpm gen                  # regenerates events.generated.ts + app-router.generated.ts
-pnpm dev                  # web on :3000, api on :4000
+pnpm bootstrap
 ```
 
-The services point at each other via `NEXT_PUBLIC_API_URL` and `WEB_ORIGIN`. Copy `.env.example` to `.env` in each of `services/web/` and `services/api/` before running.
+This runs : Node + pnpm + Docker preflight → copies `.env.example` → `.env` in every service that ships one (never overwrites operator-set values) → `pnpm install --frozen-lockfile` → `supabase start` → `pnpm db:migrate`. Idempotent ; safe to re-run on a healthy install.
+
+If Docker isn't available and you want to bring your own Postgres :
+
+```bash
+pnpm bootstrap --no-supabase
+```
+
+`bootstrap` then only handles install + env copy ; you point `DATABASE_URL` / `DIRECT_URL` at your own DB and run `pnpm db:migrate` manually.
+
+### Daily dev loop
+
+Once bootstrap has run, the daily loop is :
+
+```bash
+pnpm exec supabase start  # boots Postgres + Auth + Inbucket if they're down
+pnpm dev                   # web on :3000, api on :4000 (turbo-orchestrated)
+```
+
+`supabase start` is idempotent — fast-no-op when the stack is already running. Helper aliases for the dev tools :
+
+```bash
+pnpm dev:tools:mail        # opens Inbucket at http://localhost:54324
+pnpm dev:tools:supabase    # opens Supabase Studio
+pnpm dev:tools:db          # opens Prisma Studio
+pnpm dev:tools:all         # all three at once
+```
+
+If `pnpm dev` fails with `Can't reach database server at localhost:54322`, the stack isn't running ; run `pnpm exec supabase start` first.
+
+### Services point at each other
+
+`NEXT_PUBLIC_API_URL` and `WEB_ORIGIN` cross-wire the two services. The default `.env.example` values target the local stack ; production values for both flow through Vercel + Render's dashboards (see [docs/technical-documentation/deploy-checklist.md](docs/technical-documentation/deploy-checklist.md)).
 
 See [SCAFFOLDING.md](SCAFFOLDING.md) for the current Phase 0 state and known follow-ups.
 
@@ -68,21 +104,27 @@ See [SCAFFOLDING.md](SCAFFOLDING.md) for the current Phase 0 state and known fol
 
 Run from the repository root.
 
-| Script | What it does |
-|---|---|
-| `pnpm dev` | Launch web + api concurrently (turbo-orchestrated) |
-| `pnpm build` | Topological build across the workspace |
-| `pnpm lint` | ESLint across every package |
-| `pnpm typecheck` | `tsc --noEmit` across every package |
-| `pnpm test` | Vitest across every package |
-| `pnpm test:e2e` | Playwright against running web + api |
-| `pnpm db:migrate` | Prisma migrate deploy (via `@monark/db`) |
-| `pnpm db:reset` | Drop + reseed database |
-| `pnpm check:tiers` | Enforce no extended-to-extended dependencies |
-| `pnpm gen` | Run every codegen step (events + routers) |
-| `pnpm gen:module <name> --tier core\|extended` | Scaffold a new module package |
-| `pnpm gen:events` | Regenerate the `DomainEvent` union (add `--check` in CI) |
-| `pnpm gen:routers` | Regenerate the tRPC app router (add `--check` in CI) |
+| Script                                         | What it does                                                                              |
+| ---------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `pnpm bootstrap`                               | First-time setup ; preflight + env copy + install + `supabase start` + `pnpm db:migrate`  |
+| `pnpm dev`                                     | Launch web + api concurrently (turbo-orchestrated)                                        |
+| `pnpm build`                                   | Topological build across the workspace                                                    |
+| `pnpm lint`                                    | ESLint across every package                                                               |
+| `pnpm typecheck`                               | `tsc --noEmit` across every package                                                       |
+| `pnpm test`                                    | Vitest across every package                                                               |
+| `pnpm test:coverage`                           | Unit tests with coverage per package                                                      |
+| `pnpm test:integration`                        | Integration tests against a Postgres testcontainer                                        |
+| `pnpm test:integration:coverage`               | Integration tests with coverage                                                           |
+| `pnpm coverage:merge`                          | Fuse unit + integration coverage into per-package `coverage/lcov.info` + check thresholds |
+| `pnpm test:e2e`                                | Playwright against running web + api (manual ; CI runs via `.github/workflows/e2e.yml`)   |
+| `pnpm db:migrate`                              | Prisma migrate deploy (via `@monark/db`)                                                  |
+| `pnpm db:reset`                                | Drop + reseed database                                                                    |
+| `pnpm check:tiers`                             | Enforce no extended-to-extended dependencies                                              |
+| `pnpm gen`                                     | Run every codegen step (events + routers)                                                 |
+| `pnpm gen:module <name> --tier core\|extended` | Scaffold a new module package                                                             |
+| `pnpm gen:events`                              | Regenerate the `DomainEvent` union (add `--check` in CI)                                  |
+| `pnpm gen:routers`                             | Regenerate the tRPC app router (add `--check` in CI)                                      |
+| `pnpm sysadmin grant <userId\|email>`          | Grant platform-tier `SYSADMIN` to a user (operator break-glass)                           |
 
 ## Documentation
 
@@ -93,7 +135,12 @@ Run from the repository root.
 
 ## Deployment
 
-Production deployment is not yet wired. Candidate targets: Vercel for `services/web`, Fly.io or Railway for `services/api`, Supabase-hosted Postgres for the database. Tracked as a follow-up in [SCAFFOLDING.md](SCAFFOLDING.md).
+Single-tenant production deploys target **Vercel** (web) + **Render** (api + scheduled cron jobs) + **managed Supabase Postgres**. Both deploy specs live in code :
+
+- [render.yaml](render.yaml) — Render Blueprint : `monark-api` Web Service + `monark-cron-deletions` + `monark-cron-webhook-sweep` + shared env-var group.
+- [services/web/vercel.json](services/web/vercel.json) + [services/web/DEPLOY.md](services/web/DEPLOY.md) — Vercel project config + manual UI steps.
+
+Step-by-step walkthrough for a fresh deploy : [docs/technical-documentation/deploy-checklist.md](docs/technical-documentation/deploy-checklist.md). Allow ~60 min the first time ; re-deploys take ~5 min.
 
 ## Contributing
 

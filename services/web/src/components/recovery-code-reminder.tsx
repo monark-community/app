@@ -1,10 +1,10 @@
-"use client"
+"use client";
 
-import { useEffect, useMemo, useState, type FormEvent } from "react"
-import { useTranslations } from "next-intl"
-import { AlertTriangle, Check, Copy, ShieldAlert } from "lucide-react"
-import { toast } from "sonner"
-import { Button } from "@/components/ui/button"
+import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useTranslations } from "next-intl";
+import { AlertTriangle, Check, Copy, ShieldAlert } from "lucide-react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -12,15 +12,15 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
+} from "@/components/ui/dialog";
 import {
   InputOTP,
   InputOTPGroup,
   InputOTPSeparator,
   InputOTPSlot,
-} from "@/components/ui/input-otp"
-import { Label } from "@/components/ui/label"
-import { trpc } from "@/lib/trpc"
+} from "@/components/ui/input-otp";
+import { Label } from "@/components/ui/label";
+import { trpc } from "@/lib/trpc";
 
 // Modes the modal renders. Composed client-side from the
 // `recoveryStatus` primitives ; the server doesn't bake the mode into
@@ -35,27 +35,27 @@ type Mode =
   // 1 or 2 left, no recent use : just the regen suggestion.
   | { kind: "suggestRegen"; remaining: number }
   // 0 left : blocking, must regenerate before continuing.
-  | { kind: "mustRegenerate" }
+  | { kind: "mustRegenerate" };
 
-const LOW_THRESHOLD = 3
+const LOW_THRESHOLD = 3;
 
 function modeFromStatus(status: {
-  enrolled: boolean
-  hasUnacknowledgedUse: boolean
-  remainingCodes: number
+  enrolled: boolean;
+  hasUnacknowledgedUse: boolean;
+  remainingCodes: number;
 }): Mode {
-  if (!status.enrolled) return { kind: "idle" }
-  if (status.remainingCodes === 0) return { kind: "mustRegenerate" }
+  if (!status.enrolled) return { kind: "idle" };
+  if (status.remainingCodes === 0) return { kind: "mustRegenerate" };
   if (status.hasUnacknowledgedUse && status.remainingCodes < LOW_THRESHOLD) {
-    return { kind: "acknowledgeLow", remaining: status.remainingCodes }
+    return { kind: "acknowledgeLow", remaining: status.remainingCodes };
   }
   if (status.remainingCodes < LOW_THRESHOLD) {
-    return { kind: "suggestRegen", remaining: status.remainingCodes }
+    return { kind: "suggestRegen", remaining: status.remainingCodes };
   }
   if (status.hasUnacknowledgedUse) {
-    return { kind: "acknowledge", remaining: status.remainingCodes }
+    return { kind: "acknowledge", remaining: status.remainingCodes };
   }
-  return { kind: "idle" }
+  return { kind: "idle" };
 }
 
 /**
@@ -68,16 +68,13 @@ function modeFromStatus(status: {
  * affordance feels alive rather than scripted.
  */
 function StrikeAnimation() {
-  const codes = useMemo(
-    () => Array.from({ length: 5 }, () => "XXXX-XXXX-XXXX"),
-    [],
-  )
-  const struckIndex = useMemo(() => Math.floor(Math.random() * codes.length), [codes.length])
-  const [active, setActive] = useState(false)
+  const codes = useMemo(() => Array.from({ length: 5 }, () => "XXXX-XXXX-XXXX"), []);
+  const struckIndex = useMemo(() => Math.floor(Math.random() * codes.length), [codes.length]);
+  const [active, setActive] = useState(false);
   useEffect(() => {
-    const t = setTimeout(() => setActive(true), 350)
-    return () => clearTimeout(t)
-  }, [])
+    const t = setTimeout(() => setActive(true), 350);
+    return () => clearTimeout(t);
+  }, []);
   return (
     <pre
       className="overflow-hidden rounded-md border border-border bg-muted/40 px-4 py-3 font-mono text-xs leading-relaxed text-muted-foreground"
@@ -97,7 +94,7 @@ function StrikeAnimation() {
         </span>
       ))}
     </pre>
-  )
+  );
 }
 
 function NewCodesBlock({
@@ -106,20 +103,20 @@ function NewCodesBlock({
   copiedToast,
   copyError,
 }: {
-  codes: string[]
-  copyLabel: string
-  copiedToast: string
-  copyError: string
+  codes: string[];
+  copyLabel: string;
+  copiedToast: string;
+  copyError: string;
 }) {
-  const [copied, setCopied] = useState(false)
+  const [copied, setCopied] = useState(false);
   async function onCopy() {
     try {
-      await navigator.clipboard.writeText(codes.join("\n"))
-      setCopied(true)
-      toast.success(copiedToast)
-      setTimeout(() => setCopied(false), 1500)
+      await navigator.clipboard.writeText(codes.join("\n"));
+      setCopied(true);
+      toast.success(copiedToast);
+      setTimeout(() => setCopied(false), 1500);
     } catch {
-      toast.error(copyError)
+      toast.error(copyError);
     }
   }
   return (
@@ -143,7 +140,7 @@ function NewCodesBlock({
         )}
       </Button>
     </div>
-  )
+  );
 }
 
 /**
@@ -174,46 +171,44 @@ function NewCodesBlock({
  * underlying status would now be idle.
  */
 export function RecoveryCodeReminder() {
-  const t = useTranslations("account.totp.reminder")
-  const tToast = useTranslations("account.totp")
-  const utils = trpc.useUtils()
+  const t = useTranslations("account.totp.reminder");
+  const tToast = useTranslations("account.totp");
+  const utils = trpc.useUtils();
   const status = trpc.auth.totp.recoveryStatus.useQuery(undefined, {
     refetchOnWindowFocus: false,
-  })
+  });
   const acknowledge = trpc.auth.totp.acknowledgeRecoveryUse.useMutation({
     onSuccess: () => void utils.auth.totp.recoveryStatus.invalidate(),
-  })
+  });
   const regenWithTotp = trpc.auth.totp.regenerateRecoveryCodes.useMutation({
     onSuccess: () => void utils.auth.totp.recoveryStatus.invalidate(),
-  })
+  });
 
   // After-regen state ; the server returns the fresh codes once and we
   // show them locally until the user acknowledges they've saved them.
-  const [newCodes, setNewCodes] = useState<string[] | null>(null)
-  const [totpCode, setTotpCode] = useState("")
+  const [newCodes, setNewCodes] = useState<string[] | null>(null);
+  const [totpCode, setTotpCode] = useState("");
   // The acknowledge / acknowledgeLow / suggestRegen / mustRegenerate
   // modes all reveal the TOTP input on demand rather than always
   // showing it. Acknowledge-only paths skip the input entirely.
-  const [showTotpInput, setShowTotpInput] = useState(false)
+  const [showTotpInput, setShowTotpInput] = useState(false);
   // Lets the user dismiss the suggest / acknowledge modes for this
   // session even when they haven't taken action ; the server-state
   // policy still re-opens it on the next sign-in. mustRegenerate
   // ignores this and stays open.
-  const [dismissedThisSession, setDismissedThisSession] = useState(false)
+  const [dismissedThisSession, setDismissedThisSession] = useState(false);
 
-  const mode: Mode = status.data
-    ? modeFromStatus(status.data)
-    : { kind: "idle" }
+  const mode: Mode = status.data ? modeFromStatus(status.data) : { kind: "idle" };
   const isOpen =
     !status.isLoading &&
     mode.kind !== "idle" &&
-    (mode.kind === "mustRegenerate" || newCodes !== null || !dismissedThisSession)
-  const isBlocking = mode.kind === "mustRegenerate"
+    (mode.kind === "mustRegenerate" || newCodes !== null || !dismissedThisSession);
+  const isBlocking = mode.kind === "mustRegenerate";
 
   function reset() {
-    setNewCodes(null)
-    setTotpCode("")
-    setShowTotpInput(false)
+    setNewCodes(null);
+    setTotpCode("");
+    setShowTotpInput(false);
   }
 
   function onAcknowledge() {
@@ -223,31 +218,31 @@ export function RecoveryCodeReminder() {
         // For acknowledgeLow it dismisses the strike-it nag but the
         // suggestRegen prompt will re-appear on next sign-in until
         // the user regenerates.
-        setDismissedThisSession(true)
+        setDismissedThisSession(true);
       },
-    })
+    });
   }
 
   function onRegenWithTotp(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    if (totpCode.length < 6) return
+    event.preventDefault();
+    if (totpCode.length < 6) return;
     regenWithTotp.mutate(
       { code: totpCode },
       {
         onSuccess: (result) => {
-          setNewCodes(result.recoveryCodes)
-          setTotpCode("")
+          setNewCodes(result.recoveryCodes);
+          setTotpCode("");
         },
         onError: (err) => {
-          toast.error(err.message ?? tToast("errors.regenerate"))
+          toast.error(err.message ?? tToast("errors.regenerate"));
         },
       },
-    )
+    );
   }
 
   function onConfirmSaved() {
-    setDismissedThisSession(true)
-    reset()
+    setDismissedThisSession(true);
+    reset();
   }
 
   // Fresh-codes view : same regardless of which mode kicked us in.
@@ -276,24 +271,22 @@ export function RecoveryCodeReminder() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    )
+    );
   }
 
-  if (mode.kind === "idle") return null
+  if (mode.kind === "idle") return null;
 
   return (
     <Dialog
       open={isOpen}
       onOpenChange={(open) => {
-        if (open || isBlocking) return
-        setDismissedThisSession(true)
+        if (open || isBlocking) return;
+        setDismissedThisSession(true);
       }}
     >
       <DialogContent
         className={isBlocking ? "[&>button]:hidden" : undefined}
-        onPointerDownOutside={
-          isBlocking ? (e) => e.preventDefault() : undefined
-        }
+        onPointerDownOutside={isBlocking ? (e) => e.preventDefault() : undefined}
         onEscapeKeyDown={isBlocking ? (e) => e.preventDefault() : undefined}
       >
         <DialogHeader>
@@ -373,11 +366,7 @@ export function RecoveryCodeReminder() {
               CTA here ; the user can rotate codes from /account when
               they want. */}
           {mode.kind === "acknowledge" && (
-            <Button
-              type="button"
-              onClick={onAcknowledge}
-              disabled={acknowledge.isPending}
-            >
+            <Button type="button" onClick={onAcknowledge} disabled={acknowledge.isPending}>
               {acknowledge.isPending ? t("saving") : t("struckIt")}
             </Button>
           )}
@@ -404,11 +393,7 @@ export function RecoveryCodeReminder() {
           {/* Just low (no recent use) : suggest regen via TOTP. */}
           {mode.kind === "suggestRegen" && !showTotpInput && (
             <>
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() => setDismissedThisSession(true)}
-              >
+              <Button type="button" variant="ghost" onClick={() => setDismissedThisSession(true)}>
                 {t("notNow")}
               </Button>
               <Button type="button" onClick={() => setShowTotpInput(true)}>
@@ -429,5 +414,5 @@ export function RecoveryCodeReminder() {
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

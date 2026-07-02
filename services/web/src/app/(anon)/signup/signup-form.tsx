@@ -1,22 +1,22 @@
-"use client"
+"use client";
 
-import { useMemo, useState, useTransition } from "react"
-import { useTranslations } from "next-intl"
-import { checkPasswordOffline } from "@monark/auth/contracts"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Card, CardContent } from "@/components/ui/card"
-import { PasswordStrengthMeter } from "@/components/password-strength-meter"
-import { signUpAction, type SignUpErrorCode } from "./actions"
+import { useMemo, useState, useTransition } from "react";
+import { useTranslations } from "next-intl";
+import { checkPasswordOffline } from "@monark/auth/contracts";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent } from "@/components/ui/card";
+import { PasswordStrengthMeter } from "@/components/password-strength-meter";
+import { signUpAction, type SignUpErrorCode } from "./actions";
 
 export function SignUpForm() {
-  const t = useTranslations("auth.signUp")
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [displayName, setDisplayName] = useState("")
-  const [errorCode, setErrorCode] = useState<SignUpErrorCode | null>(null)
-  const [isPending, startTransition] = useTransition()
+  const t = useTranslations("auth.signUp");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [displayName, setDisplayName] = useState("");
+  const [errorCode, setErrorCode] = useState<SignUpErrorCode | null>(null);
+  const [isPending, startTransition] = useTransition();
 
   const strength = useMemo(
     () =>
@@ -25,18 +25,18 @@ export function SignUpForm() {
         displayName: displayName || undefined,
       }),
     [password, email, displayName],
-  )
+  );
 
   function onSubmit(formData: FormData) {
-    setErrorCode(null)
+    setErrorCode(null);
     startTransition(async () => {
       const result = await signUpAction({
         email: String(formData.get("email") ?? ""),
         password: String(formData.get("password") ?? ""),
         displayName: String(formData.get("displayName") ?? "") || undefined,
-      })
-      if (result && !result.ok) setErrorCode(result.errorCode)
-    })
+      });
+      if (result && !result.ok) setErrorCode(result.errorCode);
+    });
   }
 
   return (
@@ -86,9 +86,7 @@ export function SignUpForm() {
             />
           </div>
 
-          {errorCode && (
-            <p className="text-sm text-destructive">{t(`errors.${errorCode}`)}</p>
-          )}
+          {errorCode && <p className="text-sm text-destructive">{t(`errors.${errorCode}`)}</p>}
 
           <Button type="submit" disabled={isPending || !strength.ok} className="w-full">
             {isPending ? t("submitting") : t("submit")}
@@ -96,5 +94,5 @@ export function SignUpForm() {
         </form>
       </CardContent>
     </Card>
-  )
+  );
 }

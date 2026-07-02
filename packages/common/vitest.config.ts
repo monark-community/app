@@ -1,6 +1,6 @@
-import { mergeConfig } from "vitest/config"
-import { defineConfig } from "vitest/config"
-import baseConfig from "../../vitest.shared"
+import { mergeConfig } from "vitest/config";
+import { defineConfig } from "vitest/config";
+import baseConfig from "../../vitest.shared";
 
 // Target threshold per test-plan : 80 %. Common is small + fully
 // pure (errors, events, logger, tRPC plumbing) so it should clear
@@ -16,4 +16,4 @@ export default mergeConfig(
       },
     },
   }),
-)
+);

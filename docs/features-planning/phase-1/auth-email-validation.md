@@ -63,12 +63,12 @@ Simple table; query last 5 entries to enforce a 5-per-hour cap.
 ```ts
 // packages/auth/src/server/procedures/email-verification.ts
 
-"use server"
-export async function confirmEmail(token: string): Promise<ConfirmResult>
+"use server";
+export async function confirmEmail(token: string): Promise<ConfirmResult>;
 //   Called from /auth/confirm route after the user clicks the email link.
 
-"use server"
-export async function resendConfirmationEmail(): Promise<ResendResult>
+("use server");
+export async function resendConfirmationEmail(): Promise<ResendResult>;
 //   Called from the /signup/check-email page. Requires a partial session
 //   (user signed up but hasn't confirmed yet).
 ```
@@ -79,7 +79,7 @@ Helper guard for other modules:
 
 ```ts
 // packages/auth/src/server/index.ts
-export async function requireVerifiedEmail(): Promise<User>
+export async function requireVerifiedEmail(): Promise<User>;
 //   Throws an AuthError("email-not-verified") usable to short-circuit
 //   server actions. UI can catch and redirect to the check-email page.
 ```
@@ -106,7 +106,7 @@ export async function requireVerifiedEmail(): Promise<User>
 Server components using `requireVerifiedEmail()`:
 
 ```tsx
-const user = await requireVerifiedEmail()
+const user = await requireVerifiedEmail();
 //   throws AuthError("email-not-verified") → caught by the route's
 //   error boundary, which redirects to /signup/check-email.
 ```
@@ -125,12 +125,12 @@ Opt-in per feature — not every page demands verification. Auth-critical paths 
 ### Events emitted
 
 ```ts
-export const EMAIL_VERIFIED = "user.email-verified"
+export const EMAIL_VERIFIED = "user.email-verified";
 export type EmailVerifiedEvent = {
-  userId: string
-  email: string
-  at: Date
-}
+  userId: string;
+  email: string;
+  at: Date;
+};
 ```
 
 The onboarding module (Phase 2) listens to gate the onboarding flow's first step. The referral module uses it as the conversion signal ("a referred user became a verified user").

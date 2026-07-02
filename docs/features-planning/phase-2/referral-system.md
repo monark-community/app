@@ -81,17 +81,17 @@ model Referral {
 ```ts
 // packages/referral/src/server/procedures/codes.ts
 
-"use server"
-export async function getOrCreateMyCode(): Promise<ReferralCode>
+"use server";
+export async function getOrCreateMyCode(): Promise<ReferralCode>;
 //   Idempotent: if the user has a code, returns it; else generates.
 
-"use server"
-export async function disableCode(codeId: string): Promise<void>
+("use server");
+export async function disableCode(codeId: string): Promise<void>;
 
 // Read
 export async function listMyReferrals(opts?: {
-  status?: "pending" | "converted" | "paid"
-}): Promise<ReferralView[]>
+  status?: "pending" | "converted" | "paid";
+}): Promise<ReferralView[]>;
 ```
 
 ### Attribution (called from signup)
@@ -99,9 +99,9 @@ export async function listMyReferrals(opts?: {
 ```ts
 // packages/referral/src/server/procedures/attribute.ts
 export async function attributeSignup(params: {
-  referredUserId: string
-  referralCode?: string
-}): Promise<Referral | null>
+  referredUserId: string;
+  referralCode?: string;
+}): Promise<Referral | null>;
 //   Internal function, not a server action — called from the signup
 //   server action after the user is created. Returns null if no code
 //   or an invalid/exhausted code (signup succeeds regardless).
@@ -110,12 +110,12 @@ export async function attributeSignup(params: {
 ### Admin
 
 ```ts
-"use server"
+"use server";
 export async function listReferralsAdmin(filter: {
-  orgId?: string
-  status?: string
-  dateRange?: { from: Date; to: Date }
-}): Promise<PaginatedReferrals>
+  orgId?: string;
+  status?: string;
+  dateRange?: { from: Date; to: Date };
+}): Promise<PaginatedReferrals>;
 //   RBAC: 'referral:admin' permission.
 ```
 
@@ -135,8 +135,8 @@ And outbound — whenever a referral is conversion-eligible:
 // packages/referral/src/server/data/external.ts
 export async function notifyExternalSystem(
   referralId: string,
-  eventType: "attribution-created" | "conversion" | "payout-requested"
-): Promise<void>
+  eventType: "attribution-created" | "conversion" | "payout-requested",
+): Promise<void>;
 ```
 
 ## UI flows
@@ -175,18 +175,18 @@ export async function notifyExternalSystem(
 ### Events emitted
 
 ```ts
-export const REFERRAL_ATTRIBUTED = "referral.attributed"
-export const REFERRAL_CONVERTED = "referral.converted"
-export const REFERRAL_PAYOUT_ELIGIBLE = "referral.payout-eligible"
-export const REFERRAL_PAYOUT_CONFIRMED = "referral.payout-confirmed"
+export const REFERRAL_ATTRIBUTED = "referral.attributed";
+export const REFERRAL_CONVERTED = "referral.converted";
+export const REFERRAL_PAYOUT_ELIGIBLE = "referral.payout-eligible";
+export const REFERRAL_PAYOUT_CONFIRMED = "referral.payout-confirmed";
 
 export type ReferralConvertedEvent = {
-  referralId: string
-  codeId: string
-  referrerId: string
-  referredUserId: string
-  at: Date
-}
+  referralId: string;
+  codeId: string;
+  referrerId: string;
+  referredUserId: string;
+  at: Date;
+};
 ```
 
 Contribution-estimation (Phase 3) listens to `REFERRAL_CONVERTED` and allocates contribution points to the referrer.

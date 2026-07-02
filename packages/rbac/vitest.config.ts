@@ -1,5 +1,5 @@
-import { configDefaults, defineConfig, mergeConfig } from "vitest/config"
-import baseConfig from "../../vitest.shared"
+import { configDefaults, defineConfig, mergeConfig } from "vitest/config";
+import baseConfig from "../../vitest.shared";
 
 // Target threshold per test-plan : 80 %. Permission registry +
 // guards covered ; data + read + write integration suites land the
@@ -34,4 +34,4 @@ export default mergeConfig(
       },
     },
   }),
-)
+);

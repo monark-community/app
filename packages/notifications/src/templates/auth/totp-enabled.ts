@@ -1,4 +1,4 @@
-import type { KindMessages } from "../types"
+import type { KindMessages } from "../types";
 
 const messages: KindMessages = {
   en: {
@@ -35,6 +35,6 @@ Conservez vos codes de récupération dans un endroit sûr.`,
       link: "/account/security",
     },
   },
-}
+};
 
-export default messages
+export default messages;

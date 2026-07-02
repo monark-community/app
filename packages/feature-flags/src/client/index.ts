@@ -1,2 +1,2 @@
-export { FlagsProvider, useFlag, useFlags } from "./flags-provider"
-export type { FlagKey } from "../contracts/index"
+export { FlagsProvider, useFlag, useFlags } from "./flags-provider";
+export type { FlagKey } from "../contracts/index";

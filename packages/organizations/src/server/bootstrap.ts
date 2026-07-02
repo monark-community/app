@@ -36,16 +36,19 @@ export type BootstrapStatus = {
    */
   singletonOrganizationId: string | null;
   /**
-   * Display name + logo URL of the singleton organization. Same gate
-   * as `singletonOrganizationId` (single-tenant + exactly one org).
-   * Used by the public app chrome (AppBar logo + pre-auth screens) so
-   * the singleton org's branding follows the user before sign-in too.
-   * Multi-tenant pre-auth has no org context — falls back to the
-   * starter-template brand. Both fields are null when the gate
-   * doesn't fire.
+   * Display name + logo URL + primary color of the singleton org.
+   * Same gate as `singletonOrganizationId` (single-tenant + exactly
+   * one org). Used by the public app chrome (AppBar logo + pre-auth
+   * screens) AND by the root layout's CSS-variable injection so the
+   * whole app (primary buttons, focus rings, sidebar accents, charts,
+   * gradients) follows the operator's chosen brand color instead of
+   * the starter-template orange. Multi-tenant pre-auth has no org
+   * context — falls back to the starter-template brand. All three
+   * are null when the gate doesn't fire.
    */
   singletonDisplayName: string | null;
   singletonLogoUrl: string | null;
+  singletonPrimaryColor: string | null;
 };
 
 export async function getBootstrapStatus(): Promise<BootstrapStatus> {
@@ -60,6 +63,7 @@ export async function getBootstrapStatus(): Promise<BootstrapStatus> {
       singletonOrganizationId: null,
       singletonDisplayName: null,
       singletonLogoUrl: null,
+      singletonPrimaryColor: null,
     };
   }
   // Single-tenant : look up the row only when count is exactly 1, so
@@ -69,11 +73,20 @@ export async function getBootstrapStatus(): Promise<BootstrapStatus> {
   let singletonOrganizationId: string | null = null;
   let singletonDisplayName: string | null = null;
   let singletonLogoUrl: string | null = null;
+  let singletonPrimaryColor: string | null = null;
   if (organizationCount === 1) {
     const singleton = await findOnlyActiveOrganization();
     singletonOrganizationId = singleton?.id ?? null;
     singletonDisplayName = singleton?.displayName ?? null;
     singletonLogoUrl = singleton?.logoUrl ?? null;
+    // Defensive : only pass through a value that looks like the hex
+    // format the rest of the chrome expects ; a corrupt DB row can't
+    // poison the root layout's `<html style="…">` and bleed into the
+    // CSS of every signed-in or anon user.
+    const raw = singleton?.primaryColor;
+    if (typeof raw === "string" && /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(raw)) {
+      singletonPrimaryColor = raw;
+    }
   }
   return {
     mode,
@@ -82,6 +95,7 @@ export async function getBootstrapStatus(): Promise<BootstrapStatus> {
     singletonOrganizationId,
     singletonDisplayName,
     singletonLogoUrl,
+    singletonPrimaryColor,
   };
 }
 

@@ -18,15 +18,18 @@ body {
 }
 
 /*
- * Always reserve gutter space for the vertical scrollbar so a tall
- * page (with scrollbar) and a short page (without) anchor their
- * content at the same horizontal position. Without this, navigating
- * between routes nudges the centered content a few pixels left/right
- * as the scrollbar appears or disappears. `stable` keeps the gutter
- * even when the bar isn't drawn ; supported in every modern browser.
+ * Mobile UI scale. Tailwind sizes text, spacing (`--spacing`), and radii
+ * (`--radius`) in `rem`, so bumping the root font-size is a single global
+ * lever that scales the whole interface up proportionally on small screens —
+ * where the default read slightly too small — without touching any component.
+ * A percentage (not a px value) keeps it relative to the user's own browser
+ * font-size preference. The 767px cap mirrors the app's mobile breakpoint
+ * (`use-is-mobile`, Tailwind `md`).
  */
-html {
-  scrollbar-gutter: stable;
+@media (max-width: 767px) {
+  html {
+    font-size: 106.25%; /* 16px → 17px */
+  }
 }
 
 /*
@@ -213,7 +216,12 @@ body {
   --sidebar-ring: oklch(0.723 0.168 59.48);
 }
 
-h1, h2, h3, h4, h5, h6 {
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
   font-family: var(--font-sans);
   font-weight: 700;
   letter-spacing: -0.02em;
@@ -237,4 +245,91 @@ h1, h2, h3, h4, h5, h6 {
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* Rich-text field content (Tiptap editor + read-only RichTextView).
+ * No Tailwind typography plugin is installed ; these scoped rules give
+ * the WYSIWYG output its headings / lists / links / quote styling using
+ * the theme tokens. `--tw` spacing keeps it consistent with the app. */
+.rich-text-content {
+  line-height: 1.6;
+}
+.rich-text-content:focus {
+  outline: none;
+}
+.rich-text-content > :first-child {
+  margin-top: 0;
+}
+.rich-text-content > :last-child {
+  margin-bottom: 0;
+}
+.rich-text-content h1 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin: 0.75em 0 0.35em;
+}
+.rich-text-content h2 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin: 0.75em 0 0.35em;
+}
+.rich-text-content h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0.75em 0 0.35em;
+}
+.rich-text-content p {
+  margin: 0.5em 0;
+}
+.rich-text-content ul,
+.rich-text-content ol {
+  margin: 0.5em 0;
+  padding-left: 1.5rem;
+}
+.rich-text-content ul {
+  list-style: disc;
+}
+.rich-text-content ol {
+  list-style: decimal;
+}
+.rich-text-content li {
+  margin: 0.2em 0;
+}
+.rich-text-content a {
+  color: var(--primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.rich-text-content blockquote {
+  border-left: 3px solid var(--border);
+  padding-left: 0.75rem;
+  color: var(--muted-foreground);
+  margin: 0.5em 0;
+}
+.rich-text-content code {
+  background: var(--muted);
+  border-radius: var(--radius-sm);
+  padding: 0.1em 0.3em;
+  font-size: 0.875em;
+}
+.rich-text-content pre {
+  background: var(--muted);
+  border-radius: var(--radius-sm);
+  padding: 0.75rem;
+  overflow-x: auto;
+  margin: 0.5em 0;
+}
+.rich-text-content pre code {
+  background: transparent;
+  padding: 0;
+}
+/* Tiptap placeholder (empty editor) */
+.rich-text-content p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+  color: var(--muted-foreground);
 }

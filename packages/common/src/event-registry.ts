@@ -20,16 +20,16 @@
 
 export type EventTypeDescriptor = {
   /** Wire-level event type, e.g. `"rbac.role-assigned"`. */
-  type: string
+  type: string;
   /** Module that registered this event (the package that emits it). */
-  module: string
+  module: string;
   /** Operator-facing description. Surfaces in the webhook picker. */
-  description: string
-}
+  description: string;
+};
 
-const registry = new Map<string, EventTypeDescriptor>()
+const registry = new Map<string, EventTypeDescriptor>();
 
-const TYPE_RE = /^[a-z0-9]+(?:[._-][a-z0-9]+)*$/
+const TYPE_RE = /^[a-z0-9]+(?:[._-][a-z0-9]+)*$/;
 
 export function registerEventTypes(
   module: string,
@@ -37,43 +37,41 @@ export function registerEventTypes(
 ): void {
   for (const [type, def] of Object.entries(types)) {
     if (!TYPE_RE.test(type)) {
-      throw new Error(`Invalid event type : "${type}"`)
+      throw new Error(`Invalid event type : "${type}"`);
     }
-    registry.set(type, { type, module, description: def.description })
+    registry.set(type, { type, module, description: def.description });
   }
 }
 
-export function getEventTypeDescriptor(
-  type: string,
-): EventTypeDescriptor | undefined {
-  return registry.get(type)
+export function getEventTypeDescriptor(type: string): EventTypeDescriptor | undefined {
+  return registry.get(type);
 }
 
 export function listEventTypes(): EventTypeDescriptor[] {
-  const out = [...registry.values()]
-  out.sort((a, b) => a.type.localeCompare(b.type))
-  return out
+  const out = [...registry.values()];
+  out.sort((a, b) => a.type.localeCompare(b.type));
+  return out;
 }
 
 export function listEventTypesByModule(): Array<{
-  module: string
-  events: EventTypeDescriptor[]
+  module: string;
+  events: EventTypeDescriptor[];
 }> {
-  const grouped = new Map<string, EventTypeDescriptor[]>()
+  const grouped = new Map<string, EventTypeDescriptor[]>();
   for (const desc of registry.values()) {
-    const bucket = grouped.get(desc.module) ?? []
-    bucket.push(desc)
-    grouped.set(desc.module, bucket)
+    const bucket = grouped.get(desc.module) ?? [];
+    bucket.push(desc);
+    grouped.set(desc.module, bucket);
   }
-  const out: Array<{ module: string; events: EventTypeDescriptor[] }> = []
+  const out: Array<{ module: string; events: EventTypeDescriptor[] }> = [];
   for (const [module, events] of grouped) {
-    events.sort((a, b) => a.type.localeCompare(b.type))
-    out.push({ module, events })
+    events.sort((a, b) => a.type.localeCompare(b.type));
+    out.push({ module, events });
   }
-  out.sort((a, b) => a.module.localeCompare(b.module))
-  return out
+  out.sort((a, b) => a.module.localeCompare(b.module));
+  return out;
 }
 
 export function _resetEventRegistryForTesting(): void {
-  registry.clear()
+  registry.clear();
 }

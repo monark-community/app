@@ -1,6 +1,6 @@
-import "@testing-library/jest-dom/vitest"
-import { afterEach } from "vitest"
-import { cleanup } from "@testing-library/react"
+import "@testing-library/jest-dom/vitest";
+import { afterEach } from "vitest";
+import { cleanup } from "@testing-library/react";
 
 // jsdom's Blob / File don't ship `arrayBuffer()`. Polyfill so server
 // actions that call `file.arrayBuffer()` (e.g. the org-logo upload)
@@ -8,12 +8,12 @@ import { cleanup } from "@testing-library/react"
 if (typeof Blob.prototype.arrayBuffer !== "function") {
   Blob.prototype.arrayBuffer = function () {
     return new Promise<ArrayBuffer>((resolve, reject) => {
-      const reader = new FileReader()
-      reader.onload = () => resolve(reader.result as ArrayBuffer)
-      reader.onerror = () => reject(reader.error)
-      reader.readAsArrayBuffer(this)
-    })
-  }
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as ArrayBuffer);
+      reader.onerror = () => reject(reader.error);
+      reader.readAsArrayBuffer(this);
+    });
+  };
 }
 
 // Strip the rendered DOM between tests so a leftover dialog / drawer
@@ -22,5 +22,5 @@ if (typeof Blob.prototype.arrayBuffer !== "function") {
 // hook makes the contract obvious + keeps it working if `globals`
 // gets toggled later.
 afterEach(() => {
-  cleanup()
-})
+  cleanup();
+});

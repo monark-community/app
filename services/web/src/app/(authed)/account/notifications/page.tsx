@@ -1,5 +1,5 @@
-import { AccountPageHeader } from "../account-page-header"
-import { NotificationsSection } from "../notifications-section"
+import { AccountPageHeader } from "../account-page-header";
+import { NotificationsSection } from "../notifications-section";
 
 /**
  * Account → Notifications tab : per-user notification preferences
@@ -13,5 +13,5 @@ export default function AccountNotificationsPage() {
       <AccountPageHeader tab="notifications" />
       <NotificationsSection />
     </div>
-  )
+  );
 }

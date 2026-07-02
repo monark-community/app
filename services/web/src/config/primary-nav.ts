@@ -1,4 +1,5 @@
-import type { LucideIcon } from "lucide-react"
+import { CalendarDays, FolderKanban, Tags } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
 /**
  * Single entry in the application's primary nav (the hamburger drawer
@@ -13,18 +14,18 @@ export type PrimaryNavEntry = {
    * resolved as `appBar.primaryNav.items.<id>`. Must match across
    * languages so the drawer can render in any locale.
    */
-  id: string
+  id: string;
   /** Path the entry navigates to. Active-state matching uses `startsWith`. */
-  href: string
+  href: string;
   /** Lucide icon component rendered to the left of the label. */
-  icon: LucideIcon
+  icon: LucideIcon;
   /**
    * Optional path-prefix mapping for the AppBar section title. When
    * the user is on a route under `sectionPrefix`, the AppBar shows
    * the same `id` as the title. Falls back to `href` when omitted.
    */
-  sectionPrefix?: string
-}
+  sectionPrefix?: string;
+};
 
 /**
  * Application-level primary-nav order. Edit THIS array to compose the
@@ -49,4 +50,8 @@ export type PrimaryNavEntry = {
  * keeps the file diff-readable ; one place to look when debugging
  * "why is X showing up / not showing up".
  */
-export const PRIMARY_NAV: PrimaryNavEntry[] = []
+export const PRIMARY_NAV: PrimaryNavEntry[] = [
+  { id: "calendar", href: "/calendar", icon: CalendarDays },
+  { id: "projects", href: "/projects", icon: FolderKanban },
+  { id: "industries", href: "/industries", icon: Tags },
+];

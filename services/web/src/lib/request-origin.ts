@@ -1,4 +1,4 @@
-import type { NextRequest } from "next/server"
+import type { NextRequest } from "next/server";
 
 /**
  * Returns the origin (`scheme://host[:port]`) the user actually
@@ -27,19 +27,16 @@ import type { NextRequest } from "next/server"
  *      synthetic requests).
  */
 export function getRequestOrigin(request: NextRequest): string {
-  const fwdHost = request.headers.get("x-forwarded-host")?.split(",")[0]?.trim()
-  const fwdProto = request.headers
-    .get("x-forwarded-proto")
-    ?.split(",")[0]
-    ?.trim()
+  const fwdHost = request.headers.get("x-forwarded-host")?.split(",")[0]?.trim();
+  const fwdProto = request.headers.get("x-forwarded-proto")?.split(",")[0]?.trim();
   if (fwdHost) {
-    const proto = fwdProto || request.nextUrl.protocol.replace(":", "") || "http"
-    return `${proto}://${fwdHost}`
+    const proto = fwdProto || request.nextUrl.protocol.replace(":", "") || "http";
+    return `${proto}://${fwdHost}`;
   }
-  const host = request.headers.get("host")?.trim()
+  const host = request.headers.get("host")?.trim();
   if (host) {
-    const proto = request.nextUrl.protocol.replace(":", "") || "http"
-    return `${proto}://${host}`
+    const proto = request.nextUrl.protocol.replace(":", "") || "http";
+    return `${proto}://${host}`;
   }
-  return request.nextUrl.origin
+  return request.nextUrl.origin;
 }

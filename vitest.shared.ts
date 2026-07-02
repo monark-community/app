@@ -1,4 +1,4 @@
-import { defineConfig } from "vitest/config"
+import { defineConfig } from "vitest/config";
 
 /**
  * Shared vitest base config. Per-package `vitest.config.ts` files
@@ -61,4 +61,4 @@ export default defineConfig({
       ],
     },
   },
-})
+});

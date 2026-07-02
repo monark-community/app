@@ -81,10 +81,23 @@ export default async function AuthedLayout({ children }: { children: ReactNode }
     redirect("/signin");
   }
 
-  const trusted = await isCurrentDeviceTrusted({
-    accessToken: sessionResult.data.session.access_token,
-    userId: userResult.data.user.id,
-  });
+  const accessToken = sessionResult.data.session.access_token;
+
+  // The trusted-device gate and the deletion-grace `users.me` read are
+  // independent, so fire them together rather than serially. The device
+  // check still redirects before `me` is ever used, so fetching `me`
+  // up front only wastes work in the rare revoked-device case while
+  // saving a full round trip on every normal navigation.
+  const [trusted, me] = await Promise.all([
+    isCurrentDeviceTrusted({
+      accessToken,
+      userId: userResult.data.user.id,
+    }),
+    createServerTrpcClient(accessToken)
+      .users.me.query()
+      .catch(() => null),
+  ]);
+
   if (!trusted) {
     debugRedirect("trusted-device check failed → /auth/sign-out-stale", {
       userId: userResult.data.user.id,
@@ -102,9 +115,6 @@ export default async function AuthedLayout({ children }: { children: ReactNode }
   // keeps users out of the routes the account layout can't gate
   // (admin, inbox, future module pages). Pathname comes from the
   // `x-pathname` request header that middleware sets on every request.
-  const me = await createServerTrpcClient(sessionResult.data.session.access_token)
-    .users.me.query()
-    .catch(() => null);
   if (me?.deletedAt) {
     const hdrs = await headers();
     const pathname = hdrs.get("x-pathname") ?? "";

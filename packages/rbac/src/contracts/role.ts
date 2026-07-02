@@ -11,18 +11,15 @@
 //   - `ADMIN`    : org-tier only (RoleAssignment.organizationId IS
 //     NOT NULL). Assignable through /admin/users to designate per-org
 //     administrators.
-export const SYSADMIN_ROLE_KEY = "SYSADMIN" as const
-export const ADMIN_ROLE_KEY = "ADMIN" as const
+export const SYSADMIN_ROLE_KEY = "SYSADMIN" as const;
+export const ADMIN_ROLE_KEY = "ADMIN" as const;
 
-export type SysadminRoleKey = typeof SYSADMIN_ROLE_KEY
-export type AdminRoleKey = typeof ADMIN_ROLE_KEY
+export type SysadminRoleKey = typeof SYSADMIN_ROLE_KEY;
+export type AdminRoleKey = typeof ADMIN_ROLE_KEY;
 
 // Convenience for code paths that grant "everything" to either tier
 // (e.g. the rbac read layer's permission short-circuit). These keys
 // live on `Role` rows with `builtIn = true` and `organizationId =
 // NULL` ; the rbac write layer reserves them so operators can't
 // create custom roles that collide with the code-side guards.
-export const BUILTIN_ALL_PERMISSIONS_KEYS = [
-  SYSADMIN_ROLE_KEY,
-  ADMIN_ROLE_KEY,
-] as const
+export const BUILTIN_ALL_PERMISSIONS_KEYS = [SYSADMIN_ROLE_KEY, ADMIN_ROLE_KEY] as const;

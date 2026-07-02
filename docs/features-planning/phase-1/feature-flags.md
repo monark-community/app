@@ -9,7 +9,7 @@ The starter brief is explicit: **instance/deployment-based feature enabling/disa
 ## Goals
 
 - A single `isEnabled(flagKey, context?)` call usable from server components, client components, server actions, and route handlers.
-- Flag definitions live in code (TypeScript); flag *values* live in the database so they're editable without redeploy.
+- Flag definitions live in code (TypeScript); flag _values_ live in the database so they're editable without redeploy.
 - Scopes: global (deployment-wide), per-org, per-role, per-user (for admin previews). Resolution cascades from most-specific to least.
 - Admin UI for executives to list flags, toggle them, see who's affected.
 - Flags are evaluated server-side and passed to the client as hydration data; no client-side fetch round-trip on every render.
@@ -60,7 +60,7 @@ model FeatureFlagOverride {
 }
 ```
 
-Flag *definitions* live in code so the type system knows about them:
+Flag _definitions_ live in code so the type system knows about them:
 
 ```ts
 // packages/feature-flags/src/contracts/flags.ts
@@ -69,9 +69,9 @@ export const FLAGS = {
   "contributions.quantification": { description: "Contribution estimation + reward surface" },
   "referral.external-sync": { description: "Sync with the external referral system" },
   "onboarding.v2": { description: "Redesigned onboarding flow" },
-} as const
+} as const;
 
-export type FlagKey = keyof typeof FLAGS
+export type FlagKey = keyof typeof FLAGS;
 ```
 
 A seed step inserts a `FeatureFlag` row for each key at startup (upsert), so the DB stays in sync with code.
@@ -83,30 +83,30 @@ Module `index.ts` exports:
 ```ts
 export async function isEnabled(
   key: FlagKey,
-  context?: { userId?: string; organizationId?: string; role?: Role }
-): Promise<boolean>
+  context?: { userId?: string; organizationId?: string; role?: Role },
+): Promise<boolean>;
 
 // Batch variant for server components that need many flags; single DB trip.
 export async function getFlags(
   keys: FlagKey[],
-  context?: { userId?: string; organizationId?: string; role?: Role }
-): Promise<Record<FlagKey, boolean>>
+  context?: { userId?: string; organizationId?: string; role?: Role },
+): Promise<Record<FlagKey, boolean>>;
 
 // Admin-only write path (RBAC-guarded inside):
 export async function setOverride(
   key: FlagKey,
   scope: { organizationId?: string; userId?: string; role?: Role },
   enabled: boolean,
-  note?: string
-): Promise<void>
+  note?: string,
+): Promise<void>;
 ```
 
 Client-side API mirrors the server one via a React hook:
 
 ```ts
 // Hydrated from a server component; no fetch on render.
-export function useFlag(key: FlagKey): boolean
-export function useFlags<K extends FlagKey>(keys: K[]): Record<K, boolean>
+export function useFlag(key: FlagKey): boolean;
+export function useFlags<K extends FlagKey>(keys: K[]): Record<K, boolean>;
 ```
 
 ## Resolution order
@@ -135,8 +135,8 @@ Evaluation is deterministic and cacheable. We cache per-request in a React `cach
 Components wrap UI in:
 
 ```tsx
-const votingEnabled = await isEnabled("voting", { userId, orgId })
-if (!votingEnabled) return null
+const votingEnabled = await isEnabled("voting", { userId, orgId });
+if (!votingEnabled) return null;
 ```
 
 For static navigation (sidebar links etc.) the flag is resolved in the root layout and passed down via a provider.
@@ -154,21 +154,21 @@ Each of those is also a Phase 1 core module, so the circular concern is moot —
 ### Exposed to other modules
 
 ```ts
-export { isEnabled, getFlags, useFlag, useFlags } from "./api"
-export type { FlagKey }
+export { isEnabled, getFlags, useFlag, useFlags } from "./api";
+export type { FlagKey };
 ```
 
 ### Events
 
 ```ts
-export const FLAG_FLIPPED = "feature-flag.flipped"
+export const FLAG_FLIPPED = "feature-flag.flipped";
 export type FlagFlippedEvent = {
-  flagKey: FlagKey
-  scope: { organizationId?: string; userId?: string; role?: Role }
-  enabled: boolean
-  actorId: string
-  at: Date
-}
+  flagKey: FlagKey;
+  scope: { organizationId?: string; userId?: string; role?: Role };
+  enabled: boolean;
+  actorId: string;
+  at: Date;
+};
 ```
 
 Extended modules can subscribe (e.g., voting emits an audit line when contribution-quantification flips on, so the two are known to have been co-active during a rewards period).
@@ -177,7 +177,7 @@ Extended modules can subscribe (e.g., voting emits an audit line when contributi
 
 - **Flag removed from code but overrides remain in DB.** Weekly `pnpm flags:prune` command (admin-triggered) that lists orphan overrides and optionally deletes them. Do not auto-prune on boot; it's a destructive op.
 - **Stale client cache.** Flags are hydrated at request time. For long-lived tabs, a manual "refresh" or `revalidatePath` on flag flips keeps things correct. Worth documenting that flag flips take up to one navigation to propagate.
-- **Multi-org user.** Flags are evaluated against the *active* org in the session, not every org the user belongs to. Document this loudly in the admin UI to avoid confusion.
+- **Multi-org user.** Flags are evaluated against the _active_ org in the session, not every org the user belongs to. Document this loudly in the admin UI to avoid confusion.
 - **Race between flag flip and feature code path.** Flags are read inside the same transaction as the work when it matters (e.g., vote creation checks `isEnabled("voting")` right before insert).
 
 ## Risks

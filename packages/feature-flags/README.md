@@ -21,7 +21,7 @@ An extended module follows the same shape :
 
 ```ts
 // packages/posts/src/server/flags.ts
-import { registerFlags } from "@monark/feature-flags/server"
+import { registerFlags } from "@monark/feature-flags/server";
 
 export function registerPostsFeatureFlags(): void {
   registerFlags("posts", {
@@ -29,7 +29,7 @@ export function registerPostsFeatureFlags(): void {
       description: "Allow saving posts as drafts before publishing.",
       defaultOn: true,
     },
-  })
+  });
 }
 ```
 
@@ -74,12 +74,12 @@ Removing a registration is safe : the DB row and any overrides remain but become
 
 ```tsx
 // Server component (e.g. app/layout.tsx)
-import { getFlags, listFlagKeys } from "@monark/feature-flags/server"
-import { FlagsProvider } from "@monark/feature-flags/client"
+import { getFlags, listFlagKeys } from "@monark/feature-flags/server";
+import { FlagsProvider } from "@monark/feature-flags/client";
 
 export default async function Layout({ children }) {
-  const flags = await getFlags(listFlagKeys(), { userId, organizationId, roleId })
-  return <FlagsProvider flags={flags}>{children}</FlagsProvider>
+  const flags = await getFlags(listFlagKeys(), { userId, organizationId, roleId });
+  return <FlagsProvider flags={flags}>{children}</FlagsProvider>;
 }
 ```
 

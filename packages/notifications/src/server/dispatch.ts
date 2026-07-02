@@ -1,30 +1,30 @@
-import { createHash } from "node:crypto"
-import { emit, logger } from "@monark/common"
-import { getDb, type NotificationChannel } from "@monark/db"
+import { createHash } from "node:crypto";
+import { emit, logger } from "@monark/common";
+import { getDb, type NotificationChannel } from "@monark/db";
 import {
   getNotificationKindDef,
   getNotificationTemplate,
   type NotificationDataMap,
   type NotificationKind,
-} from "../contracts/registry"
+} from "../contracts/registry";
 import type {
   NotificationCreatedEvent,
   NotificationDeliveryFailedEvent,
-} from "../contracts/events"
-import { isChannelEnabled } from "./prefs"
-import { sendMail } from "./transport/email"
-import { enrichVars } from "./enrich"
-import { renderString } from "./template"
-import { EMAIL_SHELL } from "../templates"
+} from "../contracts/events";
+import { isChannelEnabled } from "./prefs";
+import { sendMail } from "./transport/email";
+import { enrichVars, resolveOrgBranding } from "./enrich";
+import { renderString } from "./template";
+import { EMAIL_SHELL } from "../templates";
 
-const DEDUPE_WINDOW_MS = 60_000
+const DEDUPE_WINDOW_MS = 60_000;
 
 export type DispatchResult = {
   /** IDs of Notification rows persisted (one per channel actually delivered to). */
-  deliveryIds: string[]
+  deliveryIds: string[];
   /** Channels skipped because the user opted out, with the reason. */
-  skipped: Array<{ channel: NotificationChannel; reason: string }>
-}
+  skipped: Array<{ channel: NotificationChannel; reason: string }>;
+};
 
 /**
  * Single-recipient dispatch. Resolves the recipient's prefs + locale +
@@ -39,15 +39,15 @@ export async function notify<K extends NotificationKind>(
   recipient: { userId: string },
   data: NotificationDataMap[K],
 ): Promise<DispatchResult> {
-  const db = getDb()
-  const def = getNotificationKindDef(kind)
-  const result: DispatchResult = { deliveryIds: [], skipped: [] }
+  const db = getDb();
+  const def = getNotificationKindDef(kind);
+  const result: DispatchResult = { deliveryIds: [], skipped: [] };
   if (!def) {
     logger.error(
       { kind },
       "notify: kind not registered ; ensure registerCoreNotificationKinds() / register<Module>NotificationKinds() ran at boot",
-    )
-    return result
+    );
+    return result;
   }
 
   const user = await db.user
@@ -62,45 +62,55 @@ export async function notify<K extends NotificationKind>(
       },
     })
     .catch((err) => {
-      logger.error({ err, userId: recipient.userId, kind }, "notify: user lookup failed")
-      return null
-    })
+      logger.error({ err, userId: recipient.userId, kind }, "notify: user lookup failed");
+      return null;
+    });
   if (!user) {
-    logger.warn({ userId: recipient.userId, kind }, "notify: recipient not found, skipping")
-    return result
+    logger.warn({ userId: recipient.userId, kind }, "notify: recipient not found, skipping");
+    return result;
   }
 
-  const locale = user.localePreference === "fr" ? "fr" : "en"
-  const dedupeKey = computeDedupeKey(data)
-  const vars = enrichVars(kind, data, locale)
+  const locale = user.localePreference === "fr" ? "fr" : "en";
+  const dedupeKey = computeDedupeKey(data);
+  // Pull the singleton org's brand overrides (logo + primary color)
+  // so the email shell renders the deployer's actual brand instead of
+  // the starter-template `BRANDING.logoSrc` from /public and the
+  // starter-orange accent bar. Returns nulls for multi-tenant or when
+  // the org row has neither field configured ; `enrichVars` falls
+  // back to BRANDING for any null.
+  const orgBranding = await resolveOrgBranding();
+  const vars = enrichVars(kind, data, locale, {
+    logoUrl: orgBranding.logoUrl,
+    primaryColor: orgBranding.primaryColor,
+  });
 
-  const messages = getNotificationTemplate(def.template)
+  const messages = getNotificationTemplate(def.template);
   if (!messages) {
-    logger.error({ kind, template: def.template }, "notify: template not registered")
-    return result
+    logger.error({ kind, template: def.template }, "notify: template not registered");
+    return result;
   }
-  const slot = messages[locale] ?? messages.en
+  const slot = messages[locale] ?? messages.en;
 
   for (const channel of def.channels) {
     // Soft-deleted users receive in-app (so cancellation reminders still
     // surface) but no outbound email/push (would leak to a deactivated address).
     if (user.deletedAt && channel !== "IN_APP") {
-      result.skipped.push({ channel, reason: "user-soft-deleted" })
-      continue
+      result.skipped.push({ channel, reason: "user-soft-deleted" });
+      continue;
     }
-    const enabled = await isChannelEnabled({ userId: user.id, kind, channel })
+    const enabled = await isChannelEnabled({ userId: user.id, kind, channel });
     if (!enabled) {
-      result.skipped.push({ channel, reason: "user-opted-out" })
-      continue
+      result.skipped.push({ channel, reason: "user-opted-out" });
+      continue;
     }
     if (await isDuplicate(user.id, kind, dedupeKey, channel)) {
-      result.skipped.push({ channel, reason: "duplicate-within-window" })
-      continue
+      result.skipped.push({ channel, reason: "duplicate-within-window" });
+      continue;
     }
 
-    const subject = renderString(slot.subject, vars)
-    const inappBody = renderString(slot.inapp.body, vars)
-    const link = slot.inapp.link ? renderString(slot.inapp.link, vars) : null
+    const subject = renderString(slot.subject, vars);
+    const inappBody = renderString(slot.inapp.body, vars);
+    const link = slot.inapp.link ? renderString(slot.inapp.link, vars) : null;
 
     const row = await db.notification.create({
       data: {
@@ -113,12 +123,12 @@ export async function notify<K extends NotificationKind>(
         link,
         dedupeKey,
       },
-    })
-    result.deliveryIds.push(row.id)
+    });
+    result.deliveryIds.push(row.id);
 
     if (channel === "EMAIL") {
-      const text = renderString(slot.text, vars)
-      const innerHtml = renderString(slot.html, vars)
+      const text = renderString(slot.text, vars);
+      const innerHtml = renderString(slot.html, vars);
       // Pass the full brand-enriched `vars` into the shell render so
       // the shell's `{{ appName }}` / `{{ logoUrl }}` / `{{ brandPrimary }}`
       // tokens substitute correctly. Without spreading `vars`, those
@@ -130,23 +140,23 @@ export async function notify<K extends NotificationKind>(
         locale,
         subject,
         body: innerHtml,
-      })
+      });
       const delivery = await sendMail({
         to: user.email,
         subject,
         text,
         html,
-      })
+      });
       if (delivery.ok) {
         await db.notification.update({
           where: { id: row.id },
           data: { deliveredAt: new Date() },
-        })
+        });
       } else {
         await db.notification.update({
           where: { id: row.id },
           data: { failedAt: new Date(), failureReason: delivery.reason },
-        })
+        });
         const failedEvent: NotificationDeliveryFailedEvent = {
           type: "notification.delivery-failed",
           userId: user.id,
@@ -155,8 +165,8 @@ export async function notify<K extends NotificationKind>(
           notificationId: row.id,
           reason: delivery.reason,
           occurredAt: new Date(),
-        }
-        await emit(failedEvent).catch(() => {})
+        };
+        await emit(failedEvent).catch(() => {});
       }
     }
 
@@ -168,11 +178,11 @@ export async function notify<K extends NotificationKind>(
       channel,
       notificationId: row.id,
       occurredAt: new Date(),
-    }
-    await emit(createdEvent).catch(() => {})
+    };
+    await emit(createdEvent).catch(() => {});
   }
 
-  return result
+  return result;
 }
 
 /** Fan-out variant. Iterates `notify()` ; the DB write batching is left
@@ -183,18 +193,18 @@ export async function notifyMany<K extends NotificationKind>(
   recipients: Array<{ userId: string }>,
   data: NotificationDataMap[K],
 ): Promise<DispatchResult> {
-  const aggregate: DispatchResult = { deliveryIds: [], skipped: [] }
+  const aggregate: DispatchResult = { deliveryIds: [], skipped: [] };
   for (const recipient of recipients) {
-    const r = await notify(kind, recipient, data)
-    aggregate.deliveryIds.push(...r.deliveryIds)
-    aggregate.skipped.push(...r.skipped)
+    const r = await notify(kind, recipient, data);
+    aggregate.deliveryIds.push(...r.deliveryIds);
+    aggregate.skipped.push(...r.skipped);
   }
-  return aggregate
+  return aggregate;
 }
 
 function computeDedupeKey(data: object): string {
-  const stable = JSON.stringify(data, Object.keys(data).sort())
-  return createHash("sha256").update(stable).digest("hex").slice(0, 32)
+  const stable = JSON.stringify(data, Object.keys(data).sort());
+  return createHash("sha256").update(stable).digest("hex").slice(0, 32);
 }
 
 async function isDuplicate(
@@ -203,8 +213,8 @@ async function isDuplicate(
   dedupeKey: string,
   channel: NotificationChannel,
 ): Promise<boolean> {
-  const db = getDb()
-  const cutoff = new Date(Date.now() - DEDUPE_WINDOW_MS)
+  const db = getDb();
+  const cutoff = new Date(Date.now() - DEDUPE_WINDOW_MS);
   const existing = await db.notification.findFirst({
     where: {
       userId,
@@ -214,6 +224,6 @@ async function isDuplicate(
       createdAt: { gte: cutoff },
     },
     select: { id: true },
-  })
-  return existing !== null
+  });
+  return existing !== null;
 }

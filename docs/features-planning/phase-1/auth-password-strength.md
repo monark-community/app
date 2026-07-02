@@ -31,7 +31,7 @@ At submission time, a password must:
 4. Not contain the user's email local-part (case-insensitive, ≥ 4 consecutive chars matching).
 5. Not contain the user's display name (case-insensitive, ≥ 4 consecutive chars matching), if the display name is known at validation time.
 
-The strength *meter* is more permissive than the rules: it displays a 0–4 score using zxcvbn (or `@zxcvbn-ts/core`) so users get feedback on "very weak → strong" even when they've cleared the hard rules. Passing hard rules ≠ green meter; the meter encourages better, the rules gate acceptance.
+The strength _meter_ is more permissive than the rules: it displays a 0–4 score using zxcvbn (or `@zxcvbn-ts/core`) so users get feedback on "very weak → strong" even when they've cleared the hard rules. Passing hard rules ≠ green meter; the meter encourages better, the rules gate acceptance.
 
 ## Data model
 
@@ -44,7 +44,7 @@ export const PASSWORD_RULES = {
   minCharClasses: 3,
   breachedCheck: true,
   emailSubstringMinLength: 4,
-} as const
+} as const;
 ```
 
 If we ever need per-deployment tuning, move to a `feature_flags`-style row. Not needed now.
@@ -55,26 +55,26 @@ If we ever need per-deployment tuning, move to a `feature_flags`-style row. Not 
 // packages/auth/src/server/index.ts
 export type PasswordCheckResult =
   | { ok: true; score: 0 | 1 | 2 | 3 | 4 }
-  | { ok: false; reasons: PasswordFailureReason[]; score: 0 | 1 | 2 | 3 | 4 }
+  | { ok: false; reasons: PasswordFailureReason[]; score: 0 | 1 | 2 | 3 | 4 };
 
 export type PasswordFailureReason =
   | "too-short"
   | "not-enough-char-classes"
   | "breached"
   | "contains-email"
-  | "contains-display-name"
+  | "contains-display-name";
 
 // Client + server usable (zxcvbn runs in both).
 export function checkPasswordOffline(
   password: string,
-  context?: { email?: string; displayName?: string }
-): PasswordCheckResult
+  context?: { email?: string; displayName?: string },
+): PasswordCheckResult;
 
 // Server-only (hits HIBP).
 export async function checkPassword(
   password: string,
-  context?: { email?: string; displayName?: string }
-): Promise<PasswordCheckResult>
+  context?: { email?: string; displayName?: string },
+): Promise<PasswordCheckResult>;
 ```
 
 `checkPasswordOffline` is everything except the HIBP hit — runs synchronously for live UI feedback. `checkPassword` on the server does the HIBP k-anonymity query and combines results.
@@ -94,11 +94,13 @@ Shipped as a shadcn-compatible primitive inside this module's `ui/`:
 ```
 
 Visuals:
+
 - Input field with show/hide toggle (eye icon).
 - Below: 4-segment bar colored by zxcvbn score (red → amber → green).
 - Below the bar: a compact list of specific failing rules, each with a checkmark when satisfied. "At least 12 characters," "Mix of 3+ character types," "Doesn't contain your email." The HIBP check is NOT shown live (would be a fetch per keystroke); it runs once on blur and displays "This password appeared in a data breach — please choose another" if flagged.
 
 Accessibility:
+
 - Strength meter has an ARIA live region so screen readers announce score changes as "Weak / Fair / Good / Strong" on debounce.
 - Failing rules are in a list; each has `aria-checked` or equivalent.
 - Color is never the only signal; icons + text always accompany.
@@ -108,16 +110,16 @@ Accessibility:
 ```ts
 // packages/auth/src/server/data/hibp.ts
 export async function isPasswordBreached(password: string): Promise<boolean> {
-  const sha1 = sha1Hex(password).toUpperCase()
-  const prefix = sha1.slice(0, 5)
-  const suffix = sha1.slice(5)
+  const sha1 = sha1Hex(password).toUpperCase();
+  const prefix = sha1.slice(0, 5);
+  const suffix = sha1.slice(5);
   const res = await fetch(`https://api.pwnedpasswords.com/range/${prefix}`, {
     headers: { "Add-Padding": "true" },
-    cache: "force-cache",  // the response is a static list; aggressively cached
+    cache: "force-cache", // the response is a static list; aggressively cached
     next: { revalidate: 3600 },
-  })
-  const text = await res.text()
-  return text.split("\n").some(line => line.split(":")[0] === suffix)
+  });
+  const text = await res.text();
+  return text.split("\n").some((line) => line.split(":")[0] === suffix);
 }
 ```
 

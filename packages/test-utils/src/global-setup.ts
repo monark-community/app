@@ -1,4 +1,4 @@
-import { startTestDb, stopTestDb, type StartedDb } from "./db"
+import { startTestDb, stopTestDb, type StartedDb } from "./db";
 
 /**
  * Vitest `globalSetup` entrypoint. Runs once at the start of a test
@@ -23,14 +23,14 @@ import { startTestDb, stopTestDb, type StartedDb } from "./db"
  *     },
  *   })
  */
-let started: StartedDb | undefined
+let started: StartedDb | undefined;
 
 export default async function setup(): Promise<() => Promise<void>> {
-  started = await startTestDb()
+  started = await startTestDb();
   return async () => {
     if (started) {
-      await stopTestDb(started)
-      started = undefined
+      await stopTestDb(started);
+      started = undefined;
     }
-  }
+  };
 }

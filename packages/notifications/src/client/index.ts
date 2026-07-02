@@ -7,4 +7,4 @@
 // Hooks like `useUnreadCount`, `useNotifications`, `useNotificationPreferences`
 // will land here when we want to centralise polling / subscription logic
 // across multiple call sites.
-export {}
+export {};

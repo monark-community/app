@@ -23,19 +23,19 @@
  * Adding a new tool: extend `TOOLS` below ; the help text auto-derives.
  */
 
-import { spawn } from "node:child_process"
+import { spawn } from "node:child_process";
 
 type Tool = {
-  name: string
-  description: string
+  name: string;
+  description: string;
   /**
    * URL to open in the default browser, OR a `{ command, args }` to
    * spawn (long-running). Use the URL form for everything but Prisma
    * Studio ; the spawn form is for tools that fuse "start the server"
    * and "open the browser" into one command.
    */
-  open: { url: string } | { command: string; args: string[] }
-}
+  open: { url: string } | { command: string; args: string[] };
+};
 
 const TOOLS: Tool[] = [
   {
@@ -72,29 +72,29 @@ const TOOLS: Tool[] = [
     description: "Internal tRPC api server (services/api on port 4000)",
     open: { url: "http://127.0.0.1:4000" },
   },
-]
+];
 
 function openUrl(url: string): void {
   // Resolve the OS-default-browser command per platform. `start`
   // needs an empty title argument because the first arg is parsed
   // as a window title when the URL has spaces / special chars.
-  const platform = process.platform
+  const platform = process.platform;
   const [command, args] =
     platform === "darwin"
       ? ["open", [url]]
       : platform === "win32"
         ? ["cmd", ["/c", "start", "", url]]
-        : ["xdg-open", [url]]
-  const child = spawn(command, args, { stdio: "ignore", detached: true })
+        : ["xdg-open", [url]];
+  const child = spawn(command, args, { stdio: "ignore", detached: true });
   child.on("error", (err) => {
-    console.error(`Failed to open ${url}: ${err.message}`)
-    console.error(`URL: ${url}`)
-    process.exitCode = 1
-  })
+    console.error(`Failed to open ${url}: ${err.message}`);
+    console.error(`URL: ${url}`);
+    process.exitCode = 1;
+  });
   // Detach so the parent process exits immediately ; the browser
   // handles the rest.
-  child.unref()
-  console.log(`→ ${url}`)
+  child.unref();
+  console.log(`→ ${url}`);
 }
 
 function spawnLongRunning(command: string, args: string[]): void {
@@ -102,46 +102,46 @@ function spawnLongRunning(command: string, args: string[]): void {
     stdio: "inherit",
     // Windows requires shell:true so `pnpm` (a .cmd shim) is found.
     shell: process.platform === "win32",
-  })
+  });
   child.on("exit", (code) => {
-    process.exitCode = code ?? 0
-  })
+    process.exitCode = code ?? 0;
+  });
 }
 
 function printHelp(): void {
-  console.log("Usage: pnpm dev:tools <name>\n")
-  console.log("Available tools:\n")
-  const pad = TOOLS.reduce((max, t) => Math.max(max, t.name.length), 0)
+  console.log("Usage: pnpm dev:tools <name>\n");
+  console.log("Available tools:\n");
+  const pad = TOOLS.reduce((max, t) => Math.max(max, t.name.length), 0);
   for (const tool of TOOLS) {
-    console.log(`  ${tool.name.padEnd(pad)}   ${tool.description}`)
+    console.log(`  ${tool.name.padEnd(pad)}   ${tool.description}`);
   }
-  console.log(`  ${"all".padEnd(pad)}   Open every URL-based tool at once`)
+  console.log(`  ${"all".padEnd(pad)}   Open every URL-based tool at once`);
 }
 
 function main(): void {
-  const arg = process.argv[2]
+  const arg = process.argv[2];
   if (!arg) {
-    printHelp()
-    return
+    printHelp();
+    return;
   }
   if (arg === "all") {
     for (const tool of TOOLS) {
-      if ("url" in tool.open) openUrl(tool.open.url)
+      if ("url" in tool.open) openUrl(tool.open.url);
     }
-    return
+    return;
   }
-  const tool = TOOLS.find((t) => t.name === arg)
+  const tool = TOOLS.find((t) => t.name === arg);
   if (!tool) {
-    console.error(`Unknown tool: ${arg}\n`)
-    printHelp()
-    process.exitCode = 1
-    return
+    console.error(`Unknown tool: ${arg}\n`);
+    printHelp();
+    process.exitCode = 1;
+    return;
   }
   if ("url" in tool.open) {
-    openUrl(tool.open.url)
+    openUrl(tool.open.url);
   } else {
-    spawnLongRunning(tool.open.command, tool.open.args)
+    spawnLongRunning(tool.open.command, tool.open.args);
   }
 }
 
-main()
+main();

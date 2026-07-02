@@ -1,35 +1,27 @@
-"use client"
+"use client";
 
-import { useRouter } from "next/navigation"
-import { useEffect, useMemo, useRef, useState } from "react"
-import { useTranslations } from "next-intl"
-import {
-  ChevronDown,
-  ChevronRight,
-  Lock,
-  Search,
-} from "lucide-react"
-import { toast } from "sonner"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Checkbox } from "@/components/ui/checkbox"
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Separator } from "@/components/ui/separator"
-import { Skeleton } from "@/components/ui/skeleton"
-import { Textarea } from "@/components/ui/textarea"
-import { DangerCard, DangerRow } from "@/components/danger-card"
-import { DirtyFormBar } from "@/components/dirty-form-bar"
-import { PageHeader } from "@/components/page-header"
-import { PageSection } from "@/components/page-section"
-import { trpc } from "@/lib/trpc"
+import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
+import { ChevronDown, ChevronRight, Lock, Search } from "lucide-react";
+import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { ColorInput } from "@/components/ui/color-input";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Textarea } from "@/components/ui/textarea";
+import { DangerCard, DangerRow } from "@/components/danger-card";
+import { DirtyFormBar } from "@/components/dirty-form-bar";
+import { PageHeader } from "@/components/page-header";
+import { PageSection } from "@/components/page-section";
+import { trpc } from "@/lib/trpc";
 
-const ADMIN_ROLE_KEY = "ADMIN"
+const ADMIN_ROLE_KEY = "ADMIN";
 
 /**
  * Convert a free-form role name into a server-acceptable role key :
@@ -48,9 +40,9 @@ function deriveKeyFromName(name: string): string {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "_")
     .replace(/^_+|_+$/g, "")
-    .slice(0, 60)
-  if (cleaned.length < 2) return "role"
-  return cleaned
+    .slice(0, 60);
+  if (cleaned.length < 2) return "role";
+  return cleaned;
 }
 
 /**
@@ -78,20 +70,32 @@ function deriveKeyFromName(name: string): string {
  * dense permission sets.
  */
 export function RoleEditor(
-  props:
-    | { mode: "create"; organizationId: string }
-    | { mode: "edit"; roleId: string },
+  props: ({ mode: "create"; organizationId: string } | { mode: "edit"; roleId: string }) & {
+    containment?: "viewport" | "container";
+    onClose?: () => void;
+  },
 ) {
-  const t = useTranslations("admin.rbac.editor")
-  const tCommon = useTranslations("common")
-  const router = useRouter()
-  const utils = trpc.useUtils()
-  const isEdit = props.mode === "edit"
+  const t = useTranslations("admin.rbac.editor");
+  const tCommon = useTranslations("common");
+  const router = useRouter();
+  const utils = trpc.useUtils();
+  const isEdit = props.mode === "edit";
+  // Panel mode : the editor renders inside a detail panel, so it drops its
+  // own PageHeader (the panel supplies PanelHeaderBar), anchors the save
+  // bar to the panel, and closes the panel on success instead of routing.
+  const containment = props.containment ?? "viewport";
+  const inPanel = containment === "container";
+  const done =
+    props.onClose ??
+    (() => {
+      router.push("/admin/rbac");
+      router.refresh();
+    });
 
   const permsQuery = trpc.rbac.adminListPermissions.useQuery(undefined, {
     refetchOnWindowFocus: false,
     staleTime: Infinity,
-  })
+  });
 
   // Edit-mode loads the role's existing record by id (org-agnostic ;
   // the role row carries its own organizationId). Create-mode skips
@@ -99,134 +103,129 @@ export function RoleEditor(
   const roleByIdQuery = trpc.rbac.adminGetRole.useQuery(
     isEdit ? { id: props.roleId } : { id: "" },
     { enabled: isEdit, refetchOnWindowFocus: false },
-  )
+  );
 
-  const role = isEdit ? roleByIdQuery.data ?? null : null
-  const isBuiltInAdmin =
-    role !== null && role.builtIn && role.key === ADMIN_ROLE_KEY
+  const role = isEdit ? (roleByIdQuery.data ?? null) : null;
+  const isBuiltInAdmin = role !== null && role.builtIn && role.key === ADMIN_ROLE_KEY;
 
-  const [name, setName] = useState("")
-  const [description, setDescription] = useState("")
-  const [color, setColor] = useState("")
-  const [permissions, setPermissions] = useState<Set<string>>(new Set())
-  const [search, setSearch] = useState("")
-  const [openCategories, setOpenCategories] = useState<Set<string>>(new Set())
-  const [hydrated, setHydrated] = useState(!isEdit)
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [color, setColor] = useState("");
+  const [permissions, setPermissions] = useState<Set<string>>(new Set());
+  const [search, setSearch] = useState("");
+  const [openCategories, setOpenCategories] = useState<Set<string>>(new Set());
+  const [hydrated, setHydrated] = useState(!isEdit);
 
   // Edit mode hydrates form state from the loaded role (once). Create
   // mode starts with an empty form ; no hydration needed.
   useEffect(() => {
-    if (!isEdit) return
-    if (!role) return
-    if (hydrated) return
-    setName(role.name)
-    setDescription(role.description ?? "")
-    setColor(role.color ?? "")
-    setPermissions(new Set(role.permissions.map((p) => p.permission)))
-    setHydrated(true)
-  }, [hydrated, isEdit, role])
+    if (!isEdit) return;
+    if (!role) return;
+    if (hydrated) return;
+    setName(role.name);
+    setDescription(role.description ?? "");
+    setColor(role.color ?? "");
+    setPermissions(new Set(role.permissions.map((p) => p.permission)));
+    setHydrated(true);
+  }, [hydrated, isEdit, role]);
 
   const create = trpc.rbac.adminCreateRole.useMutation({
     onSuccess: () => {
-      void utils.rbac.adminListRoles.invalidate()
-      toast.success(t("createSuccess"))
-      router.push("/admin/rbac")
-      router.refresh()
+      void utils.rbac.adminListRoles.invalidate();
+      toast.success(t("createSuccess"));
+      done();
     },
     onError: (error) => toast.error(error.message || t("createError")),
-  })
+  });
 
   const update = trpc.rbac.adminUpdateRole.useMutation({
     onSuccess: () => {
-      void utils.rbac.adminListRoles.invalidate()
-      void utils.rbac.adminGetRole.invalidate()
-      toast.success(t("updateSuccess"))
-      router.push("/admin/rbac")
-      router.refresh()
+      void utils.rbac.adminListRoles.invalidate();
+      void utils.rbac.adminGetRole.invalidate();
+      toast.success(t("updateSuccess"));
+      done();
     },
     onError: (error) => toast.error(error.message || t("updateError")),
-  })
+  });
 
   const remove = trpc.rbac.adminDeleteRole.useMutation({
     onSuccess: () => {
-      void utils.rbac.adminListRoles.invalidate()
-      toast.success(t("deleteSuccess"))
-      router.push("/admin/rbac")
-      router.refresh()
+      void utils.rbac.adminListRoles.invalidate();
+      toast.success(t("deleteSuccess"));
+      done();
     },
     onError: (error) => toast.error(error.message || t("deleteError")),
-  })
+  });
 
-  const submitting = create.isPending || update.isPending || remove.isPending
+  const submitting = create.isPending || update.isPending || remove.isPending;
 
   // Search index : lowercase needle, hit on key or description per
   // permission. Empty needle is a no-op (all permissions visible).
-  const needle = search.trim().toLowerCase()
+  const needle = search.trim().toLowerCase();
   const filteredCategories = useMemo(() => {
-    const cats = permsQuery.data?.categories ?? []
-    if (needle === "") return cats
+    const cats = permsQuery.data?.categories ?? [];
+    if (needle === "") return cats;
     return cats
       .map((cat) => ({
         ...cat,
         permissions: cat.permissions.filter(
           (p) =>
-            p.key.toLowerCase().includes(needle) ||
-            p.description.toLowerCase().includes(needle),
+            p.key.toLowerCase().includes(needle) || p.description.toLowerCase().includes(needle),
         ),
       }))
-      .filter((cat) => cat.permissions.length > 0)
-  }, [permsQuery.data, needle])
+      .filter((cat) => cat.permissions.length > 0);
+  }, [permsQuery.data, needle]);
 
   // While a search is active, expose every matching category. The
   // ref-guarded check skips re-applying when the operator manually
   // collapses a section ; the auto-expand only fires on needle change.
-  const previousNeedle = useRef("")
+  const previousNeedle = useRef("");
   useEffect(() => {
-    if (needle === previousNeedle.current) return
-    previousNeedle.current = needle
-    if (needle === "") return
-    setOpenCategories(new Set(filteredCategories.map((c) => c.category)))
-  }, [needle, filteredCategories])
+    if (needle === previousNeedle.current) return;
+    previousNeedle.current = needle;
+    if (needle === "") return;
+    setOpenCategories(new Set(filteredCategories.map((c) => c.category)));
+  }, [needle, filteredCategories]);
 
   function toggleCategoryOpen(category: string, open: boolean) {
     setOpenCategories((current) => {
-      const out = new Set(current)
-      if (open) out.add(category)
-      else out.delete(category)
-      return out
-    })
+      const out = new Set(current);
+      if (open) out.add(category);
+      else out.delete(category);
+      return out;
+    });
   }
 
   function togglePermission(permission: string, next: boolean) {
     setPermissions((current) => {
-      const out = new Set(current)
-      if (next) out.add(permission)
-      else out.delete(permission)
-      return out
-    })
+      const out = new Set(current);
+      if (next) out.add(permission);
+      else out.delete(permission);
+      return out;
+    });
   }
 
   function toggleCategoryAll(categoryPerms: ReadonlyArray<{ key: string }>) {
     setPermissions((current) => {
-      const out = new Set(current)
-      const allSelected = categoryPerms.every((p) => out.has(p.key))
+      const out = new Set(current);
+      const allSelected = categoryPerms.every((p) => out.has(p.key));
       if (allSelected) {
-        for (const p of categoryPerms) out.delete(p.key)
+        for (const p of categoryPerms) out.delete(p.key);
       } else {
-        for (const p of categoryPerms) out.add(p.key)
+        for (const p of categoryPerms) out.add(p.key);
       }
-      return out
-    })
+      return out;
+    });
   }
 
   function onSubmit() {
-    const trimmedName = name.trim()
+    const trimmedName = name.trim();
     if (trimmedName.length < 1) {
-      toast.error(t("nameRequired"))
-      return
+      toast.error(t("nameRequired"));
+      return;
     }
-    const trimmedColor = color.trim() || null
-    const list = Array.from(permissions)
+    const trimmedColor = color.trim() || null;
+    const list = Array.from(permissions);
     if (isEdit && role) {
       update.mutate({
         id: role.id,
@@ -234,8 +233,8 @@ export function RoleEditor(
         description: description.trim() || null,
         color: trimmedColor,
         permissions: isBuiltInAdmin ? undefined : list,
-      })
-      return
+      });
+      return;
     }
     if (!isEdit) {
       create.mutate({
@@ -245,7 +244,7 @@ export function RoleEditor(
         description: description.trim() || null,
         color: trimmedColor,
         permissions: list,
-      })
+      });
     }
   }
 
@@ -254,53 +253,46 @@ export function RoleEditor(
   // only slides up once the operator has actually changed something.
   const dirty = useMemo(() => {
     if (isEdit) {
-      if (!role) return false
-      const baselinePerms = new Set(role.permissions.map((p) => p.permission))
-      if (name.trim() !== role.name) return true
+      if (!role) return false;
+      const baselinePerms = new Set(role.permissions.map((p) => p.permission));
+      if (name.trim() !== role.name) return true;
       if ((description.trim() || null) !== (role.description ?? null)) {
-        return true
+        return true;
       }
-      if ((color.trim() || null) !== (role.color ?? null)) return true
+      if ((color.trim() || null) !== (role.color ?? null)) return true;
       if (!isBuiltInAdmin) {
-        if (permissions.size !== baselinePerms.size) return true
+        if (permissions.size !== baselinePerms.size) return true;
         for (const p of permissions) {
-          if (!baselinePerms.has(p)) return true
+          if (!baselinePerms.has(p)) return true;
         }
       }
-      return false
+      return false;
     }
     return (
-      name.trim() !== "" ||
-      description.trim() !== "" ||
-      color.trim() !== "" ||
-      permissions.size > 0
-    )
-  }, [isEdit, role, isBuiltInAdmin, name, description, color, permissions])
+      name.trim() !== "" || description.trim() !== "" || color.trim() !== "" || permissions.size > 0
+    );
+  }, [isEdit, role, isBuiltInAdmin, name, description, color, permissions]);
 
   function onCancel() {
     if (isEdit && role) {
-      setName(role.name)
-      setDescription(role.description ?? "")
-      setColor(role.color ?? "")
-      setPermissions(new Set(role.permissions.map((p) => p.permission)))
-      return
+      setName(role.name);
+      setDescription(role.description ?? "");
+      setColor(role.color ?? "");
+      setPermissions(new Set(role.permissions.map((p) => p.permission)));
+      return;
     }
-    setName("")
-    setDescription("")
-    setColor("")
-    setPermissions(new Set())
+    setName("");
+    setDescription("");
+    setColor("");
+    setPermissions(new Set());
   }
 
   function onDelete() {
-    if (!isEdit || !role) return
-    if (
-      !confirm(
-        t("deleteConfirm", { name: role.name }),
-      )
-    ) {
-      return
+    if (!isEdit || !role) return;
+    if (!confirm(t("deleteConfirm", { name: role.name }))) {
+      return;
     }
-    remove.mutate({ id: role.id })
+    remove.mutate({ id: role.id });
   }
 
   if (isEdit && (roleByIdQuery.isLoading || (!role && !roleByIdQuery.error))) {
@@ -309,7 +301,7 @@ export function RoleEditor(
         <Skeleton className="h-9 w-48" />
         <Skeleton className="h-64 w-full" />
       </div>
-    )
+    );
   }
   if (isEdit && roleByIdQuery.error) {
     return (
@@ -323,21 +315,23 @@ export function RoleEditor(
           {roleByIdQuery.error.message || t("loadError")}
         </p>
       </div>
-    )
+    );
   }
 
   return (
-    <div className="space-y-8">
-      <PageHeader
-        title={
-          isEdit
-            ? t("editTitle", { name: role?.name ?? "" })
-            : t("createTitle")
-        }
-        subtitle={isEdit ? t("editSubtitle") : t("createSubtitle")}
-        backHref="/admin/rbac"
-        backLabel={t("back")}
-      />
+    <div className={inPanel ? "space-y-8 pb-20" : "space-y-8"}>
+      {inPanel ? (
+        <h2 className="text-lg font-semibold tracking-tight">
+          {isEdit ? t("editTitle", { name: role?.name ?? "" }) : t("createTitle")}
+        </h2>
+      ) : (
+        <PageHeader
+          title={isEdit ? t("editTitle", { name: role?.name ?? "" }) : t("createTitle")}
+          subtitle={isEdit ? t("editSubtitle") : t("createSubtitle")}
+          backHref="/admin/rbac"
+          backLabel={t("back")}
+        />
+      )}
 
       <PageSection title={t("identitySectionTitle")}>
         <div className="space-y-2">
@@ -363,26 +357,13 @@ export function RoleEditor(
         </div>
         <div className="space-y-2">
           <Label htmlFor="role-color">{t("colorLabel")}</Label>
-          <div className="flex items-center gap-3">
-            <Input
-              id="role-color"
-              value={color}
-              onChange={(event) => setColor(event.target.value)}
-              placeholder="#F0870C"
-              className="font-mono"
-              maxLength={7}
-            />
-            <span
-              aria-hidden
-              className="h-9 w-9 shrink-0 rounded-md border border-border"
-              style={{
-                backgroundColor:
-                  color && /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(color)
-                    ? color
-                    : "transparent",
-              }}
-            />
-          </div>
+          <ColorInput
+            id="role-color"
+            value={color}
+            onChange={setColor}
+            placeholder="#F0870C"
+            aria-label={t("colorLabel")}
+          />
           <p className="text-xs text-muted-foreground">{t("colorHint")}</p>
         </div>
       </PageSection>
@@ -434,9 +415,7 @@ export function RoleEditor(
                     permissions={cat.permissions}
                     selected={permissions}
                     open={openCategories.has(cat.category)}
-                    onOpenChange={(next) =>
-                      toggleCategoryOpen(cat.category, next)
-                    }
+                    onOpenChange={(next) => toggleCategoryOpen(cat.category, next)}
                     onToggleAll={() => toggleCategoryAll(cat.permissions)}
                     onTogglePermission={togglePermission}
                   />
@@ -453,12 +432,7 @@ export function RoleEditor(
             title={t("deleteCta")}
             description={t("deleteRowDescription")}
             action={
-              <Button
-                type="button"
-                variant="destructive"
-                onClick={onDelete}
-                disabled={submitting}
-              >
+              <Button type="button" variant="destructive" onClick={onDelete} disabled={submitting}>
                 {t("deleteCta")}
               </Button>
             }
@@ -467,6 +441,7 @@ export function RoleEditor(
       )}
 
       <DirtyFormBar
+        containment={containment}
         open={dirty}
         onSave={onSubmit}
         onCancel={onCancel}
@@ -477,13 +452,13 @@ export function RoleEditor(
         message={tCommon("unsavedChanges")}
       />
     </div>
-  )
+  );
 }
 
 type CategoryPermission = {
-  key: string
-  description: string
-}
+  key: string;
+  description: string;
+};
 
 function CategorySection({
   categoryLabel,
@@ -494,22 +469,22 @@ function CategorySection({
   onToggleAll,
   onTogglePermission,
 }: {
-  categoryLabel: string
-  permissions: ReadonlyArray<CategoryPermission>
-  selected: Set<string>
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  onToggleAll: () => void
-  onTogglePermission: (permission: string, next: boolean) => void
+  categoryLabel: string;
+  permissions: ReadonlyArray<CategoryPermission>;
+  selected: Set<string>;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onToggleAll: () => void;
+  onTogglePermission: (permission: string, next: boolean) => void;
 }) {
-  const t = useTranslations("admin.rbac.editor")
-  const total = permissions.length
+  const t = useTranslations("admin.rbac.editor");
+  const total = permissions.length;
   const selectedCount = permissions.reduce(
     (acc, perm) => acc + (selected.has(perm.key) ? 1 : 0),
     0,
-  )
+  );
   const state: "none" | "some" | "all" =
-    selectedCount === 0 ? "none" : selectedCount === total ? "all" : "some"
+    selectedCount === 0 ? "none" : selectedCount === total ? "all" : "some";
 
   return (
     <Collapsible open={open} onOpenChange={onOpenChange}>
@@ -547,28 +522,24 @@ function CategorySection({
       <CollapsibleContent>
         <ul className="space-y-1 px-2 pb-1 pt-1">
           {permissions.map((perm) => {
-            const checked = selected.has(perm.key)
+            const checked = selected.has(perm.key);
             return (
               <li key={perm.key}>
                 <label className="flex cursor-pointer items-start gap-2 rounded-md border border-border px-3 py-2 text-sm">
                   <Checkbox
                     checked={checked}
-                    onChange={(event) =>
-                      onTogglePermission(perm.key, event.target.checked)
-                    }
+                    onChange={(event) => onTogglePermission(perm.key, event.target.checked)}
                   />
                   <span className="flex-1 space-y-0.5">
                     <span className="block font-mono text-xs">{perm.key}</span>
-                    <span className="block text-xs text-muted-foreground">
-                      {perm.description}
-                    </span>
+                    <span className="block text-xs text-muted-foreground">{perm.description}</span>
                   </span>
                 </label>
               </li>
-            )
+            );
           })}
         </ul>
       </CollapsibleContent>
     </Collapsible>
-  )
+  );
 }

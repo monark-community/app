@@ -1,18 +1,18 @@
-"use client"
+"use client";
 
-import { useTranslations } from "next-intl"
-import { Button } from "@/components/ui/button"
-import { trpc } from "@/lib/trpc"
-import { CollapsibleSection } from "../collapsible-section"
+import { useTranslations } from "next-intl";
+import { Button } from "@/components/ui/button";
+import { trpc } from "@/lib/trpc";
+import { CollapsibleSection } from "../collapsible-section";
 
 export function CurrentOrgPanel() {
-  const t = useTranslations("devOverlay")
+  const t = useTranslations("devOverlay");
   const current = trpc.organizations.current.useQuery(undefined, {
     refetchOnWindowFocus: false,
-  })
+  });
   const mine = trpc.organizations.mine.useQuery(undefined, {
     refetchOnWindowFocus: false,
-  })
+  });
 
   // `organizations.current` only resolves the org when the session
   // carries an `active_organization_id` claim ; in single-tenant
@@ -21,15 +21,15 @@ export function CurrentOrgPanel() {
   // working org. Fall back to the first membership so the dev panel
   // surfaces something useful instead of "(none)" — annotated below
   // so the operator can tell apart "claim resolved" from "inferred".
-  const inferredOrg = current.data ?? mine.data?.[0] ?? null
-  const inferredFromClaim = current.data !== null && current.data !== undefined
+  const inferredOrg = current.data ?? mine.data?.[0] ?? null;
+  const inferredFromClaim = current.data !== null && current.data !== undefined;
 
-  const isFetching = current.isFetching || mine.isFetching
+  const isFetching = current.isFetching || mine.isFetching;
   const badge = inferredOrg ? (
     <span className="rounded-full bg-emerald-400/20 px-1.5 py-0.5 font-mono text-[10px] text-emerald-400">
       {inferredOrg.slug}
     </span>
-  ) : null
+  ) : null;
 
   return (
     <CollapsibleSection title={t("sections.currentOrg")} badge={badge}>
@@ -79,8 +79,8 @@ export function CurrentOrgPanel() {
           variant="outline"
           size="sm"
           onClick={() => {
-            void current.refetch()
-            void mine.refetch()
+            void current.refetch();
+            void mine.refetch();
           }}
           disabled={isFetching}
           className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
@@ -89,5 +89,5 @@ export function CurrentOrgPanel() {
         </Button>
       </div>
     </CollapsibleSection>
-  )
+  );
 }

@@ -92,22 +92,25 @@ model Invite {
 ```ts
 // packages/organizations/src/server/procedures/*.ts
 
-"use server"
+"use server";
 export async function createOrganization(input: {
-  displayName: string
-  slug?: string          // auto-derived if absent
-}): Promise<Organization>
+  displayName: string;
+  slug?: string; // auto-derived if absent
+}): Promise<Organization>;
 
-"use server"
-export async function updateOrganization(id: string, input: Partial<{
-  displayName: string
-  slug: string
-  logoUrl: string
-  primaryColor: string
-}>): Promise<Organization>
+("use server");
+export async function updateOrganization(
+  id: string,
+  input: Partial<{
+    displayName: string;
+    slug: string;
+    logoUrl: string;
+    primaryColor: string;
+  }>,
+): Promise<Organization>;
 
-"use server"
-export async function deleteOrganization(id: string): Promise<void>
+("use server");
+export async function deleteOrganization(id: string): Promise<void>;
 //   Soft-delete; marks deletedAt; all memberships remain in history.
 //   RBAC-guarded: owner only.
 ```
@@ -115,38 +118,44 @@ export async function deleteOrganization(id: string): Promise<void>
 ### Membership
 
 ```ts
-"use server"
-export async function listMembers(orgId: string): Promise<MemberView[]>
+"use server";
+export async function listMembers(orgId: string): Promise<MemberView[]>;
 
-"use server"
-export async function removeMember(orgId: string, userId: string): Promise<void>
+("use server");
+export async function removeMember(orgId: string, userId: string): Promise<void>;
 ```
 
 ### Invites
 
 ```ts
-"use server"
-export async function createInvite(orgId: string, input: {
-  email: string
-  role: Role
-}): Promise<Invite>
+"use server";
+export async function createInvite(
+  orgId: string,
+  input: {
+    email: string;
+    role: Role;
+  },
+): Promise<Invite>;
 
-"use server"
-export async function listInvites(orgId: string, opts?: { status?: "pending" | "accepted" | "expired" }): Promise<Invite[]>
+("use server");
+export async function listInvites(
+  orgId: string,
+  opts?: { status?: "pending" | "accepted" | "expired" },
+): Promise<Invite[]>;
 
-"use server"
-export async function revokeInvite(orgId: string, inviteId: string): Promise<void>
+("use server");
+export async function revokeInvite(orgId: string, inviteId: string): Promise<void>;
 
-"use server"
-export async function acceptInvite(token: string): Promise<{ organizationId: string }>
+("use server");
+export async function acceptInvite(token: string): Promise<{ organizationId: string }>;
 //   Called from /invite/<token> landing page after user is signed in.
 ```
 
 ### Switching
 
 ```ts
-"use server"
-export async function switchActiveOrg(orgId: string): Promise<void>
+"use server";
+export async function switchActiveOrg(orgId: string): Promise<void>;
 //   Updates session claim; subsequent requests scope to the new org.
 ```
 
@@ -154,9 +163,9 @@ export async function switchActiveOrg(orgId: string): Promise<void>
 
 ```ts
 // packages/organizations/src/server/index.ts
-export async function getCurrentOrg(): Promise<Organization | null>
-export async function getUserOrgs(userId: string): Promise<Organization[]>
-export async function requireOrg(): Promise<Organization>  // throws if none
+export async function getCurrentOrg(): Promise<Organization | null>;
+export async function getUserOrgs(userId: string): Promise<Organization[]>;
+export async function requireOrg(): Promise<Organization>; // throws if none
 ```
 
 ## UI flows
@@ -208,11 +217,11 @@ Primary color + logo are resolved server-side per request and injected into the 
 ### Events
 
 ```ts
-export const ORGANIZATION_CREATED = "organization.created"
-export const MEMBER_JOINED = "organization.member-joined"
-export const MEMBER_REMOVED = "organization.member-removed"
-export const INVITE_SENT = "organization.invite-sent"
-export const INVITE_ACCEPTED = "organization.invite-accepted"
+export const ORGANIZATION_CREATED = "organization.created";
+export const MEMBER_JOINED = "organization.member-joined";
+export const MEMBER_REMOVED = "organization.member-removed";
+export const INVITE_SENT = "organization.invite-sent";
+export const INVITE_ACCEPTED = "organization.invite-accepted";
 ```
 
 Onboarding (Phase 2) listens to `MEMBER_JOINED` to kick off role-specific onboarding. Referral (Phase 2) listens to `INVITE_SENT` if we want to tie referrals to invites.

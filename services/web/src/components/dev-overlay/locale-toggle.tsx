@@ -1,17 +1,16 @@
-"use client"
+"use client";
 
-import { useLocale } from "next-intl"
-import { useTransition } from "react"
-import { Button } from "@/components/ui/button"
-import { LOCALES, type Locale } from "@/i18n/config"
-import { setLocaleAction } from "@/i18n/set-locale-action"
+import { useLocale } from "next-intl";
+import { useTransition } from "react";
+import { Button } from "@/components/ui/button";
+import { LOCALES, type Locale } from "@/i18n/config";
+import { setLocaleAction } from "@/i18n/set-locale-action";
 
 export function LocaleToggle() {
-  const current = useLocale() as Locale
-  const [isPending, startTransition] = useTransition()
+  const current = useLocale() as Locale;
+  const [isPending, startTransition] = useTransition();
 
-  const next: Locale =
-    LOCALES[(LOCALES.indexOf(current) + 1) % LOCALES.length] ?? LOCALES[0]
+  const next: Locale = LOCALES[(LOCALES.indexOf(current) + 1) % LOCALES.length] ?? LOCALES[0];
 
   return (
     <Button
@@ -25,5 +24,5 @@ export function LocaleToggle() {
     >
       {current}
     </Button>
-  )
+  );
 }

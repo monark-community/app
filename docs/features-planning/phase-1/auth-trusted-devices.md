@@ -63,8 +63,8 @@ Internal (called by `auth/sign-in`):
 
 export async function recognizeOrRegister(
   userId: string,
-  request: Request
-): Promise<{ device: TrustedDevice; isNew: boolean }>
+  request: Request,
+): Promise<{ device: TrustedDevice; isNew: boolean }>;
 //   Reads the device_id cookie. If present and matches a live (non-revoked)
 //   record for this user, updates lastSeen* and returns { isNew: false }.
 //   Otherwise generates a new cookie, persists a new TrustedDevice,
@@ -74,18 +74,18 @@ export async function recognizeOrRegister(
 Public (server actions on the security page):
 
 ```ts
-"use server"
-export async function listMyDevices(): Promise<TrustedDeviceView[]>
+"use server";
+export async function listMyDevices(): Promise<TrustedDeviceView[]>;
 //   Returns the user's non-revoked devices plus "current" flag
 //   indicating which one this request came from.
 
-"use server"
-export async function revokeDevice(deviceId: string): Promise<void>
+("use server");
+export async function revokeDevice(deviceId: string): Promise<void>;
 //   Soft-deletes (stamps revokedAt) and revokes all Supabase sessions
 //   tied to this device's cookie.
 
-"use server"
-export async function renameDevice(deviceId: string, label: string): Promise<void>
+("use server");
+export async function renameDevice(deviceId: string, label: string): Promise<void>;
 ```
 
 ## UI flows
@@ -129,16 +129,16 @@ export async function renameDevice(deviceId: string, label: string): Promise<voi
 ### Events emitted
 
 ```ts
-export const TRUSTED_DEVICE_ADDED = "trusted-device.added"
-export const TRUSTED_DEVICE_REVOKED = "trusted-device.revoked"
+export const TRUSTED_DEVICE_ADDED = "trusted-device.added";
+export const TRUSTED_DEVICE_REVOKED = "trusted-device.revoked";
 
 export type TrustedDeviceAddedEvent = {
-  userId: string
-  deviceId: string
-  userAgent: string
-  country?: string
-  at: Date
-}
+  userId: string;
+  deviceId: string;
+  userAgent: string;
+  country?: string;
+  at: Date;
+};
 ```
 
 The TOTP module subscribes internally (no event boundary; same core) to refresh cached "does this user+device need TOTP?" logic.

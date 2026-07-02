@@ -24,13 +24,13 @@ RBAC is the single source of truth for "what role does this user have in this or
 
 ## Roles
 
-| Role | Scope | Granted by | Primary capabilities |
-|---|---|---|---|
-| `MonarkAdmin` | Platform | Another MonarkAdmin | Everything. Cross-org admin. Access to feature flags, Monark-specific admin tooling. |
-| `Admin` | Per org | Org owner or another org Admin | Manage org settings, members, invites, roles (below Admin). White-label. |
-| `Developer` | Per org | Admin | Participate in votes; earn contribution points; contribute via whatever extended modules enable. Default self-onboarding target. |
-| `Ambassador` | Per org | Admin | Represents Monark; likely overlaps with Developer capabilities plus some community-facing affordances in Phase 2+. |
-| `Student` | Per org | Admin (or via guided onboarding + program enrollment) | Guided onboarding; limited-time relationship; can convert to Developer. |
+| Role          | Scope    | Granted by                                            | Primary capabilities                                                                                                             |
+| ------------- | -------- | ----------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `MonarkAdmin` | Platform | Another MonarkAdmin                                   | Everything. Cross-org admin. Access to feature flags, Monark-specific admin tooling.                                             |
+| `Admin`       | Per org  | Org owner or another org Admin                        | Manage org settings, members, invites, roles (below Admin). White-label.                                                         |
+| `Developer`   | Per org  | Admin                                                 | Participate in votes; earn contribution points; contribute via whatever extended modules enable. Default self-onboarding target. |
+| `Ambassador`  | Per org  | Admin                                                 | Represents Monark; likely overlaps with Developer capabilities plus some community-facing affordances in Phase 2+.               |
+| `Student`     | Per org  | Admin (or via guided onboarding + program enrollment) | Guided onboarding; limited-time relationship; can convert to Developer.                                                          |
 
 `MonarkAdmin` is deliberately separate from org `Admin` so the UI and code can distinguish "org owner" from "platform operator" without cross-leakage.
 
@@ -81,7 +81,7 @@ export const PERMISSIONS = {
   "org:invite-member": ["MONARK_ADMIN", "ADMIN"],
   "org:remove-member": ["MONARK_ADMIN", "ADMIN"],
   "org:assign-role": ["MONARK_ADMIN", "ADMIN"],
-  "org:assign-admin-role": ["MONARK_ADMIN"],       // only MonarkAdmin grants org Admin
+  "org:assign-admin-role": ["MONARK_ADMIN"], // only MonarkAdmin grants org Admin
 
   "feature-flags:read": ["MONARK_ADMIN", "ADMIN"],
   "feature-flags:write": ["MONARK_ADMIN"],
@@ -95,9 +95,9 @@ export const PERMISSIONS = {
   "contributions:view-own": ["MONARK_ADMIN", "ADMIN", "DEVELOPER", "AMBASSADOR", "STUDENT"],
   "contributions:view-all": ["MONARK_ADMIN", "ADMIN"],
   "referral:invite": ["MONARK_ADMIN", "ADMIN", "DEVELOPER", "AMBASSADOR"],
-} as const satisfies Record<string, Role[]>
+} as const satisfies Record<string, Role[]>;
 
-export type Permission = keyof typeof PERMISSIONS
+export type Permission = keyof typeof PERMISSIONS;
 ```
 
 Extended modules extend this by adding entries in their own permission files; a small script aggregates at build time.
@@ -108,50 +108,40 @@ Extended modules extend this by adding entries in their own permission files; a 
 // packages/rbac/src/server/index.ts
 
 // Read
-export async function hasRole(
-  userId: string,
-  role: Role,
-  orgId?: string
-): Promise<boolean>
+export async function hasRole(userId: string, role: Role, orgId?: string): Promise<boolean>;
 
-export async function getUserRoles(
-  userId: string,
-  orgId?: string
-): Promise<Role[]>
+export async function getUserRoles(userId: string, orgId?: string): Promise<Role[]>;
 
-export async function primaryRole(
-  userId: string,
-  orgId: string
-): Promise<Role | null>
+export async function primaryRole(userId: string, orgId: string): Promise<Role | null>;
 
 export async function hasPermission(
   userId: string,
   permission: Permission,
-  orgId?: string
-): Promise<boolean>
+  orgId?: string,
+): Promise<boolean>;
 
 // Guards for server actions / pages
-export async function requireRole(role: Role, orgId?: string): Promise<User>
-export async function requirePermission(permission: Permission, orgId?: string): Promise<User>
+export async function requireRole(role: Role, orgId?: string): Promise<User>;
+export async function requirePermission(permission: Permission, orgId?: string): Promise<User>;
 
 // Write
-"use server"
+("use server");
 export async function assignRole(input: {
-  userId: string
-  role: Role
-  organizationId?: string     // required unless role is MonarkAdmin
-  reason?: string
-}): Promise<RoleAssignment>
+  userId: string;
+  role: Role;
+  organizationId?: string; // required unless role is MonarkAdmin
+  reason?: string;
+}): Promise<RoleAssignment>;
 
-"use server"
-export async function revokeRole(assignmentId: string, reason?: string): Promise<void>
+("use server");
+export async function revokeRole(assignmentId: string, reason?: string): Promise<void>;
 ```
 
 `requireRole` / `requirePermission` are the canonical way to protect a server action or server component:
 
 ```tsx
 export default async function AdminPage() {
-  await requirePermission("org:update-settings")
+  await requirePermission("org:update-settings");
   // ... the actual admin UI
 }
 ```
@@ -189,18 +179,18 @@ The app shell renders the primary role via a `useRole()` hook (hydrated from ser
 ### Events
 
 ```ts
-export const ROLE_ASSIGNED = "rbac.role-assigned"
-export const ROLE_REVOKED = "rbac.role-revoked"
+export const ROLE_ASSIGNED = "rbac.role-assigned";
+export const ROLE_REVOKED = "rbac.role-revoked";
 
 export type RoleAssignedEvent = {
-  assignmentId: string
-  userId: string
-  organizationId: string | null
-  role: Role
-  grantedById: string
-  reason?: string
-  at: Date
-}
+  assignmentId: string;
+  userId: string;
+  organizationId: string | null;
+  role: Role;
+  grantedById: string;
+  reason?: string;
+  at: Date;
+};
 ```
 
 Onboarding (Phase 2) listens to `ROLE_ASSIGNED` to start a role-specific flow when a new role lands. Feature-flags caches invalidate on role change for any flag with a role-scoped override affecting that user.
@@ -208,6 +198,7 @@ Onboarding (Phase 2) listens to `ROLE_ASSIGNED` to start a role-specific flow wh
 ### Seed data
 
 On fresh DB, seed:
+
 - A `MonarkAdmin` user created from env-var credentials (only for dev — prod uses a manual seed step).
 - The four standard roles are implicit in the enum; no seed row needed.
 

@@ -3,7 +3,12 @@ import { cookies, headers } from "next/headers";
 import { createServerTrpcClient } from "./trpc-server";
 
 export const DEVICE_COOKIE_NAME = "monark_device_id";
-const MAX_AGE_SECONDS = 60 * 60 * 24 * 400;
+// Fallback Max-Age used only when the recognize mutation didn't return
+// a ttlSeconds (older clients, flag-off path). The per-user
+// `trustedDeviceTtlDays` preference is the source of truth in the
+// normal flow — server returns its value and we plumb it into the
+// cookie below so cookie + row die in lockstep.
+const FALLBACK_MAX_AGE_SECONDS = 60 * 60 * 24 * 400;
 
 // Per-request enforcement: returns true when the request comes from a
 // device the user has actively trusted (cookie present + matches a non-
@@ -23,19 +28,26 @@ export async function isCurrentDeviceTrusted(input: {
   userId: string;
 }): Promise<boolean> {
   const api = createServerTrpcClient(input.accessToken);
-  const flagOn = await api.featureFlags.get
-    .query({ key: "auth.trusted-devices", scope: { userId: input.userId } })
-    .catch(() => true);
-  if (!flagOn) return true;
-
   const cookieStore = await cookies();
   const cookieValue = cookieStore.get(DEVICE_COOKIE_NAME)?.value ?? null;
-  if (!cookieValue) return false;
 
-  const matched = await api.auth.trustedDevices.currentDeviceId
-    .query({ cookieValue })
-    .catch(() => null);
-  return matched !== null;
+  // Issue the flag check and the device lookup in the same tick on the
+  // same client so `httpBatchLink` folds them into ONE api round trip
+  // instead of two serial ones. No staleness (unlike a TTL cache), so
+  // the flag stays a live killswitch. The device lookup only runs when a
+  // cookie is present ; when the flag turns out to be off its result is
+  // simply discarded (rare killswitch path).
+  const flagPromise = api.featureFlags.get
+    .query({ key: "auth.trusted-devices", scope: { userId: input.userId } })
+    .catch(() => true);
+  const matchedPromise = cookieValue
+    ? api.auth.trustedDevices.currentDeviceId.query({ cookieValue }).catch(() => null)
+    : Promise.resolve(null);
+
+  const flagOn = await flagPromise;
+  if (!flagOn) return true;
+  if (!cookieValue) return false;
+  return (await matchedPromise) !== null;
 }
 
 // No-verify JWT claim extraction. Safe because the api verifies the same
@@ -168,7 +180,13 @@ export async function recognizeDeviceAfterAuth(accessToken: string): Promise<str
         sameSite: isProd ? "strict" : "lax",
         secure: isProd,
         path: "/",
-        maxAge: MAX_AGE_SECONDS,
+        // Use the per-user TTL the api computed (mirrors the DB row's
+        // `expiresAt`) ; fall back to the 400-day cap if the response
+        // didn't include it (flag-off path or pre-Q2 client).
+        maxAge:
+          typeof result.ttlSeconds === "number" && result.ttlSeconds > 0
+            ? result.ttlSeconds
+            : FALLBACK_MAX_AGE_SECONDS,
       });
     }
     return result.deviceId;

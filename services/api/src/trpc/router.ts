@@ -1,1 +1,1 @@
-export { appRouter, type AppRouter } from "./app-router.generated"
+export { appRouter, type AppRouter } from "./app-router.generated";

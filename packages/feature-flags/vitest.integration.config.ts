@@ -1,5 +1,5 @@
-import { mergeConfig, defineConfig } from "vitest/config"
-import baseConfig from "../../vitest.shared"
+import { mergeConfig, defineConfig } from "vitest/config";
+import baseConfig from "../../vitest.shared";
 
 // Same shape as the other packages' integration configs ; runs every
 // spec under `tests/integration/` against a fresh Postgres
@@ -10,6 +10,7 @@ export default mergeConfig(
   defineConfig({
     test: {
       globalSetup: ["@monark/test-utils/global-setup"],
+      setupFiles: ["@monark/test-utils/assert-test-db"],
       include: ["tests/integration/**/*.test.ts"],
       testTimeout: 30_000,
       hookTimeout: 60_000,
@@ -24,4 +25,4 @@ export default mergeConfig(
       },
     },
   }),
-)
+);

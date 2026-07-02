@@ -1,6 +1,6 @@
-import { mergeConfig } from "vitest/config"
-import { defineConfig } from "vitest/config"
-import baseConfig from "../../vitest.shared"
+import { mergeConfig } from "vitest/config";
+import { defineConfig } from "vitest/config";
+import baseConfig from "../../vitest.shared";
 
 // Target threshold per test-plan : 90 % (single config object).
 export default mergeConfig(
@@ -13,4 +13,4 @@ export default mergeConfig(
       },
     },
   }),
-)
+);

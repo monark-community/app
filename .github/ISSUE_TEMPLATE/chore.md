@@ -1,10 +1,9 @@
 ---
 name: Chore
 about: Internal engineering work that does not add user-facing features
-title: 'chore -'
-labels: 'chore'
-assignees: ''
-
+title: "chore -"
+labels: "chore"
+assignees: ""
 ---
 
 ## Summary
@@ -22,9 +21,11 @@ Explain the motivation: tech debt, cleanup, maintainability, performance, toolin
 What is in scope? What is explicitly out of scope?
 
 > **In scope**
+>
 > - [ ] Remove old auth service.
 >
 > **Out of scope**
+>
 > - [ ] Redesign login UX.
 
 ## (Opt.) Impact / Risk

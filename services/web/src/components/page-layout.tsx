@@ -1,4 +1,4 @@
-import type { ReactNode } from "react"
+import type { ReactNode } from "react";
 
 type PageLayoutProps = {
   /**
@@ -7,17 +7,17 @@ type PageLayoutProps = {
    * content stays viewport-centered. Pass a client component when the
    * nav needs interactive state (e.g. URL-driven tab switching).
    */
-  sidebar?: ReactNode
+  sidebar?: ReactNode;
   /**
    * Future contextual rail in cols 11–12 (xl+). Same centering
    * guarantee: even when omitted, the slot keeps the content
    * page-centered. Wire up activity feeds, related links, etc. here
    * once the surfaces exist.
    */
-  rightRail?: ReactNode
+  rightRail?: ReactNode;
   /** Main content ; renders in cols 3–10 of the grid. */
-  children: ReactNode
-}
+  children: ReactNode;
+};
 
 /**
  * The single layout authenticated pages reach for.
@@ -72,5 +72,5 @@ export function PageLayout({ sidebar, rightRail, children }: PageLayoutProps) {
         </aside>
       )}
     </>
-  )
+  );
 }

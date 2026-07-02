@@ -1,92 +1,85 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { useTranslations } from "next-intl"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { trpc } from "@/lib/trpc"
-import { CollapsibleSection } from "../collapsible-section"
+import { useState } from "react";
+import { useTranslations } from "next-intl";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { trpc } from "@/lib/trpc";
+import { CollapsibleSection } from "../collapsible-section";
 
-type Enrollment = { secret: string; qrSvg: string }
+type Enrollment = { secret: string; qrSvg: string };
 
 export function TotpPanel() {
-  const t = useTranslations("devOverlay")
-  const utils = trpc.useUtils()
+  const t = useTranslations("devOverlay");
+  const utils = trpc.useUtils();
   const status = trpc.auth.totp.status.useQuery(undefined, {
     refetchOnWindowFocus: false,
-  })
-  const beginEnrollment = trpc.auth.totp.beginEnrollment.useMutation()
+  });
+  const beginEnrollment = trpc.auth.totp.beginEnrollment.useMutation();
   const confirmEnrollment = trpc.auth.totp.confirmEnrollment.useMutation({
     onSuccess: () => void utils.auth.totp.status.invalidate(),
-  })
+  });
   const disable = trpc.auth.totp.disable.useMutation({
     onSuccess: () => void utils.auth.totp.status.invalidate(),
-  })
+  });
 
-  const [enrollment, setEnrollment] = useState<Enrollment | null>(null)
-  const [enrollCode, setEnrollCode] = useState("")
-  const [recoveryCodes, setRecoveryCodes] = useState<string[] | null>(null)
-  const [disableCode, setDisableCode] = useState("")
-  const [disableError, setDisableError] = useState<string | null>(null)
+  const [enrollment, setEnrollment] = useState<Enrollment | null>(null);
+  const [enrollCode, setEnrollCode] = useState("");
+  const [recoveryCodes, setRecoveryCodes] = useState<string[] | null>(null);
+  const [disableCode, setDisableCode] = useState("");
+  const [disableError, setDisableError] = useState<string | null>(null);
 
-  const data = status.data
-  const enrolled = Boolean(data && "enrolled" in data && data.enrolled)
-  const active = enrolled && data && "activatedAt" in data && Boolean(data.activatedAt)
+  const data = status.data;
+  const enrolled = Boolean(data && "enrolled" in data && data.enrolled);
+  const active = enrolled && data && "activatedAt" in data && Boolean(data.activatedAt);
 
   const badge = (
     <span
       className={`rounded-full px-1.5 py-0.5 font-mono text-[10px] ${
-        active
-          ? "bg-emerald-400/20 text-emerald-400"
-          : "bg-border text-muted-foreground"
+        active ? "bg-emerald-400/20 text-emerald-400" : "bg-border text-muted-foreground"
       }`}
     >
       {active ? t("totp.active") : t("totp.inactive")}
     </span>
-  )
+  );
 
   async function onBegin() {
-    setRecoveryCodes(null)
-    const result = await beginEnrollment.mutateAsync()
-    setEnrollment(result)
+    setRecoveryCodes(null);
+    const result = await beginEnrollment.mutateAsync();
+    setEnrollment(result);
   }
 
   async function onConfirm() {
-    setRecoveryCodes(null)
+    setRecoveryCodes(null);
     try {
       const result = await confirmEnrollment.mutateAsync({
         code: enrollCode.trim(),
-      })
-      setRecoveryCodes(result.recoveryCodes)
-      setEnrollment(null)
-      setEnrollCode("")
+      });
+      setRecoveryCodes(result.recoveryCodes);
+      setEnrollment(null);
+      setEnrollCode("");
     } catch {
       // error surfaces via mutation.error below
     }
   }
 
   async function onDisable() {
-    setDisableError(null)
+    setDisableError(null);
     try {
-      await disable.mutateAsync({ code: disableCode.trim() })
-      setDisableCode("")
+      await disable.mutateAsync({ code: disableCode.trim() });
+      setDisableCode("");
     } catch (err) {
-      setDisableError(
-        err instanceof Error ? err.message : t("totp.errors.disable"),
-      )
+      setDisableError(err instanceof Error ? err.message : t("totp.errors.disable"));
     }
   }
 
   return (
     <CollapsibleSection title={t("sections.totp")} badge={badge}>
       <div className="space-y-3">
-        {status.isLoading && (
-          <p className="text-xs opacity-60">{t("totp.resolving")}</p>
-        )}
+        {status.isLoading && <p className="text-xs opacity-60">{t("totp.resolving")}</p>}
         {status.error && (
           <p className="text-xs text-red-400">
-            {t("errorPrefix")}{" "}
-            <span className="font-mono">{status.error.message}</span>
+            {t("errorPrefix")} <span className="font-mono">{status.error.message}</span>
           </p>
         )}
 
@@ -128,9 +121,7 @@ export function TotpPanel() {
               className="h-8 font-mono text-sm"
             />
             {confirmEnrollment.error && (
-              <p className="text-[10px] text-destructive">
-                {confirmEnrollment.error.message}
-              </p>
+              <p className="text-[10px] text-destructive">{confirmEnrollment.error.message}</p>
             )}
             <div className="flex gap-2">
               <Button
@@ -146,8 +137,8 @@ export function TotpPanel() {
                 variant="ghost"
                 size="sm"
                 onClick={() => {
-                  setEnrollment(null)
-                  setEnrollCode("")
+                  setEnrollment(null);
+                  setEnrollCode("");
                 }}
                 className="h-7 text-xs"
               >
@@ -183,13 +174,9 @@ export function TotpPanel() {
         {active && !enrollment && (
           <div className="space-y-2">
             <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs font-mono">
-              <dt className="text-muted-foreground">
-                {t("totp.fields.recoveryRemaining")}
-              </dt>
+              <dt className="text-muted-foreground">{t("totp.fields.recoveryRemaining")}</dt>
               <dd>
-                {data && "remainingRecoveryCodes" in data
-                  ? data.remainingRecoveryCodes
-                  : "—"}
+                {data && "remainingRecoveryCodes" in data ? data.remainingRecoveryCodes : "—"}
               </dd>
             </dl>
             <div className="flex items-center gap-2">
@@ -211,9 +198,7 @@ export function TotpPanel() {
                 {disable.isPending ? "…" : t("totp.disable")}
               </Button>
             </div>
-            {disableError && (
-              <p className="text-[10px] text-destructive">{disableError}</p>
-            )}
+            {disableError && <p className="text-[10px] text-destructive">{disableError}</p>}
           </div>
         )}
 
@@ -228,5 +213,5 @@ export function TotpPanel() {
         </Button>
       </div>
     </CollapsibleSection>
-  )
+  );
 }

@@ -1,4 +1,4 @@
-import { z } from "zod"
+import { z } from "zod";
 
 const schema = z.object({
   PORT: z.coerce.number().int().positive().default(4000),
@@ -9,7 +9,12 @@ const schema = z.object({
   WEB_ORIGIN: z
     .string()
     .default("http://localhost:3000,http://127.0.0.1:3000")
-    .transform((raw) => raw.split(",").map((s) => s.trim()).filter(Boolean)),
+    .transform((raw) =>
+      raw
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean),
+    ),
   // Canonical web origin used when we mint user-facing URLs (e.g. email links).
   APP_URL: z.string().url().default("http://localhost:3000"),
   LOG_LEVEL: z.string().default("info"),
@@ -19,6 +24,15 @@ const schema = z.object({
   // 32 bytes, hex-encoded (64 chars). Validated lazily by the TOTP module
   // so environments without TOTP configured (e.g. CI) don't need to set it.
   TOTP_ENCRYPTION_KEY: z.string().optional(),
+  // HMAC secret for one-click email action tokens (currently only the
+  // new-device "revoke this device" link). Generate per environment with
+  // `node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"`.
+  // Optional here ; the token mint/verify helpers in `@monark/auth`
+  // fall back to a fixed dev default with a `logger.warn` when unset
+  // so local dev + CI work out of the box. Production deploys MUST set
+  // a real value — otherwise an attacker who knows the dev default
+  // can forge revoke tokens for any user.
+  EMAIL_ACTION_SECRET: z.string().min(32).optional(),
   // Shared secret required to trigger any of the `/cron/*` endpoints. Optional
   // here ; the cron handlers refuse requests when it's unset so an
   // accidentally-empty secret can't be matched. Set in production.
@@ -40,14 +54,14 @@ const schema = z.object({
     .string()
     .regex(/^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/, "invalid INITIAL_ORG_PRIMARY_COLOR")
     .optional(),
-})
+});
 
-const parsed = schema.safeParse(process.env)
+const parsed = schema.safeParse(process.env);
 
 if (!parsed.success) {
-  console.error("Invalid environment:")
-  console.error(parsed.error.flatten().fieldErrors)
-  process.exit(1)
+  console.error("Invalid environment:");
+  console.error(parsed.error.flatten().fieldErrors);
+  process.exit(1);
 }
 
-export const env = parsed.data
+export const env = parsed.data;

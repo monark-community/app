@@ -22,39 +22,39 @@ The Prisma schema has `User` and `PendingEmailChange` models under the `// ─�
 
 ```ts
 // From another module's server code:
-import { getById, getCurrent } from "@monark/users/server"
+import { getById, getCurrent } from "@monark/users/server";
 
-const user = await getById("abc-123")          // or null
-const me   = await getCurrent({ userId })      // null when unauthenticated
+const user = await getById("abc-123"); // or null
+const me = await getCurrent({ userId }); // null when unauthenticated
 ```
 
 ```ts
 // From the web side:
-const { data } = trpc.users.me.useQuery()
+const { data } = trpc.users.me.useQuery();
 // data is User | null; null until auth populates the session context.
 ```
 
 ## Public API
 
-| Import path                       | Export               | Kind       |
-|-----------------------------------|----------------------|------------|
-| `@monark/users/server`            | `usersRouter`        | tRPC router (mounted at `users.*`) |
-| `@monark/users/server`            | `getById(id)`        | `(id: string) => Promise<User \| null>` |
-| `@monark/users/server`            | `getByIdOrThrow(id)` | throws `NotFoundError` if absent |
-| `@monark/users/server`            | `getByEmail(email)`  | `(email: string) => Promise<User \| null>` |
-| `@monark/users/server`            | `getCurrent(ctx)`    | `({ userId }) => Promise<User \| null>` |
-| `@monark/users/server`            | `User`               | type from Prisma client |
-| `@monark/users/contracts`         | `UserProfileUpdatedEvent`, `UsersEvents` | event types |
+| Import path               | Export                                   | Kind                                       |
+| ------------------------- | ---------------------------------------- | ------------------------------------------ |
+| `@monark/users/server`    | `usersRouter`                            | tRPC router (mounted at `users.*`)         |
+| `@monark/users/server`    | `getById(id)`                            | `(id: string) => Promise<User \| null>`    |
+| `@monark/users/server`    | `getByIdOrThrow(id)`                     | throws `NotFoundError` if absent           |
+| `@monark/users/server`    | `getByEmail(email)`                      | `(email: string) => Promise<User \| null>` |
+| `@monark/users/server`    | `getCurrent(ctx)`                        | `({ userId }) => Promise<User \| null>`    |
+| `@monark/users/server`    | `User`                                   | type from Prisma client                    |
+| `@monark/users/contracts` | `UserProfileUpdatedEvent`, `UsersEvents` | event types                                |
 
 tRPC procedures exposed under `users.*` (from the app router):
 
-| Procedure                        | Input | Output          |
-|----------------------------------|-------|-----------------|
-| `users.me`                       | —     | `User \| null`  |
-| `users.updateProfile`            | `{ displayName?, avatarUrl?, localePreference? }` | `User` (mutation; pass `null` to clear a field) |
-| `users.syncEmail`                | `{ email }` | `User` (mutation; called from `/auth/confirm` after Supabase rotates `auth.users.email` on a `type=email_change` OTP) |
-| `users.requestAccountDeletion`   | — | `{ deletionCompletesAt: Date }` (mutation; stamps `deletedAt = now`, 14-day grace) |
-| `users.cancelAccountDeletion`    | — | void (mutation; clears `deletedAt` during grace) |
+| Procedure                      | Input                                             | Output                                                                                                                |
+| ------------------------------ | ------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `users.me`                     | —                                                 | `User \| null`                                                                                                        |
+| `users.updateProfile`          | `{ displayName?, avatarUrl?, localePreference? }` | `User` (mutation; pass `null` to clear a field)                                                                       |
+| `users.syncEmail`              | `{ email }`                                       | `User` (mutation; called from `/auth/confirm` after Supabase rotates `auth.users.email` on a `type=email_change` OTP) |
+| `users.requestAccountDeletion` | —                                                 | `{ deletionCompletesAt: Date }` (mutation; stamps `deletedAt = now`, 14-day grace)                                    |
+| `users.cancelAccountDeletion`  | —                                                 | void (mutation; clears `deletedAt` during grace)                                                                      |
 
 ## Dependencies
 
@@ -70,12 +70,12 @@ Prisma migration `20260424025927_add_users` creates the `User` and `PendingEmail
 
 ## Events emitted
 
-| Event                         | When                                                | Status |
-|-------------------------------|-----------------------------------------------------|--------|
-| `user.profile-updated`        | Any profile patch via `updateProfile`               | emitted; `changed` array lists the touched fields |
-| `user.email-changed`          | `syncEmail` flips the shadow `User.email`           | emitted; carries `previousEmail` + `newEmail` |
-| `user.deletion-requested`     | `requestAccountDeletion` stamps `deletedAt`         | emitted; carries `deletionCompletesAt` (= deletedAt + 14d) |
-| `user.deletion-canceled`      | `cancelAccountDeletion` clears `deletedAt`          | emitted |
+| Event                     | When                                        | Status                                                     |
+| ------------------------- | ------------------------------------------- | ---------------------------------------------------------- |
+| `user.profile-updated`    | Any profile patch via `updateProfile`       | emitted; `changed` array lists the touched fields          |
+| `user.email-changed`      | `syncEmail` flips the shadow `User.email`   | emitted; carries `previousEmail` + `newEmail`              |
+| `user.deletion-requested` | `requestAccountDeletion` stamps `deletedAt` | emitted; carries `deletionCompletesAt` (= deletedAt + 14d) |
+| `user.deletion-canceled`  | `cancelAccountDeletion` clears `deletedAt`  | emitted                                                    |
 
 Additional events (`user.email-changed`, `user.deletion-*`, `user.disabled`, `user.enabled`) are specified in the planning doc and will be added to the `UsersEvents` union as their flows ship.
 

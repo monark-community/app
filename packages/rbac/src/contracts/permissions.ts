@@ -18,106 +18,94 @@
 // module can introduce its own grouping (e.g. `"posts"`) without
 // modifying core. The /admin/rbac surface renders whatever categories
 // turn up in the merged registry.
-export type PermissionCategory = string
+export type PermissionCategory = string;
 
 export type PermissionDef = {
-  description: string
-  category: PermissionCategory
-}
+  description: string;
+  category: PermissionCategory;
+};
 
 export type PermissionDescriptor = {
-  module: string
-  key: string
-  description: string
-  category: PermissionCategory
-}
+  module: string;
+  key: string;
+  description: string;
+  category: PermissionCategory;
+};
 
 // Dotted form `"<module>.<key>"`. Plain string alias because the
 // registry is dynamic at runtime ; callers wanting narrowing can
 // declare their own const e.g. `const PERM_X = "rbac.manage-roles" as const`.
-export type Permission = string
+export type Permission = string;
 
-const MODULE_RE = /^[a-z][a-z0-9-]*$/
-const KEY_RE = /^[a-z][a-z0-9_-]*$/
+const MODULE_RE = /^[a-z][a-z0-9-]*$/;
+const KEY_RE = /^[a-z][a-z0-9_-]*$/;
 
-const registry = new Map<string, Map<string, PermissionDef>>()
+const registry = new Map<string, Map<string, PermissionDef>>();
 
-export function registerPermissions(
-  module: string,
-  perms: Record<string, PermissionDef>,
-): void {
+export function registerPermissions(module: string, perms: Record<string, PermissionDef>): void {
   if (!MODULE_RE.test(module)) {
-    throw new Error(`Invalid permission module name : ${module}`)
+    throw new Error(`Invalid permission module name : ${module}`);
   }
-  let bucket = registry.get(module)
+  let bucket = registry.get(module);
   if (!bucket) {
-    bucket = new Map<string, PermissionDef>()
-    registry.set(module, bucket)
+    bucket = new Map<string, PermissionDef>();
+    registry.set(module, bucket);
   }
   for (const [key, def] of Object.entries(perms)) {
     if (!KEY_RE.test(key)) {
-      throw new Error(`Invalid permission key : "${module}.${key}"`)
+      throw new Error(`Invalid permission key : "${module}.${key}"`);
     }
-    bucket.set(key, def)
+    bucket.set(key, def);
   }
 }
 
 export function isKnownPermission(dotted: string): boolean {
-  const parsed = parsePermissionKey(dotted)
-  if (!parsed) return false
-  return registry.get(parsed.module)?.has(parsed.key) ?? false
+  const parsed = parsePermissionKey(dotted);
+  if (!parsed) return false;
+  return registry.get(parsed.module)?.has(parsed.key) ?? false;
 }
 
-export function getPermissionDef(
-  dotted: string,
-): PermissionDef | undefined {
-  const parsed = parsePermissionKey(dotted)
-  if (!parsed) return undefined
-  return registry.get(parsed.module)?.get(parsed.key)
+export function getPermissionDef(dotted: string): PermissionDef | undefined {
+  const parsed = parsePermissionKey(dotted);
+  if (!parsed) return undefined;
+  return registry.get(parsed.module)?.get(parsed.key);
 }
 
 export function listPermissions(): Permission[] {
-  return listPermissionDescriptors().map((d) => `${d.module}.${d.key}`)
+  return listPermissionDescriptors().map((d) => `${d.module}.${d.key}`);
 }
 
 export function listPermissionDescriptors(): PermissionDescriptor[] {
-  const out: PermissionDescriptor[] = []
+  const out: PermissionDescriptor[] = [];
   for (const [module, bucket] of registry) {
     for (const [key, def] of bucket) {
-      out.push({ module, key, ...def })
+      out.push({ module, key, ...def });
     }
   }
-  out.sort((a, b) =>
-    `${a.module}.${a.key}`.localeCompare(`${b.module}.${b.key}`),
-  )
-  return out
+  out.sort((a, b) => `${a.module}.${a.key}`.localeCompare(`${b.module}.${b.key}`));
+  return out;
 }
 
 // Convenience for the /admin/rbac matrix : grouped by category.
 // Categories appear in alphabetical order ; permissions inside each
 // category are dotted and sorted alphabetically.
-export function permissionsByCategory(): Record<
-  PermissionCategory,
-  Permission[]
-> {
-  const grouped: Record<PermissionCategory, Permission[]> = {}
+export function permissionsByCategory(): Record<PermissionCategory, Permission[]> {
+  const grouped: Record<PermissionCategory, Permission[]> = {};
   for (const desc of listPermissionDescriptors()) {
-    const dotted = `${desc.module}.${desc.key}`
-    const bucket = grouped[desc.category] ?? []
-    bucket.push(dotted)
-    grouped[desc.category] = bucket
+    const dotted = `${desc.module}.${desc.key}`;
+    const bucket = grouped[desc.category] ?? [];
+    bucket.push(dotted);
+    grouped[desc.category] = bucket;
   }
-  return grouped
+  return grouped;
 }
 
-export function parsePermissionKey(
-  dotted: string,
-): { module: string; key: string } | null {
-  const i = dotted.indexOf(".")
-  if (i <= 0 || i === dotted.length - 1) return null
-  return { module: dotted.slice(0, i), key: dotted.slice(i + 1) }
+export function parsePermissionKey(dotted: string): { module: string; key: string } | null {
+  const i = dotted.indexOf(".");
+  if (i <= 0 || i === dotted.length - 1) return null;
+  return { module: dotted.slice(0, i), key: dotted.slice(i + 1) };
 }
 
 export function _resetPermissionRegistryForTesting(): void {
-  registry.clear()
+  registry.clear();
 }

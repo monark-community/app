@@ -1,11 +1,11 @@
-"use client"
+"use client";
 
-import { useEffect, useMemo, useState } from "react"
-import { useTranslations } from "next-intl"
-import { Plus } from "lucide-react"
-import { toast } from "sonner"
-import { Button } from "@/components/ui/button"
-import { PageSection } from "@/components/page-section"
+import { useEffect, useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
+import { Plus } from "lucide-react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { PageSection } from "@/components/page-section";
 import {
   Dialog,
   DialogContent,
@@ -13,40 +13,40 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
+} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
-import { RoleChip } from "@/components/role-chip"
-import { trpc } from "@/lib/trpc"
+} from "@/components/ui/select";
+import { RoleChip } from "@/components/role-chip";
+import { trpc } from "@/lib/trpc";
 
-const ADMIN_ROLE_KEY = "ADMIN"
+const ADMIN_ROLE_KEY = "ADMIN";
 
 type Assignment = {
-  id: string
-  organizationId: string | null
+  id: string;
+  organizationId: string | null;
   // The data layer joins the organization onto every active assignment
   // (see `findAllActiveAssignments`) — left optional here so the
   // component compiles against an older Prisma client that hasn't
   // re-generated this include yet ; once `prisma generate` lands the
   // new include, the live payload populates it.
-  organization?: { id: string; slug: string; displayName: string } | null
+  organization?: { id: string; slug: string; displayName: string } | null;
   role: {
-    id: string
-    key: string
-    name: string
+    id: string;
+    key: string;
+    name: string;
     // Same story for `color` — Prisma client may need a regen before
     // this surfaces in the generated payload type.
-    color?: string | null
-    builtIn: boolean
-    organizationId: string | null
-  }
-  grantedAt: Date | string
-}
+    color?: string | null;
+    builtIn: boolean;
+    organizationId: string | null;
+  };
+  grantedAt: Date | string;
+};
 
 /**
  * Role-assignment surface for the admin user-detail page. Renders the
@@ -76,65 +76,59 @@ export function AdminRoles({
   assignments,
   disabled,
 }: {
-  userId: string
-  assignments: Assignment[]
-  disabled?: boolean
+  userId: string;
+  assignments: Assignment[];
+  disabled?: boolean;
 }) {
-  const t = useTranslations("admin.users.roles")
-  const utils = trpc.useUtils()
+  const t = useTranslations("admin.users.roles");
+  const utils = trpc.useUtils();
 
-  const [dialogOpen, setDialogOpen] = useState(false)
+  const [dialogOpen, setDialogOpen] = useState(false);
 
   const revoke = trpc.rbac.adminRevokeRole.useMutation({
     onSuccess: () => {
-      void utils.users.adminGetUser.invalidate({ userId })
-      toast.success(t("revokeSuccess"))
+      void utils.users.adminGetUser.invalidate({ userId });
+      toast.success(t("revokeSuccess"));
     },
     onError: (error) => {
-      toast.error(error.message || t("revokeError"))
+      toast.error(error.message || t("revokeError"));
     },
-  })
+  });
 
   return (
     <PageSection title={t("title")} subtitle={t("subtitle")}>
-        {/*
+      {/*
           Inline flex-wrap of removable chips + a dashed outline "+
           Add new role" chip at the end. The empty state collapses to
           just the add chip so there's a single affordance to learn ;
           when assignments exist the add chip sits beside them,
           inheriting the same chip rhythm.
         */}
-        <div className="flex flex-wrap gap-1.5">
-          {assignments.map((assignment) => (
-            <RoleChip
-              key={assignment.id}
-              name={assignment.role.name}
-              color={assignment.role.color}
-              onRemove={() =>
-                revoke.mutate({ assignmentId: assignment.id })
-              }
-              removeAriaLabel={t("revokeAria", { role: assignment.role.name })}
-              removeDisabled={revoke.isPending || disabled}
-            />
-          ))}
-          <button
-            type="button"
-            onClick={() => setDialogOpen(true)}
-            disabled={disabled}
-            className="inline-flex items-center gap-1 rounded-md border border-dashed border-border px-2 py-0.5 text-xs font-medium text-muted-foreground transition-colors hover:border-foreground/40 hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            <Plus className="h-3 w-3" aria-hidden />
-            {t("addCta")}
-          </button>
-        </div>
+      <div className="flex flex-wrap gap-1.5">
+        {assignments.map((assignment) => (
+          <RoleChip
+            key={assignment.id}
+            name={assignment.role.name}
+            color={assignment.role.color}
+            onRemove={() => revoke.mutate({ assignmentId: assignment.id })}
+            removeAriaLabel={t("revokeAria", { role: assignment.role.name })}
+            removeDisabled={revoke.isPending || disabled}
+          />
+        ))}
+        <button
+          type="button"
+          onClick={() => setDialogOpen(true)}
+          disabled={disabled}
+          className="inline-flex items-center gap-1 rounded-md border border-dashed border-border px-2 py-0.5 text-xs font-medium text-muted-foreground transition-colors hover:border-foreground/40 hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <Plus className="h-3 w-3" aria-hidden />
+          {t("addCta")}
+        </button>
+      </div>
 
-      <AssignRoleDialog
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-        userId={userId}
-      />
+      <AssignRoleDialog open={dialogOpen} onOpenChange={setDialogOpen} userId={userId} />
     </PageSection>
-  )
+  );
 }
 
 /**
@@ -149,19 +143,19 @@ function AssignRoleDialog({
   onOpenChange,
   userId,
 }: {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  userId: string
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  userId: string;
 }) {
-  const t = useTranslations("admin.users.roles")
-  const utils = trpc.useUtils()
+  const t = useTranslations("admin.users.roles");
+  const utils = trpc.useUtils();
 
   const status = trpc.organizations.bootstrapStatus.useQuery(undefined, {
     refetchOnWindowFocus: false,
     staleTime: Infinity,
-  })
-  const isSingleTenant = status.data?.mode !== "multi"
-  const singletonOrgId = status.data?.singletonOrganizationId ?? null
+  });
+  const isSingleTenant = status.data?.mode !== "multi";
+  const singletonOrgId = status.data?.singletonOrganizationId ?? null;
 
   const orgsQuery = trpc.organizations.adminList.useQuery(
     { limit: 100 },
@@ -169,40 +163,40 @@ function AssignRoleDialog({
       enabled: open && !isSingleTenant,
       refetchOnWindowFocus: false,
     },
-  )
+  );
 
-  const [pendingOrgId, setPendingOrgId] = useState<string>("")
-  const [pendingRoleId, setPendingRoleId] = useState<string>("")
+  const [pendingOrgId, setPendingOrgId] = useState<string>("");
+  const [pendingRoleId, setPendingRoleId] = useState<string>("");
 
   // Wipe selections every time the dialog opens, then auto-pin the
   // singleton org in single-tenant so the form reduces to just the
   // role picker.
   useEffect(() => {
-    if (!open) return
-    setPendingOrgId(isSingleTenant && singletonOrgId ? singletonOrgId : "")
-    setPendingRoleId("")
-  }, [open, isSingleTenant, singletonOrgId])
+    if (!open) return;
+    setPendingOrgId(isSingleTenant && singletonOrgId ? singletonOrgId : "");
+    setPendingRoleId("");
+  }, [open, isSingleTenant, singletonOrgId]);
 
   const rolesQuery = trpc.rbac.adminListRoles.useQuery(
     { organizationId: pendingOrgId },
     { enabled: open && pendingOrgId !== "", refetchOnWindowFocus: false },
-  )
+  );
 
   const assign = trpc.rbac.adminAssignRole.useMutation({
     onSuccess: () => {
-      void utils.users.adminGetUser.invalidate({ userId })
-      toast.success(t("assignSuccess"))
-      onOpenChange(false)
+      void utils.users.adminGetUser.invalidate({ userId });
+      toast.success(t("assignSuccess"));
+      onOpenChange(false);
     },
     onError: (error) => {
-      toast.error(error.message || t("assignError"))
+      toast.error(error.message || t("assignError"));
     },
-  })
+  });
 
   const selectedRole = useMemo(
     () => rolesQuery.data?.find((r) => r.id === pendingRoleId) ?? null,
     [rolesQuery.data, pendingRoleId],
-  )
+  );
   // Built-in ADMIN at platform tier still requires the operator to
   // explicitly opt in via a scope toggle ; in single-tenant the
   // singleton org is the default and the toggle is hidden. For
@@ -213,20 +207,18 @@ function AssignRoleDialog({
     selectedRole !== null &&
     selectedRole.builtIn &&
     selectedRole.key === ADMIN_ROLE_KEY &&
-    pendingOrgId === ""
+    pendingOrgId === "";
 
   const canSubmit =
-    pendingRoleId !== "" &&
-    (willAssignAtPlatform || pendingOrgId !== "") &&
-    !assign.isPending
+    pendingRoleId !== "" && (willAssignAtPlatform || pendingOrgId !== "") && !assign.isPending;
 
   function onAdd() {
-    if (!canSubmit) return
+    if (!canSubmit) return;
     assign.mutate({
       userId,
       roleId: pendingRoleId,
       organizationId: willAssignAtPlatform ? null : pendingOrgId,
-    })
+    });
   }
 
   return (
@@ -240,17 +232,14 @@ function AssignRoleDialog({
         <div className="grid gap-3 py-2">
           {!isSingleTenant && (
             <div className="grid gap-1.5">
-              <label
-                htmlFor="assign-org-select"
-                className="text-sm font-medium"
-              >
+              <label htmlFor="assign-org-select" className="text-sm font-medium">
                 {t("orgLabel")}
               </label>
               <Select
                 value={pendingOrgId}
                 onValueChange={(next) => {
-                  setPendingOrgId(next)
-                  setPendingRoleId("")
+                  setPendingOrgId(next);
+                  setPendingRoleId("");
                 }}
               >
                 <SelectTrigger id="assign-org-select" className="w-full">
@@ -268,10 +257,7 @@ function AssignRoleDialog({
           )}
 
           <div className="grid gap-1.5">
-            <label
-              htmlFor="assign-role-select"
-              className="text-sm font-medium"
-            >
+            <label htmlFor="assign-role-select" className="text-sm font-medium">
               {t("roleLabel")}
             </label>
             <Select
@@ -309,5 +295,5 @@ function AssignRoleDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

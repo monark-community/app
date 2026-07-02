@@ -1,10 +1,10 @@
-import { redirect } from "next/navigation"
-import { getTranslations } from "next-intl/server"
-import { createServerTrpcClient } from "@/lib/trpc-server"
-import { OrganizationsList } from "./organizations-list"
+import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
+import { createServerTrpcClient } from "@/lib/trpc-server";
+import { OrganizationsList } from "./organizations-list";
 
 export default async function AdminOrganizationsPage() {
-  const t = await getTranslations("admin.organizations")
+  const t = await getTranslations("admin.organizations");
 
   // Single-tenant fast path : when the deploy runs in single-tenant
   // mode and exactly one organization exists, the "list" surface is
@@ -20,16 +20,14 @@ export default async function AdminOrganizationsPage() {
   // server-side tRPC client resolves it cleanly. `adminList` requires
   // an admin token — calling it without one would throw, the catch
   // would swallow the error, and the redirect would silently no-op.
-  const api = createServerTrpcClient()
-  const status = await api.organizations.bootstrapStatus
-    .query()
-    .catch(() => null)
+  const api = createServerTrpcClient();
+  const status = await api.organizations.bootstrapStatus.query().catch(() => null);
   if (
     status?.mode === "single" &&
     status.singletonOrganizationId !== null &&
     status.singletonOrganizationId !== undefined
   ) {
-    redirect(`/admin/organizations/${status.singletonOrganizationId}`)
+    redirect(`/admin/organizations/${status.singletonOrganizationId}`);
   }
 
   return (
@@ -40,5 +38,5 @@ export default async function AdminOrganizationsPage() {
       </header>
       <OrganizationsList />
     </section>
-  )
+  );
 }

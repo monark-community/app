@@ -57,23 +57,23 @@ Once an event matches an endpoint's subscription set, the subscriber walks three
 2. **Direct org match** — the event payload carries an `organizationId` and it equals the endpoint's. Use case : `organization.member-joined`, `organization.invite-sent`, `rbac.role-assigned` for an org-tier grant, `feature-flag.flipped` for an org-scoped override.
 3. **User-tied membership match** — the event payload carries a `userId` but no `organizationId`. The subscriber looks up the user's active org memberships once per event and fans out to every org-scoped endpoint whose org the user belongs to. Use case : `user.signed-in`, `user.signed-out`, `user.password-changed`, `totp.enabled`, `notification.created` — events that affect a user but aren't intrinsically tied to one of their orgs. Former members (rows with `leftAt` set) are excluded so a user's later events don't leak to an org they've left.
 
-   **Single-tenant fallback** : if the membership lookup returns empty AND there's exactly one non-deleted organization in the deploy, the subscriber treats the singleton as the implicit org. Covers two cases : (a) brand-new accounts whose first sign-in fires before `@monark/organizations`'s auto-membership subscriber finishes the upsert, and (b) deploys that pre-date the auto-membership subscriber and have a `User` table populated but an empty `OrganizationMembership` table. The fallback fires *only* in single-org deploys ; multi-tenant deploys with multiple orgs require an explicit membership row.
+   **Single-tenant fallback** : if the membership lookup returns empty AND there's exactly one non-deleted organization in the deploy, the subscriber treats the singleton as the implicit org. Covers two cases : (a) brand-new accounts whose first sign-in fires before `@monark/organizations`'s auto-membership subscriber finishes the upsert, and (b) deploys that pre-date the auto-membership subscriber and have a `User` table populated but an empty `OrganizationMembership` table. The fallback fires _only_ in single-org deploys ; multi-tenant deploys with multiple orgs require an explicit membership row.
 
 Endpoints that match none of the rules are skipped silently — over-eager fan-out would surprise operators who explicitly scoped their endpoint to one org. The membership lookup only runs when (a) the event has no org id, (b) it has a user id, and (c) at least one org-scoped endpoint matched the event type ; otherwise no extra DB roundtrip fires.
 
-The picker shows every event type uniformly. Operators don't have to know which routing rule fires for each — the rules are about how the subscription gets *delivered* once it matches.
+The picker shows every event type uniformly. Operators don't have to know which routing rule fires for each — the rules are about how the subscription gets _delivered_ once it matches.
 
 ## Signing
 
 Every outgoing request carries five headers :
 
-| Header                                | Value                                                |
-|---------------------------------------|------------------------------------------------------|
-| `Webhook-Delivery-Id`                 | the `WebhookDelivery.id`                             |
-| `Webhook-Delivery-Idempotency-Key`    | stable per (endpoint, event, correlationId)          |
-| `Webhook-Event-Type`                  | the source event's `type` field                      |
-| `Webhook-Timestamp`                   | unix seconds, recomputed per attempt                 |
-| `Webhook-Signature`                   | `v1=<hex hmac sha256(secret, "<timestamp>.<body>")>` |
+| Header                             | Value                                                |
+| ---------------------------------- | ---------------------------------------------------- |
+| `Webhook-Delivery-Id`              | the `WebhookDelivery.id`                             |
+| `Webhook-Delivery-Idempotency-Key` | stable per (endpoint, event, correlationId)          |
+| `Webhook-Event-Type`               | the source event's `type` field                      |
+| `Webhook-Timestamp`                | unix seconds, recomputed per attempt                 |
+| `Webhook-Signature`                | `v1=<hex hmac sha256(secret, "<timestamp>.<body>")>` |
 
 Receivers verify by recomputing the HMAC over `<timestamp>.<body>` using their stored copy of the shared secret and a constant-time compare. Including the timestamp in the signed payload defeats replay attacks outside a tolerance window (suggested ±5 minutes). The `Webhook-Delivery-Idempotency-Key` lets a receiver dedupe retries without parsing the body.
 
@@ -83,47 +83,47 @@ The DB only persists the SHA-256 hash of the secret. Production deploys MUST reg
 
 Registered at api boot via `registerWebhooksPermissions()` :
 
-| Slug                 | Reads                                                    |
-|----------------------|----------------------------------------------------------|
-| `webhooks.read`      | View endpoints, subscriptions, delivery history.         |
-| `webhooks.write`     | Create / edit / delete endpoints + rotate secrets.       |
-| `webhooks.retry`     | Manually retry a failed delivery.                        |
+| Slug             | Reads                                              |
+| ---------------- | -------------------------------------------------- |
+| `webhooks.read`  | View endpoints, subscriptions, delivery history.   |
+| `webhooks.write` | Create / edit / delete endpoints + rotate secrets. |
+| `webhooks.retry` | Manually retry a failed delivery.                  |
 
 Org-scoped endpoints check the permission against the endpoint's `organizationId` ; platform-tier endpoints (`organizationId = null`) require the permission at the platform tier (sysadmins).
 
 ## Public API
 
-| Import path                       | Export                                                      |
-|-----------------------------------|-------------------------------------------------------------|
-| `@monark/webhooks/server`         | `webhooksRouter` (tRPC sub-router mounted at `webhooks.*`)  |
-| `@monark/webhooks/server`         | `registerWebhookSubscribers`, `registerWebhooksPermissions` |
-| `@monark/webhooks/server`         | `startWebhookDeliveryWorker`, `stopWebhookDeliveryWorker`, `tickOnce` |
-| `@monark/webhooks/server`         | `setWebhookSecretResolver`                                  |
-| `@monark/webhooks/server`         | data-layer helpers (`createEndpoint`, `enqueueDeliveries`, `listPendingDueDeliveries`, …) |
-| `@monark/webhooks/contracts`      | `WebhooksEvents`, header constants, worker tunables         |
+| Import path                  | Export                                                                                    |
+| ---------------------------- | ----------------------------------------------------------------------------------------- |
+| `@monark/webhooks/server`    | `webhooksRouter` (tRPC sub-router mounted at `webhooks.*`)                                |
+| `@monark/webhooks/server`    | `registerWebhookSubscribers`, `registerWebhooksPermissions`                               |
+| `@monark/webhooks/server`    | `startWebhookDeliveryWorker`, `stopWebhookDeliveryWorker`, `tickOnce`                     |
+| `@monark/webhooks/server`    | `setWebhookSecretResolver`                                                                |
+| `@monark/webhooks/server`    | data-layer helpers (`createEndpoint`, `enqueueDeliveries`, `listPendingDueDeliveries`, …) |
+| `@monark/webhooks/contracts` | `WebhooksEvents`, header constants, worker tunables                                       |
 
 tRPC procedures under `webhooks.*` :
 
-| Procedure                    | Input                                         | Output                          |
-|------------------------------|-----------------------------------------------|---------------------------------|
-| `webhooks.list`              | `{ organizationId: string \| null }`          | `EndpointWithSubs[]`            |
-| `webhooks.get`               | `{ id }`                                      | `EndpointWithSubs`              |
-| `webhooks.create`            | `{ organizationId, url, description?, subscriptions[] }` | `{ endpoint, secret }` (secret returned **once**) |
-| `webhooks.update`            | partial of the create payload + `status`      | updated endpoint                |
-| `webhooks.rotateSecret`      | `{ id }`                                      | `{ secret }` (new plaintext)    |
-| `webhooks.delete`            | `{ id }`                                      | —                               |
-| `webhooks.listDeliveries`    | `{ endpointId, limit?, cursor? }`             | `DeliveryRow[]`                 |
-| `webhooks.getDelivery`       | `{ id }`                                      | `{ delivery, attempts }`        |
-| `webhooks.retryDelivery`     | `{ id }`                                      | —                               |
+| Procedure                 | Input                                                    | Output                                            |
+| ------------------------- | -------------------------------------------------------- | ------------------------------------------------- |
+| `webhooks.list`           | `{ organizationId: string \| null }`                     | `EndpointWithSubs[]`                              |
+| `webhooks.get`            | `{ id }`                                                 | `EndpointWithSubs`                                |
+| `webhooks.create`         | `{ organizationId, url, description?, subscriptions[] }` | `{ endpoint, secret }` (secret returned **once**) |
+| `webhooks.update`         | partial of the create payload + `status`                 | updated endpoint                                  |
+| `webhooks.rotateSecret`   | `{ id }`                                                 | `{ secret }` (new plaintext)                      |
+| `webhooks.delete`         | `{ id }`                                                 | —                                                 |
+| `webhooks.listDeliveries` | `{ endpointId, limit?, cursor? }`                        | `DeliveryRow[]`                                   |
+| `webhooks.getDelivery`    | `{ id }`                                                 | `{ delivery, attempts }`                          |
+| `webhooks.retryDelivery`  | `{ id }`                                                 | —                                                 |
 
 ## Boot wiring
 
 The api process registers + starts everything in [`services/api/src/server.ts`](../../services/api/src/server.ts) :
 
 ```ts
-registerWebhooksPermissions()           // permissions registry
-registerWebhookSubscribers()            // bus → outbox writer
-startWebhookDeliveryWorker()            // outbox → HTTP POST
+registerWebhooksPermissions(); // permissions registry
+registerWebhookSubscribers(); // bus → outbox writer
+startWebhookDeliveryWorker(); // outbox → HTTP POST
 // + POST /cron/sweep-webhook-deliveries as the external fallback
 ```
 
@@ -143,7 +143,7 @@ After `WEBHOOK_DELIVERY_FAILURE_LIMIT` (5) consecutive failed deliveries — fai
 
 ## Admin UI
 
-Mounted under `/admin/webhooks` (added to [services/web/src/app/(authed)/admin/admin-tabs.ts](../../services/web/src/app/(authed)/admin/admin-tabs.ts)). Five surfaces :
+Mounted under `/admin/webhooks` (added to [services/web/src/app/(authed)/admin/admin-tabs.ts](<../../services/web/src/app/(authed)/admin/admin-tabs.ts>)). Five surfaces :
 
 - `/admin/webhooks` — endpoint list per scope (org or platform-tier), with URL search + status badges + "consecutive failures" warnings.
 - `/admin/webhooks/new` — create form. Returns the plaintext signing secret in a copy-once banner ; once the operator leaves the page the only way to recover it is `Rotate secret`.
@@ -183,6 +183,7 @@ pnpm webhook-receiver --port 4123
 ```
 
 Flags :
+
 - `--port <n>` — listening port (default 4123).
 - `--secret <plaintext>` — turn on signature verification ; requests whose `Webhook-Signature` doesn't match are rejected with 401.
 - `--fail-once` — return 500 for the first request, then accept normally. Lets you watch the retry path end-to-end.
@@ -195,5 +196,5 @@ The e2e suite uses the receiver via [services/web/tests/e2e/helpers/webhook-rece
 - **Plaintext-secret resolver shipped by default.** A sane starter — `WEBHOOK_SECRETS` env var keyed by endpoint id — would let single-tenant deploys work without integrating an external secret store.
 - **Per-endpoint rate limiting.** A receiver under load returning 429 today retries with backoff but doesn't pause sibling deliveries to the same endpoint. A token bucket per endpoint would be kinder.
 - **Receiver-side verification helper package.** A tiny `@monark/webhooks/verifier` that wraps the HMAC compare + timestamp tolerance for hand-rolled receivers.
-- **Persisted event bus.** The in-memory bus loses events on a process crash *between* `emit()` and the wildcard subscriber's outbox write. Today the window is the same Prisma transaction so the source-mutation rollback covers it ; if subscribers ever go async-after-commit we'd want a real outbox at the bus level.
+- **Persisted event bus.** The in-memory bus loses events on a process crash _between_ `emit()` and the wildcard subscriber's outbox write. Today the window is the same Prisma transaction so the source-mutation rollback covers it ; if subscribers ever go async-after-commit we'd want a real outbox at the bus level.
 - **Cursor pagination on the deliveries list.** Today the page shows the first 50 rows and stops ; a "Load more" button + the existing cursor support in `webhooks.listDeliveries` lands when actual deploys hit the limit.

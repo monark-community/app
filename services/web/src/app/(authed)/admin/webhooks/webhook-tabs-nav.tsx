@@ -1,11 +1,11 @@
-"use client"
+"use client";
 
-import Link from "next/link"
-import { usePathname } from "next/navigation"
-import { useTranslations } from "next-intl"
-import { Settings2, Inbox, AlertTriangle } from "lucide-react"
-import { trpc } from "@/lib/trpc"
-import { cn } from "@/lib/utils"
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
+import { Settings2, Inbox, AlertTriangle } from "lucide-react";
+import { trpc } from "@/lib/trpc";
+import { cn } from "@/lib/utils";
 
 /**
  * Two-tab navigation shared by the webhook editor + the deliveries
@@ -24,11 +24,11 @@ export function WebhookTabsNav({
   endpointId,
   activeTab,
 }: {
-  endpointId: string
-  activeTab: "configuration" | "deliveries"
+  endpointId: string;
+  activeTab: "configuration" | "deliveries";
 }) {
-  const t = useTranslations("admin.webhooks.tabs")
-  const pathname = usePathname()
+  const t = useTranslations("admin.webhooks.tabs");
+  const pathname = usePathname();
 
   const deliveries = trpc.webhooks.listDeliveries.useQuery(
     { endpointId, limit: 50 },
@@ -41,17 +41,15 @@ export function WebhookTabsNav({
       refetchInterval: 30_000,
       enabled: pathname !== undefined,
     },
-  )
-  const hasFailures = (deliveries.data ?? []).some(
-    (d) => d.status === "failed",
-  )
+  );
+  const hasFailures = (deliveries.data ?? []).some((d) => d.status === "failed");
 
   const tabs: Array<{
-    id: "configuration" | "deliveries"
-    href: string
-    label: string
-    Icon: typeof Settings2
-    danger?: boolean
+    id: "configuration" | "deliveries";
+    href: string;
+    label: string;
+    Icon: typeof Settings2;
+    danger?: boolean;
   }> = [
     {
       id: "configuration",
@@ -66,15 +64,12 @@ export function WebhookTabsNav({
       Icon: hasFailures ? AlertTriangle : Inbox,
       danger: hasFailures,
     },
-  ]
+  ];
 
   return (
-    <nav
-      aria-label={t("nav")}
-      className="flex items-center gap-1 border-b border-border"
-    >
+    <nav aria-label={t("nav")} className="flex items-center gap-1 border-b border-border">
       {tabs.map((tab) => {
-        const isActive = tab.id === activeTab
+        const isActive = tab.id === activeTab;
         return (
           <Link
             key={tab.id}
@@ -92,8 +87,8 @@ export function WebhookTabsNav({
             <tab.Icon className="h-4 w-4" aria-hidden />
             {tab.label}
           </Link>
-        )
+        );
       })}
     </nav>
-  )
+  );
 }

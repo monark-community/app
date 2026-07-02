@@ -1,9 +1,8 @@
-import { registerPermissions } from "@monark/rbac/server"
+import { registerPermissions } from "@monark/rbac/server";
 
 const ORG_PERMISSIONS = {
   "update-settings": {
-    description:
-      "Edit organization profile (name, slug, logo, brand color).",
+    description: "Edit organization profile (name, slug, logo, brand color).",
     category: "organization",
   },
   "invite-member": {
@@ -14,8 +13,8 @@ const ORG_PERMISSIONS = {
     description: "Remove existing members from the organization.",
     category: "users",
   },
-} as const
+} as const;
 
 export function registerOrganizationsPermissions(): void {
-  registerPermissions("organizations", ORG_PERMISSIONS)
+  registerPermissions("organizations", ORG_PERMISSIONS);
 }

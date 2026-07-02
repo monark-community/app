@@ -25,6 +25,14 @@ import {
   registerOrganizationsPermissions,
   registerOrganizationsSubscribers,
 } from "@monark/organizations/server";
+import {
+  registerCalendarPermissions,
+  registerCalendarNotificationKinds,
+  getPendingReminders,
+  markReminderNotified,
+  listCalendarMembers,
+} from "@monark/calendar/server";
+import { registerProjectsEventTypes, registerProjectsPermissions } from "@monark/projects/server";
 import { registerRbacEventTypes, registerRbacPermissions } from "@monark/rbac/server";
 import { registerUsersEventTypes, registerUsersPermissions } from "@monark/users/server";
 import {
@@ -55,8 +63,10 @@ import { createContext } from "./trpc/context";
 registerAuthFeatureFlags();
 registerOrganizationsFeatureFlags();
 
+registerCalendarPermissions();
 registerFeatureFlagsPermissions();
 registerOrganizationsPermissions();
+registerProjectsPermissions();
 registerRbacPermissions();
 registerUsersPermissions();
 registerWebhooksPermissions();
@@ -71,6 +81,7 @@ registerAuthEventTypes();
 registerFeatureFlagsEventTypes();
 registerNotificationsEventTypes();
 registerOrganizationsEventTypes();
+registerProjectsEventTypes();
 registerRbacEventTypes();
 registerUsersEventTypes();
 
@@ -78,6 +89,7 @@ registerUsersEventTypes();
 // subscriber can call `notify()` ; subscriber registration follows
 // kind registration.
 registerCoreNotificationKinds();
+registerCalendarNotificationKinds();
 
 // Domain event listeners are registered once at process boot. Add new ones
 // here as more event-driven side-effects come online. The organizations
@@ -89,6 +101,49 @@ registerCoreNotificationKinds();
 registerOrganizationsSubscribers();
 registerNotificationSubscribers();
 registerWebhookSubscribers();
+
+async function sweepCalendarReminders(): Promise<void> {
+  const { notify } = await import("@monark/notifications/server");
+  const now = new Date();
+  const pending = await getPendingReminders(now);
+  for (const reminder of pending) {
+    const members = await listCalendarMembers({
+      organizationId: reminder.organizationId,
+      calendarId: reminder.calendarEvent.calendarId,
+    });
+    const minutesBefore = reminder.minutesBefore;
+    const minutesLabel =
+      minutesBefore >= 10080
+        ? `${minutesBefore / 10080} week${minutesBefore / 10080 !== 1 ? "s" : ""}`
+        : minutesBefore >= 1440
+          ? `${minutesBefore / 1440} day${minutesBefore / 1440 !== 1 ? "s" : ""}`
+          : minutesBefore >= 60
+            ? `${minutesBefore / 60} hour${minutesBefore / 60 !== 1 ? "s" : ""}`
+            : `${minutesBefore} minute${minutesBefore !== 1 ? "s" : ""}`;
+    try {
+      for (const member of members) {
+        await notify(
+          "calendar.event.reminder",
+          { userId: member.id },
+          {
+            eventId: reminder.calendarEventId,
+            eventTitle: reminder.calendarEvent.title,
+            minutesBefore,
+            minutesLabel,
+            startAt: reminder.calendarEvent.startAt,
+            startAtMs: reminder.calendarEvent.startAt.getTime(),
+          },
+        );
+      }
+      await markReminderNotified(reminder.id);
+    } catch (err) {
+      logger.error({ err, reminderId: reminder.id }, "calendar reminder dispatch failed");
+    }
+  }
+  if (pending.length > 0) {
+    logger.info({ count: pending.length }, "calendar reminders dispatched");
+  }
+}
 
 // Background work that should only fire when this file is the
 // process entrypoint — the integration suite imports `app` to drive
@@ -115,6 +170,18 @@ function startBackgroundWork(): void {
   // fallback (Vercel Cron, GitHub Actions, k8s CronJob) so a single
   // api crash doesn't strand the outbox.
   startWebhookDeliveryWorker();
+
+  // Calendar reminder sweep. Runs every 60 s internally; the
+  // `/cron/send-calendar-reminders` endpoint is kept as an external
+  // fallback for the same reason as the webhook worker above.
+  sweepCalendarReminders().catch((err) =>
+    logger.error({ err }, "calendar reminder sweep failed at boot"),
+  );
+  setInterval(() => {
+    sweepCalendarReminders().catch((err) =>
+      logger.error({ err }, "calendar reminder sweep failed"),
+    );
+  }, 60_000);
 
   // Sync the merged flag registry into the FeatureFlag table so the
   // /admin/feature-flags surface can read definitions, and overrides
@@ -286,6 +353,22 @@ app.post("/cron/sweep-webhook-deliveries", async (req, res) => {
     res.json({ ok: true, ...result });
   } catch (error) {
     logger.error({ err: error }, "webhook delivery sweep failed");
+    res.status(500).json({ ok: false, error: "internal" });
+  }
+});
+
+// Fires pending calendar event reminders. Run every minute via external cron.
+// The in-process setInterval in startBackgroundWork() already covers normal
+// operation; this endpoint is an external fallback (Vercel Cron, etc.).
+//   curl -H "Authorization: Bearer $CRON_SECRET" \
+//        http://localhost:4000/cron/send-calendar-reminders
+app.post("/cron/send-calendar-reminders", async (req, res) => {
+  if (!checkCronSecret(req, res)) return;
+  try {
+    await sweepCalendarReminders();
+    res.json({ ok: true });
+  } catch (error) {
+    logger.error({ err: error }, "calendar reminder sweep failed");
     res.status(500).json({ ok: false, error: "internal" });
   }
 });

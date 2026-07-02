@@ -1,3 +1,3 @@
-export * from "./events"
-export * from "./permissions"
-export * from "./role"
+export * from "./events";
+export * from "./permissions";
+export * from "./role";

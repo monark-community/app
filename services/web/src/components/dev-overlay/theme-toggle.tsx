@@ -1,22 +1,22 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
-import { useTheme } from "next-themes"
-import { useTranslations } from "next-intl"
-import { Moon, Sun } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { useEffect, useState } from "react";
+import { useTheme } from "next-themes";
+import { useTranslations } from "next-intl";
+import { Moon, Sun } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 export function ThemeToggle() {
-  const { theme, setTheme, resolvedTheme } = useTheme()
-  const [mounted, setMounted] = useState(false)
-  const t = useTranslations("devOverlay")
+  const { theme, setTheme, resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  const t = useTranslations("devOverlay");
 
-  useEffect(() => setMounted(true), [])
+  useEffect(() => setMounted(true), []);
 
-  const current = mounted ? (theme === "system" ? resolvedTheme : theme) : "dark"
-  const next = current === "dark" ? "light" : "dark"
-  const Icon = current === "dark" ? Moon : Sun
-  const label = t("themeSwitchTo", { theme: t(`theme.${next}`) })
+  const current = mounted ? (theme === "system" ? resolvedTheme : theme) : "dark";
+  const next = current === "dark" ? "light" : "dark";
+  const Icon = current === "dark" ? Moon : Sun;
+  const label = t("themeSwitchTo", { theme: t(`theme.${next}`) });
 
   return (
     <Button
@@ -29,5 +29,5 @@ export function ThemeToggle() {
     >
       <Icon />
     </Button>
-  )
+  );
 }

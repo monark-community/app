@@ -1,57 +1,53 @@
-import { getDb, type Prisma } from "@monark/db"
+import { getDb, type Prisma } from "@monark/db";
 
-export type EndpointRow = Prisma.WebhookEndpointGetPayload<Record<string, never>>
+export type EndpointRow = Prisma.WebhookEndpointGetPayload<Record<string, never>>;
 export type EndpointWithSubs = Prisma.WebhookEndpointGetPayload<{
-  include: { subscriptions: true }
-}>
-export type DeliveryRow = Prisma.WebhookDeliveryGetPayload<Record<string, never>>
+  include: { subscriptions: true };
+}>;
+export type DeliveryRow = Prisma.WebhookDeliveryGetPayload<Record<string, never>>;
 export type DeliveryWithEndpoint = Prisma.WebhookDeliveryGetPayload<{
-  include: { endpoint: true }
-}>
-export type AttemptRow = Prisma.WebhookDeliveryAttemptGetPayload<
-  Record<string, never>
->
+  include: { endpoint: true };
+}>;
+export type AttemptRow = Prisma.WebhookDeliveryAttemptGetPayload<Record<string, never>>;
 
-export type SubscriptionInput = { eventType: string; isPrefix: boolean }
+export type SubscriptionInput = { eventType: string; isPrefix: boolean };
 
-export async function findEndpointById(
-  id: string,
-): Promise<EndpointWithSubs | null> {
-  const db = getDb()
+export async function findEndpointById(id: string): Promise<EndpointWithSubs | null> {
+  const db = getDb();
   return db.webhookEndpoint.findUnique({
     where: { id },
     include: { subscriptions: true },
-  })
+  });
 }
 
 export async function listEndpointsForOrg(
   organizationId: string | null,
 ): Promise<EndpointWithSubs[]> {
-  const db = getDb()
+  const db = getDb();
   return db.webhookEndpoint.findMany({
     where: { organizationId },
     include: { subscriptions: true },
     orderBy: { createdAt: "desc" },
-  })
+  });
 }
 
 export async function listAllEndpoints(): Promise<EndpointWithSubs[]> {
-  const db = getDb()
+  const db = getDb();
   return db.webhookEndpoint.findMany({
     include: { subscriptions: true },
     orderBy: { createdAt: "desc" },
-  })
+  });
 }
 
 export async function createEndpoint(input: {
-  organizationId: string | null
-  name: string
-  url: string
-  description: string | null
-  secretHash: string
-  subscriptions: SubscriptionInput[]
+  organizationId: string | null;
+  name: string;
+  url: string;
+  description: string | null;
+  secretHash: string;
+  subscriptions: SubscriptionInput[];
 }): Promise<EndpointWithSubs> {
-  const db = getDb()
+  const db = getDb();
   return db.$transaction(async (tx) => {
     const endpoint = await tx.webhookEndpoint.create({
       data: {
@@ -61,7 +57,7 @@ export async function createEndpoint(input: {
         description: input.description,
         secretHash: input.secretHash,
       },
-    })
+    });
     if (input.subscriptions.length > 0) {
       await tx.webhookSubscription.createMany({
         data: input.subscriptions.map((s) => ({
@@ -69,49 +65,47 @@ export async function createEndpoint(input: {
           eventType: s.eventType,
           isPrefix: s.isPrefix,
         })),
-      })
+      });
     }
     return tx.webhookEndpoint.findUniqueOrThrow({
       where: { id: endpoint.id },
       include: { subscriptions: true },
-    })
-  })
+    });
+  });
 }
 
 export async function updateEndpointPatch(input: {
-  id: string
-  name?: string
-  url?: string
-  description?: string | null
-  status?: "active" | "disabled"
-  disabledReason?: string | null
-  subscriptions?: SubscriptionInput[]
+  id: string;
+  name?: string;
+  url?: string;
+  description?: string | null;
+  status?: "active" | "disabled";
+  disabledReason?: string | null;
+  subscriptions?: SubscriptionInput[];
 }): Promise<EndpointWithSubs> {
-  const db = getDb()
+  const db = getDb();
   return db.$transaction(async (tx) => {
-    const patch: Prisma.WebhookEndpointUpdateInput = {}
-    if (input.name !== undefined) patch.name = input.name
-    if (input.url !== undefined) patch.url = input.url
-    if (input.description !== undefined) patch.description = input.description
+    const patch: Prisma.WebhookEndpointUpdateInput = {};
+    if (input.name !== undefined) patch.name = input.name;
+    if (input.url !== undefined) patch.url = input.url;
+    if (input.description !== undefined) patch.description = input.description;
     if (input.status !== undefined) {
-      patch.status = input.status
-      patch.disabledAt =
-        input.status === "disabled" ? new Date() : null
-      patch.disabledReason =
-        input.status === "disabled" ? input.disabledReason ?? null : null
+      patch.status = input.status;
+      patch.disabledAt = input.status === "disabled" ? new Date() : null;
+      patch.disabledReason = input.status === "disabled" ? (input.disabledReason ?? null) : null;
       // Successful re-enable resets the failure counter so a healthy
       // run starts the disable countdown fresh.
       if (input.status === "active") {
-        patch.consecutiveFailures = 0
+        patch.consecutiveFailures = 0;
       }
     }
     if (Object.keys(patch).length > 0) {
-      await tx.webhookEndpoint.update({ where: { id: input.id }, data: patch })
+      await tx.webhookEndpoint.update({ where: { id: input.id }, data: patch });
     }
     if (input.subscriptions !== undefined) {
       await tx.webhookSubscription.deleteMany({
         where: { endpointId: input.id },
-      })
+      });
       if (input.subscriptions.length > 0) {
         await tx.webhookSubscription.createMany({
           data: input.subscriptions.map((s) => ({
@@ -119,31 +113,31 @@ export async function updateEndpointPatch(input: {
             eventType: s.eventType,
             isPrefix: s.isPrefix,
           })),
-        })
+        });
       }
     }
     return tx.webhookEndpoint.findUniqueOrThrow({
       where: { id: input.id },
       include: { subscriptions: true },
-    })
-  })
+    });
+  });
 }
 
 export async function rotateEndpointSecret(input: {
-  id: string
-  secretHash: string
+  id: string;
+  secretHash: string;
 }): Promise<EndpointWithSubs> {
-  const db = getDb()
+  const db = getDb();
   return db.webhookEndpoint.update({
     where: { id: input.id },
     data: { secretHash: input.secretHash },
     include: { subscriptions: true },
-  })
+  });
 }
 
 export async function deleteEndpoint(id: string): Promise<void> {
-  const db = getDb()
-  await db.webhookEndpoint.delete({ where: { id } })
+  const db = getDb();
+  await db.webhookEndpoint.delete({ where: { id } });
 }
 
 /**
@@ -155,17 +149,15 @@ export async function deleteEndpoint(id: string): Promise<void> {
  * routing rules) ; this function returns every candidate so the
  * subscriber can pick.
  */
-export async function findMatchingEndpoints(
-  eventType: string,
-): Promise<EndpointRow[]> {
-  const db = getDb()
+export async function findMatchingEndpoints(eventType: string): Promise<EndpointRow[]> {
+  const db = getDb();
   // Exact-match path : a single index hit on (eventType).
   const exact = db.webhookSubscription.findMany({
     where: { eventType, isPrefix: false },
     select: {
       endpoint: true,
     },
-  })
+  });
   // Prefix-match path : Postgres can't index this side, but the prefix
   // set is small (one row per `<module>.` style filter). We pull every
   // prefix sub and filter in memory.
@@ -175,18 +167,18 @@ export async function findMatchingEndpoints(
       eventType: true,
       endpoint: true,
     },
-  })
-  const [exactRows, prefixRows] = await Promise.all([exact, prefixes])
-  const map = new Map<string, EndpointRow>()
+  });
+  const [exactRows, prefixRows] = await Promise.all([exact, prefixes]);
+  const map = new Map<string, EndpointRow>();
   for (const row of exactRows) {
-    if (row.endpoint.status === "active") map.set(row.endpoint.id, row.endpoint)
+    if (row.endpoint.status === "active") map.set(row.endpoint.id, row.endpoint);
   }
   for (const row of prefixRows) {
     if (eventType.startsWith(row.eventType) && row.endpoint.status === "active") {
-      map.set(row.endpoint.id, row.endpoint)
+      map.set(row.endpoint.id, row.endpoint);
     }
   }
-  return [...map.values()]
+  return [...map.values()];
 }
 
 /**
@@ -198,15 +190,15 @@ export async function findMatchingEndpoints(
  */
 export async function enqueueDeliveries(input: {
   matches: Array<{
-    endpointId: string
-    idempotencyKey: string
-  }>
-  eventType: string
-  payload: unknown
-  client?: Prisma.TransactionClient
+    endpointId: string;
+    idempotencyKey: string;
+  }>;
+  eventType: string;
+  payload: unknown;
+  client?: Prisma.TransactionClient;
 }): Promise<DeliveryRow[]> {
-  const client = input.client ?? getDb()
-  const created: DeliveryRow[] = []
+  const client = input.client ?? getDb();
+  const created: DeliveryRow[] = [];
   for (const match of input.matches) {
     try {
       const row = await client.webhookDelivery.create({
@@ -216,8 +208,8 @@ export async function enqueueDeliveries(input: {
           payload: input.payload as never,
           idempotencyKey: match.idempotencyKey,
         },
-      })
-      created.push(row)
+      });
+      created.push(row);
     } catch (err) {
       // Unique-violation means this delivery already exists ; safely
       // skip so retries of the source mutation are idempotent.
@@ -227,18 +219,16 @@ export async function enqueueDeliveries(input: {
         "code" in err &&
         (err as { code: string }).code === "P2002"
       ) {
-        continue
+        continue;
       }
-      throw err
+      throw err;
     }
   }
-  return created
+  return created;
 }
 
-export async function listPendingDueDeliveries(
-  limit: number,
-): Promise<DeliveryWithEndpoint[]> {
-  const db = getDb()
+export async function listPendingDueDeliveries(limit: number): Promise<DeliveryWithEndpoint[]> {
+  const db = getDb();
   return db.webhookDelivery.findMany({
     where: {
       status: "pending",
@@ -247,18 +237,18 @@ export async function listPendingDueDeliveries(
     include: { endpoint: true },
     orderBy: { nextAttemptAt: "asc" },
     take: limit,
-  })
+  });
 }
 
 export async function recordAttempt(input: {
-  deliveryId: string
-  attemptNumber: number
-  startedAt: Date
-  finishedAt: Date
-  statusCode: number | null
-  error: string | null
+  deliveryId: string;
+  attemptNumber: number;
+  startedAt: Date;
+  finishedAt: Date;
+  statusCode: number | null;
+  error: string | null;
 }): Promise<AttemptRow> {
-  const db = getDb()
+  const db = getDb();
   return db.webhookDeliveryAttempt.create({
     data: {
       deliveryId: input.deliveryId,
@@ -269,14 +259,14 @@ export async function recordAttempt(input: {
       error: input.error,
       durationMs: input.finishedAt.getTime() - input.startedAt.getTime(),
     },
-  })
+  });
 }
 
 export async function markDeliverySucceeded(input: {
-  deliveryId: string
-  endpointId: string
+  deliveryId: string;
+  endpointId: string;
 }): Promise<void> {
-  const db = getDb()
+  const db = getDb();
   await db.$transaction([
     db.webhookDelivery.update({
       where: { id: input.deliveryId },
@@ -289,17 +279,17 @@ export async function markDeliverySucceeded(input: {
       where: { id: input.endpointId },
       data: { consecutiveFailures: 0 },
     }),
-  ])
+  ]);
 }
 
 export async function markDeliveryRetry(input: {
-  deliveryId: string
-  endpointId: string
-  nextAttemptAt: Date
-  attempts: number
-  lastError: string
+  deliveryId: string;
+  endpointId: string;
+  nextAttemptAt: Date;
+  attempts: number;
+  lastError: string;
 }): Promise<void> {
-  const db = getDb()
+  const db = getDb();
   await db.$transaction([
     db.webhookDelivery.update({
       where: { id: input.deliveryId },
@@ -313,16 +303,16 @@ export async function markDeliveryRetry(input: {
       where: { id: input.endpointId },
       data: { consecutiveFailures: { increment: 1 } },
     }),
-  ])
+  ]);
 }
 
 export async function markDeliveryFailed(input: {
-  deliveryId: string
-  endpointId: string
-  attempts: number
-  lastError: string
+  deliveryId: string;
+  endpointId: string;
+  attempts: number;
+  lastError: string;
 }): Promise<void> {
-  const db = getDb()
+  const db = getDb();
   await db.$transaction([
     db.webhookDelivery.update({
       where: { id: input.deliveryId },
@@ -337,14 +327,14 @@ export async function markDeliveryFailed(input: {
       where: { id: input.endpointId },
       data: { consecutiveFailures: { increment: 1 } },
     }),
-  ])
+  ]);
 }
 
 export async function disableEndpointForFailures(input: {
-  endpointId: string
-  reason: string
+  endpointId: string;
+  reason: string;
 }): Promise<void> {
-  const db = getDb()
+  const db = getDb();
   await db.webhookEndpoint.update({
     where: { id: input.endpointId },
     data: {
@@ -352,7 +342,7 @@ export async function disableEndpointForFailures(input: {
       disabledAt: new Date(),
       disabledReason: input.reason.slice(0, 280),
     },
-  })
+  });
 }
 
 // Listing rows for the admin UI. Drops the `payload` Json column to
@@ -361,19 +351,19 @@ export async function disableEndpointForFailures(input: {
 // trips TS2589 on the consuming page). The detail view fetches the
 // full row including payload through `findDeliveryById`.
 export type DeliveryListRow = {
-  id: string
-  endpointId: string
-  eventType: string
-  idempotencyKey: string
-  status: "pending" | "delivered" | "failed"
-  attempts: number
-  nextAttemptAt: Date
-  deliveredAt: Date | null
-  failedAt: Date | null
-  lastError: string | null
-  createdAt: Date
-  updatedAt: Date
-}
+  id: string;
+  endpointId: string;
+  eventType: string;
+  idempotencyKey: string;
+  status: "pending" | "delivered" | "failed";
+  attempts: number;
+  nextAttemptAt: Date;
+  deliveredAt: Date | null;
+  failedAt: Date | null;
+  lastError: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+};
 
 /**
  * Returns every active organization id the user is a member of. Used
@@ -389,15 +379,13 @@ export type DeliveryListRow = {
  * organizations module ever needs to gate this read, expose a
  * `getUserOrgIds()` helper there and switch the import.
  */
-export async function findUserMemberOrgIds(
-  userId: string,
-): Promise<string[]> {
-  const db = getDb()
+export async function findUserMemberOrgIds(userId: string): Promise<string[]> {
+  const db = getDb();
   const rows = await db.organizationMembership.findMany({
     where: { userId, leftAt: null },
     select: { organizationId: true },
-  })
-  return rows.map((r) => r.organizationId)
+  });
+  return rows.map((r) => r.organizationId);
 }
 
 /**
@@ -417,22 +405,22 @@ export async function findUserMemberOrgIds(
  * almost certainly wants.
  */
 export async function findOnlySingletonOrgId(): Promise<string | null> {
-  const db = getDb()
+  const db = getDb();
   const rows = await db.organization.findMany({
     where: { deletedAt: null },
     select: { id: true },
     take: 2,
-  })
-  if (rows.length === 1 && rows[0]) return rows[0].id
-  return null
+  });
+  if (rows.length === 1 && rows[0]) return rows[0].id;
+  return null;
 }
 
 export async function listDeliveriesForEndpoint(input: {
-  endpointId: string
-  limit: number
-  cursor?: string
+  endpointId: string;
+  limit: number;
+  cursor?: string;
 }): Promise<DeliveryListRow[]> {
-  const db = getDb()
+  const db = getDb();
   return db.webhookDelivery.findMany({
     where: { endpointId: input.endpointId },
     orderBy: { createdAt: "desc" },
@@ -453,27 +441,23 @@ export async function listDeliveriesForEndpoint(input: {
       createdAt: true,
       updatedAt: true,
     },
-  })
+  });
 }
 
-export async function findDeliveryById(
-  id: string,
-): Promise<DeliveryWithEndpoint | null> {
-  const db = getDb()
+export async function findDeliveryById(id: string): Promise<DeliveryWithEndpoint | null> {
+  const db = getDb();
   return db.webhookDelivery.findUnique({
     where: { id },
     include: { endpoint: true },
-  })
+  });
 }
 
-export async function listAttemptsForDelivery(
-  deliveryId: string,
-): Promise<AttemptRow[]> {
-  const db = getDb()
+export async function listAttemptsForDelivery(deliveryId: string): Promise<AttemptRow[]> {
+  const db = getDb();
   return db.webhookDeliveryAttempt.findMany({
     where: { deliveryId },
     orderBy: { attemptNumber: "asc" },
-  })
+  });
 }
 
 /**
@@ -481,10 +465,8 @@ export async function listAttemptsForDelivery(
  * Used by the manual-retry tRPC procedure ; the next attempt fires
  * with attemptNumber preserved so the audit trail remains continuous.
  */
-export async function requeueDelivery(
-  deliveryId: string,
-): Promise<void> {
-  const db = getDb()
+export async function requeueDelivery(deliveryId: string): Promise<void> {
+  const db = getDb();
   await db.webhookDelivery.update({
     where: { id: deliveryId },
     data: {
@@ -492,5 +474,5 @@ export async function requeueDelivery(
       nextAttemptAt: new Date(),
       failedAt: null,
     },
-  })
+  });
 }

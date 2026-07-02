@@ -1,5 +1,5 @@
-import { configDefaults, defineConfig, mergeConfig } from "vitest/config"
-import baseConfig from "../../vitest.shared"
+import { configDefaults, defineConfig, mergeConfig } from "vitest/config";
+import baseConfig from "../../vitest.shared";
 
 // Target threshold per test-plan : 85 %. Feature-flags is small +
 // well-covered already (flags + resolve specs) ; the integration
@@ -22,4 +22,4 @@ export default mergeConfig(
       },
     },
   }),
-)
+);

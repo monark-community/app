@@ -1,4 +1,4 @@
-import { RoleEditor } from "../../role-editor"
+import { RoleEditor } from "../../role-editor";
 
 /**
  * Edit-role page at `/admin/rbac/roles/[id]`. The role id is the only
@@ -14,12 +14,12 @@ import { RoleEditor } from "../../role-editor"
 export default async function AdminRbacEditRolePage({
   params,
 }: {
-  params: Promise<{ id: string }>
+  params: Promise<{ id: string }>;
 }) {
-  const { id } = await params
+  const { id } = await params;
   return (
     <section>
       <RoleEditor mode="edit" roleId={id} />
     </section>
-  )
+  );
 }

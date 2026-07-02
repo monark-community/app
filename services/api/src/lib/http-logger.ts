@@ -1,6 +1,6 @@
-import { randomUUID } from "node:crypto"
-import { pinoHttp } from "pino-http"
-import { logger } from "@monark/common"
+import { randomUUID } from "node:crypto";
+import { pinoHttp } from "pino-http";
+import { logger } from "@monark/common";
 
 /**
  * Express request logger. One concise line per request, level chosen by
@@ -18,38 +18,38 @@ import { logger } from "@monark/common"
  * don't drown out real traffic. Add other noisy paths to `IGNORED_PATHS`
  * if they come up.
  */
-const IGNORED_PATHS = new Set(["/health"])
+const IGNORED_PATHS = new Set(["/health"]);
 
 function stripQuery(url: string | undefined): string {
-  if (!url) return ""
-  const q = url.indexOf("?")
-  return q < 0 ? url : url.slice(0, q)
+  if (!url) return "";
+  const q = url.indexOf("?");
+  return q < 0 ? url : url.slice(0, q);
 }
 
 export const httpLogger = pinoHttp({
   logger,
 
   genReqId: (req) => {
-    const incoming = req.headers["x-request-id"]
-    if (typeof incoming === "string" && incoming.length > 0) return incoming
-    return randomUUID()
+    const incoming = req.headers["x-request-id"];
+    if (typeof incoming === "string" && incoming.length > 0) return incoming;
+    return randomUUID();
   },
 
   customLogLevel: (_req, res, err) => {
-    if (err || (res.statusCode ?? 0) >= 500) return "error"
-    if ((res.statusCode ?? 0) >= 400) return "warn"
-    return "info"
+    if (err || (res.statusCode ?? 0) >= 500) return "error";
+    if ((res.statusCode ?? 0) >= 400) return "warn";
+    return "info";
   },
 
   customSuccessMessage: (req, res, responseTime) => {
-    const status = res.statusCode ?? 0
-    return `${req.method} ${stripQuery(req.url)} ${status} ${responseTime.toFixed(0)}ms`
+    const status = res.statusCode ?? 0;
+    return `${req.method} ${stripQuery(req.url)} ${status} ${responseTime.toFixed(0)}ms`;
   },
 
   customErrorMessage: (req, res, err) => {
-    const status = res.statusCode ?? 500
-    const message = err instanceof Error ? err.message : "error"
-    return `${req.method} ${stripQuery(req.url)} ${status} ${message}`
+    const status = res.statusCode ?? 500;
+    const message = err instanceof Error ? err.message : "error";
+    return `${req.method} ${stripQuery(req.url)} ${status} ${message}`;
   },
 
   // Structured payload kept tiny: id + method + url(no query) + status + duration.
@@ -71,4 +71,4 @@ export const httpLogger = pinoHttp({
   autoLogging: {
     ignore: (req) => IGNORED_PATHS.has(req.url ?? ""),
   },
-})
+});

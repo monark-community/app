@@ -1,12 +1,8 @@
-"use client"
+"use client";
 
-import { useState, type ReactNode } from "react"
-import { ChevronRight } from "lucide-react"
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible"
+import { useState, type ReactNode } from "react";
+import { ChevronRight } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 export function CollapsibleSection({
   title,
@@ -14,12 +10,12 @@ export function CollapsibleSection({
   badge,
   children,
 }: {
-  title: string
-  defaultOpen?: boolean
-  badge?: ReactNode
-  children: ReactNode
+  title: string;
+  defaultOpen?: boolean;
+  badge?: ReactNode;
+  children: ReactNode;
 }) {
-  const [open, setOpen] = useState(defaultOpen)
+  const [open, setOpen] = useState(defaultOpen);
 
   return (
     <Collapsible open={open} onOpenChange={setOpen} className="border-t border-border">
@@ -34,5 +30,5 @@ export function CollapsibleSection({
         <div className="px-4 pb-4">{children}</div>
       </CollapsibleContent>
     </Collapsible>
-  )
+  );
 }

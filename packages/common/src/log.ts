@@ -1,12 +1,12 @@
-import pino, { type LoggerOptions } from "pino"
+import pino, { type LoggerOptions } from "pino";
 
-const isProd = process.env.NODE_ENV === "production"
+const isProd = process.env.NODE_ENV === "production";
 // `process.stdout.isTTY` is true when stdout is attached to a terminal
 // (local `pnpm dev`, not a piped `>file` or systemd journal). The check
 // keeps prod / CI / aggregator pipelines on machine-parseable JSON while
 // dev gets coloured one-liners via pino-pretty.
-const isTty = Boolean(process.stdout.isTTY)
-const usePretty = !isProd && isTty
+const isTty = Boolean(process.stdout.isTTY);
+const usePretty = !isProd && isTty;
 
 /**
  * Redaction list. Hits the structured-log shape only — any object key
@@ -43,13 +43,13 @@ export const REDACT_PATHS = [
   "*.secretCipher",
   "*.cookieValue",
   "*.cookieHash",
-]
+];
 
 const baseOptions: LoggerOptions = {
   level: process.env.LOG_LEVEL ?? "info",
   base: { service: process.env.SERVICE_NAME ?? "monark" },
   redact: { paths: REDACT_PATHS, censor: "[REDACTED]" },
-}
+};
 
 export const logger = usePretty
   ? pino({
@@ -68,4 +68,4 @@ export const logger = usePretty
         },
       },
     })
-  : pino(baseOptions)
+  : pino(baseOptions);

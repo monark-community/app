@@ -1,5 +1,5 @@
-import { getTranslations } from "next-intl/server"
-import { PageHeader } from "@/components/page-header"
+import { getTranslations } from "next-intl/server";
+import { PageHeader } from "@/components/page-header";
 
 /**
  * Page-level h1 + subtitle for every `/account/*` route. Uses the
@@ -23,15 +23,9 @@ export async function AccountPageHeader({
   tab,
   tone = "default",
 }: {
-  tab: "profile" | "security" | "notifications" | "danger"
-  tone?: "default" | "danger"
+  tab: "profile" | "security" | "notifications" | "danger";
+  tone?: "default" | "danger";
 }) {
-  const t = await getTranslations("account")
-  return (
-    <PageHeader
-      title={t(`tabs.${tab}`)}
-      subtitle={t(`subtitles.${tab}`)}
-      tone={tone}
-    />
-  )
+  const t = await getTranslations("account");
+  return <PageHeader title={t(`tabs.${tab}`)} subtitle={t(`subtitles.${tab}`)} tone={tone} />;
 }

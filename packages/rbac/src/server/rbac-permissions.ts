@@ -1,4 +1,4 @@
-import { registerPermissions } from "../contracts/permissions"
+import { registerPermissions } from "../contracts/permissions";
 
 // Permissions owned by the rbac module : managing custom roles,
 // granting / revoking roles to users. Registered at api boot via
@@ -16,8 +16,8 @@ const RBAC_PERMISSIONS = {
     description: "Grant or revoke the admin role to members.",
     category: "rbac",
   },
-} as const
+} as const;
 
 export function registerRbacPermissions(): void {
-  registerPermissions("rbac", RBAC_PERMISSIONS)
+  registerPermissions("rbac", RBAC_PERMISSIONS);
 }

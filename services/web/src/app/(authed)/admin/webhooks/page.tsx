@@ -1,8 +1,8 @@
-import { getTranslations } from "next-intl/server"
-import { WebhooksManager } from "./webhooks-manager"
+import { getTranslations } from "next-intl/server";
+import { WebhooksManager } from "./webhooks-manager";
 
 export default async function AdminWebhooksPage() {
-  const t = await getTranslations("admin.webhooks")
+  const t = await getTranslations("admin.webhooks");
   return (
     <section className="space-y-4">
       <header>
@@ -11,5 +11,5 @@ export default async function AdminWebhooksPage() {
       </header>
       <WebhooksManager />
     </section>
-  )
+  );
 }

@@ -1,18 +1,13 @@
-import { z } from "zod"
-import {
-  emit,
-  listEventTypesByModule,
-  NotFoundError,
-  ValidationError,
-} from "@monark/common"
-import { publicProcedure, router } from "@monark/common/trpc"
-import { requirePermission } from "@monark/rbac/server"
+import { z } from "zod";
+import { emit, listEventTypesByModule, NotFoundError, ValidationError } from "@monark/common";
+import { publicProcedure, router } from "@monark/common/trpc";
+import { requirePermission } from "@monark/rbac/server";
 import type {
   WebhookEndpointCreatedEvent,
   WebhookEndpointDeletedEvent,
   WebhookEndpointSecretRotatedEvent,
   WebhookEndpointUpdatedEvent,
-} from "../contracts/events"
+} from "../contracts/events";
 import {
   createEndpoint,
   deleteEndpoint,
@@ -24,17 +19,17 @@ import {
   requeueDelivery,
   rotateEndpointSecret,
   updateEndpointPatch,
-} from "./data"
-import { mintSecret } from "./secrets"
-import { forgetSecret, rememberSecret } from "./secret-store"
-import { deliverOne } from "./worker"
+} from "./data";
+import { mintSecret } from "./secrets";
+import { forgetSecret, rememberSecret } from "./secret-store";
+import { deliverOne } from "./worker";
 
 // Same private-host shape the api's CORS layer accepts in dev so
 // loopback + RFC 1918 ranges (10/8, 172.16/12, 192.168/16) get the
 // same treatment for webhook URLs as for cross-origin browser calls
 // during local development.
 const PRIVATE_HOST_RE =
-  /^(localhost|127\.0\.0\.1|\[::1\]|10(?:\.\d{1,3}){3}|192\.168(?:\.\d{1,3}){2}|172\.(?:1[6-9]|2\d|3[01])(?:\.\d{1,3}){2})$/
+  /^(localhost|127\.0\.0\.1|\[::1\]|10(?:\.\d{1,3}){3}|192\.168(?:\.\d{1,3}){2}|172\.(?:1[6-9]|2\d|3[01])(?:\.\d{1,3}){2})$/;
 
 const subscriptionInputSchema = z.object({
   eventType: z
@@ -44,7 +39,7 @@ const subscriptionInputSchema = z.object({
     .max(120)
     .regex(/^[a-z0-9._-]*$/, "invalid_event_type"),
   isPrefix: z.boolean().optional().default(false),
-})
+});
 
 /**
  * Validates the webhook target URL :
@@ -66,29 +61,27 @@ const subscriptionInputSchema = z.object({
  * existing CORS / cookie / log path already assumes this).
  */
 function assertSafeUrl(url: string): void {
-  let parsed: URL
+  let parsed: URL;
   try {
-    parsed = new URL(url)
+    parsed = new URL(url);
   } catch {
     throw new ValidationError(
       "Webhook URL must be an absolute https:// URL (http:// is allowed only for private/loopback hosts in development).",
-    )
+    );
   }
-  if (parsed.protocol === "https:") return
+  if (parsed.protocol === "https:") return;
   if (parsed.protocol === "http:") {
     if (process.env.NODE_ENV === "production") {
-      throw new ValidationError(
-        "Webhook URL must be https:// in production.",
-      )
+      throw new ValidationError("Webhook URL must be https:// in production.");
     }
-    if (PRIVATE_HOST_RE.test(parsed.hostname)) return
+    if (PRIVATE_HOST_RE.test(parsed.hostname)) return;
     throw new ValidationError(
       "Webhook URL over http:// is allowed in development only for loopback or private (RFC 1918) hosts. Use https:// for public targets.",
-    )
+    );
   }
   throw new ValidationError(
     `Webhook URL scheme "${parsed.protocol}" is not supported ; use https:// (or http:// for a private host in development).`,
-  )
+  );
 }
 
 export const webhooksRouter = router({
@@ -102,7 +95,12 @@ export const webhooksRouter = router({
       // Non-authed callers don't even see the metadata. Soft-fail
       // with empty groups rather than throwing — keeps the picker
       // graceful during a brief auth refresh.
-      return { groups: [] as Array<{ module: string; events: Array<{ type: string; description: string }> }> }
+      return {
+        groups: [] as Array<{
+          module: string;
+          events: Array<{ type: string; description: string }>;
+        }>,
+      };
     }
     return {
       groups: listEventTypesByModule().map((g) => ({
@@ -112,7 +110,7 @@ export const webhooksRouter = router({
           description: e.description,
         })),
       })),
-    }
+    };
   }),
 
   // List endpoints in scope. Org-scoped callers see their org's
@@ -125,26 +123,16 @@ export const webhooksRouter = router({
       }),
     )
     .query(async ({ ctx, input }) => {
-      await requirePermission(
-        ctx,
-        "webhooks.read",
-        input.organizationId ?? undefined,
-      )
-      return listEndpointsForOrg(input.organizationId)
+      await requirePermission(ctx, "webhooks.read", input.organizationId ?? undefined);
+      return listEndpointsForOrg(input.organizationId);
     }),
 
-  get: publicProcedure
-    .input(z.object({ id: z.string().min(1) }))
-    .query(async ({ ctx, input }) => {
-      const endpoint = await findEndpointById(input.id)
-      if (!endpoint) throw new NotFoundError("WebhookEndpoint", input.id)
-      await requirePermission(
-        ctx,
-        "webhooks.read",
-        endpoint.organizationId ?? undefined,
-      )
-      return endpoint
-    }),
+  get: publicProcedure.input(z.object({ id: z.string().min(1) })).query(async ({ ctx, input }) => {
+    const endpoint = await findEndpointById(input.id);
+    if (!endpoint) throw new NotFoundError("WebhookEndpoint", input.id);
+    await requirePermission(ctx, "webhooks.read", endpoint.organizationId ?? undefined);
+    return endpoint;
+  }),
 
   // Returns the freshly-minted plaintext secret in the response so
   // the operator can configure their receiver. The secret is never
@@ -164,9 +152,9 @@ export const webhooksRouter = router({
         ctx,
         "webhooks.write",
         input.organizationId ?? undefined,
-      )
-      assertSafeUrl(input.url)
-      const { plaintext, hash } = mintSecret()
+      );
+      assertSafeUrl(input.url);
+      const { plaintext, hash } = mintSecret();
       const endpoint = await createEndpoint({
         organizationId: input.organizationId,
         name: input.name,
@@ -177,11 +165,11 @@ export const webhooksRouter = router({
           eventType: s.eventType,
           isPrefix: s.isPrefix,
         })),
-      })
+      });
       // Persist the plaintext to the active SecretStore so the worker
       // can sign deliveries. Default in-memory ; production replaces
       // via `setWebhookSecretStore()` at api boot.
-      await rememberSecret(endpoint.id, plaintext)
+      await rememberSecret(endpoint.id, plaintext);
       const event: WebhookEndpointCreatedEvent = {
         type: "webhook.endpoint-created",
         endpointId: endpoint.id,
@@ -189,9 +177,9 @@ export const webhooksRouter = router({
         url: endpoint.url,
         actorId,
         occurredAt: new Date(),
-      }
-      await emit(event).catch(() => {})
-      return { endpoint, secret: plaintext }
+      };
+      await emit(event).catch(() => {});
+      return { endpoint, secret: plaintext };
     }),
 
   update: publicProcedure
@@ -207,14 +195,14 @@ export const webhooksRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const existing = await findEndpointById(input.id)
-      if (!existing) throw new NotFoundError("WebhookEndpoint", input.id)
+      const existing = await findEndpointById(input.id);
+      if (!existing) throw new NotFoundError("WebhookEndpoint", input.id);
       const actorId = await requirePermission(
         ctx,
         "webhooks.write",
         existing.organizationId ?? undefined,
-      )
-      if (input.url !== undefined) assertSafeUrl(input.url)
+      );
+      if (input.url !== undefined) assertSafeUrl(input.url);
       const updated = await updateEndpointPatch({
         id: input.id,
         name: input.name,
@@ -223,17 +211,17 @@ export const webhooksRouter = router({
         status: input.status,
         disabledReason: input.disabledReason,
         subscriptions: input.subscriptions,
-      })
-      const changed: WebhookEndpointUpdatedEvent["changed"] = []
+      });
+      const changed: WebhookEndpointUpdatedEvent["changed"] = [];
       if (input.name !== undefined && input.name !== existing.name) {
-        changed.push("name")
+        changed.push("name");
       }
-      if (input.url !== undefined && input.url !== existing.url) changed.push("url")
-      if (input.description !== undefined) changed.push("description")
+      if (input.url !== undefined && input.url !== existing.url) changed.push("url");
+      if (input.description !== undefined) changed.push("description");
       if (input.status !== undefined && input.status !== existing.status) {
-        changed.push("status")
+        changed.push("status");
       }
-      if (input.subscriptions !== undefined) changed.push("subscriptions")
+      if (input.subscriptions !== undefined) changed.push("subscriptions");
       if (changed.length > 0) {
         const event: WebhookEndpointUpdatedEvent = {
           type: "webhook.endpoint-updated",
@@ -242,56 +230,56 @@ export const webhooksRouter = router({
           changed,
           actorId,
           occurredAt: new Date(),
-        }
-        await emit(event).catch(() => {})
+        };
+        await emit(event).catch(() => {});
       }
-      return updated
+      return updated;
     }),
 
   rotateSecret: publicProcedure
     .input(z.object({ id: z.string().min(1) }))
     .mutation(async ({ ctx, input }) => {
-      const existing = await findEndpointById(input.id)
-      if (!existing) throw new NotFoundError("WebhookEndpoint", input.id)
+      const existing = await findEndpointById(input.id);
+      if (!existing) throw new NotFoundError("WebhookEndpoint", input.id);
       const actorId = await requirePermission(
         ctx,
         "webhooks.write",
         existing.organizationId ?? undefined,
-      )
-      const { plaintext, hash } = mintSecret()
-      await rotateEndpointSecret({ id: input.id, secretHash: hash })
-      await rememberSecret(input.id, plaintext)
+      );
+      const { plaintext, hash } = mintSecret();
+      await rotateEndpointSecret({ id: input.id, secretHash: hash });
+      await rememberSecret(input.id, plaintext);
       const event: WebhookEndpointSecretRotatedEvent = {
         type: "webhook.endpoint-secret-rotated",
         endpointId: input.id,
         organizationId: existing.organizationId,
         actorId,
         occurredAt: new Date(),
-      }
-      await emit(event).catch(() => {})
-      return { secret: plaintext }
+      };
+      await emit(event).catch(() => {});
+      return { secret: plaintext };
     }),
 
   delete: publicProcedure
     .input(z.object({ id: z.string().min(1) }))
     .mutation(async ({ ctx, input }) => {
-      const existing = await findEndpointById(input.id)
-      if (!existing) return
+      const existing = await findEndpointById(input.id);
+      if (!existing) return;
       const actorId = await requirePermission(
         ctx,
         "webhooks.write",
         existing.organizationId ?? undefined,
-      )
-      await deleteEndpoint(input.id)
-      await forgetSecret(input.id)
+      );
+      await deleteEndpoint(input.id);
+      await forgetSecret(input.id);
       const event: WebhookEndpointDeletedEvent = {
         type: "webhook.endpoint-deleted",
         endpointId: existing.id,
         organizationId: existing.organizationId,
         actorId,
         occurredAt: new Date(),
-      }
-      await emit(event).catch(() => {})
+      };
+      await emit(event).catch(() => {});
     }),
 
   // ── Delivery inspection + manual retry ────────────────────────
@@ -305,58 +293,46 @@ export const webhooksRouter = router({
       }),
     )
     .query(async ({ ctx, input }) => {
-      const endpoint = await findEndpointById(input.endpointId)
-      if (!endpoint) throw new NotFoundError("WebhookEndpoint", input.endpointId)
-      await requirePermission(
-        ctx,
-        "webhooks.read",
-        endpoint.organizationId ?? undefined,
-      )
+      const endpoint = await findEndpointById(input.endpointId);
+      if (!endpoint) throw new NotFoundError("WebhookEndpoint", input.endpointId);
+      await requirePermission(ctx, "webhooks.read", endpoint.organizationId ?? undefined);
       return listDeliveriesForEndpoint({
         endpointId: input.endpointId,
         limit: input.limit,
         cursor: input.cursor,
-      })
+      });
     }),
 
   getDelivery: publicProcedure
     .input(z.object({ id: z.string().min(1) }))
     .query(async ({ ctx, input }) => {
-      const delivery = await findDeliveryById(input.id)
-      if (!delivery) throw new NotFoundError("WebhookDelivery", input.id)
-      await requirePermission(
-        ctx,
-        "webhooks.read",
-        delivery.endpoint.organizationId ?? undefined,
-      )
-      const attempts = await listAttemptsForDelivery(input.id)
+      const delivery = await findDeliveryById(input.id);
+      if (!delivery) throw new NotFoundError("WebhookDelivery", input.id);
+      await requirePermission(ctx, "webhooks.read", delivery.endpoint.organizationId ?? undefined);
+      const attempts = await listAttemptsForDelivery(input.id);
       // Flatten the Prisma `Json` payload to `unknown` at the wire
       // boundary so the tRPC client doesn't carry the recursive
       // `JsonValue` generic (TS2589 fires on the consuming page when
       // it tries to materialize the resulting deep type).
-      const { payload, ...rest } = delivery
+      const { payload, ...rest } = delivery;
       return {
         delivery: { ...rest, payload: payload as unknown },
         attempts,
-      }
+      };
     }),
 
   retryDelivery: publicProcedure
     .input(z.object({ id: z.string().min(1) }))
     .mutation(async ({ ctx, input }) => {
-      const delivery = await findDeliveryById(input.id)
-      if (!delivery) throw new NotFoundError("WebhookDelivery", input.id)
-      await requirePermission(
-        ctx,
-        "webhooks.retry",
-        delivery.endpoint.organizationId ?? undefined,
-      )
+      const delivery = await findDeliveryById(input.id);
+      if (!delivery) throw new NotFoundError("WebhookDelivery", input.id);
+      await requirePermission(ctx, "webhooks.retry", delivery.endpoint.organizationId ?? undefined);
       // Reset to pending so the worker picks it up on the next tick ;
       // we also kick off one attempt inline so the operator gets
       // immediate feedback in the UI without waiting for the
       // setInterval cadence.
-      await requeueDelivery(input.id)
-      const refreshed = await findDeliveryById(input.id)
-      if (refreshed) await deliverOne(refreshed)
+      await requeueDelivery(input.id);
+      const refreshed = await findDeliveryById(input.id);
+      if (refreshed) await deliverOne(refreshed);
     }),
-})
+});

@@ -1,12 +1,9 @@
-import { createHash, randomBytes } from "node:crypto"
-import { BRANDING } from "@monark/branding"
-import { emit, NotFoundError, ValidationError } from "@monark/common"
-import { sendMail } from "@monark/notifications/server"
-import { findRoleById } from "@monark/rbac/server"
-import type {
-  InviteAcceptedEvent,
-  InviteSentEvent,
-} from "../contracts/events"
+import { createHash, randomBytes } from "node:crypto";
+import { BRANDING } from "@monark/branding";
+import { emit, NotFoundError, ValidationError } from "@monark/common";
+import { sendMail } from "@monark/notifications/server";
+import { findRoleById } from "@monark/rbac/server";
+import type { InviteAcceptedEvent, InviteSentEvent } from "../contracts/events";
 import {
   acceptInviteRow,
   createInviteRow,
@@ -14,86 +11,80 @@ import {
   findInviteByTokenHash,
   findPendingInvitesForEmail,
   findById as findOrgById,
-} from "./data"
+} from "./data";
 
 // 14-day expiry feels right: long enough that a recipient who was on
 // vacation can still claim it after they're back, short enough that
 // stale invites don't pile up in the org's pending list.
-const INVITE_TTL_DAYS = 14
+const INVITE_TTL_DAYS = 14;
 
 // 32 raw bytes → 64 hex chars of plaintext token. We never store the
 // plaintext (the schema only has `tokenHash`) ; the recipient's email
 // link is the only place it lives. Hash is SHA-256 to match every
 // other secret-by-token surface in the codebase.
 function generateToken(): { plaintext: string; hash: string } {
-  const plaintext = randomBytes(32).toString("hex")
-  const hash = createHash("sha256").update(plaintext).digest("hex")
-  return { plaintext, hash }
+  const plaintext = randomBytes(32).toString("hex");
+  const hash = createHash("sha256").update(plaintext).digest("hex");
+  return { plaintext, hash };
 }
 
 function hashToken(token: string): string {
-  return createHash("sha256").update(token).digest("hex")
+  return createHash("sha256").update(token).digest("hex");
 }
 
 type CreateInviteInput = {
-  organizationId: string
-  email: string
+  organizationId: string;
+  email: string;
   /**
    * Optional pre-fill for the recipient's display name. Used in the
    * invite email greeting and pre-populated on signup acceptance ;
    * empty / nullish skips the pre-fill.
    */
-  displayName?: string | null
+  displayName?: string | null;
   /** FK into the Role table — must be assignable within this org. */
-  roleId: string
-  invitedById: string
+  roleId: string;
+  invitedById: string;
   /** Used to build the absolute sign-up URL in the invite email. */
-  appUrl: string
-}
+  appUrl: string;
+};
 
 type CreateInviteResult = {
-  inviteId: string
-  email: string
-  displayName: string | null
-  roleId: string
-  roleKey: string
-  roleName: string
-  expiresAt: Date
+  inviteId: string;
+  email: string;
+  displayName: string | null;
+  roleId: string;
+  roleKey: string;
+  roleName: string;
+  expiresAt: Date;
   /** Plaintext token, returned to the caller for the email link only. */
-  token: string
-  signUpUrl: string
-}
+  token: string;
+  signUpUrl: string;
+};
 
 // Create + email an invite. Locale on the email defaults to the org's
 // brand language ; we don't carry a per-recipient preference yet (the
 // invitee doesn't have a User row to read `localePreference` from).
-export async function createInvite(
-  input: CreateInviteInput,
-): Promise<CreateInviteResult> {
-  const org = await findOrgById(input.organizationId)
-  if (!org) throw new NotFoundError("Organization", input.organizationId)
+export async function createInvite(input: CreateInviteInput): Promise<CreateInviteResult> {
+  const org = await findOrgById(input.organizationId);
+  if (!org) throw new NotFoundError("Organization", input.organizationId);
   if (org.deletedAt) {
-    throw new ValidationError("Cannot invite to a deleted organization.")
+    throw new ValidationError("Cannot invite to a deleted organization.");
   }
-  const role = await findRoleById(input.roleId)
-  if (!role) throw new NotFoundError("Role", input.roleId)
+  const role = await findRoleById(input.roleId);
+  if (!role) throw new NotFoundError("Role", input.roleId);
   // Custom roles must belong to this org. Built-in roles (today : just
   // ADMIN) carry `organizationId: null` and are assignable anywhere.
   if (!role.builtIn && role.organizationId !== input.organizationId) {
-    throw new ValidationError(
-      `Role ${role.key} is scoped to a different organization.`,
-    )
+    throw new ValidationError(`Role ${role.key} is scoped to a different organization.`);
   }
-  const email = input.email.trim().toLowerCase()
+  const email = input.email.trim().toLowerCase();
   if (!email || !email.includes("@")) {
-    throw new ValidationError("invalid_email")
+    throw new ValidationError("invalid_email");
   }
 
-  const { plaintext, hash } = generateToken()
-  const expiresAt = new Date(
-    Date.now() + INVITE_TTL_DAYS * 24 * 60 * 60 * 1000,
-  )
-  const displayName = input.displayName?.trim() || null
+  const { plaintext, hash } = generateToken();
+  const expiresAt = new Date(Date.now() + INVITE_TTL_DAYS * 24 * 60 * 60 * 1000);
+  const displayName = input.displayName?.trim() || null;
   const row = await createInviteRow({
     organizationId: input.organizationId,
     email,
@@ -102,16 +93,16 @@ export async function createInvite(
     invitedById: input.invitedById,
     tokenHash: hash,
     expiresAt,
-  })
+  });
 
-  const signUpUrl = `${input.appUrl.replace(/\/$/, "")}/signup?invite=${plaintext}`
+  const signUpUrl = `${input.appUrl.replace(/\/$/, "")}/signup?invite=${plaintext}`;
   // Greeting branches on whether we have a name to address them with ;
   // falls back to a neutral hello so the email doesn't read as
   // half-personalized.
   const greetingHtml = displayName
     ? `<p style="margin:0 0 12px 0;font-size:16px;color:#18181b;">Hi ${displayName},</p>`
-    : ""
-  const greetingText = displayName ? `Hi ${displayName},\n\n` : ""
+    : "";
+  const greetingText = displayName ? `Hi ${displayName},\n\n` : "";
   await sendMail({
     to: email,
     subject: `You're invited to ${org.displayName} on ${BRANDING.appName}`,
@@ -128,7 +119,7 @@ This invite expires on ${expiresAt.toISOString().slice(0, 10)}.`,
   }).catch(() => {
     // Best-effort ; the row is already persisted so the admin can
     // re-send by recreating the invite. Logging happens inside sendMail.
-  })
+  });
 
   const event: InviteSentEvent = {
     type: "organization.invite-sent",
@@ -139,8 +130,8 @@ This invite expires on ${expiresAt.toISOString().slice(0, 10)}.`,
     roleKey: role.key,
     actorId: input.invitedById,
     occurredAt: new Date(),
-  }
-  await emit(event).catch(() => {})
+  };
+  await emit(event).catch(() => {});
 
   return {
     inviteId: row.id,
@@ -152,7 +143,7 @@ This invite expires on ${expiresAt.toISOString().slice(0, 10)}.`,
     expiresAt,
     token: plaintext,
     signUpUrl,
-  }
+  };
 }
 
 // Looks up the invite by token hash, validates expiry / not-already-
@@ -162,24 +153,24 @@ export async function acceptInviteByToken(
   token: string,
   userId: string,
 ): Promise<{ organizationId: string; roleId: string }> {
-  const invite = await findInviteByTokenHash(hashToken(token))
-  if (!invite) throw new NotFoundError("Invite", "token")
+  const invite = await findInviteByTokenHash(hashToken(token));
+  if (!invite) throw new NotFoundError("Invite", "token");
   if (invite.acceptedAt) {
-    return { organizationId: invite.organizationId, roleId: invite.roleId }
+    return { organizationId: invite.organizationId, roleId: invite.roleId };
   }
   if (invite.expiresAt < new Date()) {
-    throw new ValidationError("Invite has expired.")
+    throw new ValidationError("Invite has expired.");
   }
-  const result = await acceptInviteRow({ inviteId: invite.id, userId })
+  const result = await acceptInviteRow({ inviteId: invite.id, userId });
   const event: InviteAcceptedEvent = {
     type: "organization.invite-accepted",
     organizationId: result.organizationId,
     inviteId: invite.id,
     userId,
     occurredAt: new Date(),
-  }
-  await emit(event).catch(() => {})
-  return result
+  };
+  await emit(event).catch(() => {});
+  return result;
 }
 
 // Auto-accept hook : called after sign-in / sign-up, looks up every
@@ -191,28 +182,28 @@ export async function consumePendingInvitesForUser(
   userId: string,
   email: string,
 ): Promise<{ accepted: number }> {
-  const rows = await findPendingInvitesForEmail(email)
-  let accepted = 0
+  const rows = await findPendingInvitesForEmail(email);
+  let accepted = 0;
   for (const invite of rows) {
     try {
-      await acceptInviteRow({ inviteId: invite.id, userId })
+      await acceptInviteRow({ inviteId: invite.id, userId });
       const event: InviteAcceptedEvent = {
         type: "organization.invite-accepted",
         organizationId: invite.organizationId,
         inviteId: invite.id,
         userId,
         occurredAt: new Date(),
-      }
-      await emit(event).catch(() => {})
-      accepted += 1
+      };
+      await emit(event).catch(() => {});
+      accepted += 1;
     } catch {
       // Single-row failures (e.g. row vanished mid-loop) shouldn't
       // pull the rest down ; the event log still captures successes.
     }
   }
-  return { accepted }
+  return { accepted };
 }
 
 export async function revokeInvite(inviteId: string): Promise<void> {
-  await deleteInviteRow(inviteId)
+  await deleteInviteRow(inviteId);
 }

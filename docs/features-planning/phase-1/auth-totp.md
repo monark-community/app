@@ -69,33 +69,33 @@ TOTP secrets are encrypted with AES-256-GCM. The key is stored in the Supabase V
 
 // Start enrollment — returns a secret + otpauth URL for the QR, but
 // nothing is "active" until user confirms a code.
-"use server"
+"use server";
 export async function beginTotpEnrollment(): Promise<{
-  secret: string                // base32; displayed to user as a fallback
-  qrSvg: string                 // otpauth URL rendered as themed SVG (currentColor + transparent bg)
-}>
+  secret: string; // base32; displayed to user as a fallback
+  qrSvg: string; // otpauth URL rendered as themed SVG (currentColor + transparent bg)
+}>;
 
 // Verify the first code; if valid, activate + issue recovery codes.
-"use server"
+("use server");
 export async function confirmTotpEnrollment(code: string): Promise<{
-  recoveryCodes: string[]       // shown once; user acknowledges saving
-}>
+  recoveryCodes: string[]; // shown once; user acknowledges saving
+}>;
 
-"use server"
-export async function verifyTotpCode(code: string): Promise<boolean>
+("use server");
+export async function verifyTotpCode(code: string): Promise<boolean>;
 //   Called during sign-in after password verification. Consumes the code
 //   (rejects replays within the current 30-sec window).
 
-"use server"
-export async function verifyRecoveryCode(code: string): Promise<boolean>
+("use server");
+export async function verifyRecoveryCode(code: string): Promise<boolean>;
 //   Consumes one recovery code. Hashed comparison; marks usedAt.
 
-"use server"
-export async function disableTotp(password: string, code: string): Promise<void>
+("use server");
+export async function disableTotp(password: string, code: string): Promise<void>;
 //   Requires both factors to confirm intent. Deletes the TotpSecret.
 
-"use server"
-export async function regenerateRecoveryCodes(code: string): Promise<string[]>
+("use server");
+export async function regenerateRecoveryCodes(code: string): Promise<string[]>;
 //   Current TOTP required. Invalidates old recovery codes.
 ```
 
@@ -103,11 +103,11 @@ Read interface:
 
 ```ts
 // packages/auth/src/server/index.ts
-export async function isTotpEnabled(userId: string): Promise<boolean>
+export async function isTotpEnabled(userId: string): Promise<boolean>;
 export async function requiresTotpChallenge(
   userId: string,
-  trustedDeviceId?: string
-): Promise<boolean>
+  trustedDeviceId?: string,
+): Promise<boolean>;
 ```
 
 ## UI flows
@@ -145,9 +145,9 @@ export async function requiresTotpChallenge(
 ### Events
 
 ```ts
-export const TOTP_ENABLED = "totp.enabled"
-export const TOTP_DISABLED = "totp.disabled"
-export const TOTP_RECOVERY_CODE_USED = "totp.recovery-code-used"
+export const TOTP_ENABLED = "totp.enabled";
+export const TOTP_DISABLED = "totp.disabled";
+export const TOTP_RECOVERY_CODE_USED = "totp.recovery-code-used";
 ```
 
 ### Sign-in flow contract

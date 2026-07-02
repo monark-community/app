@@ -1,8 +1,8 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
-import { useTranslations } from "next-intl"
-import { Button } from "@/components/ui/button"
+import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -10,14 +10,14 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
+} from "@/components/ui/dialog";
 import {
   InputOTP,
   InputOTPGroup,
   InputOTPSeparator,
   InputOTPSlot,
-} from "@/components/ui/input-otp"
-import { Label } from "@/components/ui/label"
+} from "@/components/ui/input-otp";
+import { Label } from "@/components/ui/label";
 
 /**
  * Sequential TOTP-confirm step for critical operations (password
@@ -44,25 +44,25 @@ import { Label } from "@/components/ui/label"
  * without mounting/unmounting the dialog.
  */
 export type TotpConfirmDialogProps = {
-  open: boolean
-  onOpenChange: (open: boolean) => void
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   /**
    * Called when the user submits the dialog with a 6-digit code.
    * Resolve to throw / no-op : the dialog stays open until either
    * the caller closes it via `onOpenChange(false)` or the promise
    * rejects + the caller surfaces an error via `errorKey`.
    */
-  onConfirm: (code: string) => Promise<void>
+  onConfirm: (code: string) => Promise<void>;
   /**
    * i18n key under `account.totp.dialog` to use for the title +
    * description copy, scoped per consumer. Falls back to a generic
    * "confirm with two-factor" prompt.
    */
-  scope?: "passwordChange" | "emailChange" | "default"
+  scope?: "passwordChange" | "emailChange" | "default";
   /** When set, surfaces a localised error message under the OTP field. */
-  errorKey?: "invalidTotpCode" | "totpRequired" | null
-  pending?: boolean
-}
+  errorKey?: "invalidTotpCode" | "totpRequired" | null;
+  pending?: boolean;
+};
 
 export function TotpConfirmDialog({
   open,
@@ -72,29 +72,29 @@ export function TotpConfirmDialog({
   errorKey,
   pending,
 }: TotpConfirmDialogProps) {
-  const t = useTranslations("account.totp.dialog")
-  const tErrors = useTranslations("account.password.errors")
-  const [code, setCode] = useState("")
+  const t = useTranslations("account.totp.dialog");
+  const tErrors = useTranslations("account.password.errors");
+  const [code, setCode] = useState("");
 
   // Wipe state on close so the next opener can't see the previous
   // code. Done inside an effect rather than in onOpenChange so
   // programmatic closes (after a successful confirm) are covered too.
   useEffect(() => {
-    if (!open) setCode("")
-  }, [open])
+    if (!open) setCode("");
+  }, [open]);
 
   function onSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    if (code.trim().length !== 6 || pending) return
-    void onConfirm(code.trim())
+    event.preventDefault();
+    if (code.trim().length !== 6 || pending) return;
+    void onConfirm(code.trim());
   }
 
   return (
     <Dialog
       open={open}
       onOpenChange={(next) => {
-        if (!next && pending) return
-        onOpenChange(next)
+        if (!next && pending) return;
+        onOpenChange(next);
       }}
     >
       <DialogContent>
@@ -127,11 +127,7 @@ export function TotpConfirmDialog({
               <InputOTPSlot index={5} />
             </InputOTPGroup>
           </InputOTP>
-          {errorKey && (
-            <p className="self-start text-xs text-destructive">
-              {tErrors(errorKey)}
-            </p>
-          )}
+          {errorKey && <p className="self-start text-xs text-destructive">{tErrors(errorKey)}</p>}
           <DialogFooter className="w-full gap-2 sm:gap-2">
             <Button
               type="button"
@@ -148,5 +144,5 @@ export function TotpConfirmDialog({
         </form>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

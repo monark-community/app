@@ -13,9 +13,9 @@ App-internal runtime and shared primitives. Backend-only runtime; types are safe
 
 ## Public entry points
 
-| Import path | What it exports |
-|---|---|
-| `@monark/common` | barrel (errors, result, logger, emit/on, DomainEvent types) |
-| `@monark/common/events` | event-bus runtime only |
-| `@monark/common/contracts/events` | `DomainEventBase`, `DomainEvent` |
-| `@monark/common/trpc` | tRPC primitives |
+| Import path                       | What it exports                                             |
+| --------------------------------- | ----------------------------------------------------------- |
+| `@monark/common`                  | barrel (errors, result, logger, emit/on, DomainEvent types) |
+| `@monark/common/events`           | event-bus runtime only                                      |
+| `@monark/common/contracts/events` | `DomainEventBase`, `DomainEvent`                            |
+| `@monark/common/trpc`             | tRPC primitives                                             |

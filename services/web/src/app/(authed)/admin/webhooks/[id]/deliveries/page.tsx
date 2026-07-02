@@ -1,10 +1,10 @@
-import { DeliveriesList } from "./deliveries-list"
+import { DeliveriesList } from "./deliveries-list";
 
 export default async function AdminWebhookDeliveriesPage({
   params,
 }: {
-  params: Promise<{ id: string }>
+  params: Promise<{ id: string }>;
 }) {
-  const { id } = await params
-  return <DeliveriesList endpointId={id} />
+  const { id } = await params;
+  return <DeliveriesList endpointId={id} />;
 }

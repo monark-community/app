@@ -1,11 +1,11 @@
-"use client"
+"use client";
 
-import Link from "next/link"
-import { Fragment, type ReactNode } from "react"
-import { usePathname } from "next/navigation"
-import { useMessages } from "next-intl"
-import { trpc } from "@/lib/trpc"
-import { cn } from "@/lib/utils"
+import Link from "next/link";
+import { Fragment, type ReactNode } from "react";
+import { usePathname } from "next/navigation";
+import { useMessages } from "next-intl";
+import { trpc } from "@/lib/trpc";
+import { cn } from "@/lib/utils";
 
 /**
  * Paths whose own page renders nothing useful (pure section headers,
@@ -21,7 +21,7 @@ import { cn } from "@/lib/utils"
  * Treating it as a label keeps the breadcrumb honest about what's
  * navigable.
  */
-const ALWAYS_NON_NAVIGABLE_HREFS: ReadonlySet<string> = new Set(["/admin"])
+const ALWAYS_NON_NAVIGABLE_HREFS: ReadonlySet<string> = new Set(["/admin"]);
 
 /**
  * Paths that are *only* non-navigable in single-tenant deploys.
@@ -31,9 +31,7 @@ const ALWAYS_NON_NAVIGABLE_HREFS: ReadonlySet<string> = new Set(["/admin"])
  * keep this list separate so the runtime check only adds these when
  * `bootstrapStatus.mode !== "multi"`.
  */
-const SINGLE_TENANT_NON_NAVIGABLE_HREFS: ReadonlySet<string> = new Set([
-  "/admin/organizations",
-])
+const SINGLE_TENANT_NON_NAVIGABLE_HREFS: ReadonlySet<string> = new Set(["/admin/organizations"]);
 
 /**
  * Generic AppBar breadcrumb : auto-derives every crumb from the URL
@@ -59,7 +57,7 @@ const SINGLE_TENANT_NON_NAVIGABLE_HREFS: ReadonlySet<string> = new Set([
  * group and the breadcrumb is purely view-state.
  */
 export function AppBarBreadcrumb() {
-  const pathname = usePathname()
+  const pathname = usePathname();
   // Tenancy mode toggles which routes are pure redirects ; cached
   // forever since it doesn't flip mid-session. Defaults to single
   // during the loading window so the breadcrumb doesn't briefly
@@ -68,19 +66,19 @@ export function AppBarBreadcrumb() {
   const status = trpc.organizations.bootstrapStatus.useQuery(undefined, {
     refetchOnWindowFocus: false,
     staleTime: Infinity,
-  })
-  const isSingleTenant = status.data?.mode !== "multi"
+  });
+  const isSingleTenant = status.data?.mode !== "multi";
 
-  if (pathname === "/" || pathname === "") return null
+  if (pathname === "/" || pathname === "") return null;
 
-  const segments = pathname.split("/").filter(Boolean)
+  const segments = pathname.split("/").filter(Boolean);
   // Build the cumulative href for each crumb so all but the last
   // become clickable Links pointing at their own subpath.
   const items = segments.map((segment, index) => {
-    const before = "/" + segments.slice(0, index).join("/")
-    const href = "/" + segments.slice(0, index + 1).join("/")
-    return { segment, before, href, isLast: index === segments.length - 1 }
-  })
+    const before = "/" + segments.slice(0, index).join("/");
+    const href = "/" + segments.slice(0, index + 1).join("/");
+    return { segment, before, href, isLast: index === segments.length - 1 };
+  });
 
   // Truncation : keep the first crumb + ellipsis + the last two when
   // the path is deeper than three segments. Three or fewer renders
@@ -98,7 +96,7 @@ export function AppBarBreadcrumb() {
           { kind: "ellipsis" as const },
           { kind: "crumb" as const, ...items[items.length - 2]! },
           { kind: "crumb" as const, ...items[items.length - 1]! },
-        ]
+        ];
 
   // Mobile variant : the breadcrumb chain is too noisy on a narrow
   // viewport (eats the AppBar row's right-side affordances), so show
@@ -106,7 +104,7 @@ export function AppBarBreadcrumb() {
   // desktop variant, just rendered alone. The `<` prefix is dropped
   // since there's no "previous" sibling to point back to ; the
   // primary-nav drawer is the canonical way back up on mobile.
-  const lastItem = items[items.length - 1]
+  const lastItem = items[items.length - 1];
 
   return (
     <>
@@ -151,7 +149,7 @@ export function AppBarBreadcrumb() {
         ))}
       </nav>
     </>
-  )
+  );
 }
 
 function CrumbItem({
@@ -161,13 +159,13 @@ function CrumbItem({
   isLast,
   isSingleTenant,
 }: {
-  segment: string
-  before: string
-  href: string
-  isLast: boolean
-  isSingleTenant: boolean
+  segment: string;
+  before: string;
+  href: string;
+  isLast: boolean;
+  isSingleTenant: boolean;
 }) {
-  const content = pickCrumbForSegment({ before, segment })
+  const content = pickCrumbForSegment({ before, segment });
   // Last crumb is the current page : non-interactive span styled as
   // foreground text. Ancestors are Links that navigate up the tree —
   // unless the path is non-navigable (a pure section header /
@@ -176,19 +174,16 @@ function CrumbItem({
   // waste a click on a redirect.
   if (isLast) {
     return (
-      <span
-        aria-current="page"
-        className="truncate font-medium text-foreground"
-      >
+      <span aria-current="page" className="truncate font-medium text-foreground">
         {content}
       </span>
-    )
+    );
   }
   const nonNavigable =
     ALWAYS_NON_NAVIGABLE_HREFS.has(href) ||
-    (isSingleTenant && SINGLE_TENANT_NON_NAVIGABLE_HREFS.has(href))
+    (isSingleTenant && SINGLE_TENANT_NON_NAVIGABLE_HREFS.has(href));
   if (nonNavigable) {
-    return <span className="truncate">{content}</span>
+    return <span className="truncate">{content}</span>;
   }
   return (
     <Link
@@ -199,35 +194,29 @@ function CrumbItem({
     >
       {content}
     </Link>
-  )
+  );
 }
 
 // Per-pattern dispatch : the parent path determines whether a segment
 // is treated as a static label or as a dynamic entity id. New `[id]`
 // routes register here ; everything else flows through `StaticCrumb`.
-function pickCrumbForSegment({
-  before,
-  segment,
-}: {
-  before: string
-  segment: string
-}): ReactNode {
-  if (before === "/admin/users") return <UserNameCrumb id={segment} />
-  if (before === "/admin/organizations") return <OrgNameCrumb id={segment} />
+function pickCrumbForSegment({ before, segment }: { before: string; segment: string }): ReactNode {
+  if (before === "/admin/users") return <UserNameCrumb id={segment} />;
+  if (before === "/admin/organizations") return <OrgNameCrumb id={segment} />;
   // `/admin/rbac/roles/<id>` carries a cuid as its terminal segment,
   // but `/admin/rbac/roles/new` is the create-role page. Skip the
   // tRPC lookup for the literal "new" path so the breadcrumb just
   // titleCase's it through `StaticCrumb`.
   if (before === "/admin/rbac/roles" && segment !== "new") {
-    return <RoleNameCrumb id={segment} />
+    return <RoleNameCrumb id={segment} />;
   }
   // Same shape : `/admin/webhooks/<id>` is the editor, `/admin/webhooks/new`
   // is the create page. Resolve the endpoint's `name` so the breadcrumb
   // renders an operator-readable label instead of a cuid.
   if (before === "/admin/webhooks" && segment !== "new") {
-    return <WebhookNameCrumb id={segment} />
+    return <WebhookNameCrumb id={segment} />;
   }
-  return <StaticCrumb segment={segment} />
+  return <StaticCrumb segment={segment} />;
 }
 
 function StaticCrumb({ segment }: { segment: string }) {
@@ -236,11 +225,12 @@ function StaticCrumb({ segment }: { segment: string }) {
   // missing-key warnings for the long tail of unmapped segments. The
   // fallback (kebab → Title Case) keeps unmapped routes legible
   // without operators having to register every page they ship.
-  const messages = useMessages() as Record<string, unknown>
-  const breadcrumb = (messages.appBar as Record<string, unknown> | undefined)
-    ?.breadcrumb as Record<string, string> | undefined
-  const label = breadcrumb?.[segment] ?? titleCase(segment)
-  return <span className="truncate">{label}</span>
+  const messages = useMessages() as Record<string, unknown>;
+  const breadcrumb = (messages.appBar as Record<string, unknown> | undefined)?.breadcrumb as
+    | Record<string, string>
+    | undefined;
+  const label = breadcrumb?.[segment] ?? titleCase(segment);
+  return <span className="truncate">{label}</span>;
 }
 
 function RoleNameCrumb({ id }: { id: string }) {
@@ -251,9 +241,9 @@ function RoleNameCrumb({ id }: { id: string }) {
   const query = trpc.rbac.adminGetRole.useQuery(
     { id },
     { refetchOnWindowFocus: false, staleTime: Infinity, retry: false },
-  )
-  const label = query.data?.name || id
-  return <span className="truncate">{label}</span>
+  );
+  const label = query.data?.name || id;
+  return <span className="truncate">{label}</span>;
 }
 
 function UserNameCrumb({ id }: { id: string }) {
@@ -264,18 +254,18 @@ function UserNameCrumb({ id }: { id: string }) {
   const query = trpc.users.adminGetUser.useQuery(
     { userId: id },
     { refetchOnWindowFocus: false, staleTime: Infinity, retry: false },
-  )
-  const label = query.data?.user.displayName || query.data?.user.email || id
-  return <span className="truncate">{label}</span>
+  );
+  const label = query.data?.user.displayName || query.data?.user.email || id;
+  return <span className="truncate">{label}</span>;
 }
 
 function OrgNameCrumb({ id }: { id: string }) {
   const query = trpc.organizations.adminGet.useQuery(
     { id },
     { refetchOnWindowFocus: false, staleTime: Infinity, retry: false },
-  )
-  const label = query.data?.displayName || id
-  return <span className="truncate">{label}</span>
+  );
+  const label = query.data?.displayName || id;
+  return <span className="truncate">{label}</span>;
 }
 
 function WebhookNameCrumb({ id }: { id: string }) {
@@ -287,16 +277,14 @@ function WebhookNameCrumb({ id }: { id: string }) {
   const query = trpc.webhooks.get.useQuery(
     { id },
     { refetchOnWindowFocus: false, staleTime: Infinity, retry: false },
-  )
-  const label = query.data?.name || id
-  return <span className="truncate">{label}</span>
+  );
+  const label = query.data?.name || id;
+  return <span className="truncate">{label}</span>;
 }
 
 function titleCase(segment: string): string {
   return segment
     .split("-")
-    .map((part) =>
-      part.length === 0 ? part : part[0]!.toUpperCase() + part.slice(1),
-    )
-    .join(" ")
+    .map((part) => (part.length === 0 ? part : part[0]!.toUpperCase() + part.slice(1)))
+    .join(" ");
 }

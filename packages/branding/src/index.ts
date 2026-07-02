@@ -34,24 +34,24 @@
 
 export type Branding = {
   /** Product name as it appears in the UI, emails, and metadata. */
-  appName: string
+  appName: string;
   /** One-line product description shown in <meta description> + signin/signup subtitles. */
-  tagline: string
+  tagline: string;
   /** Inbox a recipient can reply to ; surfaces in CODE_OF_CONDUCT, support links, etc. */
-  supportEmail: string
+  supportEmail: string;
   /** Issuer name shown in the user's authenticator app on the TOTP enrollment page. */
-  totpIssuer: string
+  totpIssuer: string;
   /** Default outbound mail envelope when SMTP_FROM env var isn't set. */
-  fromEmail: string
+  fromEmail: string;
   /** App URL used to build links inside emails (`{{ accountLink }}`, etc.). Override at runtime via `APP_URL`. */
-  appUrl: string
+  appUrl: string;
   /** Primary brand color (hex). Used for email CTA backgrounds + the NProgress trailing edge + brand wordmark. */
-  brandPrimary: string
+  brandPrimary: string;
   /** Accent (hex). Pairs with primary in the NProgress gradient + decorative surfaces. */
-  brandAccent: string
+  brandAccent: string;
   /** Public path to the logo SVG. Resolved relative to `services/web/public/`. */
-  logoSrc: string
-}
+  logoSrc: string;
+};
 
 const DEFAULT_BRANDING: Branding = {
   appName: "Monark",
@@ -63,7 +63,7 @@ const DEFAULT_BRANDING: Branding = {
   brandPrimary: "#F0870C",
   brandAccent: "#EF3620",
   logoSrc: "/monark-logo.svg",
-}
+};
 
 /**
  * Per-deployment overrides via env vars. Each is optional ; missing keys
@@ -79,16 +79,10 @@ const DEFAULT_BRANDING: Branding = {
  * surfaces in sync without the deployer having to think about runtime
  * boundaries.
  */
-function resolve<K extends keyof Branding>(
-  key: K,
-  envKey: string,
-): Branding[K] {
-  const env =
-    process.env[envKey] ??
-    process.env[`NEXT_PUBLIC_${envKey}`] ??
-    null
-  if (env && env.length > 0) return env as Branding[K]
-  return DEFAULT_BRANDING[key]
+function resolve<K extends keyof Branding>(key: K, envKey: string): Branding[K] {
+  const env = process.env[envKey] ?? process.env[`NEXT_PUBLIC_${envKey}`] ?? null;
+  if (env && env.length > 0) return env as Branding[K];
+  return DEFAULT_BRANDING[key];
 }
 
 export const BRANDING: Branding = {
@@ -101,7 +95,7 @@ export const BRANDING: Branding = {
   brandPrimary: resolve("brandPrimary", "BRANDING_PRIMARY"),
   brandAccent: resolve("brandAccent", "BRANDING_ACCENT"),
   logoSrc: resolve("logoSrc", "BRANDING_LOGO_SRC"),
-}
+};
 
 /**
  * The subset of branding values that are safe to interpolate into templated
@@ -109,13 +103,13 @@ export const BRANDING: Branding = {
  * only make sense inside an `<img>` / public URL context.
  */
 export type BrandingTemplateVars = {
-  appName: string
-  tagline: string
-  supportEmail: string
-  appUrl: string
-  brandPrimary: string
-  brandAccent: string
-}
+  appName: string;
+  tagline: string;
+  supportEmail: string;
+  appUrl: string;
+  brandPrimary: string;
+  brandAccent: string;
+};
 
 export function brandingTemplateVars(): BrandingTemplateVars {
   return {
@@ -125,5 +119,5 @@ export function brandingTemplateVars(): BrandingTemplateVars {
     appUrl: BRANDING.appUrl,
     brandPrimary: BRANDING.brandPrimary,
     brandAccent: BRANDING.brandAccent,
-  }
+  };
 }

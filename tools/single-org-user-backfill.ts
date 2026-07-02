@@ -16,34 +16,34 @@
  * @monark/organizations as a root dep too.
  */
 
-import { getDb } from "@monark/db"
+import { getDb } from "@monark/db";
 
-const db = getDb()
+const db = getDb();
 
 const activeOrgs = await db.organization.findMany({
   where: { deletedAt: null },
   select: { id: true, slug: true },
   take: 2,
-})
+});
 
 if (activeOrgs.length !== 1) {
   console.error(
     `backfill: expected exactly 1 active organization, found ${activeOrgs.length}. ` +
       `This script is single-tenant-only ; a multi-tenant deploy needs an ` +
       `explicit per-user → org mapping.`,
-  )
-  process.exit(1)
+  );
+  process.exit(1);
 }
 
-const org = activeOrgs[0]!
+const org = activeOrgs[0]!;
 
-const users = await db.user.findMany({ select: { id: true } })
+const users = await db.user.findMany({ select: { id: true } });
 const result = await db.organizationMembership.createMany({
   data: users.map((u) => ({ userId: u.id, organizationId: org.id })),
   skipDuplicates: true,
-})
+});
 
 console.log(
   `backfill: ${users.length} user(s) processed, ${result.count} new membership row(s) created in org "${org.slug}" (${org.id}).`,
-)
-process.exit(0)
+);
+process.exit(0);

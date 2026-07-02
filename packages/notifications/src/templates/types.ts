@@ -13,17 +13,17 @@
  * preview pane.
  */
 export type LocaleMessage = {
-  subject: string
-  html: string
-  text: string
+  subject: string;
+  html: string;
+  text: string;
   inapp: {
-    subject: string
-    body: string
-    link?: string
-  }
-}
+    subject: string;
+    body: string;
+    link?: string;
+  };
+};
 
 export type KindMessages = {
-  en: LocaleMessage
-  fr: LocaleMessage
-}
+  en: LocaleMessage;
+  fr: LocaleMessage;
+};

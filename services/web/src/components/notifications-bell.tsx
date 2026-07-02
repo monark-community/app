@@ -1,8 +1,8 @@
-"use client"
+"use client";
 
-import Link from "next/link"
-import { useState } from "react"
-import { useLocale, useTranslations } from "next-intl"
+import Link from "next/link";
+import { useState } from "react";
+import { useLocale, useTranslations } from "next-intl";
 import {
   AtSign,
   Bell,
@@ -18,28 +18,23 @@ import {
   Trash2,
   TriangleAlert,
   type LucideIcon,
-} from "lucide-react"
-import { Button } from "@/components/ui/button"
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import {
-  Sheet,
-  SheetContent,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet"
-import { formatRelativeTime } from "@/lib/format-time"
-import { trpc } from "@/lib/trpc"
-import { cn } from "@/lib/utils"
+} from "@/components/ui/dropdown-menu";
+import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { formatRelativeTime } from "@/lib/format-time";
+import { trpc } from "@/lib/trpc";
+import { cn } from "@/lib/utils";
 
-const POLL_INTERVAL_MS = 60_000
-const PAGE_SIZE = 20
+const POLL_INTERVAL_MS = 15_000;
+const PAGE_SIZE = 20;
 
-type Filter = "unread" | "all"
+type Filter = "unread" | "all";
 
 // Per-kind icon registry. Each notification carries its `kind` string
 // (`auth.password-changed`, `account.deletion-scheduled`, …) ; the
@@ -59,11 +54,11 @@ const KIND_ICONS: Record<string, { icon: LucideIcon; tone: string }> = {
     tone: "text-destructive",
   },
   "account.deletion-canceled": { icon: CheckCircle2, tone: "text-emerald-500" },
-}
+};
 
 function iconForKind(kind: string): { Icon: LucideIcon; tone: string } {
-  const entry = KIND_ICONS[kind] ?? { icon: Mail, tone: "text-muted-foreground" }
-  return { Icon: entry.icon, tone: entry.tone }
+  const entry = KIND_ICONS[kind] ?? { icon: Mail, tone: "text-muted-foreground" };
+  return { Icon: entry.icon, tone: entry.tone };
 }
 
 /**
@@ -87,16 +82,16 @@ function iconForKind(kind: string): { Icon: LucideIcon; tone: string } {
  * so we don't carry our own.
  */
 export function NotificationsBell() {
-  const t = useTranslations("account.notifications")
-  const locale = useLocale()
-  const utils = trpc.useUtils()
-  const [open, setOpen] = useState(false)
-  const [filter, setFilter] = useState<Filter>("unread")
+  const t = useTranslations("account.notifications");
+  const locale = useLocale();
+  const utils = trpc.useUtils();
+  const [open, setOpen] = useState(false);
+  const [filter, setFilter] = useState<Filter>("unread");
 
   const unread = trpc.notifications.unreadCount.useQuery(undefined, {
     refetchInterval: POLL_INTERVAL_MS,
     refetchOnWindowFocus: true,
-  })
+  });
   const list = trpc.notifications.list.useInfiniteQuery(
     { limit: PAGE_SIZE, filter },
     {
@@ -104,29 +99,29 @@ export function NotificationsBell() {
       refetchOnWindowFocus: open,
       getNextPageParam: (page) => page.nextCursor ?? undefined,
     },
-  )
+  );
 
   function invalidateAll() {
-    void utils.notifications.unreadCount.invalidate()
-    void utils.notifications.list.invalidate()
+    void utils.notifications.unreadCount.invalidate();
+    void utils.notifications.list.invalidate();
   }
 
   const markRead = trpc.notifications.markRead.useMutation({
     onSuccess: invalidateAll,
-  })
+  });
   const markUnread = trpc.notifications.markUnread.useMutation({
     onSuccess: invalidateAll,
-  })
+  });
   const dismiss = trpc.notifications.dismiss.useMutation({
     onSuccess: invalidateAll,
-  })
+  });
   const markAllRead = trpc.notifications.markAllRead.useMutation({
     onSuccess: invalidateAll,
-  })
+  });
 
-  const items = list.data?.pages.flatMap((p) => p.items) ?? []
-  const count = unread.data?.count ?? 0
-  const badgeLabel = count > 9 ? "9+" : String(count)
+  const items = list.data?.pages.flatMap((p) => p.items) ?? [];
+  const count = unread.data?.count ?? 0;
+  const badgeLabel = count > 9 ? "9+" : String(count);
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
@@ -141,7 +136,7 @@ export function NotificationsBell() {
           {count > 0 && (
             <span
               aria-hidden
-              className="absolute -right-0.5 -top-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-(--brand-accent) px-1 text-[10px] font-semibold leading-none text-white"
+              className="absolute -right-0.5 -top-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-(--brand-accent) px-1 text-[10px] font-semibold leading-none text-(--brand-foreground)"
             >
               {badgeLabel}
             </span>
@@ -170,7 +165,7 @@ export function NotificationsBell() {
               className="flex gap-1 rounded-md border border-border p-1"
             >
               {(["unread", "all"] as const).map((value) => {
-                const active = filter === value
+                const active = filter === value;
                 return (
                   <button
                     key={value}
@@ -185,11 +180,9 @@ export function NotificationsBell() {
                         : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
                     )}
                   >
-                    {value === "unread"
-                      ? t("filterUnread")
-                      : t("filterAll")}
+                    {value === "unread" ? t("filterUnread") : t("filterAll")}
                   </button>
-                )
+                );
               })}
             </div>
             {count > 0 && (
@@ -210,18 +203,14 @@ export function NotificationsBell() {
 
         <div className="flex flex-1 flex-col overflow-y-auto">
           {list.isLoading ? (
-            <p className="px-4 py-12 text-center text-xs text-muted-foreground">
-              {t("loading")}
-            </p>
+            <p className="px-4 py-12 text-center text-xs text-muted-foreground">{t("loading")}</p>
           ) : items.length === 0 ? (
-            <p className="px-4 py-12 text-center text-sm text-muted-foreground">
-              {t("empty")}
-            </p>
+            <p className="px-4 py-12 text-center text-sm text-muted-foreground">{t("empty")}</p>
           ) : (
             <ul className="divide-y divide-border">
               {items.map((item) => {
-                const { Icon, tone } = iconForKind(item.kind)
-                const isUnread = !item.readAt
+                const { Icon, tone } = iconForKind(item.kind);
+                const isUnread = !item.readAt;
                 return (
                   <li
                     key={item.id}
@@ -247,9 +236,7 @@ export function NotificationsBell() {
                         <span
                           className={cn(
                             "text-sm",
-                            isUnread
-                              ? "font-semibold"
-                              : "font-normal text-muted-foreground",
+                            isUnread ? "font-semibold" : "font-normal text-muted-foreground",
                           )}
                         >
                           {item.subject}
@@ -261,11 +248,7 @@ export function NotificationsBell() {
                           />
                         )}
                       </div>
-                      {item.body && (
-                        <p className="text-xs text-muted-foreground">
-                          {item.body}
-                        </p>
-                      )}
+                      {item.body && <p className="text-xs text-muted-foreground">{item.body}</p>}
                       <p className="text-[11px] text-muted-foreground">
                         {formatRelativeTime(item.createdAt, locale)}
                       </p>
@@ -273,8 +256,8 @@ export function NotificationsBell() {
                         <Link
                           href={item.link}
                           onClick={() => {
-                            if (isUnread) markRead.mutate({ id: item.id })
-                            setOpen(false)
+                            if (isUnread) markRead.mutate({ id: item.id });
+                            setOpen(false);
                           }}
                           className="mt-1 inline-block text-xs text-primary hover:underline"
                         >
@@ -297,16 +280,12 @@ export function NotificationsBell() {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" sideOffset={4}>
                         {isUnread ? (
-                          <DropdownMenuItem
-                            onSelect={() => markRead.mutate({ id: item.id })}
-                          >
+                          <DropdownMenuItem onSelect={() => markRead.mutate({ id: item.id })}>
                             <Check className="h-4 w-4" aria-hidden />
                             {t("markRead")}
                           </DropdownMenuItem>
                         ) : (
-                          <DropdownMenuItem
-                            onSelect={() => markUnread.mutate({ id: item.id })}
-                          >
+                          <DropdownMenuItem onSelect={() => markUnread.mutate({ id: item.id })}>
                             <Check className="h-4 w-4" aria-hidden />
                             {t("markUnread")}
                           </DropdownMenuItem>
@@ -321,7 +300,7 @@ export function NotificationsBell() {
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </li>
-                )
+                );
               })}
             </ul>
           )}
@@ -342,5 +321,5 @@ export function NotificationsBell() {
         </div>
       </SheetContent>
     </Sheet>
-  )
+  );
 }

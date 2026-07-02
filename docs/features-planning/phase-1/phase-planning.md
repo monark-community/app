@@ -53,7 +53,7 @@ All five core modules live and integrated. A new user can sign up, verify their 
 - Steps 2 and 3 can partially overlap once step 1 is live: the `User` and `Organization` schemas don't conflict, only the membership join table does. Build both schemas, then land the join model as part of step 3.
 - Steps 6, 7, 8 can ship in parallel once step 5 is stable; they each layer onto different points in the auth flow and don't cross-depend.
 - Step 9 must strictly follow step 8.
-- Step 10 (notifications) needs the events from steps 5–9 to be stable in shape, but the *infrastructure* (package skeleton, in-app channel schema, header bell) can be built in parallel with steps 6–9. Land the subscriber wiring last.
+- Step 10 (notifications) needs the events from steps 5–9 to be stable in shape, but the _infrastructure_ (package skeleton, in-app channel schema, header bell) can be built in parallel with steps 6–9. Land the subscriber wiring last.
 
 ## Sequencing risks
 

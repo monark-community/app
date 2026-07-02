@@ -1,10 +1,10 @@
-"use client"
+"use client";
 
-import { useLocale, useTranslations } from "next-intl"
-import { Button } from "@/components/ui/button"
-import { formatRelativeTime } from "@/lib/format-time"
-import { trpc } from "@/lib/trpc"
-import { CollapsibleSection } from "../collapsible-section"
+import { useLocale, useTranslations } from "next-intl";
+import { Button } from "@/components/ui/button";
+import { formatRelativeTime } from "@/lib/format-time";
+import { trpc } from "@/lib/trpc";
+import { CollapsibleSection } from "../collapsible-section";
 
 /**
  * Dev-only notifications panel. Three things:
@@ -18,44 +18,44 @@ import { CollapsibleSection } from "../collapsible-section"
  * by the parent component.
  */
 export function NotificationsPanel() {
-  const t = useTranslations("devOverlay")
-  const tKinds = useTranslations("account.notifications.kinds")
-  const locale = useLocale()
-  const utils = trpc.useUtils()
+  const t = useTranslations("devOverlay");
+  const tKinds = useTranslations("account.notifications.kinds");
+  const locale = useLocale();
+  const utils = trpc.useUtils();
 
-  const session = trpc.users.me.useQuery(undefined, { refetchOnWindowFocus: false })
+  const session = trpc.users.me.useQuery(undefined, { refetchOnWindowFocus: false });
   const unread = trpc.notifications.unreadCount.useQuery(undefined, {
     refetchOnWindowFocus: false,
     enabled: Boolean(session.data),
-  })
+  });
   const list = trpc.notifications.list.useQuery(
     { limit: 5 },
     { refetchOnWindowFocus: false, enabled: Boolean(session.data) },
-  )
+  );
   const kinds = trpc.notifications.dev.listKinds.useQuery(undefined, {
     refetchOnWindowFocus: false,
-  })
+  });
   const testSend = trpc.notifications.dev.testSend.useMutation({
     onSuccess: () => {
-      void utils.notifications.unreadCount.invalidate()
-      void utils.notifications.list.invalidate()
+      void utils.notifications.unreadCount.invalidate();
+      void utils.notifications.list.invalidate();
     },
-  })
+  });
   const markAllRead = trpc.notifications.markAllRead.useMutation({
     onSuccess: () => {
-      void utils.notifications.unreadCount.invalidate()
-      void utils.notifications.list.invalidate()
+      void utils.notifications.unreadCount.invalidate();
+      void utils.notifications.list.invalidate();
     },
-  })
+  });
   const resetPrefs = trpc.notifications.preferences.reset.useMutation({
     onSuccess: () => {
-      void utils.notifications.preferences.get.invalidate()
+      void utils.notifications.preferences.get.invalidate();
     },
-  })
+  });
 
-  const signedIn = Boolean(session.data)
-  const count = unread.data?.count ?? 0
-  const items = list.data?.items ?? []
+  const signedIn = Boolean(session.data);
+  const count = unread.data?.count ?? 0;
+  const items = list.data?.items ?? [];
 
   const badge = (
     <span
@@ -67,14 +67,12 @@ export function NotificationsPanel() {
     >
       {count > 0 ? `${count} ${t("notifications.unreadShort")}` : t("notifications.zero")}
     </span>
-  )
+  );
 
   return (
     <CollapsibleSection title={t("sections.notifications")} badge={badge}>
       {!signedIn ? (
-        <p className="text-xs text-muted-foreground">
-          {t("notifications.signInPrompt")}
-        </p>
+        <p className="text-xs text-muted-foreground">{t("notifications.signInPrompt")}</p>
       ) : (
         <div className="space-y-3">
           <div className="flex flex-wrap items-center gap-2">
@@ -142,10 +140,7 @@ export function NotificationsPanel() {
             ) : (
               <ul className="space-y-1">
                 {items.map((item) => (
-                  <li
-                    key={item.id}
-                    className="flex items-baseline gap-2 text-[11px]"
-                  >
+                  <li key={item.id} className="flex items-baseline gap-2 text-[11px]">
                     <span
                       aria-hidden
                       className={`mt-1 inline-block h-1.5 w-1.5 shrink-0 rounded-full ${
@@ -164,5 +159,5 @@ export function NotificationsPanel() {
         </div>
       )}
     </CollapsibleSection>
-  )
+  );
 }

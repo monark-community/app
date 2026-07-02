@@ -1,4 +1,4 @@
-import { redirect } from "next/navigation"
+import { redirect } from "next/navigation";
 
 /**
  * `/account` is the canonical entry point but doesn't carry its own
@@ -13,5 +13,5 @@ import { redirect } from "next/navigation"
  * still navigate to `/account/danger` from the sidebar to cancel.
  */
 export default function AccountIndexPage() {
-  redirect("/account/profile")
+  redirect("/account/profile");
 }

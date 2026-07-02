@@ -1,4 +1,4 @@
-import type { KindMessages } from "../types"
+import type { KindMessages } from "../types";
 
 const messages: KindMessages = {
   en: {
@@ -61,6 +61,6 @@ Si ce n'était pas vous, révoquez immédiatement cet appareil :
       link: "/account/security",
     },
   },
-}
+};
 
-export default messages
+export default messages;

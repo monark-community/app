@@ -10,15 +10,15 @@
  * special-case strings.
  */
 export function formatRelativeTime(value: Date | string, locale: string): string {
-  const date = typeof value === "string" ? new Date(value) : value
-  const diffSec = Math.round((date.getTime() - Date.now()) / 1000)
-  const abs = Math.abs(diffSec)
-  const rtf = new Intl.RelativeTimeFormat(locale, { numeric: "auto" })
+  const date = typeof value === "string" ? new Date(value) : value;
+  const diffSec = Math.round((date.getTime() - Date.now()) / 1000);
+  const abs = Math.abs(diffSec);
+  const rtf = new Intl.RelativeTimeFormat(locale, { numeric: "auto" });
 
-  if (abs < 60) return rtf.format(diffSec, "second")
-  if (abs < 3600) return rtf.format(Math.round(diffSec / 60), "minute")
-  if (abs < 86_400) return rtf.format(Math.round(diffSec / 3600), "hour")
-  if (abs < 86_400 * 30) return rtf.format(Math.round(diffSec / 86_400), "day")
-  if (abs < 86_400 * 365) return rtf.format(Math.round(diffSec / (86_400 * 30)), "month")
-  return rtf.format(Math.round(diffSec / (86_400 * 365)), "year")
+  if (abs < 60) return rtf.format(diffSec, "second");
+  if (abs < 3600) return rtf.format(Math.round(diffSec / 60), "minute");
+  if (abs < 86_400) return rtf.format(Math.round(diffSec / 3600), "hour");
+  if (abs < 86_400 * 30) return rtf.format(Math.round(diffSec / 86_400), "day");
+  if (abs < 86_400 * 365) return rtf.format(Math.round(diffSec / (86_400 * 30)), "month");
+  return rtf.format(Math.round(diffSec / (86_400 * 365)), "year");
 }

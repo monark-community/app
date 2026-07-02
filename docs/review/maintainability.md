@@ -20,9 +20,12 @@ Headline: the architecture is genuinely good — a real shared-patterns library,
 [packages/common/src/trpc.ts](../../packages/common/src/trpc.ts):46 exports only `publicProcedure`, so every router hand-rolls the preamble. [packages/projects/src/server/index.ts](../../packages/projects/src/server/index.ts) repeats this verbatim **7 times in one file**:
 
 ```ts
-if (!ctx.userId) throw new UnauthorizedError()
-const org = await requireOrg({ userId: ctx.userId, activeOrganizationId: ctx.activeOrganizationId })
-await requirePermission(ctx, "projects.read", org.id)
+if (!ctx.userId) throw new UnauthorizedError();
+const org = await requireOrg({
+  userId: ctx.userId,
+  activeOrganizationId: ctx.activeOrganizationId,
+});
+await requirePermission(ctx, "projects.read", org.id);
 ```
 
 Same shape across users (5), organizations (5), webhooks (10), rbac, and calendar — ~40 copies, each a chance to forget the `userId` check or the org-scope check (and the security review found exactly that class of omission in calendar). This is the **single highest-leverage refactor** and it is also a security control: fix M-D1 and H2/H3/H4 from the security report get structurally harder to reintroduce.
@@ -30,17 +33,18 @@ Fix: `authedProcedure` (asserts `ctx.userId`, narrows the type) and an `orgScope
 
 ### M-D2. Dirty/baseline/revert form machinery hand-rolled 7× (~250 lines)
 
-`useState`-per-field + hand-written `dirty` + `revert()` + hydrate effect in [role-editor.tsx](../../services/web/src/app/(authed)/admin/rbac/role-editor.tsx), [webhook-editor.tsx](../../services/web/src/app/(authed)/admin/webhooks/webhook-editor.tsx), [organization-detail.tsx](../../services/web/src/app/(authed)/admin/organizations/[id]/organization-detail.tsx), [project-form.tsx](../../services/web/src/app/(authed)/projects/project-form.tsx), industries-list.tsx, industry-edit-form.tsx, and [profile-section.tsx](../../services/web/src/app/(authed)/account/profile-section.tsx) — all sitting directly next to the shared `DirtyFormBar`. Fix: a `useFormBaseline<T>()` hook beside `DirtyFormBar` returning `{ values, set, dirty, revert }`. Also: `dirty-form-bar.tsx` lives at `src/components/`, outside `components/patterns/` and its barrel, despite CLAUDE.md listing it as a house pattern — move it in.
+`useState`-per-field + hand-written `dirty` + `revert()` + hydrate effect in [role-editor.tsx](<../../services/web/src/app/(authed)/admin/rbac/role-editor.tsx>), [webhook-editor.tsx](<../../services/web/src/app/(authed)/admin/webhooks/webhook-editor.tsx>), [organization-detail.tsx](<../../services/web/src/app/(authed)/admin/organizations/[id]/organization-detail.tsx>), [project-form.tsx](<../../services/web/src/app/(authed)/projects/project-form.tsx>), industries-list.tsx, industry-edit-form.tsx, and [profile-section.tsx](<../../services/web/src/app/(authed)/account/profile-section.tsx>) — all sitting directly next to the shared `DirtyFormBar`. Fix: a `useFormBaseline<T>()` hook beside `DirtyFormBar` returning `{ values, set, dirty, revert }`. Also: `dirty-form-bar.tsx` lives at `src/components/`, outside `components/patterns/` and its barrel, despite CLAUDE.md listing it as a house pattern — move it in.
 
 ### M-D3. Mutation + toast + invalidate boilerplate ~40× — and 3 mutations fail silently
 
-~75 `useMutation` sites ; ~40 follow the exact `onSuccess: toast + invalidate / onError: toast` template. Two error conventions coexist (`t("error", {message})` vs `err.message || t("error")`), and **3 mutations have no `onError` at all** so they fail silently: [notifications-section.tsx](../../services/web/src/app/(authed)/account/notifications-section.tsx):37-41, [admin-notifications.tsx](../../services/web/src/app/(authed)/admin/users/[id]/admin-notifications.tsx):52-56, [profile-section.tsx](../../services/web/src/app/(authed)/account/profile-section.tsx):53-55. Fix: a `useToastMutation` helper that makes error toasts the default (~250-300 lines saved and closes the silent failures).
+~75 `useMutation` sites ; ~40 follow the exact `onSuccess: toast + invalidate / onError: toast` template. Two error conventions coexist (`t("error", {message})` vs `err.message || t("error")`), and **3 mutations have no `onError` at all** so they fail silently: [notifications-section.tsx](<../../services/web/src/app/(authed)/account/notifications-section.tsx>):37-41, [admin-notifications.tsx](<../../services/web/src/app/(authed)/admin/users/[id]/admin-notifications.tsx>):52-56, [profile-section.tsx](<../../services/web/src/app/(authed)/account/profile-section.tsx>):53-55. Fix: a `useToastMutation` helper that makes error toasts the default (~250-300 lines saved and closes the silent failures).
 
 ### M-D4. Web-screen glue around the shared patterns is copy-paste (~30% of each screen)
 
 The patterns library is genuinely used by all 7 list screens ; duplication lives in the wiring:
-1. **Archive/restore/hard-delete lifecycle** duplicated wholesale between [projects-list.tsx](../../services/web/src/app/(authed)/projects/projects-list.tsx) and [industries-list.tsx](../../services/web/src/app/(authed)/industries/industries-list.tsx) — ~110 lines/screen, ~100 shared → extract `useArchiveLifecycle()` + `<ArchiveConfirmDialogs>`.
-2. **Industry edit form exists twice** ([industries-list.tsx](../../services/web/src/app/(authed)/industries/industries-list.tsx):48-168 vs [industry-edit-form.tsx](../../services/web/src/app/(authed)/industries/[id]/industry-edit-form.tsx):11-120) — ~85% identical ; every other entity uses one component + `containment` prop. Merge into `industry-form.tsx`.
+
+1. **Archive/restore/hard-delete lifecycle** duplicated wholesale between [projects-list.tsx](<../../services/web/src/app/(authed)/projects/projects-list.tsx>) and [industries-list.tsx](<../../services/web/src/app/(authed)/industries/industries-list.tsx>) — ~110 lines/screen, ~100 shared → extract `useArchiveLifecycle()` + `<ArchiveConfirmDialogs>`.
+2. **Industry edit form exists twice** ([industries-list.tsx](<../../services/web/src/app/(authed)/industries/industries-list.tsx>):48-168 vs [industry-edit-form.tsx](<../../services/web/src/app/(authed)/industries/[id]/industry-edit-form.tsx>):11-120) — ~85% identical ; every other entity uses one component + `containment` prop. Merge into `industry-form.tsx`.
 3. **Panel scaffold repeated 6×** (`PanelHeaderBar` + scroll container + sr-only `SheetTitle` + create/edit/skeleton switch) — ~100 removable lines → fold into `TableDetailLayout`.
 4. **Org-scope picker** duplicated rbac ↔ webhooks (~40 lines ; the webhooks copy's own comment says "Mirrors the /admin/rbac manager pattern") → `useOrgScope()` + `<OrgScopePickerCard>`.
 5. **Notification preference matrix** duplicated account ↔ admin (~115 lines, incl. a hand-rolled toggle pill duplicated in both while `ui/switch.tsx` exists) → one `<NotificationPrefsMatrix>` + `Switch`.
@@ -57,7 +61,7 @@ The patterns library is genuinely used by all 7 list screens ; duplication lives
 
 ### M-D7. Email templates — the shell abstraction stops too early
 
-[_partials/email-shell.ts](../../packages/notifications/src/templates/_partials/email-shell.ts) exists, but every template still inlines raw styled HTML: `color:#3f3f46` appears **42 times across 8 template files** (× en+fr), and the styled `<h1>` header is copy-pasted per template per locale. 10 templates, 627 lines, ~60% repeated scaffolding ; a brand change means editing ~20 blocks in lockstep and en/fr styling can silently diverge. Fix: add `heading()`, `paragraph()`, `button()`, `mutedFooter()` builders to `_partials/` ; templates keep only copy strings. (This also removes the M2 HTML-escaping risk from the security report if the builders escape by default.)
+[\_partials/email-shell.ts](../../packages/notifications/src/templates/_partials/email-shell.ts) exists, but every template still inlines raw styled HTML: `color:#3f3f46` appears **42 times across 8 template files** (× en+fr), and the styled `<h1>` header is copy-pasted per template per locale. 10 templates, 627 lines, ~60% repeated scaffolding ; a brand change means editing ~20 blocks in lockstep and en/fr styling can silently diverge. Fix: add `heading()`, `paragraph()`, `button()`, `mutedFooter()` builders to `_partials/` ; templates keep only copy strings. (This also removes the M2 HTML-escaping risk from the security report if the builders escape by default.)
 
 ### M-D8. i18n value duplication (structure is clean)
 
@@ -66,9 +70,9 @@ The patterns library is genuinely used by all 7 list screens ; duplication lives
 ## Consistency
 
 - **Two names for the same screen type:** `*-list.tsx` (organizations, users, projects, industries, deliveries) vs `*-manager.tsx` (roles, webhooks) for identical FilterBar+TableDetailLayout screens ; detail components split across `-detail`/`-editor`/`-form` with no correlating reason. Pick one convention.
-- **Native `confirm()` instead of the house `ConfirmDialog`:** [role-editor.tsx](../../services/web/src/app/(authed)/admin/rbac/role-editor.tsx):304-314, [webhook-editor.tsx](../../services/web/src/app/(authed)/admin/webhooks/webhook-editor.tsx):312-317 (while the rotate-secret flow in the same file uses a proper Dialog), calendar new-event-popover.
-- **Save-on-blur vs DirtyFormBar:** [admin-profile-form.tsx](../../services/web/src/app/(authed)/admin/users/[id]/admin-profile-form.tsx):97-128 commits per field ; its self-service twin `account/profile-section.tsx` batches through `DirtyFormBar`. Same surface, two philosophies.
-- **Dead/dev code in the authed tree:** [dev/fields/page.tsx](../../services/web/src/app/(authed)/dev/fields/page.tsx) (214 lines, `console.log` at :167) ships with no flag gate ; unused `useTransition()` at profile-section.tsx:74.
+- **Native `confirm()` instead of the house `ConfirmDialog`:** [role-editor.tsx](<../../services/web/src/app/(authed)/admin/rbac/role-editor.tsx>):304-314, [webhook-editor.tsx](<../../services/web/src/app/(authed)/admin/webhooks/webhook-editor.tsx>):312-317 (while the rotate-secret flow in the same file uses a proper Dialog), calendar new-event-popover.
+- **Save-on-blur vs DirtyFormBar:** [admin-profile-form.tsx](<../../services/web/src/app/(authed)/admin/users/[id]/admin-profile-form.tsx>):97-128 commits per field ; its self-service twin `account/profile-section.tsx` batches through `DirtyFormBar`. Same surface, two philosophies.
+- **Dead/dev code in the authed tree:** [dev/fields/page.tsx](<../../services/web/src/app/(authed)/dev/fields/page.tsx>) (214 lines, `console.log` at :167) ships with no flag gate ; unused `useTransition()` at profile-section.tsx:74.
 - **`useDetailPanelRoute.close()` uses `router.push`** ([use-detail-panel-route.ts](../../services/web/src/components/patterns/use-detail-panel-route.ts):37) so Back reopens the panel ; `replace` was likely intended — one decision, six screens inherit it.
 - **Server-side error handling is exemplary** — one `TRPCError` construction in the whole packages tree, everything else throws typed `AppError` subclasses translated by one middleware (70 `UnauthorizedError`, 53 `ValidationError`, 43 `NotFoundError`, 11 `ForbiddenError`, 3 `ConflictError`). Keep and imitate.
 - **TODO/FIXME/HACK inventory is effectively zero** in source. Notably clean.
@@ -80,30 +84,30 @@ The patterns library is genuinely used by all 7 list screens ; duplication lives
 
 ## Type-safety erosion
 
-| Escape hatch | Count in production src | Notes |
-|---|---|---|
-| `as any` | effectively 0 | real ones only in webhooks worker tests |
-| `@ts-ignore` / `@ts-expect-error` | 0 in src | 12 in tests, all justified |
-| `as unknown as` | 3 in src | typing around the Supabase admin API ; acceptable, documented |
-| Non-null `!` | **~70 in src**, banned by CLAUDE.md | concentrated in calendar UI: day-view (8), month-view (8), week-view (9), new-event-popover ; plus the pagination trio (M-D5) |
-| `eslint-disable` | 12 | 8 are `react-hooks/exhaustive-deps` in calendar views ; 1 real `any` (`rdpLocale: any` — react-day-picker exports a `Locale` type) |
+| Escape hatch                      | Count in production src             | Notes                                                                                                                              |
+| --------------------------------- | ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `as any`                          | effectively 0                       | real ones only in webhooks worker tests                                                                                            |
+| `@ts-ignore` / `@ts-expect-error` | 0 in src                            | 12 in tests, all justified                                                                                                         |
+| `as unknown as`                   | 3 in src                            | typing around the Supabase admin API ; acceptable, documented                                                                      |
+| Non-null `!`                      | **~70 in src**, banned by CLAUDE.md | concentrated in calendar UI: day-view (8), month-view (8), week-view (9), new-event-popover ; plus the pagination trio (M-D5)      |
+| `eslint-disable`                  | 12                                  | 8 are `react-hooks/exhaustive-deps` in calendar views ; 1 real `any` (`rdpLocale: any` — react-day-picker exports a `Locale` type) |
 
 The strict-TS rule holds everywhere **except the calendar module** — which is simultaneously the newest, largest, least-tested, and unmanifested code. Every erosion signal points at one hot spot.
 
 ## Size / complexity hot spots (top 10)
 
-| Lines | File |
-|---|---|
-| 1038 | [calendar/week-view.tsx](../../services/web/src/app/(authed)/calendar/week-view.tsx) |
-| 991 | [calendar/new-event-popover.tsx](../../services/web/src/app/(authed)/calendar/new-event-popover.tsx) |
-| 911 | [calendar/day-view.tsx](../../services/web/src/app/(authed)/calendar/day-view.tsx) |
-| 769 | [patterns/data-table/data-table.tsx](../../services/web/src/components/patterns/data-table/data-table.tsx) (earns it — serves 7 screens) |
-| 654 | calendar/month-view.tsx |
-| 630 | account/totp-section.tsx |
-| 630 | account/actions.ts |
-| 622 | admin/webhooks/webhook-editor.tsx |
-| 594 | packages/auth/src/server/index.ts |
-| 578 | admin/rbac/role-editor.tsx |
+| Lines | File                                                                                                                                     |
+| ----- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| 1038  | [calendar/week-view.tsx](<../../services/web/src/app/(authed)/calendar/week-view.tsx>)                                                   |
+| 991   | [calendar/new-event-popover.tsx](<../../services/web/src/app/(authed)/calendar/new-event-popover.tsx>)                                   |
+| 911   | [calendar/day-view.tsx](<../../services/web/src/app/(authed)/calendar/day-view.tsx>)                                                     |
+| 769   | [patterns/data-table/data-table.tsx](../../services/web/src/components/patterns/data-table/data-table.tsx) (earns it — serves 7 screens) |
+| 654   | calendar/month-view.tsx                                                                                                                  |
+| 630   | account/totp-section.tsx                                                                                                                 |
+| 630   | account/actions.ts                                                                                                                       |
+| 622   | admin/webhooks/webhook-editor.tsx                                                                                                        |
+| 594   | packages/auth/src/server/index.ts                                                                                                        |
+| 578   | admin/rbac/role-editor.tsx                                                                                                               |
 
 Calendar's three views (3,594 combined lines) share lane/overlap layout math, drag state machines, and per-day bucketing that could live in `packages/calendar/src/client` as tested pure modules (some already does in `day-schedule.tsx`).
 
@@ -118,7 +122,7 @@ Calendar's three views (3,594 combined lines) share lane/overlap layout math, dr
 - [packages/rbac/README.md](../../packages/rbac/README.md):65-85 Public API table is stale — documents `hasRole`/`requireRole`/`primaryRole`/`rbac.myPrimaryRole` ; actual exports are `hasRoleKey`/`requireRoleKey`, `primaryRole` doesn't exist, and ~10 `admin*` procedures + `devToggleSysadmin` are undocumented. A sample of one suggests auditing all package READMEs against exports.
 - CLAUDE.md claims "flags surface in `/admin/feature-flags` automatically" — there is **no `/admin/feature-flags` route** (nor `/admin/notifications`). The doc promises admin surfaces that don't exist.
 - **Skeleton mandate partially unmet:** account sections profile/notifications/totp/danger have **no `isLoading` skeleton branch** (siblings email-section and trusted-devices-section do it right) ; `account/notifications/loading.tsx` hardcodes a 3×5 skeleton for a real 2×2 matrix.
-- **Hardcoded string** violating the i18n rule: [trusted-devices-section.tsx](../../services/web/src/app/(authed)/account/trusted-devices-section.tsx):288.
+- **Hardcoded string** violating the i18n rule: [trusted-devices-section.tsx](<../../services/web/src/app/(authed)/account/trusted-devices-section.tsx>):288.
 
 ## Genuinely well-factored (keep and imitate)
 

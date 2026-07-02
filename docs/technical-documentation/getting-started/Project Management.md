@@ -19,8 +19,8 @@ To ensure smooth collaboration, knowledge continuity, and effective delivery, al
 
 1. 2-week sprint cycles are recommended for iterative development.
 2. Sprint planning sessions should be held at the start of each sprint to define goals and priorities.
-    1. Each task should be given a complexity score following a modified Fibbonacci sequence (0.5, 1, 2, 3, 5, 8, 13, 20), agreed uppon by students during sprint planning.
-        1. We highly encourage splitting tasks above 5 in multiple tasks if possible and/or take the time to discuss it further as those are generally risky.
+   1. Each task should be given a complexity score following a modified Fibbonacci sequence (0.5, 1, 2, 3, 5, 8, 13, 20), agreed uppon by students during sprint planning.
+      1. We highly encourage splitting tasks above 5 in multiple tasks if possible and/or take the time to discuss it further as those are generally risky.
 3. Demo sessions should occur at the end of each sprint to review progress and gather feedback.
 
 ### 4. Releases and Versioning

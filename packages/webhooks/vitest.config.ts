@@ -1,5 +1,5 @@
-import { configDefaults, defineConfig, mergeConfig } from "vitest/config"
-import baseConfig from "../../vitest.shared"
+import { configDefaults, defineConfig, mergeConfig } from "vitest/config";
+import baseConfig from "../../vitest.shared";
 
 // `test.exclude` REPLACES Vitest's defaults instead of merging into
 // them, so we re-spread `configDefaults.exclude` to keep
@@ -17,4 +17,4 @@ export default mergeConfig(
       },
     },
   }),
-)
+);

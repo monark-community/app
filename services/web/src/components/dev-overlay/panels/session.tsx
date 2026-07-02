@@ -1,32 +1,30 @@
-"use client"
+"use client";
 
-import { useTransition } from "react"
-import Link from "next/link"
-import { useTranslations } from "next-intl"
-import { Button } from "@/components/ui/button"
-import { signOutAction } from "@/app/(anon)/signin/actions"
-import { trpc } from "@/lib/trpc"
-import { CollapsibleSection } from "../collapsible-section"
+import { useTransition } from "react";
+import Link from "next/link";
+import { useTranslations } from "next-intl";
+import { Button } from "@/components/ui/button";
+import { signOutAction } from "@/app/(anon)/signin/actions";
+import { trpc } from "@/lib/trpc";
+import { CollapsibleSection } from "../collapsible-section";
 
 export function SessionPanel() {
-  const t = useTranslations("devOverlay")
+  const t = useTranslations("devOverlay");
   const { data, isLoading, error, refetch, isFetching } = trpc.users.me.useQuery(undefined, {
     refetchOnWindowFocus: false,
-  })
-  const [isSigningOut, startSignOut] = useTransition()
+  });
+  const [isSigningOut, startSignOut] = useTransition();
 
-  const signedIn = Boolean(data)
+  const signedIn = Boolean(data);
   const badge = (
     <span
       className={`rounded-full px-1.5 py-0.5 font-mono text-[10px] ${
-        signedIn
-          ? "bg-emerald-400/20 text-emerald-400"
-          : "bg-border text-muted-foreground"
+        signedIn ? "bg-emerald-400/20 text-emerald-400" : "bg-border text-muted-foreground"
       }`}
     >
       {signedIn ? t("badges.signedIn") : t("badges.anon")}
     </span>
-  )
+  );
 
   return (
     <CollapsibleSection title={t("sections.session")} badge={badge}>
@@ -74,11 +72,7 @@ export function SessionPanel() {
               <dt className="text-muted-foreground">{t("session.fields.locale")}</dt>
               <dd>{data.localePreference}</dd>
               <dt className="text-muted-foreground">{t("session.fields.verified")}</dt>
-              <dd
-                className={
-                  data.emailVerifiedAt ? "text-emerald-400" : "text-amber-400"
-                }
-              >
+              <dd className={data.emailVerifiedAt ? "text-emerald-400" : "text-amber-400"}>
                 {data.emailVerifiedAt
                   ? new Date(data.emailVerifiedAt).toISOString()
                   : t("session.verifiedNo")}
@@ -109,5 +103,5 @@ export function SessionPanel() {
         )}
       </div>
     </CollapsibleSection>
-  )
+  );
 }

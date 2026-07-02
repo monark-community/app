@@ -38,12 +38,12 @@ If you have two-factor enrollment, the reset gate also asks for a TOTP code (or 
 
 Your avatar in the top-right corner of any page opens the user-menu drawer. The "About you" links there take you into the four account tabs :
 
-| URL                         | What it holds                                                          |
-| --------------------------- | ---------------------------------------------------------------------- |
-| `/account/profile`          | Display name, bio, avatar, banner, language, theme.                    |
-| `/account/security`         | Email, password, two-factor authentication, trusted devices.           |
-| `/account/notifications`    | Per-category × per-channel preferences.                                |
-| `/account/danger`           | Schedule (or cancel) account deletion.                                 |
+| URL                      | What it holds                                                |
+| ------------------------ | ------------------------------------------------------------ |
+| `/account/profile`       | Display name, bio, avatar, banner, language, theme.          |
+| `/account/security`      | Email, password, two-factor authentication, trusted devices. |
+| `/account/notifications` | Per-category × per-channel preferences.                      |
+| `/account/danger`        | Schedule (or cancel) account deletion.                       |
 
 The account sidebar pinned to the left shows the same four entries on wide viewports ; on narrow viewports it collapses to a horizontal strip above the content.
 
@@ -70,7 +70,7 @@ Click **Change email**. A modal opens with two fields :
 
 If you have TOTP enrolled, a second dialog asks for a 6-digit code before the request goes out.
 
-The app sends a confirmation email to **both** your current and your new address. Click the link in either email *or* paste the 6-digit code shown in either email back into the dialog. Once one side confirms, the dialog updates : "First side confirmed, now enter the code from {your other inbox}". When both sides have confirmed, the email rotates : you're signed out and bounced to the sign-in page with an "Email updated" banner ; sign back in with the new address.
+The app sends a confirmation email to **both** your current and your new address. Click the link in either email _or_ paste the 6-digit code shown in either email back into the dialog. Once one side confirms, the dialog updates : "First side confirmed, now enter the code from {your other inbox}". When both sides have confirmed, the email rotates : you're signed out and bounced to the sign-in page with an "Email updated" banner ; sign back in with the new address.
 
 You can keep the dialog open while waiting for the email — it remembers your progress.
 
@@ -156,5 +156,5 @@ This path is final ; the request-deletion grace flow is the path you want for al
 
 - **You signed in mid-deletion** : the app routes you to `/account/danger` so cancellation is one click away.
 - **Your password was reset by an admin** : check your inbox for the reset email and follow its link. Same flow as forgot-password from your side.
-- **Your email was changed by you but the new inbox is unreachable** : open the email at your *current* address and use the 6-digit code from there ; the dialog will accept either side.
+- **Your email was changed by you but the new inbox is unreachable** : open the email at your _current_ address and use the 6-digit code from there ; the dialog will accept either side.
 - **You're an admin and you don't have TOTP enrolled** : you have 7 days to enroll before the app starts blocking admin routes ; an amber banner on `/account/security` counts down. Once you enroll, the banner disappears immediately. If you exceed the deadline, you can still reach `/account` to enroll, but every other route bounces back here with a toast saying "Admin access restricted".

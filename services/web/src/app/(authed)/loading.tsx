@@ -1,5 +1,5 @@
-import { AppBar } from "@/components/app-bar"
-import { Skeleton } from "@/components/ui/skeleton"
+import { AppBar } from "@/components/app-bar";
+import { Skeleton } from "@/components/ui/skeleton";
 
 /**
  * Default Suspense fallback for any `/(authed)/...` route that doesn't
@@ -20,5 +20,5 @@ export default function AuthedLoading() {
         </div>
       </main>
     </>
-  )
+  );
 }

@@ -1,40 +1,52 @@
-"use client"
+"use client";
 
-import { useEffect, useState, type ReactNode } from "react"
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
-import { httpBatchLink } from "@trpc/client"
-import { rewriteForCurrentHost } from "./dev-host-rewrite"
-import { createSupabaseBrowserClient } from "./supabase/browser"
-import { trpc } from "./trpc"
+import { useEffect, useState, type ReactNode } from "react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { httpBatchLink } from "@trpc/client";
+import { rewriteForCurrentHost } from "./dev-host-rewrite";
+import { createSupabaseBrowserClient } from "./supabase/browser";
+import { trpc } from "./trpc";
 
 const CONFIGURED_API_URL =
   process.env.NEXT_PUBLIC_API_URL && process.env.NEXT_PUBLIC_API_URL.length > 0
     ? process.env.NEXT_PUBLIC_API_URL
-    : "http://localhost:4000"
+    : "http://localhost:4000";
 
 export function TrpcProvider({ children }: { children: ReactNode }) {
-  const [queryClient] = useState(() => new QueryClient())
-  const [supabase] = useState(() => createSupabaseBrowserClient())
+  const [queryClient] = useState(
+    () =>
+      new QueryClient({
+        // A short default `staleTime` stops every mounted query from
+        // refetching the instant it remounts during a soft navigation
+        // (the App Router keeps the QueryClient alive across route
+        // changes). Mutations still call `invalidateQueries`, which
+        // marks data stale regardless of this window, so correctness is
+        // unaffected — this only removes redundant refetches when the
+        // user bounces between screens inside the window.
+        defaultOptions: { queries: { staleTime: 30_000 } },
+      }),
+  );
+  const [supabase] = useState(() => createSupabaseBrowserClient());
   const [trpcClient] = useState(() => {
     // Resolved at client-init time so the loopback-host rewrite runs
     // against the browser's actual `window.location` ; in dev this
     // makes phone-from-LAN testing work without env edits, in prod
     // it's a no-op because the configured URL doesn't point to
     // localhost.
-    const apiUrl = rewriteForCurrentHost(CONFIGURED_API_URL)
+    const apiUrl = rewriteForCurrentHost(CONFIGURED_API_URL);
     return trpc.createClient({
       links: [
         httpBatchLink({
           url: `${apiUrl}/trpc`,
           async headers() {
-            const { data } = await supabase.auth.getSession()
-            const token = data.session?.access_token
-            return token ? { authorization: `Bearer ${token}` } : {}
+            const { data } = await supabase.auth.getSession();
+            const token = data.session?.access_token;
+            return token ? { authorization: `Bearer ${token}` } : {};
           },
         }),
       ],
-    })
-  })
+    });
+  });
 
   // Server-action sign-in / sign-out uses redirect(), which is a soft
   // navigation in Next App Router; the QueryClient survives, so anything
@@ -48,15 +60,15 @@ export function TrpcProvider({ children }: { children: ReactNode }) {
         event === "TOKEN_REFRESHED" ||
         event === "USER_UPDATED"
       ) {
-        queryClient.invalidateQueries()
+        queryClient.invalidateQueries();
       }
-    })
-    return () => sub.subscription.unsubscribe()
-  }, [supabase, queryClient])
+    });
+    return () => sub.subscription.unsubscribe();
+  }, [supabase, queryClient]);
 
   return (
     <trpc.Provider client={trpcClient} queryClient={queryClient}>
       <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
     </trpc.Provider>
-  )
+  );
 }

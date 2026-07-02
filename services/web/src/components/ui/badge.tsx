@@ -1,6 +1,6 @@
-import * as React from "react"
-import { cva, type VariantProps } from "class-variance-authority"
-import { cn } from "@/lib/utils"
+import * as React from "react";
+import { cva, type VariantProps } from "class-variance-authority";
+import { cn } from "@/lib/utils";
 
 /**
  * Status / label pill primitive used across the admin + account
@@ -28,12 +28,9 @@ const badgeVariants = cva(
       variant: {
         primary: "bg-primary/10 text-primary",
         secondary: "bg-muted text-muted-foreground",
-        success:
-          "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400",
-        warning:
-          "bg-amber-500/15 text-amber-700 dark:text-amber-400",
-        destructive:
-          "bg-destructive/10 text-destructive",
+        success: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400",
+        warning: "bg-amber-500/15 text-amber-700 dark:text-amber-400",
+        destructive: "bg-destructive/10 text-destructive",
         outline: "border border-border text-foreground",
       },
       size: {
@@ -46,18 +43,12 @@ const badgeVariants = cva(
       size: "default",
     },
   },
-)
+);
 
-export type BadgeProps = React.HTMLAttributes<HTMLSpanElement> &
-  VariantProps<typeof badgeVariants>
+export type BadgeProps = React.HTMLAttributes<HTMLSpanElement> & VariantProps<typeof badgeVariants>;
 
 export function Badge({ className, variant, size, ...props }: BadgeProps) {
-  return (
-    <span
-      className={cn(badgeVariants({ variant, size }), className)}
-      {...props}
-    />
-  )
+  return <span className={cn(badgeVariants({ variant, size }), className)} {...props} />;
 }
 
-export { badgeVariants }
+export { badgeVariants };

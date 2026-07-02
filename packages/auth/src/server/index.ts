@@ -1,20 +1,17 @@
-import { z } from "zod"
-import { createClient, type SupabaseClient } from "@supabase/supabase-js"
-import { UAParser } from "ua-parser-js"
-import { router, publicProcedure } from "@monark/common/trpc"
-import { ForbiddenError, UnauthorizedError, ValidationError } from "@monark/common"
-import { isEnabled } from "@monark/feature-flags/server"
-import { adminAssignmentSummary } from "@monark/rbac/server"
-import { getByEmail, getById } from "@monark/users/server"
-import { hardDeleteUser } from "./account-lifecycle"
-import { checkPassword } from "./password"
-import {
-  markEmailVerified,
-  recordResendAttempt,
-  type ResendResult,
-} from "./email-verification"
-import { emitPasswordChanged, emitSignedIn, emitSignedOut } from "./events"
-import { signUpUser, signUpInputSchema } from "./signup"
+import { z } from "zod";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { UAParser } from "ua-parser-js";
+import { router, publicProcedure } from "@monark/common/trpc";
+import { ForbiddenError, UnauthorizedError, ValidationError } from "@monark/common";
+import { isEnabled } from "@monark/feature-flags/server";
+import { adminAssignmentSummary } from "@monark/rbac/server";
+import { getByEmail, getById } from "@monark/users/server";
+import { hardDeleteUser } from "./account-lifecycle";
+import { checkPassword } from "./password";
+import { markEmailVerified, recordResendAttempt, type ResendResult } from "./email-verification";
+import { emitPasswordChanged, emitSignedIn, emitSignedOut } from "./events";
+import { signUpUser, signUpInputSchema } from "./signup";
+import { verifyEmailActionToken } from "./email-action-token";
 import {
   findCurrentDeviceId,
   listTrustedDevices,
@@ -22,7 +19,7 @@ import {
   revokeAllTrustedDevices,
   revokeTrustedDevice,
   type TrustedDeviceRow,
-} from "./trusted-devices"
+} from "./trusted-devices";
 import {
   acknowledgeRecoveryCodeUse,
   beginTotpEnrollment,
@@ -36,7 +33,7 @@ import {
   markDeviceTotpVerified,
   requiresTotpChallenge,
   adminTotpEnforcement,
-} from "./totp"
+} from "./totp";
 
 // Exposed to clients; strips the cookie hash (treat it as a server secret).
 //
@@ -57,16 +54,16 @@ import {
 // browsers leave it null. The card uses it to pick the glyph (phone /
 // tablet / laptop) without re-parsing the UA on the client.
 export type TrustedDeviceView = Omit<TrustedDeviceRow, "cookieHash"> & {
-  browserName: string | null
-  osName: string | null
-  deviceVendor: string | null
-  deviceModel: string | null
-  deviceType: string | null
-}
+  browserName: string | null;
+  osName: string | null;
+  deviceVendor: string | null;
+  deviceModel: string | null;
+  deviceType: string | null;
+};
 
 function toView(row: TrustedDeviceRow): TrustedDeviceView {
-  const { cookieHash: _cookieHash, ...rest } = row
-  const parsed = row.userAgent ? new UAParser(row.userAgent).getResult() : null
+  const { cookieHash: _cookieHash, ...rest } = row;
+  const parsed = row.userAgent ? new UAParser(row.userAgent).getResult() : null;
   // UA-CH model is always preferred when present : on modern Chrome /
   // Edge for Android the UA string itself reduces the device model to
   // "K" for privacy, so the ua-parser-js result is essentially useless
@@ -74,12 +71,12 @@ function toView(row: TrustedDeviceRow): TrustedDeviceView {
   // ("Pixel 7", "Galaxy S24", …). Falls back to the UA-parsed value
   // when no hints were captured (Firefox, Safari, older Chrome).
   const hints = (row.clientHints ?? null) as {
-    model?: string
-    platformVersion?: string
-  } | null
-  const uaModel = parsed?.device.model ?? null
-  const reducedModel = uaModel === "K" || uaModel === null
-  const deviceModel = hints?.model ?? (reducedModel ? null : uaModel)
+    model?: string;
+    platformVersion?: string;
+  } | null;
+  const uaModel = parsed?.device.model ?? null;
+  const reducedModel = uaModel === "K" || uaModel === null;
+  const deviceModel = hints?.model ?? (reducedModel ? null : uaModel);
   return {
     ...rest,
     browserName: parsed?.browser.name ?? null,
@@ -87,7 +84,7 @@ function toView(row: TrustedDeviceRow): TrustedDeviceView {
     deviceVendor: parsed?.device.vendor ?? null,
     deviceModel,
     deviceType: parsed?.device.type ?? null,
-  }
+  };
 }
 
 function authEnv() {
@@ -96,29 +93,29 @@ function authEnv() {
     supabasePublishableKey: process.env.SUPABASE_PUBLISHABLE_KEY!,
     supabaseSecretKey: process.env.SUPABASE_SECRET_KEY!,
     appUrl: process.env.APP_URL ?? "http://localhost:3000",
-  }
+  };
 }
 
 const totpRouter = router({
   // Status is safe to expose unauthenticated (returns "not enrolled" for
   // anon) so the client can render the settings surface without auth noise.
   status: publicProcedure.query(async ({ ctx }) => {
-    if (!ctx.userId) return { enrolled: false } as const
-    return getTotpStatus(ctx.userId)
+    if (!ctx.userId) return { enrolled: false } as const;
+    return getTotpStatus(ctx.userId);
   }),
 
   beginEnrollment: publicProcedure.mutation(async ({ ctx }) => {
-    if (!ctx.userId) throw new UnauthorizedError()
-    const user = await getById(ctx.userId)
-    if (!user) throw new UnauthorizedError()
-    return beginTotpEnrollment({ userId: ctx.userId, accountLabel: user.email })
+    if (!ctx.userId) throw new UnauthorizedError();
+    const user = await getById(ctx.userId);
+    if (!user) throw new UnauthorizedError();
+    return beginTotpEnrollment({ userId: ctx.userId, accountLabel: user.email });
   }),
 
   confirmEnrollment: publicProcedure
     .input(z.object({ code: z.string().min(6).max(8) }))
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.userId) throw new UnauthorizedError()
-      return confirmTotpEnrollment({ userId: ctx.userId, code: input.code })
+      if (!ctx.userId) throw new UnauthorizedError();
+      return confirmTotpEnrollment({ userId: ctx.userId, code: input.code });
     }),
 
   // Called from the /signin/totp server action. Stamps the current device as
@@ -131,15 +128,15 @@ const totpRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.userId) throw new UnauthorizedError()
-      const ok = await verifyTotpCode({ userId: ctx.userId, code: input.code })
+      if (!ctx.userId) throw new UnauthorizedError();
+      const ok = await verifyTotpCode({ userId: ctx.userId, code: input.code });
       if (ok && input.trustedDeviceId) {
         await markDeviceTotpVerified({
           userId: ctx.userId,
           trustedDeviceId: input.trustedDeviceId,
-        })
+        });
       }
-      return { ok }
+      return { ok };
     }),
 
   // Same as verifyCode but consumes a recovery code; also stamps the device.
@@ -151,26 +148,26 @@ const totpRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.userId) throw new UnauthorizedError()
-      const ok = await verifyRecoveryCode({ userId: ctx.userId, code: input.code })
+      if (!ctx.userId) throw new UnauthorizedError();
+      const ok = await verifyRecoveryCode({ userId: ctx.userId, code: input.code });
       if (ok && input.trustedDeviceId) {
         await markDeviceTotpVerified({
           userId: ctx.userId,
           trustedDeviceId: input.trustedDeviceId,
-        })
+        });
       }
-      return { ok }
+      return { ok };
     }),
 
   regenerateRecoveryCodes: publicProcedure
     .input(z.object({ code: z.string().min(6).max(8) }))
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.userId) throw new UnauthorizedError()
+      if (!ctx.userId) throw new UnauthorizedError();
       const recoveryCodes = await regenerateRecoveryCodes({
         userId: ctx.userId,
         code: input.code,
-      })
-      return { recoveryCodes }
+      });
+      return { recoveryCodes };
     }),
 
   // Read surface for the post-sign-in reminder modal. Returns enrollment +
@@ -183,52 +180,50 @@ const totpRouter = router({
         hasUnacknowledgedUse: false,
         lastUnacknowledgedUseAt: null,
         remainingCodes: 0,
-      }
+      };
     }
-    return getRecoveryCodeStatus(ctx.userId)
+    return getRecoveryCodeStatus(ctx.userId);
   }),
 
   // User confirmed they've struck the spent recovery code from their
   // saved list ; clears the unack flag so the modal stops reappearing.
   acknowledgeRecoveryUse: publicProcedure.mutation(async ({ ctx }) => {
-    if (!ctx.userId) throw new UnauthorizedError()
-    await acknowledgeRecoveryCodeUse(ctx.userId)
+    if (!ctx.userId) throw new UnauthorizedError();
+    await acknowledgeRecoveryCodeUse(ctx.userId);
   }),
 
   disable: publicProcedure
     .input(z.object({ code: z.string().min(6).max(8) }))
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.userId) throw new UnauthorizedError()
-      await disableTotp({ userId: ctx.userId, code: input.code })
+      if (!ctx.userId) throw new UnauthorizedError();
+      await disableTotp({ userId: ctx.userId, code: input.code });
     }),
 
   // Called from the sign-in flow to decide whether to route to /signin/totp.
   isChallengeRequired: publicProcedure
-    .input(
-      z.object({ trustedDeviceId: z.string().nullable().optional() }).optional(),
-    )
+    .input(z.object({ trustedDeviceId: z.string().nullable().optional() }).optional())
     .query(async ({ ctx, input }) => {
-      if (!ctx.userId) return false
+      if (!ctx.userId) return false;
       return requiresTotpChallenge({
         userId: ctx.userId,
         trustedDeviceId: input?.trustedDeviceId ?? null,
-      })
+      });
     }),
 
   // Read by /admin route guards + the /account banner. Returns enforcement
   // mode (soft/hard) when the signed-in admin must enroll TOTP.
   adminEnforcement: publicProcedure.query(async ({ ctx }) => {
-    if (!ctx.userId) return { required: false } as const
-    return adminTotpEnforcement(ctx.userId)
+    if (!ctx.userId) return { required: false } as const;
+    return adminTotpEnforcement(ctx.userId);
   }),
-})
+});
 
 const trustedDevicesRouter = router({
   // Non-revoked devices for the signed-in user.
   mine: publicProcedure.query(async ({ ctx }): Promise<TrustedDeviceView[]> => {
-    if (!ctx.userId) return []
-    const rows = await listTrustedDevices(ctx.userId)
-    return rows.map(toView)
+    if (!ctx.userId) return [];
+    const rows = await listTrustedDevices(ctx.userId);
+    return rows.map(toView);
   }),
 
   // Called by the web server action right after a successful sign-in / verify.
@@ -265,10 +260,10 @@ const trustedDevicesRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.userId) throw new UnauthorizedError()
-      const flagOn = await isEnabled("auth.trusted-devices", { userId: ctx.userId })
+      if (!ctx.userId) throw new UnauthorizedError();
+      const flagOn = await isEnabled("auth.trusted-devices", { userId: ctx.userId });
       if (!flagOn) {
-        return { deviceId: null, isNew: false, rawCookieValue: null }
+        return { deviceId: null, isNew: false, rawCookieValue: null, ttlSeconds: 0 };
       }
       const result = await recognizeOrRegister({
         userId: ctx.userId,
@@ -278,12 +273,17 @@ const trustedDevicesRouter = router({
         clientHints: input.clientHints ?? null,
         existingCookieValue: input.existingCookieValue ?? null,
         supabaseSessionId: input.supabaseSessionId ?? null,
-      })
+      });
       return {
         deviceId: result.device.id,
         isNew: result.isNew,
         rawCookieValue: result.rawCookieValue,
-      }
+        // Plumbs the user's `trustedDeviceTtlDays` preference back to
+        // the web layer so the cookie's Max-Age matches the row's
+        // expiresAt — same value used by both sides of the trust
+        // signal stays the only safe option.
+        ttlSeconds: result.ttlSeconds,
+      };
     }),
 
   // Soft-revokes a device the user owns; no-op if it doesn't belong to them or
@@ -291,8 +291,8 @@ const trustedDevicesRouter = router({
   revoke: publicProcedure
     .input(z.object({ deviceId: z.string().min(1) }))
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.userId) throw new UnauthorizedError()
-      await revokeTrustedDevice({ userId: ctx.userId, deviceId: input.deviceId })
+      if (!ctx.userId) throw new UnauthorizedError();
+      await revokeTrustedDevice({ userId: ctx.userId, deviceId: input.deviceId });
     }),
 
   // Emergency lockout. Revokes every non-revoked device the user owns ; each
@@ -301,9 +301,9 @@ const trustedDevicesRouter = router({
   // invoked this mutation. Returns the count of devices revoked so the UI
   // can confirm "N sessions ended".
   revokeAll: publicProcedure.mutation(async ({ ctx }) => {
-    if (!ctx.userId) throw new UnauthorizedError()
-    const count = await revokeAllTrustedDevices({ userId: ctx.userId })
-    return { count }
+    if (!ctx.userId) throw new UnauthorizedError();
+    const count = await revokeAllTrustedDevices({ userId: ctx.userId });
+    return { count };
   }),
 
   // Resolves the device id matching the caller-supplied cookie. Read by
@@ -313,13 +313,38 @@ const trustedDevicesRouter = router({
   currentDeviceId: publicProcedure
     .input(z.object({ cookieValue: z.string().nullable().optional() }).optional())
     .query(async ({ ctx, input }) => {
-      if (!ctx.userId) return null
+      if (!ctx.userId) return null;
       return findCurrentDeviceId({
         userId: ctx.userId,
         cookieValue: input?.cookieValue ?? null,
-      })
+      });
     }),
-})
+
+  // One-click revoke via the signed token embedded in `auth.new-device`
+  // emails. PublicProcedure : the token IS the authorisation, so the
+  // user doesn't need to be signed in (they may have clicked from a
+  // different device entirely). Returns a tagged result for the
+  // `/auth/revoke-device/<token>` page to render — invalid / expired
+  // links get a clear explanation instead of a generic 500. The action
+  // itself is idempotent (revokeTrustedDevice is a no-op when the row
+  // is already revoked), so a second click on the same link is safe.
+  revokeByEmailToken: publicProcedure
+    .input(z.object({ token: z.string().min(1).max(2048) }))
+    .mutation(async ({ input }) => {
+      const verified = verifyEmailActionToken({
+        token: input.token,
+        expectedPurpose: "revoke-device",
+      });
+      if (!verified.ok) {
+        return { ok: false as const, reason: verified.reason };
+      }
+      await revokeTrustedDevice({
+        userId: verified.userId,
+        deviceId: verified.deviceId,
+      });
+      return { ok: true as const };
+    }),
+});
 
 export const authRouter = router({
   trustedDevices: trustedDevicesRouter,
@@ -362,9 +387,9 @@ export const authRouter = router({
   signUp: publicProcedure
     .input(signUpInputSchema.extend({ appUrl: z.string().url().optional() }))
     .mutation(({ input }) => {
-      const { appUrl, ...rest } = input
-      const env = authEnv()
-      return signUpUser(rest, { ...env, appUrl: appUrl ?? env.appUrl })
+      const { appUrl, ...rest } = input;
+      const env = authEnv();
+      return signUpUser(rest, { ...env, appUrl: appUrl ?? env.appUrl });
     }),
 
   // Emits the domain event. Uses ctx.userId so a caller can't fake another
@@ -379,11 +404,11 @@ export const authRouter = router({
         .optional(),
     )
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.userId) throw new UnauthorizedError()
+      if (!ctx.userId) throw new UnauthorizedError();
       await emitSignedIn({
         userId: ctx.userId,
         trustedDeviceId: input?.trustedDeviceId,
-      })
+      });
     }),
 
   // Emits the signed-out event. Caller forwards the still-valid access token
@@ -391,8 +416,8 @@ export const authRouter = router({
   notifySignedOut: publicProcedure
     .input(z.object({ scope: z.enum(["local", "global"]).default("local") }))
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.userId) throw new UnauthorizedError()
-      await emitSignedOut({ userId: ctx.userId, scope: input.scope })
+      if (!ctx.userId) throw new UnauthorizedError();
+      await emitSignedOut({ userId: ctx.userId, scope: input.scope });
     }),
 
   // Emits `user.password-changed`. Supabase owns the actual password state;
@@ -401,15 +426,15 @@ export const authRouter = router({
   notifyPasswordChanged: publicProcedure
     .input(z.object({ triggeredBy: z.enum(["user", "reset"]).default("user") }))
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.userId) throw new UnauthorizedError()
-      await emitPasswordChanged({ userId: ctx.userId, triggeredBy: input.triggeredBy })
+      if (!ctx.userId) throw new UnauthorizedError();
+      await emitPasswordChanged({ userId: ctx.userId, triggeredBy: input.triggeredBy });
     }),
 
   // Flips `User.emailVerifiedAt`. Expects the caller to have just finished
   // `verifyOtp` so ctx.userId points at the newly-verified user.
   markOwnEmailVerified: publicProcedure.mutation(async ({ ctx }) => {
-    if (!ctx.userId) throw new UnauthorizedError()
-    await markEmailVerified(ctx.userId)
+    if (!ctx.userId) throw new UnauthorizedError();
+    await markEmailVerified(ctx.userId);
   }),
 
   // Full resend flow: look up user, apply the rate limit, ask Supabase to send
@@ -430,41 +455,39 @@ export const authRouter = router({
       }),
     )
     .mutation(async ({ input }): Promise<ResendActionResult> => {
-      const user = await getByEmail(input.email)
+      const user = await getByEmail(input.email);
       if (!user) {
         // Don't leak whether the email exists; pretend success.
-        return { ok: true, remaining: 0 }
+        return { ok: true, remaining: 0 };
       }
       if (user.emailVerifiedAt) {
-        return { ok: false, errorCode: "alreadyVerified" }
+        return { ok: false, errorCode: "alreadyVerified" };
       }
 
-      const limit: ResendResult = await recordResendAttempt(user.id)
+      const limit: ResendResult = await recordResendAttempt(user.id);
       if (!limit.sent) {
         return {
           ok: false,
           errorCode: "exhausted",
           retryAfterSeconds: limit.retryAfterSeconds,
-        }
+        };
       }
 
-      const env = authEnv()
-      const appUrl = input.appUrl ?? env.appUrl
-      const supabase: SupabaseClient = createClient(
-        env.supabaseUrl,
-        env.supabasePublishableKey,
-        { auth: { autoRefreshToken: false, persistSession: false } },
-      )
+      const env = authEnv();
+      const appUrl = input.appUrl ?? env.appUrl;
+      const supabase: SupabaseClient = createClient(env.supabaseUrl, env.supabasePublishableKey, {
+        auth: { autoRefreshToken: false, persistSession: false },
+      });
       const { error: resendError } = await supabase.auth.resend({
         type: "signup",
         email: input.email,
         options: { emailRedirectTo: `${appUrl}/auth/confirm` },
-      })
+      });
       if (resendError) {
-        return { ok: false, errorCode: "upstream" }
+        return { ok: false, errorCode: "upstream" };
       }
 
-      return { ok: true, remaining: limit.remainingInWindow }
+      return { ok: true, remaining: limit.remainingInWindow };
     }),
 
   // Admin-only hard delete. Bypasses the standard 14-day grace window —
@@ -477,30 +500,28 @@ export const authRouter = router({
   adminHardDeleteUser: publicProcedure
     .input(z.object({ userId: z.string().min(1) }))
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.userId) throw new UnauthorizedError()
-      const summary = await adminAssignmentSummary(ctx.userId)
-      if (!summary.hasAdmin) throw new ForbiddenError("Admin role required.")
+      if (!ctx.userId) throw new UnauthorizedError();
+      const summary = await adminAssignmentSummary(ctx.userId);
+      if (!summary.hasAdmin) throw new ForbiddenError("Admin role required.");
       if (input.userId === ctx.userId) {
-        throw new ValidationError(
-          "Use your own account page to delete your account.",
-        )
+        throw new ValidationError("Use your own account page to delete your account.");
       }
-      await hardDeleteUser(input.userId)
+      await hardDeleteUser(input.userId);
     }),
-})
+});
 
 // Shape mirrors the previous server action so the web layer maps 1-to-1.
-export type ResendActionErrorCode = "alreadyVerified" | "exhausted" | "upstream"
+export type ResendActionErrorCode = "alreadyVerified" | "exhausted" | "upstream";
 export type ResendActionResult =
   | { ok: true; remaining: number }
-  | { ok: false; errorCode: ResendActionErrorCode; retryAfterSeconds?: number }
+  | { ok: false; errorCode: ResendActionErrorCode; retryAfterSeconds?: number };
 
 // Reusable helpers used by server actions in services/web + by any future
 // server-side auth orchestration.
-export { signUpUser, signUpInputSchema } from "./signup"
-export type { SignUpInput, SignUpResult, SignUpDeps } from "./signup"
-export { emitSignedIn, emitSignedOut, emitPasswordChanged } from "./events"
-export { checkPassword } from "./password"
+export { signUpUser, signUpInputSchema } from "./signup";
+export type { SignUpInput, SignUpResult, SignUpDeps } from "./signup";
+export { emitSignedIn, emitSignedOut, emitPasswordChanged } from "./events";
+export { checkPassword } from "./password";
 export {
   markEmailVerified,
   recordResendAttempt,
@@ -508,7 +529,7 @@ export {
   RESEND_MAX_PER_WINDOW,
   RESEND_WINDOW_MS,
   type ResendResult,
-} from "./email-verification"
+} from "./email-verification";
 export {
   recognizeOrRegister,
   listTrustedDevices,
@@ -516,8 +537,16 @@ export {
   findCurrentDeviceId,
   DEVICE_COOKIE_NAME,
   DEVICE_COOKIE_MAX_AGE_SECONDS,
+  DEVICE_TTL_OPTIONS_DAYS,
+  clampDeviceTtlDays,
   type TrustedDeviceRow,
-} from "./trusted-devices"
+} from "./trusted-devices";
+export {
+  mintEmailActionToken,
+  verifyEmailActionToken,
+  type MintEmailActionTokenInput,
+  type VerifyEmailActionTokenResult,
+} from "./email-action-token";
 export {
   beginTotpEnrollment,
   confirmTotpEnrollment,
@@ -534,22 +563,22 @@ export {
   TotpRateLimitError,
   type TotpStatus,
   type AdminTotpEnforcement,
-} from "./totp"
-export { hardDeleteUser, processExpiredDeletions } from "./account-lifecycle"
-export { getSupabaseAdmin } from "./supabase-admin"
-export { registerAuthFeatureFlags } from "./flags"
-export { registerAuthEventTypes } from "./event-types"
+} from "./totp";
+export { hardDeleteUser, processExpiredDeletions } from "./account-lifecycle";
+export { getSupabaseAdmin } from "./supabase-admin";
+export { registerAuthFeatureFlags } from "./flags";
+export { registerAuthEventTypes } from "./event-types";
 
 // Read interface. Takes an explicit ctx so callers can use this from either
 // tRPC procedures or Next server components.
 export async function getCurrentUser(ctx: { userId: string | null }) {
-  if (!ctx.userId) return null
-  return getById(ctx.userId)
+  if (!ctx.userId) return null;
+  return getById(ctx.userId);
 }
 
 export async function requireUser(ctx: { userId: string | null }) {
-  if (!ctx.userId) throw new UnauthorizedError()
-  const user = await getById(ctx.userId)
-  if (!user) throw new UnauthorizedError()
-  return user
+  if (!ctx.userId) throw new UnauthorizedError();
+  const user = await getById(ctx.userId);
+  if (!user) throw new UnauthorizedError();
+  return user;
 }

@@ -1,5 +1,5 @@
-import { mergeConfig, defineConfig } from "vitest/config"
-import baseConfig from "../../vitest.shared"
+import { mergeConfig, defineConfig } from "vitest/config";
+import baseConfig from "../../vitest.shared";
 
 // Integration test config — opt-in via `pnpm --filter
 // @monark/notifications test:integration`. Boots a Postgres
@@ -14,6 +14,7 @@ export default mergeConfig(
   defineConfig({
     test: {
       globalSetup: ["@monark/test-utils/global-setup"],
+      setupFiles: ["@monark/test-utils/assert-test-db"],
       include: ["tests/integration/**/*.test.ts"],
       testTimeout: 30_000,
       hookTimeout: 60_000,
@@ -31,4 +32,4 @@ export default mergeConfig(
       },
     },
   }),
-)
+);

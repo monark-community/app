@@ -1,10 +1,9 @@
 ---
 name: Documentation
 about: Report missing, incorrect, unclear, or requested documentation
-title: 'docs -'
-labels: ['docs']
-assignees: ''
-
+title: "docs -"
+labels: ["docs"]
+assignees: ""
 ---
 
 ## Type of documentation request

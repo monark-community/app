@@ -1,4 +1,4 @@
-import type { KindMessages } from "../types"
+import type { KindMessages } from "../types";
 
 const messages: KindMessages = {
   en: {
@@ -43,6 +43,6 @@ Jusqu'à cette date, vous pouvez annuler la suppression à tout moment :
       link: "/account/danger",
     },
   },
-}
+};
 
-export default messages
+export default messages;

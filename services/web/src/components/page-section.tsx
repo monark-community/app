@@ -1,5 +1,5 @@
-import type { ReactNode } from "react"
-import { cn } from "@/lib/utils"
+import type { ReactNode } from "react";
+import { cn } from "@/lib/utils";
 
 /**
  * Shared layout primitive for "card-less" page sections. Replaces the
@@ -26,13 +26,13 @@ import { cn } from "@/lib/utils"
  * accent color so danger / warning sections stand out without
  * needing a re-bordered card.
  */
-export type PageSectionTone = "default" | "danger" | "warning"
+export type PageSectionTone = "default" | "danger" | "warning";
 
 const TITLE_TONE_CLASSES: Record<PageSectionTone, string> = {
   default: "",
   danger: "text-destructive",
   warning: "text-amber-500",
-}
+};
 
 export function PageSection({
   title,
@@ -45,19 +45,19 @@ export function PageSection({
   id,
   titleId,
 }: {
-  title: ReactNode
-  subtitle?: ReactNode
+  title: ReactNode;
+  subtitle?: ReactNode;
   /** Header-row right slot ; primary button, badge, etc. */
-  action?: ReactNode
-  tone?: PageSectionTone
-  children: ReactNode
-  className?: string
+  action?: ReactNode;
+  tone?: PageSectionTone;
+  children: ReactNode;
+  className?: string;
   /** Override the inner content wrapper's spacing if the default
    * (`space-y-4`) doesn't fit (e.g. a fieldset that owns its own
    * gap). Pass empty string for no spacing. */
-  contentClassName?: string
-  id?: string
-  titleId?: string
+  contentClassName?: string;
+  id?: string;
+  titleId?: string;
 }) {
   return (
     <section id={id} className={cn("space-y-4", className)}>
@@ -72,13 +72,11 @@ export function PageSection({
           >
             {title}
           </h2>
-          {subtitle && (
-            <p className="text-sm text-muted-foreground">{subtitle}</p>
-          )}
+          {subtitle && <p className="text-sm text-muted-foreground">{subtitle}</p>}
         </div>
         {action && <div className="shrink-0">{action}</div>}
       </header>
       <div className={cn(contentClassName ?? "space-y-4")}>{children}</div>
     </section>
-  )
+  );
 }

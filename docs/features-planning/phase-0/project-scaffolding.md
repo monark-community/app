@@ -28,24 +28,24 @@ The architecture decision that shapes everything else: each **business module** 
 
 ## Stack
 
-| Concern | Choice | Where it lives |
-|---|---|---|
-| Package manager | pnpm ≥ 10, workspaces | `app/` root |
-| Node runtime | Node 22 LTS (pinned via `.nvmrc` + `packageManager` field) | root |
-| Monorepo orchestrator | Turborepo (caching + graph-aware filters) on top of pnpm | `app/turbo.json` |
-| Backend framework | Express 5 | `services/api` |
-| Frontend framework | Next 16 (App Router) | `services/web` |
-| Language | TypeScript strict across the board | every package |
-| Cross-service RPC | tRPC v11 | sub-routers in each module's `/server`, composed in `services/api`; type-only import in `services/web` |
-| DB | Supabase Postgres | accessed through `@monark/db` only |
-| ORM | Prisma | schema + generated client in `packages/db` |
-| Auth | Supabase Auth (web session) + JWT verification (api) | web: `@supabase/ssr`; api: `jose` + Supabase JWKS |
-| UI base | `@monark/ui` (shadcn-compatible registry, published) | installed into `packages/components` via shadcn CLI |
-| Styling | Tailwind v4 | `services/web` + `packages/components` + per-module `/client` bundles |
-| Form + validation | React Hook Form + Zod (shared schemas from `/contracts`) | any `/client` |
-| Testing (unit) | Vitest | per package |
-| Testing (e2e) | Playwright | `services/web/tests/e2e` against running web + api |
-| Linting | ESLint + `eslint-plugin-boundaries` | root config, plus per-module workspace-dep rules |
+| Concern               | Choice                                                     | Where it lives                                                                                         |
+| --------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| Package manager       | pnpm ≥ 10, workspaces                                      | `app/` root                                                                                            |
+| Node runtime          | Node 22 LTS (pinned via `.nvmrc` + `packageManager` field) | root                                                                                                   |
+| Monorepo orchestrator | Turborepo (caching + graph-aware filters) on top of pnpm   | `app/turbo.json`                                                                                       |
+| Backend framework     | Express 5                                                  | `services/api`                                                                                         |
+| Frontend framework    | Next 16 (App Router)                                       | `services/web`                                                                                         |
+| Language              | TypeScript strict across the board                         | every package                                                                                          |
+| Cross-service RPC     | tRPC v11                                                   | sub-routers in each module's `/server`, composed in `services/api`; type-only import in `services/web` |
+| DB                    | Supabase Postgres                                          | accessed through `@monark/db` only                                                                     |
+| ORM                   | Prisma                                                     | schema + generated client in `packages/db`                                                             |
+| Auth                  | Supabase Auth (web session) + JWT verification (api)       | web: `@supabase/ssr`; api: `jose` + Supabase JWKS                                                      |
+| UI base               | `@monark/ui` (shadcn-compatible registry, published)       | installed into `packages/components` via shadcn CLI                                                    |
+| Styling               | Tailwind v4                                                | `services/web` + `packages/components` + per-module `/client` bundles                                  |
+| Form + validation     | React Hook Form + Zod (shared schemas from `/contracts`)   | any `/client`                                                                                          |
+| Testing (unit)        | Vitest                                                     | per package                                                                                            |
+| Testing (e2e)         | Playwright                                                 | `services/web/tests/e2e` against running web + api                                                     |
+| Linting               | ESLint + `eslint-plugin-boundaries`                        | root config, plus per-module workspace-dep rules                                                       |
 
 ## Workspace topology
 
@@ -171,24 +171,31 @@ app/
 ## Package responsibilities (and what does NOT go where)
 
 ### `services/web`
+
 Thin. Owns the browser experience: app shell, route composition, Supabase session. Routes under `src/app/` are typically ≤ 10 lines each, importing a page component from the relevant module's `/client`. Never talks to Prisma or Supabase DB directly. Only imports the `AppRouter` **type** from `services/api` (for tRPC client typing).
 
 ### `services/api`
+
 Thin. Owns process lifecycle: Express boot, middleware, tRPC handler mount, health endpoint, external webhook routes. The business logic lives in module packages; `services/api/src/trpc/router.ts` composes their sub-routers.
 
 ### `packages/db` (`@monark/db`)
+
 Owns `prisma/schema.prisma` and the generated client. Every module's `/server/data/` imports from `@monark/db`. Migrations run from here. Seed script here.
 
 ### `packages/common` (`@monark/common`)
-Owns the in-process event bus (runtime + singleton) and shared helpers (errors, log, result types). The event bus runtime lives here so every module's `/server` imports the same instance. Event *type definitions* also live here so any `/server` or `/client` can import them without pulling cross-module code.
+
+Owns the in-process event bus (runtime + singleton) and shared helpers (errors, log, result types). The event bus runtime lives here so every module's `/server` imports the same instance. Event _type definitions_ also live here so any `/server` or `/client` can import them without pulling cross-module code.
 
 ### `packages/shared` (`@monark/shared`)
+
 Portable code we would extract outside the monorepo. API client abstractions, generic utility types, cross-project conventions. Private for now.
 
 ### `packages/components` (`@monark/components`)
+
 App-specific UI compositions. Installs shadcn components from `@monark/ui`'s registry. Hosts app chrome pieces (e.g., `<AdminLayout>`). Individual business components (e.g., `<VoteBallot>`) live in their own module's `/client`, not here.
 
 ### `packages/<module>` (e.g. `@monark/auth`)
+
 Owns everything about one business module: server-side tRPC sub-router, client-side UI, shared contracts. Three entry points via `package.json#exports`:
 
 ```json
@@ -226,18 +233,18 @@ The ESLint-boundaries rule does one job: forbid `services/web` from importing `@
 // app/modules.manifest.ts
 export const MODULES = {
   // core tier — coupled, ship together
-  "@monark/auth":            { tier: "core" },
-  "@monark/organizations":   { tier: "core" },
-  "@monark/users":           { tier: "core" },
-  "@monark/rbac":            { tier: "core" },
-  "@monark/feature-flags":   { tier: "core" },
+  "@monark/auth": { tier: "core" },
+  "@monark/organizations": { tier: "core" },
+  "@monark/users": { tier: "core" },
+  "@monark/rbac": { tier: "core" },
+  "@monark/feature-flags": { tier: "core" },
 
   // extended tier — independent, may not depend on each other
-  "@monark/onboarding":      { tier: "extended" },
-  "@monark/referral":        { tier: "extended" },
-  "@monark/voting":          { tier: "extended" },
-  "@monark/contributions":   { tier: "extended" },
-} as const
+  "@monark/onboarding": { tier: "extended" },
+  "@monark/referral": { tier: "extended" },
+  "@monark/voting": { tier: "extended" },
+  "@monark/contributions": { tier: "extended" },
+} as const;
 ```
 
 A CI guard (`pnpm check:tiers`) walks each extended package's `package.json#dependencies` and fails if any of them names another extended package. Minimal code; catches the only boundary violation package.json can't catch on its own (since workspace deps compile fine).
@@ -251,14 +258,14 @@ A CI guard (`pnpm check:tiers`) walks each extended package's `package.json#depe
 - `services/api/src/trpc/router.ts` composes them:
   ```ts
   export const appRouter = t.router({
-    auth:          authRouter,
+    auth: authRouter,
     organizations: orgsRouter,
-    users:         usersRouter,
-    rbac:          rbacRouter,
-    voting:        votingRouter,
+    users: usersRouter,
+    rbac: rbacRouter,
+    voting: votingRouter,
     // ...
-  })
-  export type AppRouter = typeof appRouter
+  });
+  export type AppRouter = typeof appRouter;
   ```
 - `services/web/src/lib/trpc.ts` imports `type { AppRouter }` from `services/api` via workspace path alias. No runtime code crosses the boundary.
 - Auth: web holds the Supabase session cookie via `@supabase/ssr`; every tRPC call forwards `Authorization: Bearer <jwt>`; api verifies against Supabase JWKS and populates the tRPC context.
@@ -295,6 +302,7 @@ Both services validate env at boot via Zod and fail loudly on missing/invalid. N
 ## Build + consumption
 
 **In dev**, services consume module packages as TypeScript source:
+
 - `services/api` runs via `tsx watch src/server.ts`. TS source from every `@monark/*` package is transpiled on demand. No pre-build step.
 - `services/web` sets `transpilePackages: ["@monark/*"]` in `next.config.ts`. Next's build pipeline handles the TSX.
 
@@ -397,16 +405,20 @@ pnpm --filter @monark/components build
 {
   "$schema": "https://turbo.build/schema.json",
   "tasks": {
-    "build":     { "dependsOn": ["^build"], "outputs": ["dist/**", ".next/**"] },
+    "build": { "dependsOn": ["^build"], "outputs": ["dist/**", ".next/**"] },
     "typecheck": { "dependsOn": ["^build"] },
-    "lint":      {},
-    "test":      { "dependsOn": ["^build"] },
-    "dev":       { "cache": false, "persistent": true },
-    "gen:events":  { "inputs": ["../packages/*/src/contracts/events.ts", "../modules.manifest.ts"],
-                     "outputs": ["../packages/common/src/contracts/events.generated.ts"] },
-    "gen:routers": { "inputs": ["../packages/*/src/server/index.ts", "../modules.manifest.ts"],
-                     "outputs": ["../services/api/src/trpc/app-router.generated.ts"] }
-  }
+    "lint": {},
+    "test": { "dependsOn": ["^build"] },
+    "dev": { "cache": false, "persistent": true },
+    "gen:events": {
+      "inputs": ["../packages/*/src/contracts/events.ts", "../modules.manifest.ts"],
+      "outputs": ["../packages/common/src/contracts/events.generated.ts"],
+    },
+    "gen:routers": {
+      "inputs": ["../packages/*/src/server/index.ts", "../modules.manifest.ts"],
+      "outputs": ["../services/api/src/trpc/app-router.generated.ts"],
+    },
+  },
 }
 ```
 
@@ -421,6 +433,7 @@ Three small scripts live under `app/tools/`. Each exists to kill a class of repe
 Scaffolds a new module package end-to-end, so adding a module stays a one-command operation instead of 10 minutes of copy-paste-rename.
 
 Produces:
+
 - `packages/<name>/package.json` with the strict three-exports shape and `@monark/db` + `@monark/common` deps.
 - `packages/<name>/tsconfig.json` extending the base.
 - `packages/<name>/src/{server,client,contracts}/index.ts` stubs with correct re-export patterns.
@@ -442,23 +455,23 @@ Produces `services/api/src/trpc/app-router.generated.ts`:
 
 ```ts
 // AUTO-GENERATED by `pnpm gen:routers`. Do not edit by hand.
-import { authRouter }          from "@monark/auth/server"
-import { organizationsRouter } from "@monark/organizations/server"
-import { usersRouter }         from "@monark/users/server"
-import { rbacRouter }          from "@monark/rbac/server"
+import { authRouter } from "@monark/auth/server";
+import { organizationsRouter } from "@monark/organizations/server";
+import { usersRouter } from "@monark/users/server";
+import { rbacRouter } from "@monark/rbac/server";
 // ...
 
-import { t } from "./trpc"
+import { t } from "./trpc";
 
 export const appRouter = t.router({
-  auth:          authRouter,
+  auth: authRouter,
   organizations: organizationsRouter,
-  users:         usersRouter,
-  rbac:          rbacRouter,
+  users: usersRouter,
+  rbac: rbacRouter,
   // ...
-})
+});
 
-export type AppRouter = typeof appRouter
+export type AppRouter = typeof appRouter;
 ```
 
 Convention: each module's `/server/index.ts` must export a named router `<module>Router` (camelCased module name + `Router` suffix). The codegen enforces this and fails loudly with a helpful message if a module forgets it.
@@ -472,11 +485,11 @@ Root `package.json` additions:
 ```json
 {
   "scripts": {
-    "gen:module":  "tsx tools/gen-module.ts",
-    "gen:events":  "tsx tools/gen-events.ts",
+    "gen:module": "tsx tools/gen-module.ts",
+    "gen:events": "tsx tools/gen-events.ts",
     "gen:routers": "tsx tools/gen-routers.ts",
-    "gen":         "pnpm gen:events && pnpm gen:routers",
-    "prebuild":    "pnpm gen"
+    "gen": "pnpm gen:events && pnpm gen:routers",
+    "prebuild": "pnpm gen"
   }
 }
 ```
@@ -494,7 +507,7 @@ CI gets one extra step between typecheck and test: `pnpm gen:events --check && p
 Single GitHub Actions workflow on every PR:
 
 1. `pnpm install --frozen-lockfile`
-2. `pnpm gen:events --check && pnpm gen:routers --check`  (fails fast on codegen drift)
+2. `pnpm gen:events --check && pnpm gen:routers --check` (fails fast on codegen drift)
 3. `pnpm lint`
 4. `pnpm typecheck`
 5. `pnpm check:tiers`
@@ -520,7 +533,7 @@ Turborepo's remote cache (Vercel or a self-hosted S3 bucket) pipes into this wor
    - `gen-module.ts` (scaffold generator)
    - `gen-events.ts` (master union codegen + `--check` mode)
    - `gen-routers.ts` (app router codegen + `--check` mode)
-   Add the wiring scripts to the root `package.json`.
+     Add the wiring scripts to the root `package.json`.
 10. Use `pnpm gen:module auth --tier core` to produce `packages/auth` with one dummy tRPC procedure and one dummy event. Proves the scaffolder works end-to-end.
 11. Scaffold `services/api`: Express + tRPC handler that imports `appRouter` from the generated file. Health endpoint. JWT middleware.
 12. Scaffold `services/web`: Next 16 App Router, `@supabase/ssr`, tRPC client, a placeholder page that calls the dummy procedure from step 10 end-to-end.

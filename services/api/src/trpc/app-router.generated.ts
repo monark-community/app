@@ -4,18 +4,22 @@
 import { router } from "@monark/common/trpc"
 
 import { authRouter } from "@monark/auth/server"
+import { calendarRouter } from "@monark/calendar/server"
 import { featureFlagsRouter } from "@monark/feature-flags/server"
 import { notificationsRouter } from "@monark/notifications/server"
 import { organizationsRouter } from "@monark/organizations/server"
+import { projectsRouter } from "@monark/projects/server"
 import { rbacRouter } from "@monark/rbac/server"
 import { usersRouter } from "@monark/users/server"
 import { webhooksRouter } from "@monark/webhooks/server"
 
 export const appRouter = router({
   auth         : authRouter,
+  calendar     : calendarRouter,
   featureFlags : featureFlagsRouter,
   notifications: notificationsRouter,
   organizations: organizationsRouter,
+  projects     : projectsRouter,
   rbac         : rbacRouter,
   users        : usersRouter,
   webhooks     : webhooksRouter,

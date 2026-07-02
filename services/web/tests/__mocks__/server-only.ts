@@ -3,4 +3,4 @@
 // all. Providing an empty module lets action tests that transitively
 // import server-side code (trusted-device-cookie, supabase/server)
 // resolve without crashing.
-export {}
+export {};

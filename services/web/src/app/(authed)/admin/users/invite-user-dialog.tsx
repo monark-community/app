@@ -1,9 +1,9 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
-import { useTranslations } from "next-intl"
-import { toast } from "sonner"
-import { Button } from "@/components/ui/button"
+import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -11,17 +11,17 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
-import { trpc } from "@/lib/trpc"
+} from "@/components/ui/select";
+import { trpc } from "@/lib/trpc";
 
 /**
  * Dialog launched from the admin users list to send a new invite. The
@@ -39,18 +39,18 @@ export function InviteUserDialog({
   open,
   onOpenChange,
 }: {
-  open: boolean
-  onOpenChange: (open: boolean) => void
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }) {
-  const t = useTranslations("admin.users.invite")
-  const utils = trpc.useUtils()
+  const t = useTranslations("admin.users.invite");
+  const utils = trpc.useUtils();
 
   const status = trpc.organizations.bootstrapStatus.useQuery(undefined, {
     refetchOnWindowFocus: false,
     staleTime: Infinity,
-  })
-  const isSingleTenant = status.data?.mode !== "multi"
-  const singletonId = status.data?.singletonOrganizationId ?? null
+  });
+  const isSingleTenant = status.data?.mode !== "multi";
+  const singletonId = status.data?.singletonOrganizationId ?? null;
 
   // Multi-tenant org picker is fed by the same admin list the orgs
   // page uses ; capped at 100 pre-typeahead.
@@ -60,19 +60,19 @@ export function InviteUserDialog({
       refetchOnWindowFocus: false,
       enabled: !isSingleTenant,
     },
-  )
+  );
 
-  const [email, setEmail] = useState("")
-  const [displayName, setDisplayName] = useState("")
-  const [roleId, setRoleId] = useState("")
-  const [orgId, setOrgId] = useState("")
+  const [email, setEmail] = useState("");
+  const [displayName, setDisplayName] = useState("");
+  const [roleId, setRoleId] = useState("");
+  const [orgId, setOrgId] = useState("");
 
   // Single-tenant : pin the org to the singleton so the rest of the
   // flow doesn't have to branch. Cleared (and never used) in
   // multi-tenant where the picker drives it.
   useEffect(() => {
-    if (isSingleTenant && singletonId) setOrgId(singletonId)
-  }, [isSingleTenant, singletonId])
+    if (isSingleTenant && singletonId) setOrgId(singletonId);
+  }, [isSingleTenant, singletonId]);
 
   // Roles available within the chosen org : built-in ADMIN +
   // org-scoped custom roles. Re-fetches when `orgId` changes ; until
@@ -80,52 +80,50 @@ export function InviteUserDialog({
   const rolesQuery = trpc.rbac.adminListRoles.useQuery(
     { organizationId: orgId },
     { enabled: orgId !== "", refetchOnWindowFocus: false },
-  )
+  );
 
   const create = trpc.organizations.invites.adminCreate.useMutation({
     onSuccess: () => {
-      void utils.organizations.invites.adminListAll.invalidate()
-      toast.success(t("success"))
+      void utils.organizations.invites.adminListAll.invalidate();
+      toast.success(t("success"));
       // Wipe state on close so the dialog doesn't reopen with stale
       // values next time.
-      setEmail("")
-      setDisplayName("")
-      setRoleId("")
-      onOpenChange(false)
+      setEmail("");
+      setDisplayName("");
+      setRoleId("");
+      onOpenChange(false);
     },
     onError: (error) => {
-      toast.error(error.message || t("error"))
+      toast.error(error.message || t("error"));
     },
-  })
+  });
 
-  const emailValid = /\S+@\S+\.\S+/.test(email.trim())
-  const canSubmit =
-    emailValid && roleId !== "" && orgId !== "" && !create.isPending
+  const emailValid = /\S+@\S+\.\S+/.test(email.trim());
+  const canSubmit = emailValid && roleId !== "" && orgId !== "" && !create.isPending;
 
   function onSubmit() {
-    if (!canSubmit) return
+    if (!canSubmit) return;
     create.mutate({
       organizationId: orgId,
       email: email.trim().toLowerCase(),
       displayName: displayName.trim() || undefined,
       roleId,
-      appUrl:
-        typeof window !== "undefined" ? window.location.origin : undefined,
-    })
+      appUrl: typeof window !== "undefined" ? window.location.origin : undefined,
+    });
   }
 
   return (
     <Dialog
       open={open}
       onOpenChange={(next) => {
-        onOpenChange(next)
+        onOpenChange(next);
         // Soft reset on close so a re-open starts clean. We don't
         // touch `orgId` since the single-tenant pin auto-resolves
         // and the multi-tenant picker carries its own state.
         if (!next) {
-          setEmail("")
-          setDisplayName("")
-          setRoleId("")
+          setEmail("");
+          setDisplayName("");
+          setRoleId("");
         }
       }}
     >
@@ -161,11 +159,7 @@ export function InviteUserDialog({
           </div>
           <div className="grid gap-2">
             <Label htmlFor="invite-role">{t("roleLabel")}</Label>
-            <Select
-              value={roleId}
-              onValueChange={setRoleId}
-              disabled={orgId === ""}
-            >
+            <Select value={roleId} onValueChange={setRoleId} disabled={orgId === ""}>
               <SelectTrigger id="invite-role" className="w-full">
                 <SelectValue placeholder={t("rolePlaceholder")} />
               </SelectTrigger>
@@ -211,5 +205,5 @@ export function InviteUserDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

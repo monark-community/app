@@ -1,19 +1,19 @@
-"use client"
+"use client";
 
-import { useLocale, useTranslations } from "next-intl"
-import { ShieldCheck } from "lucide-react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Skeleton } from "@/components/ui/skeleton"
-import { trpc } from "@/lib/trpc"
+import { useLocale, useTranslations } from "next-intl";
+import { ShieldCheck } from "lucide-react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { trpc } from "@/lib/trpc";
 
 function formatDate(iso: string | Date, locale: string): string {
-  const parsed = typeof iso === "string" ? new Date(iso) : iso
-  if (Number.isNaN(parsed.getTime())) return ""
+  const parsed = typeof iso === "string" ? new Date(iso) : iso;
+  if (Number.isNaN(parsed.getTime())) return "";
   return parsed.toLocaleDateString([locale, "en"], {
     year: "numeric",
     month: "short",
     day: "numeric",
-  })
+  });
 }
 
 /**
@@ -27,12 +27,12 @@ function formatDate(iso: string | Date, locale: string): string {
  * detail.
  */
 export function SystemAdminsCard() {
-  const t = useTranslations("admin.rbac.sysadmins")
-  const locale = useLocale()
+  const t = useTranslations("admin.rbac.sysadmins");
+  const locale = useLocale();
   const query = trpc.rbac.adminListSysadmins.useQuery(undefined, {
     refetchOnWindowFocus: false,
     staleTime: 30 * 1000,
-  })
+  });
 
   return (
     <Card className="bg-transparent shadow-none">
@@ -56,12 +56,9 @@ export function SystemAdminsCard() {
         ) : (
           <ul className="divide-y divide-border rounded-md border border-border">
             {(query.data ?? []).map((row) => {
-              const label = row.user.displayName ?? row.user.email
+              const label = row.user.displayName ?? row.user.email;
               return (
-                <li
-                  key={row.assignmentId}
-                  className="flex items-center gap-3 px-4 py-3"
-                >
+                <li key={row.assignmentId} className="flex items-center gap-3 px-4 py-3">
                   <span
                     aria-hidden
                     className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground"
@@ -71,9 +68,7 @@ export function SystemAdminsCard() {
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium">{label}</p>
                     {row.user.displayName && (
-                      <p className="truncate text-xs text-muted-foreground">
-                        {row.user.email}
-                      </p>
+                      <p className="truncate text-xs text-muted-foreground">{row.user.email}</p>
                     )}
                   </div>
                   <p className="shrink-0 text-xs text-muted-foreground">
@@ -82,11 +77,11 @@ export function SystemAdminsCard() {
                     })}
                   </p>
                 </li>
-              )
+              );
             })}
           </ul>
         )}
       </CardContent>
     </Card>
-  )
+  );
 }

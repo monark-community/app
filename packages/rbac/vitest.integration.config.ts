@@ -1,5 +1,5 @@
-import { mergeConfig, defineConfig } from "vitest/config"
-import baseConfig from "../../vitest.shared"
+import { mergeConfig, defineConfig } from "vitest/config";
+import baseConfig from "../../vitest.shared";
 
 // Integration test config — opt-in via `pnpm --filter @monark/rbac
 // test:integration`. Boots a Postgres testcontainer in
@@ -16,6 +16,7 @@ export default mergeConfig(
   defineConfig({
     test: {
       globalSetup: ["@monark/test-utils/global-setup"],
+      setupFiles: ["@monark/test-utils/assert-test-db"],
       include: ["tests/integration/**/*.test.ts"],
       // Long boot + migrate ; bump the per-test timeout so the
       // first test that pulls a fresh Prisma client doesn't fail
@@ -42,4 +43,4 @@ export default mergeConfig(
       },
     },
   }),
-)
+);

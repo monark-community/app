@@ -1,4 +1,4 @@
-import { registerPermissions } from "@monark/rbac/server"
+import { registerPermissions } from "@monark/rbac/server";
 
 const FEATURE_FLAGS_PERMISSIONS = {
   read: {
@@ -9,8 +9,8 @@ const FEATURE_FLAGS_PERMISSIONS = {
     description: "Set or remove feature flag overrides.",
     category: "platform",
   },
-} as const
+} as const;
 
 export function registerFeatureFlagsPermissions(): void {
-  registerPermissions("feature-flags", FEATURE_FLAGS_PERMISSIONS)
+  registerPermissions("feature-flags", FEATURE_FLAGS_PERMISSIONS);
 }

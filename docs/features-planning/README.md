@@ -6,13 +6,13 @@ This folder maps every desired feature of the Monark App to an implementation ph
 
 Monark App is the central hub for five user types:
 
-| Role | Relationship | Onboarding style |
-|---|---|---|
-| **Admin** (Monark executive) | Long-term, internal | Invite-only; privileged by default |
-| **Moderator** | Long-term, external | Elected from the community; privileged to moderate community interactions |
-| **Developer** | Long-term, external | Decentralized, self-onboarding, retained |
-| **Student** | Short-term (4–8 months) | Guided onboarding; may convert to Developer |
-| **Ambassador** | Long-term, community-facing | Represents Monark in local and digital communities |
+| Role                         | Relationship                | Onboarding style                                                          |
+| ---------------------------- | --------------------------- | ------------------------------------------------------------------------- |
+| **Admin** (Monark executive) | Long-term, internal         | Invite-only; privileged by default                                        |
+| **Moderator**                | Long-term, external         | Elected from the community; privileged to moderate community interactions |
+| **Developer**                | Long-term, external         | Decentralized, self-onboarding, retained                                  |
+| **Student**                  | Short-term (4–8 months)     | Guided onboarding; may convert to Developer                               |
+| **Ambassador**               | Long-term, community-facing | Represents Monark in local and digital communities                        |
 
 Executive priorities:
 
@@ -29,9 +29,9 @@ Two module tiers, both documented in [`phase-0/modular-architecture.md`](phase-0
 - **Core modules**: foundational, coupled, cannot be removed. Feature flags, auth, organizations, users, RBAC, notifications.
 - **Extended modules**: Monark-specific, self-contained, communicate with each other and core only through well-defined interfaces. Removing one must not break another.
 
-Each business module is its own workspace package (`@monark/auth`, `@monark/voting`, …) with three entry points: `/server`, `/client`, `/contracts`. Workspace package boundaries *are* the module boundaries; you can't reach into another module by file path because the internals aren't exported. Two thin services (`services/web` for Next.js 16, `services/api` for Express 5 + tRPC) consume those packages. See [`phase-0/project-scaffolding.md`](phase-0/project-scaffolding.md) for the full layout.
+Each business module is its own workspace package (`@monark/auth`, `@monark/voting`, …) with three entry points: `/server`, `/client`, `/contracts`. Workspace package boundaries _are_ the module boundaries; you can't reach into another module by file path because the internals aren't exported. Two thin services (`services/web` for Next.js 16, `services/api` for Express 5 + tRPC) consume those packages. See [`phase-0/project-scaffolding.md`](phase-0/project-scaffolding.md) for the full layout.
 
-Extended modules that *must* depend on another one would declare that through the module manifest; two extended modules should never silently couple, and the preferred fix is to promote the shared concept into a core package.
+Extended modules that _must_ depend on another one would declare that through the module manifest; two extended modules should never silently couple, and the preferred fix is to promote the shared concept into a core package.
 
 ## Phases
 

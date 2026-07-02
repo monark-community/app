@@ -1,4 +1,4 @@
-import { ProfileSection } from "../profile-section"
+import { ProfileSection } from "../profile-section";
 
 // `/account/profile` skips the AccountPageHeader because the UserBanner
 // inside ProfileSection serves as the page hero (avatar + display name
@@ -9,5 +9,5 @@ export default function AccountProfilePage() {
     <div className="space-y-8">
       <ProfileSection />
     </div>
-  )
+  );
 }

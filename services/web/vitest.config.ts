@@ -1,7 +1,7 @@
-import { mergeConfig, defineConfig } from "vitest/config"
-import react from "@vitejs/plugin-react"
-import { resolve } from "node:path"
-import baseConfig from "../../vitest.shared"
+import { mergeConfig, defineConfig } from "vitest/config";
+import react from "@vitejs/plugin-react";
+import { resolve } from "node:path";
+import baseConfig from "../../vitest.shared";
 
 // Component test config for the Next.js app. Uses the shared root
 // vitest config (provider + reporters + excludes) and layers on :
@@ -38,12 +38,9 @@ export default mergeConfig(
       include: [
         "tests/components/**/*.test.{ts,tsx}",
         "tests/actions/**/*.test.ts",
+        "tests/lib/**/*.test.ts",
       ],
-      exclude: [
-        "**/node_modules/**",
-        "**/.next/**",
-        "tests/e2e/**",
-      ],
+      exclude: ["**/node_modules/**", "**/.next/**", "tests/e2e/**"],
       coverage: {
         // The web service has no integration suite ; the unit run
         // already produces the canonical report. Subdir kept
@@ -65,4 +62,4 @@ export default mergeConfig(
       },
     },
   }),
-)
+);

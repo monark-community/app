@@ -1,5 +1,5 @@
-import { mergeConfig, defineConfig } from "vitest/config"
-import baseConfig from "../../vitest.shared"
+import { mergeConfig, defineConfig } from "vitest/config";
+import baseConfig from "../../vitest.shared";
 
 // Same shape as the package-level integration configs ; runs every
 // spec under `tests/integration/` against a fresh Postgres
@@ -27,4 +27,4 @@ export default mergeConfig(
       },
     },
   }),
-)
+);

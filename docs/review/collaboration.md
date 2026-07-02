@@ -6,8 +6,8 @@ This is the "what to change about the process" report the review was ultimately 
 
 **The standards are outstanding ; the enforcement is manual and inconsistent, and the person writing the code is the only person checking it.** Read that against the evidence:
 
-- CLAUDE.md mandates layout-accurate skeletons, org-scoped permission checks, no non-null `!`, and en+fr i18n. The review found violations of *every one* of those — always in the newest code (calendar), never in the oldest (auth, projects). The rules didn't get worse ; the discipline to apply them decayed as novelty and time pressure rose.
-- The repo has a codegen-drift CI gate — and the working tree currently *fails* it (calendar unmanifested). A gate that the shipping branch violates isn't gating.
+- CLAUDE.md mandates layout-accurate skeletons, org-scoped permission checks, no non-null `!`, and en+fr i18n. The review found violations of _every one_ of those — always in the newest code (calendar), never in the oldest (auth, projects). The rules didn't get worse ; the discipline to apply them decayed as novelty and time pressure rose.
+- The repo has a codegen-drift CI gate — and the working tree currently _fails_ it (calendar unmanifested). A gate that the shipping branch violates isn't gating.
 - 44 of 52 commits are by one author ; ~7 weeks of work (114 files) sit uncommitted on one machine. There is no second pair of eyes and no durable copy.
 
 So the systemic fixes are not "write more rules." They are: **make the machine enforce the rules that already exist, make review a real gate, shrink the unit of work so quality is checkable, and reduce the bus factor.** In rough priority order:
@@ -37,7 +37,7 @@ The strongest predictor of the findings' distribution is that no one reviews the
 
 ## 3. Shrink the unit of work so quality is checkable
 
-A 114-file, 4,600-line uncommitted change cannot be reviewed, cannot be reasoned about, and cannot be safely reverted. The size of the change *is* a quality risk.
+A 114-file, 4,600-line uncommitted change cannot be reviewed, cannot be reasoned about, and cannot be safely reverted. The size of the change _is_ a quality risk.
 
 - **Land work in small, single-concern PRs.** The CHANGELOG shows the team already thinks in discrete, well-scoped units (each entry is one coherent change) — the git history just doesn't match that granularity. Make commits as granular as the CHANGELOG entries already are.
 - **Commit early and often ; push daily.** This is also the bus-factor fix (§5). Seven weeks on one disk is an outage away from gone.
@@ -45,7 +45,7 @@ A 114-file, 4,600-line uncommitted change cannot be reviewed, cannot be reasoned
 
 ## 4. Fix the "fix-forward on main" loop
 
-The commit log (`Fix codecov` → `Fix build` → `Fix lint`) shows CI failures being discovered *after* merge and patched in follow-ups. Move that leftward:
+The commit log (`Fix codecov` → `Fix build` → `Fix lint`) shows CI failures being discovered _after_ merge and patched in follow-ups. Move that leftward:
 
 - **Run the full pre-PR gate locally as a pre-push hook** — `simple-git-hooks` is already a dependency. `pnpm gen && pnpm typecheck && pnpm lint && pnpm test && pnpm check:tiers` on pre-push turns three "fix" commits into zero.
 - **Branch protection on `main`:** require the CI checks to pass and require the PR to be up to date before merge. This is the mechanical guarantee behind §2.
@@ -64,7 +64,7 @@ One author, one uncommitted working tree, undocumented product decisions living 
 You cannot raise standards on outcomes you don't measure.
 
 - **Add basic telemetry** (product report): even a first-party counter fed by the existing wildcard event subscriber answers "is anyone using Calendar?" — which should gate whether the polymorphic-DB rewrite happens at all.
-- **Add error tracking** (Sentry or equivalent). The review found no error boundaries *and* no error reporting — so a production exception is invisible twice. Wiring one makes the E-1 error-boundary work pay double.
+- **Add error tracking** (Sentry or equivalent). The review found no error boundaries _and_ no error reporting — so a production exception is invisible twice. Wiring one makes the E-1 error-boundary work pay double.
 
 ---
 
@@ -79,4 +79,4 @@ A sequenced, non-overwhelming rollout — process changes first because they pre
 
 ## The through-line
 
-Nothing here asks the team to be more careful — "be more careful" is what already failed. It asks the team to **encode the care that already exists in CLAUDE.md into gates, reviews, and small reversible steps**, so that the quality of the auth module (written early, carefully, and tested) becomes the automatic floor for the next module, instead of a bar each new module has to clear by memory and willpower. The codebase has already proven the team can build to a very high standard. The systemic change is making that standard the *default*, not the *achievement*.
+Nothing here asks the team to be more careful — "be more careful" is what already failed. It asks the team to **encode the care that already exists in CLAUDE.md into gates, reviews, and small reversible steps**, so that the quality of the auth module (written early, carefully, and tested) becomes the automatic floor for the next module, instead of a bar each new module has to clear by memory and willpower. The codebase has already proven the team can build to a very high standard. The systemic change is making that standard the _default_, not the _achievement_.

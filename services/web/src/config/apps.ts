@@ -1,7 +1,4 @@
-import {
-  Boxes,
-  type LucideIcon,
-} from "lucide-react"
+import { Boxes, type LucideIcon } from "lucide-react";
 
 /**
  * Single entry in the application's *app launcher* (the 3x3 grid icon
@@ -19,29 +16,29 @@ export type AppEntry = {
    * resolved as `appBar.apps.items.<id>.name` and
    * `appBar.apps.items.<id>.tagline`.
    */
-  id: string
+  id: string;
   /**
    * URL the entry navigates to. Absolute (`https://...`) for external
    * apps on other subdomains ; relative (`/`) for the current app.
    */
-  href: string
+  href: string;
   /**
    * Whether the entry opens in a new tab. External apps default to
    * `true` so the user keeps their session in the launcher's host app ;
    * the current app's entry uses `false` (and is rarely clicked anyway,
    * since it's marked as current).
    */
-  external: boolean
+  external: boolean;
   /**
    * Marks the app the user is currently inside. The launcher renders a
    * "current" affordance on this card ; clicking is a no-op redirect
    * to "/" but is still allowed for symmetry. Exactly one entry should
    * carry this flag in any given deploy.
    */
-  current: boolean
+  current: boolean;
   /** Lucide icon component rendered in the card's icon slot. */
-  icon: LucideIcon
-}
+  icon: LucideIcon;
+};
 
 /**
  * Application-level apps registry. Edit THIS array to compose the
@@ -66,4 +63,4 @@ export const APPS: AppEntry[] = [
     current: true,
     icon: Boxes,
   },
-]
+];

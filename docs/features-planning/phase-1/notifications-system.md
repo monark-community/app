@@ -26,10 +26,10 @@ The notifications module fixes all four. It owns the channels (email, in-app, la
 
 - **Not building an email marketing platform.** No campaign editor, no segmentation builder, no A/B subject lines. Marketing-style emails (weekly digest, announcements) ride the same dispatch path but are templated in code, not authored in a UI.
 - **Not building a queue / retry infrastructure** at Phase 1. Delivery is best-effort in-process. A flag-gated upgrade to BullMQ + Redis (or equivalent) is reserved for the moment we genuinely need it ; before then, the volume doesn't justify the moving parts.
-- **Not owning Supabase Auth's own emails** (sign-up confirm, magic link, recovery, email change). Those are templated in `supabase/templates/` and rendered by Supabase Auth on send. The notifications module owns *our* transactional emails (new-device alert, password-changed alert, deletion-grace reminders, …) and the in-app channel.
+- **Not owning Supabase Auth's own emails** (sign-up confirm, magic link, recovery, email change). Those are templated in `supabase/templates/` and rendered by Supabase Auth on send. The notifications module owns _our_ transactional emails (new-device alert, password-changed alert, deletion-grace reminders, …) and the in-app channel.
 - **Not push notifications at Phase 1.** Web push + mobile push land later, behind the same dispatch surface so call sites don't change.
 - **Not Discord/Slack webhooks at Phase 1.** Same story ; same surface when added.
-- **Not user-to-user messaging.** That's a product surface (DMs / mentions) ; notifications can carry the *alert* about a mention but doesn't own message storage.
+- **Not user-to-user messaging.** That's a product surface (DMs / mentions) ; notifications can carry the _alert_ about a mention but doesn't own message storage.
 
 ## User stories
 
@@ -127,8 +127,8 @@ export const NOTIFICATION_KINDS = {
     category: "SECURITY",
     channels: ["EMAIL", "IN_APP"],
     defaultEnabled: { EMAIL: true, IN_APP: true },
-    requiredEmail: true,            // SECURITY emails can't be opted out of
-    template: "auth/new-device",    // resolves to packages/notifications/src/templates/auth/new-device/{en,fr}.{html,txt,inapp}
+    requiredEmail: true, // SECURITY emails can't be opted out of
+    template: "auth/new-device", // resolves to packages/notifications/src/templates/auth/new-device/{en,fr}.{html,txt,inapp}
   },
   "auth.password-changed": {
     category: "SECURITY",
@@ -144,9 +144,9 @@ export const NOTIFICATION_KINDS = {
     requiredEmail: false,
     template: "account/deletion-scheduled",
   },
-} as const satisfies Record<string, NotificationKindDef>
+} as const satisfies Record<string, NotificationKindDef>;
 
-export type NotificationKind = keyof typeof NOTIFICATION_KINDS
+export type NotificationKind = keyof typeof NOTIFICATION_KINDS;
 ```
 
 Each template directory ships :
@@ -177,43 +177,55 @@ The brand chrome (header band, Monark wordmark, CTA button, code-surface) is ext
 export async function notify<K extends NotificationKind>(
   kind: K,
   recipient: { userId: string },
-  data: NotificationData<K>,        // typed per-kind ; see registry
-): Promise<{ deliveryIds: string[] }>
+  data: NotificationData<K>, // typed per-kind ; see registry
+): Promise<{ deliveryIds: string[] }>;
 
 // Fan-out to many users. Same path per recipient ; batches the DB write.
 export async function notifyMany<K extends NotificationKind>(
   kind: K,
   recipients: Array<{ userId: string }>,
   data: NotificationData<K>,
-): Promise<{ deliveryIds: string[] }>
+): Promise<{ deliveryIds: string[] }>;
 ```
 
 ### Server — subscriber registry
 
-The dispatch path is *imperative* (some modules call `notify()` directly when they have richer per-recipient data), but most notifications are *event-driven*. The notifications module owns a thin subscriber layer that maps domain events → `notify()` calls :
+The dispatch path is _imperative_ (some modules call `notify()` directly when they have richer per-recipient data), but most notifications are _event-driven_. The notifications module owns a thin subscriber layer that maps domain events → `notify()` calls :
 
 ```ts
 // packages/notifications/src/server/subscribers.ts
 export function registerNotificationSubscribers(): void {
   // Auth
   on<TrustedDeviceAddedEvent>("trusted-device.added", async (e) => {
-    await notify("auth.new-device", { userId: e.userId }, {
-      deviceLabel: e.deviceLabel,
-      deviceCountry: e.country,
-      deviceIp: e.ip,
-      seenAt: e.occurredAt,
-    })
-  })
+    await notify(
+      "auth.new-device",
+      { userId: e.userId },
+      {
+        deviceLabel: e.deviceLabel,
+        deviceCountry: e.country,
+        deviceIp: e.ip,
+        seenAt: e.occurredAt,
+      },
+    );
+  });
   on<PasswordChangedEvent>("auth.password-changed", async (e) => {
-    await notify("auth.password-changed", { userId: e.userId }, {
-      occurredAt: e.occurredAt,
-    })
-  })
+    await notify(
+      "auth.password-changed",
+      { userId: e.userId },
+      {
+        occurredAt: e.occurredAt,
+      },
+    );
+  });
   on<UserDeletionRequestedEvent>("user.deletion-requested", async (e) => {
-    await notify("account.deletion-scheduled", { userId: e.userId }, {
-      completesAt: e.deletionCompletesAt,
-    })
-  })
+    await notify(
+      "account.deletion-scheduled",
+      { userId: e.userId },
+      {
+        completesAt: e.deletionCompletesAt,
+      },
+    );
+  });
   // … one entry per kind that's event-driven
 }
 ```
@@ -245,9 +257,9 @@ notifications.preferences.set: (input: {
 
 ```ts
 // packages/notifications/src/client
-export function useUnreadCount(): { count: number; isLoading: boolean }
-export function useNotifications(): InfiniteQueryReturn<NotificationListItem>
-export function useNotificationPreferences(): { prefs, set, isLoading }
+export function useUnreadCount(): { count: number; isLoading: boolean };
+export function useNotifications(): InfiniteQueryReturn<NotificationListItem>;
+export function useNotificationPreferences(): { prefs; set; isLoading };
 ```
 
 ## UI flows
@@ -274,7 +286,7 @@ export function useNotificationPreferences(): { prefs, set, isLoading }
 
 - **`users`** : recipient lookup (email, locale, displayName for greetings, deletedAt to skip dispatching to deleted accounts).
 - **`feature-flags`** : `notifications.in-app` and `notifications.email` kill switches (default ON), plus future per-feature flags like `notifications.weekly-digest`.
-- **`auth`** : the new-device email + password-changed email handlers move *out* of `@monark/auth/server` and *into* the notifications subscribers ; auth no longer depends on a mailer. (Auth still depends on `users`/`feature-flags` like the rest of the core.)
+- **`auth`** : the new-device email + password-changed email handlers move _out_ of `@monark/auth/server` and _into_ the notifications subscribers ; auth no longer depends on a mailer. (Auth still depends on `users`/`feature-flags` like the rest of the core.)
 - **`@monark/common`** : event bus (`emit` / `on`), logger, error types.
 - **External** : `nodemailer` for SMTP transport (already a dep of auth ; moves over).
 
@@ -286,40 +298,40 @@ The notifications module does **not** depend on extended modules ; extended modu
 
 ```ts
 // @monark/notifications/server
-export { notify, notifyMany } from "./dispatch"
-export type { NotificationKind, NotificationData } from "./registry"
-export { registerNotificationSubscribers } from "./subscribers"
+export { notify, notifyMany } from "./dispatch";
+export type { NotificationKind, NotificationData } from "./registry";
+export { registerNotificationSubscribers } from "./subscribers";
 
 // @monark/notifications/contracts
 export type {
   NotificationCreatedEvent,
   NotificationReadEvent,
   NotificationPreferenceChangedEvent,
-} from "./events"
+} from "./events";
 
 // @monark/notifications/client
-export { useUnreadCount, useNotifications, useNotificationPreferences } from "./hooks"
+export { useUnreadCount, useNotifications, useNotificationPreferences } from "./hooks";
 ```
 
 ### Events emitted
 
 ```ts
 type NotificationCreatedEvent = DomainEventBase & {
-  type: "notification.created"
-  userId: string
-  kind: NotificationKind
-  channel: NotificationChannel
-  notificationId: string
-}
+  type: "notification.created";
+  userId: string;
+  kind: NotificationKind;
+  channel: NotificationChannel;
+  notificationId: string;
+};
 
 type NotificationDeliveryFailedEvent = DomainEventBase & {
-  type: "notification.delivery-failed"
-  userId: string
-  kind: NotificationKind
-  channel: NotificationChannel
-  notificationId: string
-  reason: string
-}
+  type: "notification.delivery-failed";
+  userId: string;
+  kind: NotificationKind;
+  channel: NotificationChannel;
+  notificationId: string;
+  reason: string;
+};
 ```
 
 The `delivery-failed` event is what an ops dashboard / alerting subscribes to ; it's the signal that SMTP is down or a template is broken at render-time.
@@ -343,7 +355,7 @@ Concrete steps to land this without a flag day :
 1. **Create `packages/notifications/`** with the schema above + dispatch surface + an empty subscriber registry.
 2. **Move** `packages/auth/src/server/mailer.ts` → `packages/notifications/src/server/transport/email.ts`. Re-export from `@monark/auth/server` for one release as `/** @deprecated */` so consumers can migrate without a flag day.
 3. **Move** `packages/auth/src/server/new-device-email.ts` into the notifications subscriber for `trusted-device.added`. Delete the now-unused `registerNewDeviceEmailListener` export from auth.
-4. **Wrap the existing branded transactional templates** (`supabase/templates/confirmation.html`, `supabase/templates/email-change.html`) — *no actual move* ; those stay in Supabase. But port the brand chrome partial into the notifications template directory so future *our*-side emails reuse the same shell.
+4. **Wrap the existing branded transactional templates** (`supabase/templates/confirmation.html`, `supabase/templates/email-change.html`) — _no actual move_ ; those stay in Supabase. But port the brand chrome partial into the notifications template directory so future _our_-side emails reuse the same shell.
 5. **Add the in-app channel** : Notification table migration, header bell component, popover, inbox page, prefs page.
 6. **Wire the rest of the Phase 1 subscribers** (password-changed, totp-enabled/disabled, deletion-scheduled, etc.) so the in-app inbox fills in for users.
 
@@ -356,14 +368,14 @@ Each step is independently shippable and can land behind `notifications.in-app` 
 - **SMTP down.** `notify()` records the row with `failedAt` + `failureReason`, emits `notification.delivery-failed`, swallows the error so the calling event handler doesn't fail. (The original action — sign-in, password-change — already succeeded ; failing the notification dispatch can't roll it back.)
 - **Template render error** (missing variable, malformed locale branch). Logged loudly, falls back to the en template ; if that also fails, the in-app row is created with a generic "Something happened on your account" subject so the user at least sees the affordance, and the failure event fires.
 - **User toggles preference mid-dispatch.** Read prefs at dispatch time only ; we don't try to "respect" a toggle that flips during a fan-out. Eventual consistency is fine for this domain.
-- **Locale changes between event emit and dispatch.** Dispatch reads the *current* `localePreference` at send time, not the locale that was active when the event was emitted. Matches user intuition.
+- **Locale changes between event emit and dispatch.** Dispatch reads the _current_ `localePreference` at send time, not the locale that was active when the event was emitted. Matches user intuition.
 - **Duplicate dispatches** (e.g., two trusted-device.added events in quick succession from a retry). De-duplicate within a 60s window per `(userId, kind, hash(data))`. Keeps the inbox clean without needing a full idempotency-key contract from emitters.
 
 ## Risks
 
-- **Notification fatigue.** Every new feature wants its own notification ; the inbox becomes noise and users disable everything. Mitigate by reviewing every new kind at the same gate as a copy review : does this *need* to interrupt the user, or is it fine as a passive history entry? When in doubt, IN_APP only, no email.
-- **Email reputation.** Sending too many low-value emails from `noreply@monark.io` tanks deliverability for the security emails that *do* matter. Mitigate by gating non-security emails behind opt-in defaults at Phase 2 and by monitoring bounce / complaint rates.
-- **Template drift.** Two engineers ship two templates with subtly different brand chrome because they each copy-pasted from a different reference. Mitigate by extracting the chrome into a shared partial *now*, before the third template lands.
+- **Notification fatigue.** Every new feature wants its own notification ; the inbox becomes noise and users disable everything. Mitigate by reviewing every new kind at the same gate as a copy review : does this _need_ to interrupt the user, or is it fine as a passive history entry? When in doubt, IN_APP only, no email.
+- **Email reputation.** Sending too many low-value emails from `noreply@monark.io` tanks deliverability for the security emails that _do_ matter. Mitigate by gating non-security emails behind opt-in defaults at Phase 2 and by monitoring bounce / complaint rates.
+- **Template drift.** Two engineers ship two templates with subtly different brand chrome because they each copy-pasted from a different reference. Mitigate by extracting the chrome into a shared partial _now_, before the third template lands.
 - **Audit-log growth.** `Notification` rows accumulate forever if not pruned. Mitigate by a daily cron that hard-deletes rows older than 180 days (configurable per kind ; security retention is longer, marketing is shorter).
 - **In-app inbox inconsistency in dev.** Without subscription support locally, a dev who triggers an event won't see the bell update until they refresh. Mitigate by hooking the bell badge into a window-focus refetch in addition to the polling fallback.
 
@@ -389,15 +401,15 @@ Each step is independently shippable and can land behind `notifications.in-app` 
 
 The Phase 1 set of notification kinds and their default channel × pref matrix :
 
-| Kind                        | Category | Email default | In-app default | Email overridable |
-|-----------------------------|----------|---------------|----------------|-------------------|
-| `auth.new-device`           | SECURITY | on            | on             | no                |
-| `auth.password-changed`     | SECURITY | on            | on             | no                |
-| `auth.totp-enabled`         | SECURITY | on            | on             | no                |
-| `auth.totp-disabled`        | SECURITY | on            | on             | no                |
-| `account.email-changed`     | ACCOUNT  | on            | on             | yes               |
-| `account.deletion-scheduled`| ACCOUNT  | on            | on             | yes               |
-| `account.deletion-canceled` | ACCOUNT  | on            | on             | yes               |
+| Kind                         | Category | Email default | In-app default | Email overridable |
+| ---------------------------- | -------- | ------------- | -------------- | ----------------- |
+| `auth.new-device`            | SECURITY | on            | on             | no                |
+| `auth.password-changed`      | SECURITY | on            | on             | no                |
+| `auth.totp-enabled`          | SECURITY | on            | on             | no                |
+| `auth.totp-disabled`         | SECURITY | on            | on             | no                |
+| `account.email-changed`      | ACCOUNT  | on            | on             | yes               |
+| `account.deletion-scheduled` | ACCOUNT  | on            | on             | yes               |
+| `account.deletion-canceled`  | ACCOUNT  | on            | on             | yes               |
 
 Anything Phase 2+ (referrals, voting, contributions, mentions) registers later in the same shape.
 

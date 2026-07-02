@@ -62,6 +62,7 @@ model PendingEmailChange {
 ```
 
 Soft delete vs disable:
+
 - `deletedAt` → user initiated, grace period applies, eventual hard delete.
 - `disabledAt` → admin initiated, indefinite. User can't sign in. Restorable by admin.
 
@@ -71,34 +72,34 @@ Soft delete vs disable:
 
 ```ts
 // packages/users/src/server/procedures/profile.ts
-"use server"
+"use server";
 export async function updateProfile(input: {
-  displayName?: string
-  avatarUrl?: string
-  localePreference?: string
-}): Promise<User>
+  displayName?: string;
+  avatarUrl?: string;
+  localePreference?: string;
+}): Promise<User>;
 
-"use server"
-export async function requestEmailChange(newEmail: string): Promise<void>
+("use server");
+export async function requestEmailChange(newEmail: string): Promise<void>;
 //   Sends a verification email to newEmail; no mutation until confirmed.
 
-"use server"
-export async function confirmEmailChange(token: string): Promise<void>
+("use server");
+export async function confirmEmailChange(token: string): Promise<void>;
 //   Updates User.email; revokes all sessions (force re-sign-in).
 
-"use server"
-export async function uploadAvatar(file: File): Promise<{ avatarUrl: string }>
+("use server");
+export async function uploadAvatar(file: File): Promise<{ avatarUrl: string }>;
 //   Uploads to Supabase Storage `avatars` bucket, 1:1 crop server-side,
 //   returns the public URL.
 
 // packages/users/src/server/procedures/account.ts
-"use server"
+("use server");
 export async function requestAccountDeletion(): Promise<{
-  deletionCompletesAt: Date
-}>
+  deletionCompletesAt: Date;
+}>;
 
-"use server"
-export async function cancelAccountDeletion(): Promise<void>
+("use server");
+export async function cancelAccountDeletion(): Promise<void>;
 ```
 
 ### Admin
@@ -106,21 +107,24 @@ export async function cancelAccountDeletion(): Promise<void>
 ```ts
 // packages/users/src/server/procedures/admin.ts (RBAC-guarded)
 
-"use server"
-export async function listOrgMembers(orgId: string, opts?: {
-  search?: string
-  role?: Role
-  status?: "active" | "disabled"
-  limit?: number
-  cursor?: string
-}): Promise<PaginatedMembers>
+"use server";
+export async function listOrgMembers(
+  orgId: string,
+  opts?: {
+    search?: string;
+    role?: Role;
+    status?: "active" | "disabled";
+    limit?: number;
+    cursor?: string;
+  },
+): Promise<PaginatedMembers>;
 
-"use server"
-export async function disableUser(userId: string, reason: string): Promise<void>
+("use server");
+export async function disableUser(userId: string, reason: string): Promise<void>;
 //   Sets disabledAt; revokes all sessions; emits audit event.
 
-"use server"
-export async function enableUser(userId: string): Promise<void>
+("use server");
+export async function enableUser(userId: string): Promise<void>;
 //   Clears disabledAt.
 ```
 
@@ -128,11 +132,11 @@ export async function enableUser(userId: string): Promise<void>
 
 ```ts
 // packages/users/src/server/index.ts
-export async function getById(id: string): Promise<User | null>
-export async function getByIdOrThrow(id: string): Promise<User>
-export async function getByEmail(email: string): Promise<User | null>
+export async function getById(id: string): Promise<User | null>;
+export async function getByIdOrThrow(id: string): Promise<User>;
+export async function getByEmail(email: string): Promise<User | null>;
 
-export async function getCurrent(): Promise<User | null>  // same as auth.getCurrentUser but with full profile hydrated
+export async function getCurrent(): Promise<User | null>; // same as auth.getCurrentUser but with full profile hydrated
 ```
 
 ## UI flows
@@ -178,16 +182,17 @@ export async function getCurrent(): Promise<User | null>  // same as auth.getCur
 ### Events
 
 ```ts
-export const USER_PROFILE_UPDATED = "user.profile-updated"
-export const USER_EMAIL_CHANGED = "user.email-changed"
-export const USER_DELETION_REQUESTED = "user.deletion-requested"
-export const USER_DELETION_CANCELED = "user.deletion-canceled"
-export const USER_DELETED = "user.deleted"                    // after grace period
-export const USER_DISABLED = "user.disabled"
-export const USER_ENABLED = "user.enabled"
+export const USER_PROFILE_UPDATED = "user.profile-updated";
+export const USER_EMAIL_CHANGED = "user.email-changed";
+export const USER_DELETION_REQUESTED = "user.deletion-requested";
+export const USER_DELETION_CANCELED = "user.deletion-canceled";
+export const USER_DELETED = "user.deleted"; // after grace period
+export const USER_DISABLED = "user.disabled";
+export const USER_ENABLED = "user.enabled";
 ```
 
 Downstream listeners (examples):
+
 - Onboarding (Phase 2) consumes `USER_PROFILE_UPDATED` to re-evaluate completeness.
 - Voting (Phase 3) marks votes as "from deleted user" when `USER_DELETED` fires, rather than cascading the delete (we keep vote integrity; we anonymize the voter).
 - Contribution-estimation (Phase 3) stops accruing for disabled users.
@@ -195,6 +200,7 @@ Downstream listeners (examples):
 ### Hard-delete job
 
 Daily cron: selects users where `deletedAt < now - 14 days` and executes the anonymization:
+
 - Email → `deleted-<uuid>@monark.invalid`.
 - Display name → `"Deleted User"`.
 - Avatar → null, blob removed from storage.

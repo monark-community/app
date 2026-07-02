@@ -143,6 +143,7 @@ export function SetupStatus({ initialStatus }: { initialStatus: Status | null })
     singletonOrganizationId: null,
     singletonDisplayName: null,
     singletonLogoUrl: null,
+    singletonPrimaryColor: null,
   };
 
   // Per-row resolved state, gated by the staggered reveal. Rows still

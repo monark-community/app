@@ -1,18 +1,13 @@
-import {
-  WILDCARD_EVENT_TYPE,
-  logger,
-  on,
-  type DomainEvent,
-} from "@monark/common"
+import { WILDCARD_EVENT_TYPE, logger, on, type DomainEvent } from "@monark/common";
 import {
   enqueueDeliveries,
   findMatchingEndpoints,
   findOnlySingletonOrgId,
   findUserMemberOrgIds,
-} from "./data"
-import { computeIdempotencyKey } from "./secrets"
+} from "./data";
+import { computeIdempotencyKey } from "./secrets";
 
-let registered = false
+let registered = false;
 
 /**
  * Wires the webhook outbox into the in-memory event bus. Idempotent ;
@@ -46,8 +41,8 @@ let registered = false
  * extra DB roundtrip when the routing answer is already determinate.
  */
 export function registerWebhookSubscribers(): void {
-  if (registered) return
-  registered = true
+  if (registered) return;
+  registered = true;
 
   on(WILDCARD_EVENT_TYPE, async (event: DomainEvent) => {
     try {
@@ -56,24 +51,23 @@ export function registerWebhookSubscribers(): void {
       // generate webhook deliveries about itself. (Operators can
       // still subscribe explicitly via the `webhook.*` prefix if
       // they want this — they just have to opt in.)
-      if (event.type.startsWith("webhook.")) return
+      if (event.type.startsWith("webhook.")) return;
 
-      const endpoints = await findMatchingEndpoints(event.type)
-      if (endpoints.length === 0) return
+      const endpoints = await findMatchingEndpoints(event.type);
+      if (endpoints.length === 0) return;
 
       // Type-narrow the event payload by duck-typing — the union of
       // every domain event includes a mix of shapes with different
       // optional fields. Pulling these out here keeps the routing
       // logic in one place.
       const eventOrgId =
-        typeof (event as { organizationId?: unknown }).organizationId ===
-          "string"
+        typeof (event as { organizationId?: unknown }).organizationId === "string"
           ? (event as { organizationId: string }).organizationId
-          : null
+          : null;
       const eventUserId =
         typeof (event as { userId?: unknown }).userId === "string"
           ? (event as { userId: string }).userId
-          : null
+          : null;
 
       // Lazy : only look up memberships if we have an org-scoped
       // endpoint that needs the lookup AND the event is user-tied
@@ -83,43 +77,37 @@ export function registerWebhookSubscribers(): void {
       // ; covers the single-tenant deploy where direct sign-ups
       // pre-date the auto-membership subscriber + every sign-in
       // before the upsert lands.
-      let userOrgIds: Set<string> | null = null
+      let userOrgIds: Set<string> | null = null;
       const needsMembershipLookup =
         eventOrgId === null &&
         eventUserId !== null &&
-        endpoints.some((e) => e.organizationId !== null)
+        endpoints.some((e) => e.organizationId !== null);
       if (needsMembershipLookup && eventUserId !== null) {
-        const memberOrgIds = await findUserMemberOrgIds(eventUserId)
+        const memberOrgIds = await findUserMemberOrgIds(eventUserId);
         if (memberOrgIds.length > 0) {
-          userOrgIds = new Set(memberOrgIds)
+          userOrgIds = new Set(memberOrgIds);
         } else {
-          const singleton = await findOnlySingletonOrgId()
-          userOrgIds = singleton ? new Set([singleton]) : new Set()
+          const singleton = await findOnlySingletonOrgId();
+          userOrgIds = singleton ? new Set([singleton]) : new Set();
         }
       }
 
-      const correlationId = event.correlationId
-      const matches: Array<{ endpointId: string; idempotencyKey: string }> = []
+      const correlationId = event.correlationId;
+      const matches: Array<{ endpointId: string; idempotencyKey: string }> = [];
       for (const endpoint of endpoints) {
         // Rule 1 : platform-tier endpoint always receives.
         if (endpoint.organizationId === null) {
           // fall through to push
         }
         // Rule 2 : direct org match.
-        else if (
-          eventOrgId !== null &&
-          endpoint.organizationId === eventOrgId
-        ) {
+        else if (eventOrgId !== null && endpoint.organizationId === eventOrgId) {
           // fall through to push
         }
         // Rule 3 : user-tied membership match.
-        else if (
-          userOrgIds !== null &&
-          userOrgIds.has(endpoint.organizationId)
-        ) {
+        else if (userOrgIds !== null && userOrgIds.has(endpoint.organizationId)) {
           // fall through to push
         } else {
-          continue
+          continue;
         }
 
         matches.push({
@@ -130,15 +118,15 @@ export function registerWebhookSubscribers(): void {
             correlationId,
             payload: event,
           }),
-        })
+        });
       }
-      if (matches.length === 0) return
+      if (matches.length === 0) return;
 
       await enqueueDeliveries({
         matches,
         eventType: event.type,
         payload: event,
-      })
+      });
     } catch (err) {
       // Never crash the emitter ; a webhook hiccup must not roll back
       // the source mutation. Log + move on ; the event is lost from
@@ -147,11 +135,11 @@ export function registerWebhookSubscribers(): void {
       logger.error(
         { err, eventType: event.type },
         "webhook subscriber failed to enqueue deliveries",
-      )
+      );
     }
-  })
+  });
 }
 
 export function _resetWebhookSubscribersForTesting(): void {
-  registered = false
+  registered = false;
 }

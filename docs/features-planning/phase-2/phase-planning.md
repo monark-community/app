@@ -10,7 +10,7 @@ The first two extended modules ship and get users in the door. Each is self-cont
    Ship first. Onboarding is the default first-run experience for every new user, so it has to exist before any other extended module can assume "this user has been greeted." It consumes the full core (auth, users, orgs, rbac) without depending on anything extended.
 
 2. **[`referral-system.md`](referral-system.md)**
-   Ship second. Referral attribution slots into onboarding's "where did you come from" step rather than defining its own landing-page flow. Until onboarding exists, there's no runway to attribute users *into*.
+   Ship second. Referral attribution slots into onboarding's "where did you come from" step rather than defining its own landing-page flow. Until onboarding exists, there's no runway to attribute users _into_.
 
 ## Exit criteria
 

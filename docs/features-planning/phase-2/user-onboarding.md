@@ -83,12 +83,12 @@ Flow definitions live in code, keyed by role + version:
 // packages/onboarding/src/server/domain/flows.ts
 
 export type FlowStep = {
-  key: string
-  title: string
-  required: boolean
-  Component: ComponentType<StepProps>
-  validate?: (payload: unknown) => StepStatus | Promise<StepStatus>
-}
+  key: string;
+  title: string;
+  required: boolean;
+  Component: ComponentType<StepProps>;
+  validate?: (payload: unknown) => StepStatus | Promise<StepStatus>;
+};
 
 export const FLOWS = {
   "developer.v1": {
@@ -108,9 +108,13 @@ export const FLOWS = {
       completionStep,
     ],
   },
-  "ambassador.v1": { /* ... */ },
-  "admin.v1": { /* ... */ },
-} as const satisfies Record<string, FlowDefinition>
+  "ambassador.v1": {
+    /* ... */
+  },
+  "admin.v1": {
+    /* ... */
+  },
+} as const satisfies Record<string, FlowDefinition>;
 ```
 
 Why versioned flow strings: we want to change flows without retroactively changing the steps a mid-flow user sees. A running session sticks with its flow version; new sessions use the latest.
@@ -123,34 +127,31 @@ Why versioned flow strings: we want to change flows without retroactively changi
 export async function getOrStartSession(
   userId: string,
   orgId: string,
-  role: Role
-): Promise<OnboardingSession>
+  role: Role,
+): Promise<OnboardingSession>;
 //   Called on role assignment. Idempotent — returns existing session if one
 //   exists for (user, org), otherwise creates.
 
-export async function getCurrentStep(sessionId: string): Promise<FlowStep>
+export async function getCurrentStep(sessionId: string): Promise<FlowStep>;
 //   The next PENDING step, or null if completed.
 
 export async function getProgress(sessionId: string): Promise<{
-  completed: number
-  total: number
-  percent: number
-  nextStepKey: string | null
-}>
+  completed: number;
+  total: number;
+  percent: number;
+  nextStepKey: string | null;
+}>;
 
-"use server"
-export async function completeStep(
-  stepKey: string,
-  payload?: unknown
-): Promise<void>
+("use server");
+export async function completeStep(stepKey: string, payload?: unknown): Promise<void>;
 
-"use server"
-export async function skipStep(stepKey: string): Promise<void>
+("use server");
+export async function skipStep(stepKey: string): Promise<void>;
 //   Only allowed for non-required steps.
 
 // Admin-only
-"use server"
-export async function previewFlow(role: Role): Promise<string>
+("use server");
+export async function previewFlow(role: Role): Promise<string>;
 //   Returns a preview URL that simulates the flow in a sandboxed session
 //   the admin can navigate without side-effects.
 ```
@@ -171,20 +172,20 @@ Example — the `profile` step:
 
 ```tsx
 export default async function ProfileStep({ session }: StepProps) {
-  const user = await getById(session.userId)
+  const user = await getById(session.userId);
   return (
     <OnboardingStepShell title="Tell us about yourself">
       <ProfileForm
         defaults={user}
         onSubmit={async (formData) => {
-          "use server"
-          await users.updateProfile(parseProfile(formData))
-          await completeStep("profile")
-          revalidatePath("/onboarding")
+          "use server";
+          await users.updateProfile(parseProfile(formData));
+          await completeStep("profile");
+          revalidatePath("/onboarding");
         }}
       />
     </OnboardingStepShell>
-  )
+  );
 }
 ```
 
@@ -197,11 +198,13 @@ export default async function ProfileStep({ session }: StepProps) {
 ### Role-specific sketches
 
 **Developer flow** (3 steps):
+
 1. Profile
 2. Pick 3–5 interests (tags drive recommended content / peers — consumed in Phase 3)
 3. Connect GitHub (optional — unlocks contribution signals)
 
 **Student flow** (8 steps):
+
 1. Program intro (branded page; what to expect)
 2. Profile
 3. Verify program enrollment (check against a Program model owned by onboarding)
@@ -212,6 +215,7 @@ export default async function ProfileStep({ session }: StepProps) {
 8. Completion — summary, CTA to dashboard
 
 **Ambassador flow** (5 steps):
+
 1. Welcome + community standards
 2. Profile (extended — add bio, social links)
 3. Define region / community
@@ -219,6 +223,7 @@ export default async function ProfileStep({ session }: StepProps) {
 5. Completion + "how to earn rewards" primer (teases Phase 3 contributions)
 
 **Admin flow** (4 steps):
+
 1. TOTP enrollment
 2. Org settings tour (prompted edit — set logo / primary color)
 3. Invite first teammates
@@ -244,21 +249,21 @@ export default async function ProfileStep({ session }: StepProps) {
 ### Events emitted
 
 ```ts
-export const ONBOARDING_STARTED = "onboarding.started"
-export const ONBOARDING_STEP_COMPLETED = "onboarding.step-completed"
-export const ONBOARDING_STEP_SKIPPED = "onboarding.step-skipped"
-export const ONBOARDING_COMPLETED = "onboarding.completed"
+export const ONBOARDING_STARTED = "onboarding.started";
+export const ONBOARDING_STEP_COMPLETED = "onboarding.step-completed";
+export const ONBOARDING_STEP_SKIPPED = "onboarding.step-skipped";
+export const ONBOARDING_COMPLETED = "onboarding.completed";
 
 export type OnboardingCompletedEvent = {
-  userId: string
-  organizationId: string
-  role: Role
-  flowVersion: string
-  durationMs: number      // time from start to complete
-  completedSteps: string[]
-  skippedSteps: string[]
-  at: Date
-}
+  userId: string;
+  organizationId: string;
+  role: Role;
+  flowVersion: string;
+  durationMs: number; // time from start to complete
+  completedSteps: string[];
+  skippedSteps: string[];
+  at: Date;
+};
 ```
 
 Contribution-estimation (Phase 3) consumes `ONBOARDING_COMPLETED` to register the user for rewards. Voting (Phase 3) uses the same event to enable voting eligibility.

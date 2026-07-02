@@ -14,7 +14,7 @@ By contributing, you agree to the following terms:
 git checkout -b feature/my-feature
 ```
 
-2. **Make your changes** following our [code style guidelines](#code-style).  
+2. **Make your changes** following our [code style guidelines](#code-style).
 
 3. **Commit your changes** with clear [conventional](https://www.conventionalcommits.org/en/v1.0.0) messages:
 
@@ -35,7 +35,7 @@ git push origin feature/my-feature
 ## 2. Code Style & Development Workflow
 
 - Follow the existing project code style; Prettier and ESLint are configured at the repo root.
-- Prefer clear identifiers and minimal comments; add a comment only when the *why* is non-obvious.
+- Prefer clear identifiers and minimal comments; add a comment only when the _why_ is non-obvious.
 - This repo is a pnpm monorepo orchestrated by Turbo. Requires **Node 22** (see `.nvmrc`) and **pnpm 10**.
 - **TypeScript imports use no file extension on relative paths.** Write `import { x } from "./events"`, not `"./events.js"` or `"./events.ts"`. The base `tsconfig.json` uses `moduleResolution: "Bundler"` precisely so source works uniformly across Next (SWC), `tsx` (esbuild), and `tsc --noEmit`. NodeNext-style `.js` suffixes are the wrong call here and have broken Next bundling more than once.
 
@@ -99,7 +99,7 @@ Each package in `packages/` ships with a README. Target 100–300 lines; prefer 
 ## 5. Legal Considerations
 
 - By contributing, you agree that your contributions will be licensed under the terms of the [LICENSE](./LICENSE).
-- Your contributions become part of **16918140 Canada Inc. (Monark Inc.)**’s project.  
+- Your contributions become part of **16918140 Canada Inc. (Monark Inc.)**’s project.
 
 > Example copyright notice for contributions:
 >
@@ -121,4 +121,3 @@ We expect all contributors to follow a respectful and collaborative approach. Pl
 ---
 
 Thank you for helping improve **Monark App**! Your contributions are highly appreciated.
-

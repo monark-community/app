@@ -26,7 +26,7 @@ Spec: [docs/features-planning/phase-1/auth-login-password.md](../../docs/feature
 
 ```ts
 // Server action in services/web/src/app/signup/actions.ts
-import { signUpUser } from "@monark/auth/server"
+import { signUpUser } from "@monark/auth/server";
 
 await signUpUser(
   { email, password, displayName },
@@ -34,72 +34,72 @@ await signUpUser(
     supabaseUrl: process.env.SUPABASE_URL!,
     supabaseSecretKey: process.env.SUPABASE_SECRET_KEY!,
   },
-)
+);
 ```
 
 ```ts
 // From any module's tRPC procedure
-import { getCurrentUser, requireUser } from "@monark/auth/server"
+import { getCurrentUser, requireUser } from "@monark/auth/server";
 
-const user = await getCurrentUser(ctx)      // null when unauthenticated
-const user = await requireUser(ctx)         // throws UnauthorizedError
+const user = await getCurrentUser(ctx); // null when unauthenticated
+const user = await requireUser(ctx); // throws UnauthorizedError
 ```
 
 ```ts
 // From the web
-const session = trpc.auth.session.useQuery()
+const session = trpc.auth.session.useQuery();
 // { userId, activeOrganizationId, signedIn }
 ```
 
 ```tsx
 // Live password-rule hints on a form (pure; no network):
-import { checkPasswordOffline, PASSWORD_RULE_HINTS } from "@monark/auth/contracts"
+import { checkPasswordOffline, PASSWORD_RULE_HINTS } from "@monark/auth/contracts";
 
-const result = checkPasswordOffline(password, { email, displayName })
+const result = checkPasswordOffline(password, { email, displayName });
 // result: { ok: true, score } | { ok: false, reasons, score }
 // Render PASSWORD_RULE_HINTS[reason] with a checkmark per rule.
 ```
 
 ## Public API
 
-| Import path                | Export                  | Kind |
-|----------------------------|-------------------------|------|
-| `@monark/auth/server`      | `authRouter`            | tRPC sub-router mounted under `auth.*` |
-| `@monark/auth/server`      | `signUpUser(input, deps)` | admin-path user creation + shadow User insert; runs `checkPassword` before admin call |
-| `@monark/auth/server`      | `signUpInputSchema`     | Zod validator shared between server + forms |
-| `@monark/auth/server`      | `checkPassword(pw, ctx)` | full rules + HIBP k-anonymity; returns `PasswordCheckResult` |
-| `@monark/auth/server`      | `emitSignedIn` / `emitSignedOut` / `emitPasswordChanged` | event helpers for the web-side server actions |
-| `@monark/auth/server`      | `getCurrentUser(ctx)`   | resolves `ctx.userId` → `User \| null` via `@monark/users` |
-| `@monark/auth/server`      | `requireUser(ctx)`      | throws `UnauthorizedError` if unauthenticated |
-| `@monark/auth/server`      | `requireVerifiedEmail(ctx)` | throws `ForbiddenError` if `User.emailVerifiedAt` is null |
-| `@monark/auth/server`      | `markEmailVerified(userId)` | flips shadow `User.emailVerifiedAt` + emits `user.email-verified` |
-| `@monark/auth/server`      | `recordResendAttempt(userId)` | rate-limit gate; returns `{ sent, remainingInWindow, retryAfterSeconds? }` |
-| `@monark/auth/contracts`   | `checkPasswordOffline`, `PASSWORD_RULES`, `PASSWORD_RULE_HINTS`, `PasswordCheckResult`, event types | pure; safe for browser |
+| Import path              | Export                                                                                              | Kind                                                                                  |
+| ------------------------ | --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| `@monark/auth/server`    | `authRouter`                                                                                        | tRPC sub-router mounted under `auth.*`                                                |
+| `@monark/auth/server`    | `signUpUser(input, deps)`                                                                           | admin-path user creation + shadow User insert; runs `checkPassword` before admin call |
+| `@monark/auth/server`    | `signUpInputSchema`                                                                                 | Zod validator shared between server + forms                                           |
+| `@monark/auth/server`    | `checkPassword(pw, ctx)`                                                                            | full rules + HIBP k-anonymity; returns `PasswordCheckResult`                          |
+| `@monark/auth/server`    | `emitSignedIn` / `emitSignedOut` / `emitPasswordChanged`                                            | event helpers for the web-side server actions                                         |
+| `@monark/auth/server`    | `getCurrentUser(ctx)`                                                                               | resolves `ctx.userId` → `User \| null` via `@monark/users`                            |
+| `@monark/auth/server`    | `requireUser(ctx)`                                                                                  | throws `UnauthorizedError` if unauthenticated                                         |
+| `@monark/auth/server`    | `requireVerifiedEmail(ctx)`                                                                         | throws `ForbiddenError` if `User.emailVerifiedAt` is null                             |
+| `@monark/auth/server`    | `markEmailVerified(userId)`                                                                         | flips shadow `User.emailVerifiedAt` + emits `user.email-verified`                     |
+| `@monark/auth/server`    | `recordResendAttempt(userId)`                                                                       | rate-limit gate; returns `{ sent, remainingInWindow, retryAfterSeconds? }`            |
+| `@monark/auth/contracts` | `checkPasswordOffline`, `PASSWORD_RULES`, `PASSWORD_RULE_HINTS`, `PasswordCheckResult`, event types | pure; safe for browser                                                                |
 
 tRPC procedures under `auth.*`:
 
-| Procedure         | Input | Output |
-|-------------------|-------|--------|
-| `auth.ping`           | —     | `{ pong: true, at: string }` |
-| `auth.session`        | —     | `{ userId, activeOrganizationId, signedIn }` |
-| `auth.checkPassword`  | `{ password, email?, displayName? }` | `PasswordCheckResult` (mutation) |
-| `auth.signUp`         | `SignUpInput` | `SignUpResult` (mutation; runs `signUpUser` end-to-end) |
-| `auth.notifySignedIn` | `{ trustedDeviceId? }?` | void (mutation; requires `ctx.userId`) |
-| `auth.notifySignedOut`| `{ scope: "local" \| "global" }` | void (mutation) |
-| `auth.markOwnEmailVerified` | — | void (mutation; uses `ctx.userId` post-verifyOtp) |
-| `auth.requestConfirmationResend` | `{ email }` | `ResendActionResult` (mutation) |
-| `auth.trustedDevices.mine`     | — | `TrustedDeviceView[]` |
-| `auth.trustedDevices.recognize`| `{ userAgent?, ip?, country?, existingCookieValue?, supabaseSessionId? }` | `{ deviceId, isNew, rawCookieValue }` |
-| `auth.trustedDevices.revoke`   | `{ deviceId }` | void (mutation) |
-| `auth.trustedDevices.revokeAll`| — | `{ count }` (mutation; emergency lockout, per-device admin signOut) |
-| `auth.totp.status`                  | — | `TotpStatus` (`{ enrolled: false }` or `{ enrolled: true, activatedAt, remainingRecoveryCodes }`) |
-| `auth.totp.beginEnrollment`         | — | `{ secret, qrSvg }` (mutation; SVG with `currentColor` foreground + transparent background, themed inline) |
-| `auth.totp.confirmEnrollment`       | `{ code }` | `{ recoveryCodes }` (mutation; recovery codes shown once) |
-| `auth.totp.verifyCode`              | `{ code, trustedDeviceId? }` | `{ ok }` (mutation; stamps device on success) |
-| `auth.totp.verifyRecoveryCode`      | `{ code, trustedDeviceId? }` | `{ ok }` (mutation; consumes one code) |
-| `auth.totp.regenerateRecoveryCodes` | `{ code }` | `{ recoveryCodes }` (mutation; invalidates old codes) |
-| `auth.totp.disable`                 | `{ code }` | void (mutation) |
-| `auth.totp.isChallengeRequired`     | `{ trustedDeviceId? }?` | `boolean` (query) |
+| Procedure                           | Input                                                                     | Output                                                                                                     |
+| ----------------------------------- | ------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `auth.ping`                         | —                                                                         | `{ pong: true, at: string }`                                                                               |
+| `auth.session`                      | —                                                                         | `{ userId, activeOrganizationId, signedIn }`                                                               |
+| `auth.checkPassword`                | `{ password, email?, displayName? }`                                      | `PasswordCheckResult` (mutation)                                                                           |
+| `auth.signUp`                       | `SignUpInput`                                                             | `SignUpResult` (mutation; runs `signUpUser` end-to-end)                                                    |
+| `auth.notifySignedIn`               | `{ trustedDeviceId? }?`                                                   | void (mutation; requires `ctx.userId`)                                                                     |
+| `auth.notifySignedOut`              | `{ scope: "local" \| "global" }`                                          | void (mutation)                                                                                            |
+| `auth.markOwnEmailVerified`         | —                                                                         | void (mutation; uses `ctx.userId` post-verifyOtp)                                                          |
+| `auth.requestConfirmationResend`    | `{ email }`                                                               | `ResendActionResult` (mutation)                                                                            |
+| `auth.trustedDevices.mine`          | —                                                                         | `TrustedDeviceView[]`                                                                                      |
+| `auth.trustedDevices.recognize`     | `{ userAgent?, ip?, country?, existingCookieValue?, supabaseSessionId? }` | `{ deviceId, isNew, rawCookieValue }`                                                                      |
+| `auth.trustedDevices.revoke`        | `{ deviceId }`                                                            | void (mutation)                                                                                            |
+| `auth.trustedDevices.revokeAll`     | —                                                                         | `{ count }` (mutation; emergency lockout, per-device admin signOut)                                        |
+| `auth.totp.status`                  | —                                                                         | `TotpStatus` (`{ enrolled: false }` or `{ enrolled: true, activatedAt, remainingRecoveryCodes }`)          |
+| `auth.totp.beginEnrollment`         | —                                                                         | `{ secret, qrSvg }` (mutation; SVG with `currentColor` foreground + transparent background, themed inline) |
+| `auth.totp.confirmEnrollment`       | `{ code }`                                                                | `{ recoveryCodes }` (mutation; recovery codes shown once)                                                  |
+| `auth.totp.verifyCode`              | `{ code, trustedDeviceId? }`                                              | `{ ok }` (mutation; stamps device on success)                                                              |
+| `auth.totp.verifyRecoveryCode`      | `{ code, trustedDeviceId? }`                                              | `{ ok }` (mutation; consumes one code)                                                                     |
+| `auth.totp.regenerateRecoveryCodes` | `{ code }`                                                                | `{ recoveryCodes }` (mutation; invalidates old codes)                                                      |
+| `auth.totp.disable`                 | `{ code }`                                                                | void (mutation)                                                                                            |
+| `auth.totp.isChallengeRequired`     | `{ trustedDeviceId? }?`                                                   | `boolean` (query)                                                                                          |
 
 ## Dependencies
 
@@ -163,52 +163,52 @@ Pull all four values from `pnpm supabase status`. The server-only `SUPABASE_SECR
 After signing up your first user, grant them MONARK_ADMIN:
 
 ```ts
-import { assignRole } from "@monark/rbac/server"
+import { assignRole } from "@monark/rbac/server";
 
 await assignRole({
   userId: "<your supabase uuid>",
   role: "MONARK_ADMIN",
   grantedById: "system",
   reason: "bootstrap",
-})
+});
 ```
 
 ## Feature flags
 
 Three flags owned by this module, all registered in [`@monark/feature-flags`](../feature-flags/src/contracts/flags.ts):
 
-| Flag | Default | Purpose |
-|---|---|---|
-| `auth.trusted-devices` | on | Kill switch for device tracking. When off, `auth.trustedDevices.recognize` short-circuits; no cookie is minted, no `TrustedDevice` row is written, no `trusted-device.added` event fires. `trustedDeviceId` is always `null` downstream. |
-| `auth.totp-trust-devices` | on | TOTP-skip policy. When off, `requiresTotpChallenge` always returns `true` for enrolled users; the `TrustedDevice.totpVerifiedAt` stamp is ignored as a skip signal. |
-| `auth.totp-required-admin` | on | Enforcement flag read by the admin route guard to soft-wall (day 1) / hard-wall (day 7) admins without TOTP enrolled. MVP defines the flag; the guard itself lands with the admin onboarding pass. |
+| Flag                       | Default | Purpose                                                                                                                                                                                                                                  |
+| -------------------------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `auth.trusted-devices`     | on      | Kill switch for device tracking. When off, `auth.trustedDevices.recognize` short-circuits; no cookie is minted, no `TrustedDevice` row is written, no `trusted-device.added` event fires. `trustedDeviceId` is always `null` downstream. |
+| `auth.totp-trust-devices`  | on      | TOTP-skip policy. When off, `requiresTotpChallenge` always returns `true` for enrolled users; the `TrustedDevice.totpVerifiedAt` stamp is ignored as a skip signal.                                                                      |
+| `auth.totp-required-admin` | on      | Enforcement flag read by the admin route guard to soft-wall (day 1) / hard-wall (day 7) admins without TOTP enrolled. MVP defines the flag; the guard itself lands with the admin onboarding pass.                                       |
 
 The first two compose:
 
-| `trusted-devices` | `totp-trust-devices` | Effect |
-|---|---|---|
-| on | on | Default. Device recognized ⇒ TOTP skipped after the first pass. |
-| on | off | Devices are tracked (so "new sign-in" signals work) but TOTP is always challenged. |
-| off | on | No tracking; `totp-trust-devices` has no records to consult, so TOTP is always challenged. |
-| off | off | No tracking; TOTP always challenged. |
+| `trusted-devices` | `totp-trust-devices` | Effect                                                                                     |
+| ----------------- | -------------------- | ------------------------------------------------------------------------------------------ |
+| on                | on                   | Default. Device recognized ⇒ TOTP skipped after the first pass.                            |
+| on                | off                  | Devices are tracked (so "new sign-in" signals work) but TOTP is always challenged.         |
+| off               | on                   | No tracking; `totp-trust-devices` has no records to consult, so TOTP is always challenged. |
+| off               | off                  | No tracking; TOTP always challenged.                                                       |
 
 `auth.trusted-devices` off makes `auth.totp-trust-devices` effectively a no-op — the latter only matters when the former is on.
 
 ## Events emitted
 
-| Event                  | When                                           | Status |
-|------------------------|------------------------------------------------|--------|
-| `user.signed-up`       | every `signUpUser` call                         | emitted |
-| `user.signed-in`       | after `signInWithPassword` succeeds             | emitted (via `emitSignedIn` from the web server action) |
-| `user.signed-out`      | `signOutAction`                                 | emitted |
-| `user.password-changed`| password reset / account page password change   | emitted (via `emitPasswordChanged` from the web server action through `auth.notifyPasswordChanged`) |
-| `user.email-verified`  | `/auth/confirm` successfully verified            | emitted via `markEmailVerified` |
-| `trusted-device.added` | first sign-in from a new device (or stale / wrong-user cookie) | emitted via `recognizeOrRegister` |
-| `trusted-device.revoked` | user revokes a device or an admin revokes | emitted via `revokeTrustedDevice` |
-| `trusted-devices.all-revoked` | emergency lockout (`revokeAllTrustedDevices`) | emitted once per bulk run with the actual revoked count |
-| `totp.enabled`         | `confirmTotpEnrollment` succeeds                | emitted |
-| `totp.disabled`        | `disableTotp` succeeds                          | emitted (`triggeredBy: "user"`) |
-| `totp.recovery-code-used` | recovery code consumed during challenge       | emitted |
+| Event                         | When                                                           | Status                                                                                              |
+| ----------------------------- | -------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `user.signed-up`              | every `signUpUser` call                                        | emitted                                                                                             |
+| `user.signed-in`              | after `signInWithPassword` succeeds                            | emitted (via `emitSignedIn` from the web server action)                                             |
+| `user.signed-out`             | `signOutAction`                                                | emitted                                                                                             |
+| `user.password-changed`       | password reset / account page password change                  | emitted (via `emitPasswordChanged` from the web server action through `auth.notifyPasswordChanged`) |
+| `user.email-verified`         | `/auth/confirm` successfully verified                          | emitted via `markEmailVerified`                                                                     |
+| `trusted-device.added`        | first sign-in from a new device (or stale / wrong-user cookie) | emitted via `recognizeOrRegister`                                                                   |
+| `trusted-device.revoked`      | user revokes a device or an admin revokes                      | emitted via `revokeTrustedDevice`                                                                   |
+| `trusted-devices.all-revoked` | emergency lockout (`revokeAllTrustedDevices`)                  | emitted once per bulk run with the actual revoked count                                             |
+| `totp.enabled`                | `confirmTotpEnrollment` succeeds                               | emitted                                                                                             |
+| `totp.disabled`               | `disableTotp` succeeds                                         | emitted (`triggeredBy: "user"`)                                                                     |
+| `totp.recovery-code-used`     | recovery code consumed during challenge                        | emitted                                                                                             |
 
 ## Deferred
 

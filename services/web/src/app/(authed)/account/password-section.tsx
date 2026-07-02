@@ -1,10 +1,10 @@
-"use client"
+"use client";
 
-import { useEffect, useMemo, useState, useTransition, type FormEvent } from "react"
-import { useTranslations } from "next-intl"
-import { toast } from "sonner"
-import { checkPasswordOffline } from "@monark/auth/contracts"
-import { Button } from "@/components/ui/button"
+import { useEffect, useMemo, useState, useTransition, type FormEvent } from "react";
+import { useTranslations } from "next-intl";
+import { toast } from "sonner";
+import { checkPasswordOffline } from "@monark/auth/contracts";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -12,14 +12,14 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { PasswordStrengthMeter } from "@/components/password-strength-meter"
-import { PageSection } from "@/components/page-section"
-import { TotpConfirmDialog } from "@/components/totp-confirm-dialog"
-import { trpc } from "@/lib/trpc"
-import { changePasswordAction, type ChangePasswordResult } from "./actions"
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { PasswordStrengthMeter } from "@/components/password-strength-meter";
+import { PageSection } from "@/components/page-section";
+import { TotpConfirmDialog } from "@/components/totp-confirm-dialog";
+import { trpc } from "@/lib/trpc";
+import { changePasswordAction, type ChangePasswordResult } from "./actions";
 
 /**
  * Password-change card. The form was inline before ; now it's hosted
@@ -34,36 +34,34 @@ import { changePasswordAction, type ChangePasswordResult } from "./actions"
  * server-side gate is the actual security boundary, the dialog is UX.
  */
 export function PasswordSection() {
-  const t = useTranslations("account.password")
-  const me = trpc.users.me.useQuery(undefined, { refetchOnWindowFocus: false })
+  const t = useTranslations("account.password");
+  const me = trpc.users.me.useQuery(undefined, { refetchOnWindowFocus: false });
   const totpStatus = trpc.auth.totp.status.useQuery(undefined, {
     refetchOnWindowFocus: false,
-  })
+  });
   const totpEnrolled = Boolean(
     totpStatus.data && "enrolled" in totpStatus.data && totpStatus.data.enrolled,
-  )
-  const [open, setOpen] = useState(false)
-  const [currentPassword, setCurrentPassword] = useState("")
-  const [newPassword, setNewPassword] = useState("")
-  const [confirmPassword, setConfirmPassword] = useState("")
-  const [mismatch, setMismatch] = useState(false)
-  const [isPending, startTransition] = useTransition()
-  const [dialogOpen, setDialogOpen] = useState(false)
-  const [dialogError, setDialogError] = useState<
-    "invalidTotpCode" | "totpRequired" | null
-  >(null)
+  );
+  const [open, setOpen] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [mismatch, setMismatch] = useState(false);
+  const [isPending, startTransition] = useTransition();
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [dialogError, setDialogError] = useState<"invalidTotpCode" | "totpRequired" | null>(null);
 
   // Reset every time the modal opens so a half-finished attempt
   // doesn't leak across opens.
   useEffect(() => {
     if (open) {
-      setCurrentPassword("")
-      setNewPassword("")
-      setConfirmPassword("")
-      setMismatch(false)
-      setDialogError(null)
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+      setMismatch(false);
+      setDialogError(null);
     }
-  }, [open])
+  }, [open]);
 
   const strength = useMemo(
     () =>
@@ -72,7 +70,7 @@ export function PasswordSection() {
         displayName: me.data?.displayName ?? undefined,
       }),
     [newPassword, me.data?.email, me.data?.displayName],
-  )
+  );
 
   function commitChange(totpCode?: string) {
     startTransition(async () => {
@@ -80,40 +78,37 @@ export function PasswordSection() {
         currentPassword,
         newPassword,
         totpCode,
-      })
+      });
       if (result.ok) {
-        toast.success(t("success"))
-        setOpen(false)
-        setDialogOpen(false)
-        setDialogError(null)
-        return
+        toast.success(t("success"));
+        setOpen(false);
+        setDialogOpen(false);
+        setDialogError(null);
+        return;
       }
-      if (
-        result.errorCode === "invalidTotpCode" ||
-        result.errorCode === "totpRequired"
-      ) {
-        setDialogError(result.errorCode)
-        return
+      if (result.errorCode === "invalidTotpCode" || result.errorCode === "totpRequired") {
+        setDialogError(result.errorCode);
+        return;
       }
-      toast.error(t(`errors.${result.errorCode}`))
-      setDialogOpen(false)
-      setDialogError(null)
-    })
+      toast.error(t(`errors.${result.errorCode}`));
+      setDialogOpen(false);
+      setDialogError(null);
+    });
   }
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
+    event.preventDefault();
     if (newPassword !== confirmPassword) {
-      setMismatch(true)
-      return
+      setMismatch(true);
+      return;
     }
-    setMismatch(false)
+    setMismatch(false);
     if (totpEnrolled) {
-      setDialogError(null)
-      setDialogOpen(true)
-      return
+      setDialogError(null);
+      setDialogOpen(true);
+      return;
     }
-    commitChange()
+    commitChange();
   }
 
   return (
@@ -128,11 +123,7 @@ export function PasswordSection() {
             <DialogTitle>{t("dialogTitle")}</DialogTitle>
             <DialogDescription>{t("dialogSubtitle")}</DialogDescription>
           </DialogHeader>
-          <form
-            id="password-change-form"
-            onSubmit={onSubmit}
-            className="grid gap-3 py-2"
-          >
+          <form id="password-change-form" onSubmit={onSubmit} className="grid gap-3 py-2">
             {/* Hidden `username` field so password managers update the
                 correct credential entry instead of creating a brand-new
                 one. The value comes from the authed user's email ;
@@ -168,10 +159,7 @@ export function PasswordSection() {
                 required
                 autoComplete="new-password"
               />
-              <PasswordStrengthMeter
-                score={strength.score}
-                visible={newPassword.length > 0}
-              />
+              <PasswordStrengthMeter score={strength.score} visible={newPassword.length > 0} />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="confirmPassword">{t("labels.confirm")}</Label>
@@ -183,9 +171,7 @@ export function PasswordSection() {
                 required
                 autoComplete="new-password"
               />
-              {mismatch && (
-                <p className="text-xs text-destructive">{t("errors.mismatch")}</p>
-              )}
+              {mismatch && <p className="text-xs text-destructive">{t("errors.mismatch")}</p>}
             </div>
           </form>
           <DialogFooter>
@@ -197,11 +183,7 @@ export function PasswordSection() {
             >
               {t("cancel")}
             </Button>
-            <Button
-              type="submit"
-              form="password-change-form"
-              disabled={isPending || !strength.ok}
-            >
+            <Button type="submit" form="password-change-form" disabled={isPending || !strength.ok}>
               {isPending ? t("submitting") : t("submit")}
             </Button>
           </DialogFooter>
@@ -211,17 +193,17 @@ export function PasswordSection() {
       <TotpConfirmDialog
         open={dialogOpen}
         onOpenChange={(next) => {
-          if (!next) setDialogError(null)
-          setDialogOpen(next)
+          if (!next) setDialogError(null);
+          setDialogOpen(next);
         }}
         onConfirm={async (code) => {
-          setDialogError(null)
-          commitChange(code)
+          setDialogError(null);
+          commitChange(code);
         }}
         scope="passwordChange"
         errorKey={dialogError}
         pending={isPending}
       />
     </PageSection>
-  )
+  );
 }

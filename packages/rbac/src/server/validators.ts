@@ -1,15 +1,9 @@
-import { ValidationError } from "@monark/common"
-import {
-  ADMIN_ROLE_KEY,
-  SYSADMIN_ROLE_KEY,
-} from "../contracts/role"
-import {
-  isKnownPermission,
-  parsePermissionKey,
-} from "../contracts/permissions"
+import { ValidationError } from "@monark/common";
+import { ADMIN_ROLE_KEY, SYSADMIN_ROLE_KEY } from "../contracts/role";
+import { isKnownPermission, parsePermissionKey } from "../contracts/permissions";
 
-const KEY_RE = /^[a-z0-9](?:[a-z0-9_-]*[a-z0-9])?$/
-const HEX_RE = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/
+const KEY_RE = /^[a-z0-9](?:[a-z0-9_-]*[a-z0-9])?$/;
+const HEX_RE = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
 
 /**
  * Validates a role color : either `null` / `undefined` / empty string
@@ -17,18 +11,14 @@ const HEX_RE = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/
  * Whitespace is trimmed before validation. Anything else throws
  * ValidationError so the caller can surface a clean error to the UI.
  */
-export function validateColor(
-  color: string | null | undefined,
-): string | null {
-  if (color === null || color === undefined) return null
-  const trimmed = color.trim()
-  if (trimmed === "") return null
+export function validateColor(color: string | null | undefined): string | null {
+  if (color === null || color === undefined) return null;
+  const trimmed = color.trim();
+  if (trimmed === "") return null;
   if (!HEX_RE.test(trimmed)) {
-    throw new ValidationError(
-      "Color must be a hex code like #F0870C or #fff.",
-    )
+    throw new ValidationError("Color must be a hex code like #F0870C or #fff.");
   }
-  return trimmed
+  return trimmed;
 }
 
 /**
@@ -39,25 +29,22 @@ export function validateColor(
  * code-side guards. Returns the trimmed + lowercased key.
  */
 export function validateRoleKey(key: string): string {
-  const trimmed = key.trim().toLowerCase()
+  const trimmed = key.trim().toLowerCase();
   if (trimmed.length < 2 || trimmed.length > 60) {
-    throw new ValidationError("Role key must be 2–60 characters.")
+    throw new ValidationError("Role key must be 2–60 characters.");
   }
   if (!KEY_RE.test(trimmed)) {
     throw new ValidationError(
       "Role key must use lowercase letters, digits, dashes, or underscores.",
-    )
+    );
   }
-  if (
-    trimmed === ADMIN_ROLE_KEY.toLowerCase() ||
-    trimmed === SYSADMIN_ROLE_KEY.toLowerCase()
-  ) {
-    throw new ValidationError(`The role key "${trimmed}" is reserved.`)
+  if (trimmed === ADMIN_ROLE_KEY.toLowerCase() || trimmed === SYSADMIN_ROLE_KEY.toLowerCase()) {
+    throw new ValidationError(`The role key "${trimmed}" is reserved.`);
   }
-  return trimmed
+  return trimmed;
 }
 
-export type ValidatedPermission = { module: string; key: string }
+export type ValidatedPermission = { module: string; key: string };
 
 /**
  * Validates a list of dotted permission keys : every entry must be a
@@ -67,23 +54,21 @@ export type ValidatedPermission = { module: string; key: string }
  * so the caller learns which one is wrong. Returns the parsed
  * `{ module, key }` pairs ready for DB insertion.
  */
-export function validatePermissionList(
-  permissions: readonly string[],
-): ValidatedPermission[] {
-  const seen = new Set<string>()
-  const out: ValidatedPermission[] = []
+export function validatePermissionList(permissions: readonly string[]): ValidatedPermission[] {
+  const seen = new Set<string>();
+  const out: ValidatedPermission[] = [];
   for (const dotted of permissions) {
     if (!isKnownPermission(dotted)) {
-      throw new ValidationError(`Unknown permission key : ${dotted}`)
+      throw new ValidationError(`Unknown permission key : ${dotted}`);
     }
-    if (seen.has(dotted)) continue
-    seen.add(dotted)
-    const parsed = parsePermissionKey(dotted)
+    if (seen.has(dotted)) continue;
+    seen.add(dotted);
+    const parsed = parsePermissionKey(dotted);
     if (!parsed) {
       // unreachable — isKnownPermission already validated parsability
-      continue
+      continue;
     }
-    out.push(parsed)
+    out.push(parsed);
   }
-  return out
+  return out;
 }

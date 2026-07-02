@@ -1,11 +1,11 @@
-"use client"
+"use client";
 
-import { useRouter } from "next/navigation"
-import { useState } from "react"
-import { useLocale, useTranslations } from "next-intl"
-import { Trash2 } from "lucide-react"
-import { toast } from "sonner"
-import { Button } from "@/components/ui/button"
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { useLocale, useTranslations } from "next-intl";
+import { Trash2 } from "lucide-react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -13,28 +13,28 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Separator } from "@/components/ui/separator"
-import { DangerCard, DangerRow } from "@/components/danger-card"
-import { trpc } from "@/lib/trpc"
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
+import { DangerCard, DangerRow } from "@/components/danger-card";
+import { trpc } from "@/lib/trpc";
 
 function formatDate(iso: string, locale: string): string {
-  const parsed = new Date(iso)
-  if (Number.isNaN(parsed.getTime())) return iso
+  const parsed = new Date(iso);
+  if (Number.isNaN(parsed.getTime())) return iso;
   return parsed.toLocaleDateString([locale, "en"], {
     year: "numeric",
     month: "long",
     day: "numeric",
-  })
+  });
 }
 
 type Props = {
-  userId: string
-  email: string
-  deletedAt: Date | string | null
-}
+  userId: string;
+  email: string;
+  deletedAt: Date | string | null;
+};
 
 /**
  * Two destructive admin actions, gated by the same `<DangerCard>` :
@@ -59,57 +59,54 @@ type Props = {
  * visually distinct, but amber instead of red).
  */
 export function AdminDangerZone({ userId, email, deletedAt }: Props) {
-  const t = useTranslations("admin.users.dangerZone")
-  const locale = useLocale()
-  const router = useRouter()
-  const utils = trpc.useUtils()
+  const t = useTranslations("admin.users.dangerZone");
+  const locale = useLocale();
+  const router = useRouter();
+  const utils = trpc.useUtils();
 
-  const inGrace = Boolean(deletedAt)
+  const inGrace = Boolean(deletedAt);
   const completesAtIso = deletedAt
-    ? new Date(
-        new Date(deletedAt).getTime() + 14 * 24 * 60 * 60 * 1000,
-      ).toISOString()
-    : null
+    ? new Date(new Date(deletedAt).getTime() + 14 * 24 * 60 * 60 * 1000).toISOString()
+    : null;
 
   const requestDeletion = trpc.users.adminRequestDeletion.useMutation({
     onSuccess: () => {
-      void utils.users.adminGetUser.invalidate({ userId })
-      toast.success(t("requestSuccess"))
-      setRequestOpen(false)
+      void utils.users.adminGetUser.invalidate({ userId });
+      toast.success(t("requestSuccess"));
+      setRequestOpen(false);
     },
     onError: (error) => {
-      toast.error(error.message || t("requestError"))
+      toast.error(error.message || t("requestError"));
     },
-  })
+  });
 
   const cancelDeletion = trpc.users.adminCancelDeletion.useMutation({
     onSuccess: () => {
-      void utils.users.adminGetUser.invalidate({ userId })
-      toast.success(t("cancelSuccess"))
+      void utils.users.adminGetUser.invalidate({ userId });
+      toast.success(t("cancelSuccess"));
     },
     onError: (error) => {
-      toast.error(error.message || t("cancelError"))
+      toast.error(error.message || t("cancelError"));
     },
-  })
+  });
 
   const hardDelete = trpc.auth.adminHardDeleteUser.useMutation({
     onSuccess: () => {
-      toast.success(t("hardDeleteSuccess"))
+      toast.success(t("hardDeleteSuccess"));
       // List query is now stale ; the row is anonymized so listing it
       // again would surface noise. Bounce back to the list rather than
       // staying on a detail page that's about to render @monark.invalid.
-      router.push("/admin/users")
+      router.push("/admin/users");
     },
     onError: (error) => {
-      toast.error(error.message || t("hardDeleteError"))
+      toast.error(error.message || t("hardDeleteError"));
     },
-  })
+  });
 
-  const [requestOpen, setRequestOpen] = useState(false)
-  const [hardOpen, setHardOpen] = useState(false)
-  const [confirmEmail, setConfirmEmail] = useState("")
-  const emailMatches =
-    confirmEmail.trim().toLowerCase() === email.trim().toLowerCase()
+  const [requestOpen, setRequestOpen] = useState(false);
+  const [hardOpen, setHardOpen] = useState(false);
+  const [confirmEmail, setConfirmEmail] = useState("");
+  const emailMatches = confirmEmail.trim().toLowerCase() === email.trim().toLowerCase();
 
   if (inGrace && completesAtIso) {
     return (
@@ -130,14 +127,12 @@ export function AdminDangerZone({ userId, email, deletedAt }: Props) {
               onClick={() => cancelDeletion.mutate({ userId })}
               disabled={cancelDeletion.isPending}
             >
-              {cancelDeletion.isPending
-                ? t("cancelPending")
-                : t("cancelDeletion")}
+              {cancelDeletion.isPending ? t("cancelPending") : t("cancelDeletion")}
             </Button>
           }
         />
       </DangerCard>
-    )
+    );
   }
 
   return (
@@ -147,11 +142,7 @@ export function AdminDangerZone({ userId, email, deletedAt }: Props) {
           title={t("requestDeletion")}
           description={t("requestHint")}
           action={
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setRequestOpen(true)}
-            >
+            <Button type="button" variant="outline" onClick={() => setRequestOpen(true)}>
               {t("requestDeletion")}
             </Button>
           }
@@ -166,8 +157,8 @@ export function AdminDangerZone({ userId, email, deletedAt }: Props) {
               variant="ghost"
               className="text-destructive hover:text-destructive"
               onClick={() => {
-                setConfirmEmail("")
-                setHardOpen(true)
+                setConfirmEmail("");
+                setHardOpen(true);
               }}
             >
               <Trash2 className="h-4 w-4" aria-hidden />
@@ -181,9 +172,7 @@ export function AdminDangerZone({ userId, email, deletedAt }: Props) {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{t("requestDialog.title")}</DialogTitle>
-            <DialogDescription>
-              {t("requestDialog.description", { email })}
-            </DialogDescription>
+            <DialogDescription>{t("requestDialog.description", { email })}</DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button
@@ -210,23 +199,17 @@ export function AdminDangerZone({ userId, email, deletedAt }: Props) {
       <Dialog
         open={hardOpen}
         onOpenChange={(next) => {
-          setHardOpen(next)
-          if (!next) setConfirmEmail("")
+          setHardOpen(next);
+          if (!next) setConfirmEmail("");
         }}
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle className="text-destructive">
-              {t("hardDialog.title")}
-            </DialogTitle>
-            <DialogDescription>
-              {t("hardDialog.description", { email })}
-            </DialogDescription>
+            <DialogTitle className="text-destructive">{t("hardDialog.title")}</DialogTitle>
+            <DialogDescription>{t("hardDialog.description", { email })}</DialogDescription>
           </DialogHeader>
           <div className="grid gap-2 py-2">
-            <Label htmlFor="hard-confirm-email">
-              {t("hardDialog.label", { email })}
-            </Label>
+            <Label htmlFor="hard-confirm-email">{t("hardDialog.label", { email })}</Label>
             <Input
               id="hard-confirm-email"
               value={confirmEmail}
@@ -250,13 +233,11 @@ export function AdminDangerZone({ userId, email, deletedAt }: Props) {
               onClick={() => hardDelete.mutate({ userId })}
               disabled={!emailMatches || hardDelete.isPending}
             >
-              {hardDelete.isPending
-                ? t("hardDialog.confirming")
-                : t("hardDialog.confirm")}
+              {hardDelete.isPending ? t("hardDialog.confirming") : t("hardDialog.confirm")}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
     </>
-  )
+  );
 }

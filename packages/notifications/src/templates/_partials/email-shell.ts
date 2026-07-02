@@ -47,7 +47,7 @@ export const EMAIL_SHELL = `<!doctype html>
             </tr>
             <tr>
               <td style="padding:28px 32px 8px 32px;">
-                <img src="{{ logoUrl }}" alt="{{ appName }}" width="40" height="40" style="display:block;border:0;outline:none;text-decoration:none;width:40px;height:40px;" />
+                {{ logoHtml }}
                 <span style="margin-top:8px;display:inline-block;font-size:22px;font-weight:800;color:{{ brandPrimary }};letter-spacing:-0.02em;font-family:'Nunito Sans','Helvetica Neue',Helvetica,Arial,sans-serif;">{{ appName }}</span>
               </td>
             </tr>
@@ -64,4 +64,4 @@ export const EMAIL_SHELL = `<!doctype html>
       </tr>
     </table>
   </body>
-</html>`
+</html>`;

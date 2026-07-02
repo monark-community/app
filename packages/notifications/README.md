@@ -27,9 +27,9 @@ Spec: [docs/features-planning/phase-1/notifications-system.md](../../docs/featur
 
 ```ts
 // From another module's server code:
-import { notify } from "@monark/notifications/server"
+import { notify } from "@monark/notifications/server";
 
-await notify("auth.password-changed", { userId }, { occurredAt: new Date() })
+await notify("auth.password-changed", { userId }, { occurredAt: new Date() });
 ```
 
 Most call sites won't reach `notify()` directly ; they emit a domain event and the subscriber registry forwards it. Add a new kind by :
@@ -38,7 +38,7 @@ Most call sites won't reach `notify()` directly ; they emit a domain event and t
    ```ts
    declare module "@monark/notifications/contracts" {
      interface NotificationDataRegistry {
-       "posts.published": { postId: string; authorId: string; publishedAt: Date }
+       "posts.published": { postId: string; authorId: string; publishedAt: Date };
      }
    }
    ```
@@ -48,17 +48,17 @@ Most call sites won't reach `notify()` directly ; they emit a domain event and t
 
 ## Public API
 
-| Import path                            | Export                              | Kind                |
-|----------------------------------------|-------------------------------------|---------------------|
-| `@monark/notifications/server`         | `notify`, `notifyMany`              | function            |
-| `@monark/notifications/server`         | `registerCoreNotificationKinds`, `registerNotificationKind` | function            |
-| `@monark/notifications/server`         | `registerNotificationSubscribers`   | function            |
-| `@monark/notifications/server`         | `notificationsRouter`               | tRPC sub-router     |
-| `@monark/notifications/server`         | `isChannelEnabled`, `setPreference`, `listPreferences`, `resetPreferences`, `resolveChannelEnabled` | function |
-| `@monark/notifications/server`         | `sendMail`                          | function (transport)|
-| `@monark/notifications/contracts`      | `NotificationKind`, `NotificationDataMap`, `NotificationDataRegistry` | type     |
-| `@monark/notifications/contracts`      | `getNotificationKindDef`, `listNotificationKinds`, `listNotificationKindDescriptors` | function |
-| `@monark/notifications/contracts`      | `NotificationsEvents` (and members) | type union          |
+| Import path                       | Export                                                                                              | Kind                 |
+| --------------------------------- | --------------------------------------------------------------------------------------------------- | -------------------- |
+| `@monark/notifications/server`    | `notify`, `notifyMany`                                                                              | function             |
+| `@monark/notifications/server`    | `registerCoreNotificationKinds`, `registerNotificationKind`                                         | function             |
+| `@monark/notifications/server`    | `registerNotificationSubscribers`                                                                   | function             |
+| `@monark/notifications/server`    | `notificationsRouter`                                                                               | tRPC sub-router      |
+| `@monark/notifications/server`    | `isChannelEnabled`, `setPreference`, `listPreferences`, `resetPreferences`, `resolveChannelEnabled` | function             |
+| `@monark/notifications/server`    | `sendMail`                                                                                          | function (transport) |
+| `@monark/notifications/contracts` | `NotificationKind`, `NotificationDataMap`, `NotificationDataRegistry`                               | type                 |
+| `@monark/notifications/contracts` | `getNotificationKindDef`, `listNotificationKinds`, `listNotificationKindDescriptors`                | function             |
+| `@monark/notifications/contracts` | `NotificationsEvents` (and members)                                                                 | type union           |
 
 ## tRPC surface
 
@@ -74,16 +74,16 @@ Mounted at `notifications.*` by the auto-generated [services/api/src/trpc/app-ro
 
 Wired in `registerNotificationSubscribers()` :
 
-| Event                       | Notification kind          |
-|-----------------------------|----------------------------|
-| `trusted-device.added`      | `auth.new-device`          |
-| `user.password-changed`     | `auth.password-changed`    |
-| `totp.enabled`              | `auth.totp-enabled`        |
-| `totp.disabled`             | `auth.totp-disabled`       |
-| `trusted-devices.all-revoked` | `auth.all-devices-revoked` |
-| `user.email-changed`        | `account.email-changed`    |
-| `user.deletion-requested`   | `account.deletion-scheduled` |
-| `user.deletion-canceled`    | `account.deletion-canceled` |
+| Event                         | Notification kind            |
+| ----------------------------- | ---------------------------- |
+| `trusted-device.added`        | `auth.new-device`            |
+| `user.password-changed`       | `auth.password-changed`      |
+| `totp.enabled`                | `auth.totp-enabled`          |
+| `totp.disabled`               | `auth.totp-disabled`         |
+| `trusted-devices.all-revoked` | `auth.all-devices-revoked`   |
+| `user.email-changed`          | `account.email-changed`      |
+| `user.deletion-requested`     | `account.deletion-scheduled` |
+| `user.deletion-canceled`      | `account.deletion-canceled`  |
 
 ## Out of scope (deferred)
 

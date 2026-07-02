@@ -41,6 +41,7 @@ describe("getBootstrapStatus", () => {
       singletonOrganizationId: null,
       singletonDisplayName: null,
       singletonLogoUrl: null,
+      singletonPrimaryColor: null,
     });
   });
 
@@ -51,6 +52,7 @@ describe("getBootstrapStatus", () => {
         slug: "acme",
         displayName: "Acme",
         logoUrl: "https://example.com/acme.png",
+        primaryColor: "#0066FF",
       },
     });
     const status = await getBootstrapStatus();
@@ -59,6 +61,21 @@ describe("getBootstrapStatus", () => {
     expect(status.singletonOrganizationId).toBe(row.id);
     expect(status.singletonDisplayName).toBe("Acme");
     expect(status.singletonLogoUrl).toBe("https://example.com/acme.png");
+    expect(status.singletonPrimaryColor).toBe("#0066FF");
+  });
+
+  it("rejects an invalid hex format from the DB defensively (singletonPrimaryColor falls back to null)", async () => {
+    const db = getDb();
+    await db.organization.create({
+      data: {
+        slug: "borked",
+        displayName: "Borked",
+        primaryColor: "javascript:alert(1)",
+      },
+    });
+    const status = await getBootstrapStatus();
+    expect(status.singletonOrganizationId).not.toBeNull();
+    expect(status.singletonPrimaryColor).toBeNull();
   });
 
   it("does not pin singletonOrganizationId when multiple orgs exist", async () => {

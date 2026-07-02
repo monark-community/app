@@ -1,4 +1,4 @@
-import { defineConfig, devices } from "@playwright/test"
+import { defineConfig, devices } from "@playwright/test";
 
 // Smoke-only Playwright config; the suite verifies routing + auth gates
 // without depending on a running Supabase / Mailpit stack. Full happy-path
@@ -47,4 +47,4 @@ export default defineConfig({
         },
       ]
     : undefined,
-})
+});

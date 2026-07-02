@@ -21,12 +21,12 @@ This document is a working plan : it inventories what's there, defines what each
 
 We write tests at four layers ; each owns a different question.
 
-| Layer            | Question                                                | Tool                          | Where the test lives                                   |
-| ---------------- | ------------------------------------------------------- | ----------------------------- | ------------------------------------------------------ |
-| **Unit**         | Does this pure function do the right thing in isolation ? | vitest                        | `<package>/tests/<name>.test.ts`                       |
-| **Integration**  | Do these modules talk to each other correctly when wired through Prisma / tRPC / nodemailer / Supabase ? | vitest + testcontainers / sqlite-in-memory | `<package>/tests/integration/<name>.test.ts`           |
-| **Component**    | Does this React surface render + behave when given known tRPC + i18n state ? | vitest + Testing Library + msw | `services/web/tests/components/<name>.test.tsx`        |
-| **End-to-end**   | Can a real user sign up, sign in, manage their account, and reach admin surfaces in a real browser against a real backend ? | Playwright                    | `services/web/tests/e2e/<flow>.spec.ts`                |
+| Layer           | Question                                                                                                                    | Tool                                       | Where the test lives                            |
+| --------------- | --------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------ | ----------------------------------------------- |
+| **Unit**        | Does this pure function do the right thing in isolation ?                                                                   | vitest                                     | `<package>/tests/<name>.test.ts`                |
+| **Integration** | Do these modules talk to each other correctly when wired through Prisma / tRPC / nodemailer / Supabase ?                    | vitest + testcontainers / sqlite-in-memory | `<package>/tests/integration/<name>.test.ts`    |
+| **Component**   | Does this React surface render + behave when given known tRPC + i18n state ?                                                | vitest + Testing Library + msw             | `services/web/tests/components/<name>.test.tsx` |
+| **End-to-end**  | Can a real user sign up, sign in, manage their account, and reach admin surfaces in a real browser against a real backend ? | Playwright                                 | `services/web/tests/e2e/<flow>.spec.ts`         |
 
 The four layers compose : a unit test catches arithmetic / parsing / regex bugs cheaply ; integration tests catch wiring + transaction + Prisma-default mistakes ; component tests catch state / loading / a11y issues without booting the whole app ; e2e catches full-stack regressions and routing.
 
@@ -162,7 +162,7 @@ Fastify app + tRPC router export + bootstrap + cron endpoint.
 
 Next.js app. Server actions, client islands, page routes.
 
-The right unit-of-test for a web page is the *server action* (a pure async function with typed inputs / outputs) and the *interactive island* (a React component with local state). Pages themselves are mostly composition + auth gates ; e2e covers those.
+The right unit-of-test for a web page is the _server action_ (a pure async function with typed inputs / outputs) and the _interactive island_ (a React component with local state). Pages themselves are mostly composition + auth gates ; e2e covers those.
 
 - **Have** : nothing under `services/web/tests/components/` ; only e2e specs.
 - **Add** :
@@ -189,7 +189,7 @@ The right unit-of-test for a web page is the *server action* (a pure async funct
 
 ## End-to-end plan
 
-Playwright covers the *user* paths : we don't try to test every code branch here, just the happy paths and the half-dozen scary failure modes.
+Playwright covers the _user_ paths : we don't try to test every code branch here, just the happy paths and the half-dozen scary failure modes.
 
 ### Setup
 

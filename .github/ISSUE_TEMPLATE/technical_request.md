@@ -1,10 +1,9 @@
 ---
 name: Technical Request
 about: Use when product already approved the feature and needs development-level clarity.
-title: 'tech - '
+title: "tech - "
 labels: ["tech"]
-assignees: ''
-
+assignees: ""
 ---
 
 ## Context

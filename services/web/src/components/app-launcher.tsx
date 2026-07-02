@@ -1,17 +1,12 @@
-"use client"
+"use client";
 
-import Link from "next/link"
-import { useState } from "react"
-import { useTranslations } from "next-intl"
-import { ExternalLink, Grip } from "lucide-react"
-import {
-  Sheet,
-  SheetContent,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet"
-import { APPS } from "@/config/apps"
-import { cn } from "@/lib/utils"
+import Link from "next/link";
+import { useState } from "react";
+import { useTranslations } from "next-intl";
+import { ExternalLink, Grip } from "lucide-react";
+import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { APPS } from "@/config/apps";
+import { cn } from "@/lib/utils";
 
 /**
  * Top-of-app launcher : a 3x3 grid icon in the AppBar that opens a
@@ -30,9 +25,9 @@ import { cn } from "@/lib/utils"
  * deploy-time config, not user state. That keeps this island light.
  */
 export function AppLauncher() {
-  const t = useTranslations("appBar.apps")
-  const tItems = useTranslations("appBar.apps.items")
-  const [open, setOpen] = useState(false)
+  const t = useTranslations("appBar.apps");
+  const tItems = useTranslations("appBar.apps.items");
+  const [open, setOpen] = useState(false);
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
@@ -69,10 +64,10 @@ export function AppLauncher() {
           */}
           <ul className="grid grid-cols-2 gap-2">
             {APPS.map((app) => {
-              const Icon = app.icon
+              const Icon = app.icon;
               const externalProps = app.external
                 ? { target: "_blank" as const, rel: "noopener noreferrer" }
-                : {}
+                : {};
               return (
                 <li key={app.id}>
                   <Link
@@ -98,10 +93,7 @@ export function AppLauncher() {
                         aria-hidden
                       />
                       {app.external && (
-                        <ExternalLink
-                          className="h-3 w-3 text-muted-foreground"
-                          aria-hidden
-                        />
+                        <ExternalLink className="h-3 w-3 text-muted-foreground" aria-hidden />
                       )}
                     </div>
                     <div className="space-y-0.5">
@@ -119,18 +111,16 @@ export function AppLauncher() {
                     )}
                   </Link>
                 </li>
-              )
+              );
             })}
             <li aria-hidden>
               <div className="flex h-full flex-col items-center justify-center gap-1 rounded-md border border-dashed border-border px-3 py-4 text-center">
-                <p className="text-xs font-medium text-muted-foreground">
-                  {t("emptySlot")}
-                </p>
+                <p className="text-xs font-medium text-muted-foreground">{t("emptySlot")}</p>
               </div>
             </li>
           </ul>
         </div>
       </SheetContent>
     </Sheet>
-  )
+  );
 }

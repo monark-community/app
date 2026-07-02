@@ -1,16 +1,10 @@
-import {
-  Building2,
-  KeyRound,
-  Users,
-  Webhook,
-  type LucideIcon,
-} from "lucide-react"
+import { Building2, KeyRound, Users, Webhook, type LucideIcon } from "lucide-react";
 
 export type AdminTab = {
-  id: "organizations" | "users" | "rbac" | "webhooks"
-  href: `/admin/${string}`
-  icon: LucideIcon
-}
+  id: "organizations" | "users" | "rbac" | "webhooks";
+  href: `/admin/${string}`;
+  icon: LucideIcon;
+};
 
 /**
  * The admin section's tab order. Single source of truth shared by the
@@ -19,16 +13,14 @@ export type AdminTab = {
  * admins land on something actionable instead of an empty section
  * header).
  *
- * Order : organization first since it's the spine of the deploy
- * (especially in single-tenant where it's the operator's own profile),
- * users next as the day-to-day surface, rbac after that because role
- * config is rarer, webhooks last because endpoint config is platform
- * plumbing — operators set it up once and revisit only when an
- * integration breaks.
+ * Projects and industries are module-level surfaces gated by
+ * `projects.read` / `industries.read` permissions ; they live under
+ * `/(authed)/projects` and `/(authed)/industries` and are reached via
+ * the primary nav drawer instead.
  */
 export const ADMIN_TABS: ReadonlyArray<AdminTab> = [
   { id: "organizations", href: "/admin/organizations", icon: Building2 },
   { id: "users", href: "/admin/users", icon: Users },
   { id: "rbac", href: "/admin/rbac", icon: KeyRound },
   { id: "webhooks", href: "/admin/webhooks", icon: Webhook },
-]
+];

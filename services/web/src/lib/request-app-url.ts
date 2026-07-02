@@ -1,6 +1,6 @@
-import "server-only"
-import { headers } from "next/headers"
-import { BRANDING } from "@monark/branding"
+import "server-only";
+import { headers } from "next/headers";
+import { BRANDING } from "@monark/branding";
 
 /**
  * Builds the canonical app URL ("scheme://host[:port]") for the
@@ -26,15 +26,15 @@ import { BRANDING } from "@monark/branding"
  */
 export async function getRequestAppUrl(): Promise<string> {
   try {
-    const hdrs = await headers()
-    const proto = (hdrs.get("x-forwarded-proto") ?? "http").split(",")[0]?.trim() || "http"
+    const hdrs = await headers();
+    const proto = (hdrs.get("x-forwarded-proto") ?? "http").split(",")[0]?.trim() || "http";
     const host =
-      (hdrs.get("x-forwarded-host") ?? hdrs.get("host") ?? "").split(",")[0]?.trim() || ""
-    if (!host) return BRANDING.appUrl
-    return `${proto}://${host}`.replace(/\/$/, "")
+      (hdrs.get("x-forwarded-host") ?? hdrs.get("host") ?? "").split(",")[0]?.trim() || "";
+    if (!host) return BRANDING.appUrl;
+    return `${proto}://${host}`.replace(/\/$/, "");
   } catch {
     // `headers()` throws when called outside a request scope (e.g.
     // cron jobs, scripts). Fall back to the static branding URL.
-    return BRANDING.appUrl
+    return BRANDING.appUrl;
   }
 }
