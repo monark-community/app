@@ -77,6 +77,9 @@ jobs:
       - name: Check module tiers
         run: pnpm check:tiers
 
+      - name: Check module completeness
+        run: pnpm check:modules
+
   # Unit suites only. Coverage outputs upload to a per-job artifact so
   # the codecov-upload job below can fuse them with the integration
   # leg's outputs into a merged report.

@@ -76,7 +76,7 @@ Two artifacts are generated, not written: the `DomainEvent` union (`*.generated`
 
 ## Scaffolding a new module
 
-Use `pnpm gen:module` to create a module — don't hand-build the skeleton. It lays down the `contracts` / `server` / `client` layout with the correct `package.json`, `tsconfig.json`, and vitest config wired up, so the new package is consistent with the rest of `packages/*` from the first commit. Add it to [modules.manifest.ts](modules.manifest.ts) with its tier, then wire its `register*` helpers into [services/api/src/server.ts](services/api/src/server.ts).
+Use `pnpm gen:module` to create a module — don't hand-build the skeleton. It lays down the `contracts` / `server` / `client` layout with the correct `package.json`, `tsconfig.json`, and vitest config wired up, so the new package is consistent with the rest of `packages/*` from the first commit. Add it to [modules.manifest.ts](modules.manifest.ts) with its tier, then wire its `register*` helpers into [services/api/src/server.ts](services/api/src/server.ts). `pnpm check:modules` (a CI gate) then holds the module to the completeness contract — registered in the manifest, README + `contracts/events.ts` present, and a `tests/integration/` suite if it has a tRPC router. A conscious, temporary exception goes in `ACKNOWLEDGED_GAPS` in [tools/check-modules.ts](tools/check-modules.ts) ; the gate fails if that entry is left behind once the gap is closed.
 
 ## Strict TypeScript
 
@@ -147,10 +147,10 @@ House style throughout docs, commits, READMEs, and CHANGELOG: use `;` rather tha
 Run the same sequence CI runs, in order, before a change is done:
 
 ```
-pnpm gen && pnpm typecheck && pnpm lint && pnpm test && pnpm check:tiers
+pnpm gen && pnpm typecheck && pnpm lint && pnpm test && pnpm check:tiers && pnpm check:modules
 ```
 
-`pnpm gen` first so a stale generated file doesn't fail `typecheck` ; `check:tiers` last confirms no boundary was crossed.
+`pnpm gen` first so a stale generated file doesn't fail `typecheck` ; `check:tiers` confirms no boundary was crossed ; `check:modules` last confirms every module is complete (registered in the manifest, README + `contracts/events.ts` present, integration suite present ; conscious exceptions live in `ACKNOWLEDGED_GAPS` in [tools/check-modules.ts](tools/check-modules.ts)).
 
 ## Definition of done
 
@@ -166,4 +166,4 @@ pnpm gen && pnpm typecheck && pnpm lint && pnpm test && pnpm check:tiers
 - [ ] i18n keys added for en + fr
 - [ ] CHANGELOG entry added, dated, under `[Unreleased]`
 - [ ] `register*` helpers wired into [services/api/src/server.ts](services/api/src/server.ts)
-- [ ] Pre-PR gate passes: `pnpm gen && pnpm typecheck && pnpm lint && pnpm test && pnpm check:tiers`
+- [ ] Pre-PR gate passes: `pnpm gen && pnpm typecheck && pnpm lint && pnpm test && pnpm check:tiers && pnpm check:modules`

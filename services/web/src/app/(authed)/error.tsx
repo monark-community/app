@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { BrandedAppLogo } from "@/components/branded-app-logo";
+import { BrandedAppLogoView } from "@/components/branded-app-logo-view";
 import { Button } from "@/components/ui/button";
 
 /**
@@ -32,7 +32,17 @@ export default function AuthedError({
   return (
     <main className="flex min-h-[60vh] items-center justify-center px-4 py-10">
       <div className="w-full max-w-sm space-y-6 text-center">
-        <BrandedAppLogo size={48} className="mx-auto" />
+        {/* Client error boundary: can't fetch server-side, so render the view
+            with the static template brand (no singleton-org logo lookup). */}
+        <BrandedAppLogoView
+          data={{
+            singletonLogoUrl: null,
+            singletonDisplayName: null,
+            isSingleTenantBootstrapped: false,
+          }}
+          size={48}
+          className="mx-auto"
+        />
         <div className="space-y-2">
           <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
             {t("eyebrow")}
