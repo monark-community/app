@@ -29,6 +29,7 @@
     "db:reset": "pnpm --filter @monark/db db:reset",
     "check:tiers": "tsx tools/check-tiers.ts",
     "check:modules": "tsx tools/check-modules.ts",
+    "check:i18n": "tsx tools/check-i18n.ts",
     "coverage:merge": "tsx tools/merge-coverage.ts",
     "gen": "pnpm gen:events && pnpm gen:routers",
     "gen:module": "tsx tools/gen-module.ts",

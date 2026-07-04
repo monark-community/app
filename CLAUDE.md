@@ -102,7 +102,7 @@ Every meaningful component that fetches or awaits data ships a **layout-accurate
 Recurring list / detail-panel screens compose from the shared patterns in [services/web/src/components/patterns](services/web/src/components/patterns) — reach for these before re-pasting layout, so every admin screen reads and behaves the same. Import from the barrel: `import { FilterBar, TableDetailLayout, … } from "@/components/patterns"`.
 
 - **`DataTable`** — the standard table (built on `@tanstack/react-table` + `@dnd-kit`), used by **every** list screen (admin included ; no hand-rolled `<ul>` card lists). Columns sort, hide, resize, and drag-reorder ; the layout persists per-browser under `storageKey` (localStorage). Chrome defaults to **`chrome="calm"`** : the idle sort glyph and the column-layout menu stay hidden until you hover the header / table, so a simple list reads as quiet as an old card list (pass `chrome="full"` to always show them). Every table has a mandatory **primary column** (first, pinned, never hidden/moved) with a main label + optional subtext + an optional **`leading`** slot (avatar / logo / status dot, so a row reads card-like) ; a hover icon opens the detail panel. Any non-computed cell can be made inline-editable with a column `edit` config (`getValue` / `onSave`) — click to edit, Enter/blur commits, Escape cancels ; never attach `edit` to computed or relational cells. Per-row actions collapse into a single trailing `…` menu via `rowActions` — do not add multiple inline action buttons to a row. Pass already-translated `labels` + action labels (i18n stays with the caller).
-- **`FilterBar` + `FilterBarSearch` + `FilterMenu`** — the toolbar row above a table. `FilterBar` has three slots : `search` (pair with `FilterBarSearch`, which fills the row on mobile and holds ~350px on desktop), `filter` (pair with `FilterMenu`), and `actions` for the primary CTA. `FilterMenu` collapses every filter behind one icon button 8px from the search field : on desktop it opens a dropdown of labelled radio groups, on mobile a full-screen modal (title + top-right close). Pass filters declaratively as `FilterConfig[]` (id, label, options, value, onValueChange) — never scatter loose `Select`s across the toolbar.
+- **`FilterBar` + `FilterBarSearch` + `FilterMenu`** — the toolbar row above a table. `FilterBar` has three slots : `search` (pair with `FilterBarSearch`, which fills the row on mobile and holds ~350px on desktop), `filter` (pair with `FilterMenu`), and `actions` for the primary CTA. `FilterMenu` collapses every filter behind one icon button 8px from the search field : on desktop each field is a top-level row that opens a **submenu** holding that field's value input (keeps the menu short instead of one long flat field+value list), on mobile a full-screen modal (title + top-right close) with a labelled section per field. Pass filters declaratively as `FilterConfig[]`, a union discriminated by `type` : `select` (the default when omitted → radio list), `multiSelect` (checkboxes, `value: string[]`), `text` (text input), `date` (date input) — so the input matches the field's data type. Never scatter loose `Select`s across the toolbar.
 - **`TableDetailLayout` + `useDetailPanelRoute`** — the table ↔ detail-panel combo. The hook keeps the selection in a `?<param>=` search param (deep-linkable, create = `?<param>=new`). On desktop the layout owns a persistent non-modal right-hand `Sheet`, keeps the table interactive behind it, and closes on Escape / outside-click (but not when clicking a row, a `…`/column menu, or a confirm dialog it spawned). On mobile the same panel goes full-screen and modal ; selecting a row (tap the primary label, which stops inline-editing there) takes over the screen.
   List/detail sections open records **in the panel by default** (limit page-nav), keeping the full `[id]` page only as an "open full page" escape hatch — this is the house pattern for admin (organizations, users, rbac, webhooks) as well as projects/industries. An editor rendered in the panel takes a `containment="container"` prop so it drops its `PageHeader`, anchors its save bar to the panel, and closes the panel on success instead of routing.
 - **`PanelHeaderBar`** — the `h-14` panel controls bar (collapse + optional open-full-page), aligned to the appbar height. The open-full-page link is auto-hidden on mobile, where the panel is already full-screen.
@@ -126,7 +126,7 @@ Two documentation audiences, both required when the change reaches them:
 - **User docs** — [docs/user-guide](docs/user-guide) for anything user-facing. No code, written for the person using the app.
 - **Developer docs** — [docs/technical-documentation](docs/technical-documentation) for internals (architecture, data models, extension points, runbooks). Add a new file per topic and cross-link ; update [docs/README.md](docs/README.md) if you add one.
 
-All user-facing strings go through i18n in both `en` and `fr` — never hardcode visible text.
+All user-facing strings go through i18n in both `en` and `fr` — never hardcode visible text. `pnpm check:i18n` (a CI gate) enforces that every locale catalog under [services/web/src/messages](services/web/src/messages) carries the exact same key set as `en` ; add a key to one locale and you must add it to all.
 
 ## CHANGELOG
 
@@ -147,10 +147,10 @@ House style throughout docs, commits, READMEs, and CHANGELOG: use `;` rather tha
 Run the same sequence CI runs, in order, before a change is done:
 
 ```
-pnpm gen && pnpm typecheck && pnpm lint && pnpm test && pnpm check:tiers && pnpm check:modules
+pnpm gen && pnpm typecheck && pnpm lint && pnpm test && pnpm check:tiers && pnpm check:modules && pnpm check:i18n
 ```
 
-`pnpm gen` first so a stale generated file doesn't fail `typecheck` ; `check:tiers` confirms no boundary was crossed ; `check:modules` last confirms every module is complete (registered in the manifest, README + `contracts/events.ts` present, integration suite present ; conscious exceptions live in `ACKNOWLEDGED_GAPS` in [tools/check-modules.ts](tools/check-modules.ts)).
+`pnpm gen` first so a stale generated file doesn't fail `typecheck` ; `check:tiers` confirms no boundary was crossed ; `check:modules` confirms every module is complete (registered in the manifest, README + `contracts/events.ts` present, integration suite present ; conscious exceptions live in `ACKNOWLEDGED_GAPS` in [tools/check-modules.ts](tools/check-modules.ts)) ; `check:i18n` confirms every locale catalog has the exact same key set as `en` (no missing or dead keys).
 
 ## Definition of done
 
@@ -166,4 +166,4 @@ pnpm gen && pnpm typecheck && pnpm lint && pnpm test && pnpm check:tiers && pnpm
 - [ ] i18n keys added for en + fr
 - [ ] CHANGELOG entry added, dated, under `[Unreleased]`
 - [ ] `register*` helpers wired into [services/api/src/server.ts](services/api/src/server.ts)
-- [ ] Pre-PR gate passes: `pnpm gen && pnpm typecheck && pnpm lint && pnpm test && pnpm check:tiers && pnpm check:modules`
+- [ ] Pre-PR gate passes: `pnpm gen && pnpm typecheck && pnpm lint && pnpm test && pnpm check:tiers && pnpm check:modules && pnpm check:i18n`
