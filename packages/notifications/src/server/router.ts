@@ -21,46 +21,42 @@ async function requireAdmin(userId: string | null): Promise<string> {
   return userId;
 }
 
-// Resolves the prefs matrix for any userId (admin variants reuse this
-// against the target user, self-service uses it against ctx.userId).
-//
-// Phase-1 only ships SECURITY + ACCOUNT category notifications ;
-// ACTIVITY + DIGEST stay in the Prisma enum (reserved for phase-2)
-// but we don't surface them here so the prefs UI doesn't render
-// empty rows for categories with no live kinds.
-async function resolvePrefsCells(userId: string) {
+// Resolves the full per-KIND preference matrix for any userId (admin
+// variants reuse this against the target user, self-service against
+// ctx.userId). Every registered notification kind is surfaced, each with
+// a cell per channel : the resolved on/off state, whether the channel is
+// `forced` (requiredEmail EMAIL — locked on), and whether the kind even
+// supports that channel (`available`). The UI groups by `category`.
+async function resolvePrefsForUser(userId: string) {
   const rows = await listPreferences(userId);
-  const cells: Array<{
-    category: "SECURITY" | "ACCOUNT";
-    channel: "IN_APP" | "EMAIL";
-    enabled: boolean;
-    forced: boolean;
-  }> = [];
-  const categories = ["SECURITY", "ACCOUNT"] as const;
   const channels = ["IN_APP", "EMAIL"] as const;
-  const descriptors = listNotificationKindDescriptors();
-  for (const category of categories) {
-    for (const channel of channels) {
-      const sample = descriptors.find((d) => d.category === category);
-      if (!sample) continue;
-      const enabled = resolveChannelEnabled({
-        kind: sample.kind as never,
-        channel,
-        rows,
-      });
-      const forced = sample.requiredEmail && channel === "EMAIL";
-      cells.push({ category, channel, enabled, forced });
-    }
-  }
-  return cells;
+  const kinds = listNotificationKindDescriptors().map((d) => ({
+    kind: d.kind,
+    category: d.category,
+    cells: channels.map((channel) => ({
+      channel,
+      enabled: resolveChannelEnabled({ kind: d.kind as NotificationKind, channel, rows }),
+      forced: d.requiredEmail && channel === "EMAIL",
+      available: d.channels.includes(channel),
+    })),
+  }));
+  return { kinds };
 }
 
 const channelSchema = z.enum(["IN_APP", "EMAIL"]);
-// Phase-1 only allows toggling SECURITY + ACCOUNT prefs ; ACTIVITY +
-// DIGEST stay in the Prisma enum but the prefs API rejects them so a
-// stale client (or someone hand-crafting a request) can't write a
-// row that the UI then can't reach.
-const categorySchema = z.enum(["SECURITY", "ACCOUNT"]);
+
+// A pref write targets a specific registered kind + a channel that kind
+// actually supports. Rejecting unknown kinds / unavailable channels keeps
+// a stale client (or a hand-crafted request) from writing a row the UI
+// can never reach.
+function assertWritableCell(kind: string, channel: "IN_APP" | "EMAIL"): NotificationKind {
+  const def = getNotificationKindDef(kind as NotificationKind);
+  if (!def) throw new NotFoundError("NotificationKind", kind);
+  if (!def.channels.includes(channel)) {
+    throw new NotFoundError("NotificationKind channel", `${kind}:${channel}`);
+  }
+  return kind as NotificationKind;
+}
 
 const listInput = z.object({
   cursor: z.string().optional(),
@@ -173,30 +169,30 @@ export const notificationsRouter = router({
   preferences: router({
     get: publicProcedure.query(async ({ ctx }) => {
       if (!ctx.userId) throw new UnauthorizedError();
-      const cells = await resolvePrefsCells(ctx.userId);
-      return { cells };
+      return resolvePrefsForUser(ctx.userId);
     }),
 
     set: publicProcedure
       .input(
         z.object({
-          category: categorySchema,
+          kind: z.string().min(1),
           channel: channelSchema,
           enabled: z.boolean(),
         }),
       )
       .mutation(async ({ ctx, input }) => {
         if (!ctx.userId) throw new UnauthorizedError();
+        const kind = assertWritableCell(input.kind, input.channel);
         const result = await setPreference({
           userId: ctx.userId,
-          category: input.category,
+          kind,
           channel: input.channel,
           enabled: input.enabled,
         });
         const event: NotificationPreferenceChangedEvent = {
           type: "notification.preference-changed",
           userId: ctx.userId,
-          category: input.category,
+          kind,
           channel: input.channel,
           enabled: result.enabled,
           occurredAt: new Date(),
@@ -211,38 +207,38 @@ export const notificationsRouter = router({
     }),
 
     // Admin variants of the get/set/reset trio above. Same matrix shape
-    // as `get` ; same event emission as `set` (the event still carries
-    // the *target* user id, not the actor — listeners care about whose
-    // prefs changed, the rbac gate above is the audit-trail anchor).
+    // as `get` ; same event emission as `set` (the event carries the
+    // *target* user id, not the actor — listeners care about whose prefs
+    // changed, the rbac gate above is the audit-trail anchor).
     adminGet: publicProcedure
       .input(z.object({ userId: z.string().min(1) }))
       .query(async ({ ctx, input }) => {
         await requireAdmin(ctx.userId);
-        const cells = await resolvePrefsCells(input.userId);
-        return { cells };
+        return resolvePrefsForUser(input.userId);
       }),
 
     adminSet: publicProcedure
       .input(
         z.object({
           userId: z.string().min(1),
-          category: categorySchema,
+          kind: z.string().min(1),
           channel: channelSchema,
           enabled: z.boolean(),
         }),
       )
       .mutation(async ({ ctx, input }) => {
         await requireAdmin(ctx.userId);
+        const kind = assertWritableCell(input.kind, input.channel);
         const result = await setPreference({
           userId: input.userId,
-          category: input.category,
+          kind,
           channel: input.channel,
           enabled: input.enabled,
         });
         const event: NotificationPreferenceChangedEvent = {
           type: "notification.preference-changed",
           userId: input.userId,
-          category: input.category,
+          kind,
           channel: input.channel,
           enabled: result.enabled,
           occurredAt: new Date(),
@@ -300,6 +296,14 @@ export const notificationsRouter = router({
               return { occurredAt: now };
             case "auth.all-devices-revoked":
               return { count: 3, occurredAt: now };
+            case "auth.signed-in":
+              return { deviceLabel: "Chrome on macOS", occurredAt: now };
+            case "auth.device-revoked":
+              return { deviceLabel: "Chrome on macOS", occurredAt: now };
+            case "auth.recovery-code-used":
+              return { remainingCodes: 7, occurredAt: now };
+            case "auth.recovery-codes-regenerated":
+              return { count: 10, occurredAt: now };
             case "account.email-changed":
               return {
                 previousEmail: "old@example.com",

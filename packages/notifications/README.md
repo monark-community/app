@@ -6,7 +6,7 @@ Spec: [docs/features-planning/phase-1/notifications-system.md](../../docs/featur
 
 ## What's here (Phase 1 MVP)
 
-- `/server` — `notify()` + `notifyMany()` dispatch surface, prefs CRUD (`isChannelEnabled`, `setPreference`, `listPreferences`, `resetPreferences`), `registerNotificationSubscribers()` for the api boot path, `registerCoreNotificationKinds()` (the eight core kinds) + `registerNotificationKind()` (extension entrypoint), `notificationsRouter` tRPC sub-router (unread count, list, markRead, markAllRead, dismiss, prefs.get/set/reset), and the email transport (`sendMail`).
+- `/server` — `notify()` + `notifyMany()` dispatch surface, prefs CRUD (`isChannelEnabled`, `setPreference`, `listPreferences`, `resetPreferences`), `registerNotificationSubscribers()` for the api boot path, `registerCoreNotificationKinds()` (the core auth / account / webhook-operator kinds) + `registerNotificationKind()` (extension entrypoint), `notificationsRouter` tRPC sub-router (unread count, list, markRead, markAllRead, dismiss, prefs.get/set/reset), and the email transport (`sendMail`).
 - `/contracts` — `NotificationCreatedEvent`, `NotificationDeliveryFailedEvent`, `NotificationPreferenceChangedEvent` (unioned into `NotificationsEvents`), the runtime kind registry (`registerNotificationKind`, `getNotificationKindDef`, `listNotificationKinds`), and the `NotificationDataRegistry` interface that modules augment via TypeScript declaration merging to keep per-kind payloads typed.
 - `/client` — placeholder ; the web service consumes the inbox via `trpc.notifications.*` directly. Centralised hooks land here when more than one site needs them.
 - Templates under `src/templates/{auth,account}/<kind>.ts` ; each kind ships en + fr slots with `subject` / `html` / `text` / `inapp { subject, body, link? }`. The brand chrome (orange header band, Monark wordmark, brand-orange CTA, footer) is appended at render time from `src/templates/_partials/email-shell.ts` so adding a new kind is "fill in the body slot."
@@ -15,13 +15,14 @@ Spec: [docs/features-planning/phase-1/notifications-system.md](../../docs/featur
 ## Key concepts
 
 - **Dispatch is best-effort.** `notify()` never throws. SMTP failures / template render errors land on the row as `failedAt` + `failureReason` and emit `notification.delivery-failed` ; the calling action (sign-in, password change, deletion request) was already committed and can't be rolled back by a notification problem.
-- **SECURITY × EMAIL is forced on.** A `requiredEmail: true` kind ignores any opt-out row in `NotificationPreference`. Account-safety guarantee ; the prefs UI shows a disabled toggle with a tooltip.
+- **SECURITY × EMAIL is forced on.** A `requiredEmail: true` kind ignores any opt-out row in `NotificationPreference`. Account-safety guarantee ; the prefs UI shows the row's email checkbox checked + disabled with a "required" hint.
+- **Email is the only user-configurable channel.** The `/account/notifications` prefs UI exposes one email checkbox per event (kinds without an EMAIL channel are hidden) ; in-app delivery is platform-controlled and not user-toggleable. Kinds still declare `IN_APP` in `channels` / `defaultEnabled` — that governs whether the bell row is written, not a user choice.
 - **Per-user preferences are sparse.** "No row" means "use the registry default." Rows are only inserted when the user explicitly toggles ; lets the registry default change without backfilling everyone.
 - **In-app delivery is the row.** For `IN_APP`, persisting the `Notification` row IS the delivery — `readAt` / `dismissedAt` are user-action stamps. For `EMAIL`, the row is the audit trail (`deliveredAt` / `failedAt` / `failureReason`).
 - **Soft-deleted users still get IN_APP, but no EMAIL.** Cancellation reminders need to surface inside the app. Outbound mail to a deactivated address would leak.
 - **De-dup by data hash.** `notify()` skips if the same `(userId, kind, hash(data))` was delivered to the same channel within the last 60s. Catches double-fires from event-bus retries without forcing emitters to carry idempotency keys.
 - **Locales come from `User.localePreference`.** `updateLocaleAction` mirrors the value into Supabase user_metadata too, so Supabase Auth's own emails (signup confirm, email change) match.
-- **Templates get enriched vars, not just raw payload.** `notify()` runs the typed payload through [`enrichVars`](src/server/enrich.ts) before rendering. Every `Date` field K gains a `{{ K }}Formatted` companion (locale-aware via `Intl.DateTimeFormat`), every template can reference `{{ accountLink }}`, `{{ securityLink }}`, `{{ revokeLink }}`, `{{ signInLink }}`, `{{ appUrl }}` (built from `process.env.APP_URL` ; falls back to `BRANDING.appUrl`), and the brand surface vars `{{ appName }}`, `{{ tagline }}`, `{{ supportEmail }}`, `{{ brandPrimary }}`, `{{ brandAccent }}` come from `@monark/branding` so a template never hardcodes the product name or accent colour. Per-kind derivations live in an exhaustive `switch` ; today only `auth.new-device` derives one (`{{ deviceWhere }}` from country + ip, with localised "Unknown location" / "Lieu inconnu" fallback). When you add a kind that needs a derived var, add the case to the switch ; templates that reference an unknown token render it literally so authors notice immediately.
+- **Templates get enriched vars, not just raw payload.** `notify()` runs the typed payload through [`enrichVars`](src/server/enrich.ts) before rendering. Every `Date` field K gains a `{{ K }}Formatted` companion (locale-aware via `Intl.DateTimeFormat`), every template can reference `{{ accountLink }}`, `{{ securityLink }}`, `{{ revokeLink }}`, `{{ signInLink }}`, `{{ appUrl }}` (built from `process.env.APP_URL` ; falls back to `BRANDING.appUrl`), and the brand surface vars `{{ appName }}`, `{{ tagline }}`, `{{ supportEmail }}`, `{{ brandPrimary }}`, `{{ brandAccent }}` come from `@monark/branding` so a template never hardcodes the product name or accent colour. Per-kind derivations live in an exhaustive `switch` ; e.g. `auth.new-device` derives `{{ deviceWhere }}` from country + ip (localised "Unknown location" / "Lieu inconnu" fallback), and `auth.signed-in` / `auth.device-revoked` fall a null `deviceLabel` back to a localised "a device" / "un appareil". When you add a kind that needs a derived var, add the case to the switch ; templates that reference an unknown token render it literally so authors notice immediately.
 
 ## Usage
 
@@ -67,8 +68,8 @@ Mounted at `notifications.*` by the auto-generated [services/api/src/trpc/app-ro
 - `notifications.unreadCount()` → `{ count }` for the header bell.
 - `notifications.list({ cursor?, limit?, filter? })` → paged in-app rows.
 - `notifications.markRead({ id })`, `notifications.markAllRead()`, `notifications.dismiss({ id })`.
-- `notifications.preferences.get()` → resolved (category × channel) cells with `forced` flag.
-- `notifications.preferences.set({ category, channel, enabled })`, `notifications.preferences.reset()`.
+- `notifications.preferences.get()` → resolved per-kind × channel cells (each with `forced` + `available` flags), grouped by `category` in the UI.
+- `notifications.preferences.set({ kind, channel, enabled })`, `notifications.preferences.reset()`, plus rbac-gated `adminGet` / `adminSet` / `adminReset` variants targeting another user.
 
 ## Subscribed events (Phase 1)
 
@@ -76,20 +77,23 @@ Wired in `registerNotificationSubscribers()` :
 
 | Event                         | Notification kind            |
 | ----------------------------- | ---------------------------- |
-| `trusted-device.added`        | `auth.new-device`            |
-| `user.password-changed`       | `auth.password-changed`      |
-| `totp.enabled`                | `auth.totp-enabled`          |
-| `totp.disabled`               | `auth.totp-disabled`         |
-| `trusted-devices.all-revoked` | `auth.all-devices-revoked`   |
-| `user.email-changed`          | `account.email-changed`      |
-| `user.deletion-requested`     | `account.deletion-scheduled` |
-| `user.deletion-canceled`      | `account.deletion-canceled`  |
+| `trusted-device.added`             | `auth.new-device`                 |
+| `user.signed-in`                   | `auth.signed-in`                  |
+| `user.password-changed`            | `auth.password-changed`           |
+| `totp.enabled`                     | `auth.totp-enabled`               |
+| `totp.disabled`                    | `auth.totp-disabled`              |
+| `totp.recovery-code-used`          | `auth.recovery-code-used`         |
+| `totp.recovery-codes-regenerated`  | `auth.recovery-codes-regenerated` |
+| `trusted-device.revoked`           | `auth.device-revoked` (skips bulk-sweep rows) |
+| `trusted-devices.all-revoked`      | `auth.all-devices-revoked`        |
+| `user.email-changed`               | `account.email-changed`           |
+| `user.deletion-requested`          | `account.deletion-scheduled`      |
+| `user.deletion-canceled`           | `account.deletion-canceled`       |
 
 ## Out of scope (deferred)
 
 - Push channel (web push, mobile push) ; same dispatch surface when added.
 - Discord / Slack webhook channels ; same surface.
-- Per-kind opt-out (only per-category at Phase 1).
 - Scheduled / batched dispatch (weekly digest cron). The kind + UI exist (DIGEST category) ; the cron lands later.
 - Rich attachments (PDFs, ICS) ; HTML + text only at Phase 1.
 - A real queue / retry layer ; in-process best-effort with audit row at Phase 1.

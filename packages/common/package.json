@@ -21,6 +21,10 @@
     "./trpc": {
       "types": "./src/trpc.ts",
       "default": "./src/trpc.ts"
+    },
+    "./pagination": {
+      "types": "./src/pagination.ts",
+      "default": "./src/pagination.ts"
     }
   },
   "scripts": {

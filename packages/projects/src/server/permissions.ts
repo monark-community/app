@@ -29,15 +29,15 @@ const PROJECT_PERMISSIONS = {
 const INDUSTRY_PERMISSIONS = {
   read: {
     description: "Read the industry taxonomy.",
-    category: "projects",
+    category: "industries",
   },
   write: {
     description: "Create or rename industries in the shared taxonomy.",
-    category: "projects",
+    category: "industries",
   },
   delete: {
     description: "Soft-delete or hard-delete industries from the shared taxonomy.",
-    category: "projects",
+    category: "industries",
   },
 } as const;
 

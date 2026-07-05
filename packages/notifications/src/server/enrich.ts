@@ -221,10 +221,22 @@ export function enrichVars<K extends NotificationKind>(
       out.deviceWhere = where || (locale === "fr" ? "Lieu inconnu" : "Unknown location");
       break;
     }
+    case "auth.signed-in": {
+      const d = data as NotificationDataMap["auth.signed-in"];
+      out.deviceLabel = d.deviceLabel || (locale === "fr" ? "un appareil" : "a device");
+      break;
+    }
+    case "auth.device-revoked": {
+      const d = data as NotificationDataMap["auth.device-revoked"];
+      out.deviceLabel = d.deviceLabel || (locale === "fr" ? "un appareil" : "a device");
+      break;
+    }
     case "auth.password-changed":
     case "auth.totp-enabled":
     case "auth.totp-disabled":
     case "auth.all-devices-revoked":
+    case "auth.recovery-code-used":
+    case "auth.recovery-codes-regenerated":
     case "account.email-changed":
     case "account.deletion-scheduled":
     case "account.deletion-canceled":

@@ -204,11 +204,12 @@ The first two compose:
 | `user.password-changed`       | password reset / account page password change                  | emitted (via `emitPasswordChanged` from the web server action through `auth.notifyPasswordChanged`) |
 | `user.email-verified`         | `/auth/confirm` successfully verified                          | emitted via `markEmailVerified`                                                                     |
 | `trusted-device.added`        | first sign-in from a new device (or stale / wrong-user cookie) | emitted via `recognizeOrRegister`                                                                   |
-| `trusted-device.revoked`      | user revokes a device or an admin revokes                      | emitted via `revokeTrustedDevice`                                                                   |
+| `trusted-device.revoked`      | user revokes a device or an admin revokes                      | emitted via `revokeTrustedDevice` (`bulk: true` for each row of a bulk sweep)                       |
 | `trusted-devices.all-revoked` | emergency lockout (`revokeAllTrustedDevices`)                  | emitted once per bulk run with the actual revoked count                                             |
 | `totp.enabled`                | `confirmTotpEnrollment` succeeds                               | emitted                                                                                             |
 | `totp.disabled`               | `disableTotp` succeeds                                         | emitted (`triggeredBy: "user"`)                                                                     |
 | `totp.recovery-code-used`     | recovery code consumed during challenge                        | emitted                                                                                             |
+| `totp.recovery-codes-regenerated` | `regenerateRecoveryCodes` succeeds (old codes invalidated) | emitted with the new-code `count`                                                                   |
 
 ## Deferred
 

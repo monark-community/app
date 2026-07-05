@@ -15,6 +15,11 @@ Import from the barrel : `import { AutoForm, fieldColumn, … } from "@/componen
   chrome contracts (`FieldLabels`, `FieldMessages`).
 - **`registry.tsx`** — `FieldInput` (def → form input) + `FIELD_TYPE_META`.
   The single seam the polymorphic layer plugs into.
+- **`field-icons.tsx`** — `FIELD_TYPE_ICON`, a `FieldType → lucide glyph`
+  map shown before a field's label so a reader can tell the data type
+  (short text / select / URL / …) at a glance. Rendered automatically by
+  `FieldShell` (forms) and `fieldColumn` (table headers) ; the standalone
+  `FieldRow` and `DataColumnDef.headerIcon` accept an icon to opt in.
 - **`schema.ts`** — `schemaFor` / `schemaForFields` (def → zod fragment).
 - **`inputs/*`** — one RHF-bound input component per field type, each
   wrapped in `FieldShell` (label + control + help + error).

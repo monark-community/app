@@ -830,7 +830,7 @@ export function WeekView({
         startAt: payload.startAt.toISOString(),
         endAt: payload.endAt.toISOString(),
       });
-      await utils.calendar.events.listForDay.fetch(rangeQuery);
+      await utils.calendar.events.listForDay.invalidate(rangeQuery);
       clearPopover();
     },
     [createEvent, utils, rangeQuery, clearPopover],
@@ -850,7 +850,7 @@ export function WeekView({
         startAt: patch.startAt?.toISOString(),
         endAt: patch.endAt?.toISOString(),
       });
-      await utils.calendar.events.listForDay.fetch(rangeQuery);
+      await utils.calendar.events.listForDay.invalidate(rangeQuery);
       clearPopover();
     },
     [updateEvent, utils, rangeQuery, clearPopover],
@@ -859,7 +859,7 @@ export function WeekView({
   const handleEventDelete = useCallback(
     async (eventId: string) => {
       await deleteEvent.mutateAsync({ id: eventId });
-      await utils.calendar.events.listForDay.fetch(rangeQuery);
+      await utils.calendar.events.listForDay.invalidate(rangeQuery);
       clearPopover();
     },
     [deleteEvent, utils, rangeQuery, clearPopover],

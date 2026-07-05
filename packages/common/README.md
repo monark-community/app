@@ -10,6 +10,7 @@ App-internal runtime and shared primitives. Backend-only runtime; types are safe
 - **Error hierarchy** ([`src/errors.ts`](src/errors.ts)); `AppError` + `NotFoundError` / `UnauthorizedError` / `ForbiddenError` / `ValidationError` / `ConflictError`.
 - **Result type** ([`src/result.ts`](src/result.ts)); `Result<T, E>` with `ok`/`err` constructors.
 - **Logger** ([`src/log.ts`](src/log.ts)); pino instance with default service metadata.
+- **Cursor pagination** ([`src/pagination.ts`](src/pagination.ts)); the shared `PaginationArgs` / `Paginated<T>` contract for every "GET ALL" list method, plus `cursorFindArgs` / `toPage` / `resolveLimit` helpers and the `DEFAULT_PAGE_SIZE` / `MAX_PAGE_SIZE` / `PAGE_SIZE_OPTIONS` constants. Dependency-free, so client code can import the subpath.
 
 ## Public entry points
 
@@ -19,3 +20,4 @@ App-internal runtime and shared primitives. Backend-only runtime; types are safe
 | `@monark/common/events`           | event-bus runtime only                                      |
 | `@monark/common/contracts/events` | `DomainEventBase`, `DomainEvent`                            |
 | `@monark/common/trpc`             | tRPC primitives                                             |
+| `@monark/common/pagination`       | cursor-pagination types, helpers, constants (dep-free)      |

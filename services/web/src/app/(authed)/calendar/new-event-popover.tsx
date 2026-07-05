@@ -11,7 +11,7 @@ import type {
   CalendarEventType,
 } from "@monark/calendar/contracts";
 import { ConfirmDialog, FormActionsFooter } from "@/components/patterns";
-import { Button } from "@/components/ui/button";
+import { RichTextEditor, useFieldStrings } from "@/components/fields";
 import { Calendar } from "@/components/ui/calendar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -24,7 +24,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
 import { TimePicker } from "@/components/ui/time-picker";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
@@ -244,6 +243,7 @@ export function NewEventPopover({
 }) {
   const tc = useTranslations("calendar.dayView.newEvent");
   const te = useTranslations("calendar.dayView.editEvent");
+  const fieldStrings = useFieldStrings();
   const isMobile = useIsMobile();
   const locale = useLocale();
   const rdpLocale = locale === "fr" ? frLocale : enUS;
@@ -299,6 +299,7 @@ export function NewEventPopover({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
+  const [confirmDiscard, setConfirmDiscard] = useState(false);
   const [participantInput, setParticipantInput] = useState("");
   const [participantDropdownOpen, setParticipantDropdownOpen] = useState(false);
   // `useIsMobile` resolves to false on the first (pre-effect) render. Wait for
@@ -404,7 +405,10 @@ export function NewEventPopover({
   }
 
   function handleCancel() {
-    if (isDirty() && !window.confirm(tc("discardConfirm"))) return;
+    if (isDirty()) {
+      setConfirmDiscard(true);
+      return;
+    }
     onCancel();
   }
 
@@ -485,8 +489,8 @@ export function NewEventPopover({
     }
   }
 
-  // Desktop uses a two-step inline confirm in the footer ; mobile pairs the
-  // FormActionsFooter delete with a ConfirmDialog that calls performDelete.
+  // Both breakpoints pair the FormActionsFooter delete with a ConfirmDialog
+  // that calls performDelete once confirmed.
   async function performDelete() {
     setIsConfirmingDelete(false);
     if (!existingEvent || !onDelete) return;
@@ -499,14 +503,6 @@ export function NewEventPopover({
     } finally {
       setIsSubmitting(false);
     }
-  }
-
-  async function handleDelete() {
-    if (!isConfirmingDelete) {
-      setIsConfirmingDelete(true);
-      return;
-    }
-    await performDelete();
   }
 
   const isEdit = mode === "edit";
@@ -542,71 +538,37 @@ export function NewEventPopover({
               }}
             />
           </div>
-          <div className="flex flex-1 flex-col gap-1 min-h-0">
+          <div className="flex min-h-0 flex-1 flex-col gap-1">
             <Label htmlFor="cal-desc">{tc("descriptionLabel")}</Label>
-            <Textarea
+            <RichTextEditor
               id="cal-desc"
+              ariaLabel={tc("descriptionLabel")}
               placeholder={tc("descriptionPlaceholder")}
-              className="flex-1 resize-none"
-              style={{ minHeight: "7rem" }}
+              labels={fieldStrings.labels.richText}
+              minHeight={28}
+              // Desktop: fill the (grid-stretched) left column so the editor is
+              // as tall as the metadata column. Mobile: keep the min-height so
+              // the form scrolls naturally in the full-screen dialog.
+              fill={!isMobile}
               value={form.description}
-              onChange={(e) => set("description", e.target.value)}
+              onChange={(html) => set("description", html)}
             />
           </div>
         </div>
 
-        {/* Right column: metadata */}
+        {/* Right column: metadata — Type, Date, Times, Participants, Location,
+            Calendar, Reminders (top → bottom). */}
         <div className="flex flex-col gap-3 [&_label]:whitespace-nowrap">
-          {calendars.length > 0 && (
-            <div className="flex flex-col gap-1">
-              <Label htmlFor="cal-calendar">{tc("calendarLabel")}</Label>
-              <Select
-                value={form.calendarId}
-                onValueChange={(v) => {
-                  set("calendarId", v);
-                  onCalendarChange?.(v);
-                }}
-              >
-                <SelectTrigger id="cal-calendar">
-                  <div className="flex min-w-0 items-center gap-2 overflow-hidden">
-                    <span
-                      className={`h-2 w-2 shrink-0 rounded-full ${!calendarMap[form.calendarId]?.color ? "bg-primary" : ""}`}
-                      style={
-                        calendarMap[form.calendarId]?.color
-                          ? { backgroundColor: calendarMap[form.calendarId]!.color! }
-                          : {}
-                      }
-                    />
-                    <span className="truncate">{calendarMap[form.calendarId]?.name ?? ""}</span>
-                  </div>
-                </SelectTrigger>
-                <SelectContent>
-                  {calendars.map((cal) => (
-                    <SelectItem key={cal.id} value={cal.id}>
-                      <div className="flex items-center gap-2">
-                        <span
-                          className={`h-2 w-2 shrink-0 rounded-full ${!cal.color ? "bg-primary" : ""}`}
-                          style={cal.color ? { backgroundColor: cal.color } : {}}
-                        />
-                        {cal.name}
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-
           <div className="flex flex-col gap-1">
             <Label>{tc("eventTypeLabel")}</Label>
-            <div className="flex rounded-md border border-input">
+            <div className="flex h-9 rounded-md border border-input">
               {(["STANDARD", "PUNCTUAL", "ALL_DAY"] as const).map((type) => (
                 <button
                   key={type}
                   type="button"
                   onClick={() => handleTypeChange(type)}
                   className={cn(
-                    "flex-1 border-l border-input px-2 py-1.5 text-xs font-medium transition-colors first:rounded-l-md first:border-l-0 last:rounded-r-md",
+                    "flex flex-1 items-center justify-center border-l border-input px-2 text-xs font-medium transition-colors first:rounded-l-md first:border-l-0 last:rounded-r-md",
                     form.eventType === type
                       ? "bg-primary text-primary-foreground"
                       : "text-foreground hover:bg-muted",
@@ -810,6 +772,46 @@ export function NewEventPopover({
             />
           </div>
 
+          {calendars.length > 0 && (
+            <div className="flex flex-col gap-1">
+              <Label htmlFor="cal-calendar">{tc("calendarLabel")}</Label>
+              <Select
+                value={form.calendarId}
+                onValueChange={(v) => {
+                  set("calendarId", v);
+                  onCalendarChange?.(v);
+                }}
+              >
+                <SelectTrigger id="cal-calendar">
+                  <div className="flex min-w-0 items-center gap-2 overflow-hidden">
+                    <span
+                      className={`h-2 w-2 shrink-0 rounded-full ${!calendarMap[form.calendarId]?.color ? "bg-primary" : ""}`}
+                      style={
+                        calendarMap[form.calendarId]?.color
+                          ? { backgroundColor: calendarMap[form.calendarId]!.color! }
+                          : {}
+                      }
+                    />
+                    <span className="truncate">{calendarMap[form.calendarId]?.name ?? ""}</span>
+                  </div>
+                </SelectTrigger>
+                <SelectContent>
+                  {calendars.map((cal) => (
+                    <SelectItem key={cal.id} value={cal.id}>
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`h-2 w-2 shrink-0 rounded-full ${!cal.color ? "bg-primary" : ""}`}
+                          style={cal.color ? { backgroundColor: cal.color } : {}}
+                        />
+                        {cal.name}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
           <div className="flex flex-col gap-1">
             <Label>{tc("remindersLabel")}</Label>
             <div className="flex flex-col gap-1.5">
@@ -838,6 +840,9 @@ export function NewEventPopover({
                       <SelectItem value="weeks">{tc("reminderUnitWeeks")}</SelectItem>
                     </SelectContent>
                   </Select>
+                  <span className="shrink-0 text-xs text-muted-foreground">
+                    {tc("reminderBefore")}
+                  </span>
                   <TooltipProvider delayDuration={400}>
                     <Tooltip>
                       <TooltipTrigger asChild>
@@ -872,44 +877,33 @@ export function NewEventPopover({
     </>
   );
 
-  const desktopFooter = (
-    <div className="mt-4 flex items-center gap-2">
-      {isEdit &&
-        (isConfirmingDelete ? (
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground">{te("deleteConfirmLabel")}</span>
-            <Button
-              variant="ghost"
-              size="sm"
-              disabled={isSubmitting}
-              onClick={() => setIsConfirmingDelete(false)}
-            >
-              {tc("cancel")}
-            </Button>
-            <Button variant="destructive" size="sm" disabled={isSubmitting} onClick={handleDelete}>
-              {te("delete")}
-            </Button>
-          </div>
-        ) : (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-destructive hover:text-destructive"
-            disabled={isSubmitting}
-            onClick={handleDelete}
-          >
-            {te("delete")}
-          </Button>
-        ))}
-      <div className="ml-auto flex gap-2">
-        <Button variant="ghost" size="sm" disabled={isSubmitting} onClick={handleCancel}>
-          {tc("cancel")}
-        </Button>
-        <Button size="sm" disabled={isSubmitting} onClick={handleSubmit}>
-          {isSubmitting ? "…" : submitLabel}
-        </Button>
-      </div>
-    </div>
+  // Delete + discard confirmations, shared by the mobile and desktop
+  // branches so both breakpoints use the same ConfirmDialog + footer.
+  const confirmDialogs = (
+    <>
+      <ConfirmDialog
+        open={isConfirmingDelete}
+        onOpenChange={setIsConfirmingDelete}
+        title={te("deleteConfirmLabel")}
+        cancelLabel={tc("cancel")}
+        confirmLabel={te("delete")}
+        isPending={isSubmitting}
+        onConfirm={performDelete}
+      />
+      <ConfirmDialog
+        open={confirmDiscard}
+        onOpenChange={setConfirmDiscard}
+        title={tc("discardTitle")}
+        description={tc("discardConfirm")}
+        cancelLabel={tc("cancel")}
+        confirmLabel={tc("discardCta")}
+        confirmVariant="default"
+        onConfirm={() => {
+          setConfirmDiscard(false);
+          onCancel();
+        }}
+      />
+    </>
   );
 
   // Mobile: a full-screen modal makes far better use of the phone viewport than an
@@ -954,15 +948,7 @@ export function NewEventPopover({
             </form>
           </DialogContent>
         </Dialog>
-        <ConfirmDialog
-          open={isConfirmingDelete}
-          onOpenChange={setIsConfirmingDelete}
-          title={te("deleteConfirmLabel")}
-          cancelLabel={tc("cancel")}
-          confirmLabel={te("delete")}
-          isPending={isSubmitting}
-          onConfirm={performDelete}
-        />
+        {confirmDialogs}
       </>
     );
   }
@@ -977,7 +963,9 @@ export function NewEventPopover({
         />
       </PopoverAnchor>
       <PopoverContent
-        className="w-165 max-w-[95vw] overflow-visible p-4"
+        // Cap the box at the viewport and scroll the body inside, so a long
+        // description / many reminders can't grow the popover past the screen.
+        className="flex max-h-[calc(100dvh-2rem)] w-190 max-w-[95vw] flex-col overflow-hidden p-0"
         side={side}
         align="start"
         onOpenAutoFocus={(e) => {
@@ -987,17 +975,30 @@ export function NewEventPopover({
         onPointerDownOutside={onDismiss ?? onCancel}
         onFocusOutside={(e) => e.preventDefault()}
         onEscapeKeyDown={(e) => {
-          if (isDirty()) {
-            e.preventDefault();
-            if (window.confirm(tc("discardConfirm"))) onCancel();
-          } else {
-            onCancel();
-          }
+          e.preventDefault();
+          handleCancel();
         }}
       >
-        <p className="mb-3 text-sm font-semibold text-foreground">{heading}</p>
-        {formBody}
-        {desktopFooter}
+        <p className="shrink-0 px-4 pb-3 pt-4 text-sm font-semibold text-foreground">{heading}</p>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleSubmit();
+          }}
+          className="flex min-h-0 flex-1 flex-col overflow-hidden"
+        >
+          <div className="min-h-0 flex-1 overflow-y-auto px-4">{formBody}</div>
+          <FormActionsFooter
+            submitLabel={isSubmitting ? "…" : submitLabel}
+            cancelLabel={tc("cancel")}
+            onCancel={handleCancel}
+            isBusy={isSubmitting}
+            onDelete={isEdit ? () => setIsConfirmingDelete(true) : undefined}
+            deleteLabel={te("delete")}
+            className="shrink-0 px-4 pb-4 pt-3"
+          />
+        </form>
+        {confirmDialogs}
       </PopoverContent>
     </Popover>
   );

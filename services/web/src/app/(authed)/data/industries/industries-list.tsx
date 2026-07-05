@@ -1,27 +1,41 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
+import { keepPreviousData } from "@tanstack/react-query";
 import { Archive, Pencil, Plus, RotateCcw, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { SheetTitle } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   ConfirmDialog,
   DataTable,
+  DiscussionSection,
+  FieldRow,
   FilterBar,
   FilterBarSearch,
-  FilterMenu,
-  PanelHeaderBar,
+  PageSection,
+  PanelHeader,
   TableDetailLayout,
+  TableTools,
+  useDataTableLayout,
   useDetailPanelRoute,
+  useDiscussionPreview,
+  usePaginatedList,
+  type DataColumnDef,
+  type FilterConfig,
+  type PrimaryColumnDef,
+  type TableToolsLabels,
 } from "@/components/patterns";
 import { DirtyFormBar } from "@/components/dirty-form-bar";
+import { FIELD_TYPE_ICON } from "@/components/fields";
+import { RichTextEditor } from "@/components/fields/inputs/rich-text-editor";
+import { useFieldStrings } from "@/components/fields/strings";
 import { trpc } from "@/lib/trpc";
+import { usePaginationLabels } from "@/lib/use-pagination-labels";
 
 function slugify(raw: string): string {
   return raw
@@ -45,20 +59,35 @@ function formatDate(iso: Date | string): string {
   return d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
 }
 
+function useDebounced<T>(value: T, ms: number): T {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const id = setTimeout(() => setDebounced(value), ms);
+    return () => clearTimeout(id);
+  }, [value, ms]);
+  return debounced;
+}
+
 function IndustryFormContent({
   mode,
   onClose,
 }: {
-  mode: { type: "create" } | { type: "edit"; id: string; displayName: string; slug: string };
+  mode:
+    | { type: "create" }
+    | { type: "edit"; id: string; displayName: string; slug: string; description: string | null };
   onClose: () => void;
 }) {
   const t = useTranslations("admin.industries.form");
   const tCommon = useTranslations("common");
+  const tSection = useTranslations("dataForm");
+  const fieldStrings = useFieldStrings();
+  const discussion = useDiscussionPreview();
   const utils = trpc.useUtils();
 
   const isEdit = mode.type === "edit";
   const [displayName, setDisplayName] = useState(isEdit ? mode.displayName : "");
   const [slugOverride, setSlugOverride] = useState(isEdit ? mode.slug : "");
+  const [description, setDescription] = useState(isEdit ? (mode.description ?? "") : "");
 
   const slugPreview = useMemo(() => {
     const trimmed = slugOverride.trim();
@@ -90,11 +119,13 @@ function IndustryFormContent({
     const name = displayName.trim();
     if (!name) return;
     const slug = slugOverride.trim() || undefined;
+    // The editor emits "" when empty ; persist that as `null` (cleared).
+    const desc = description === "" ? null : description;
 
     if (isEdit) {
-      updateMutation.mutate({ id: mode.id, displayName: name, slug });
+      updateMutation.mutate({ id: mode.id, displayName: name, slug, description: desc });
     } else {
-      createMutation.mutate({ displayName: name, slug });
+      createMutation.mutate({ displayName: name, slug, description: desc });
     }
   }
 
@@ -105,24 +136,26 @@ function IndustryFormContent({
 
   // Dirty vs baseline (edit) or empty form (create) — drives the save bar.
   const dirty = isEdit
-    ? displayName.trim() !== mode.displayName || slugOverride.trim() !== mode.slug
-    : displayName.trim() !== "" || slugOverride.trim() !== "";
+    ? displayName.trim() !== mode.displayName ||
+      slugOverride.trim() !== mode.slug ||
+      description !== (mode.description ?? "")
+    : displayName.trim() !== "" || slugOverride.trim() !== "" || description !== "";
 
   // Cancel = revert to baseline (panel close is the header's job).
   function revert() {
     setDisplayName(isEdit ? mode.displayName : "");
     setSlugOverride(isEdit ? mode.slug : "");
+    setDescription(isEdit ? (mode.description ?? "") : "");
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-6 pb-20">
-      <SheetHeader>
-        <SheetTitle>{isEdit ? t("editTitle") : t("createTitle")}</SheetTitle>
-      </SheetHeader>
-
-      <div className="flex flex-col gap-4">
-        <div className="space-y-1.5">
-          <Label htmlFor="ind-name">{t("displayName")}</Label>
+    <form onSubmit={handleSubmit} className="flex flex-col gap-8 pb-20">
+      <PageSection
+        title={tSection("attributesTitle")}
+        subtitle={tSection("attributesSubtitle")}
+        contentClassName="@container flex flex-col gap-4"
+      >
+        <FieldRow label={t("displayName")} htmlFor="ind-name" icon={FIELD_TYPE_ICON.text}>
           <Input
             id="ind-name"
             value={displayName}
@@ -131,11 +164,9 @@ function IndustryFormContent({
             required
             autoFocus
           />
-          <p className="text-xs text-muted-foreground">{t("displayNameHelp")}</p>
-        </div>
+        </FieldRow>
 
-        <div className="space-y-1.5">
-          <Label htmlFor="ind-slug">{t("slug")}</Label>
+        <FieldRow label={t("slug")} htmlFor="ind-slug" icon={FIELD_TYPE_ICON.text}>
           <Input
             id="ind-slug"
             value={slugOverride}
@@ -147,9 +178,24 @@ function IndustryFormContent({
               {t("slugPreview", { slug: slugPreview })}
             </p>
           )}
-          <p className="text-xs text-muted-foreground">{t("slugHelp")}</p>
-        </div>
-      </div>
+        </FieldRow>
+      </PageSection>
+
+      <PageSection title={tSection("descriptionTitle")} subtitle={tSection("descriptionSubtitle")}>
+        <RichTextEditor
+          id="ind-description"
+          value={description}
+          onChange={setDescription}
+          labels={fieldStrings.labels.richText}
+          placeholder={t("descriptionPlaceholder")}
+          ariaLabel={t("description")}
+          minHeight={40}
+        />
+      </PageSection>
+
+      <PageSection title={tSection("discussionTitle")} subtitle={tSection("discussionSubtitle")}>
+        <DiscussionSection {...discussion} />
+      </PageSection>
 
       <DirtyFormBar
         containment="container"
@@ -169,7 +215,6 @@ function IndustryFormContent({
 export function IndustriesList() {
   const t = useTranslations("admin.industries");
   const tActions = useTranslations("admin.industries.actions");
-  const tForm = useTranslations("admin.industries.form");
   const tRestore = useTranslations("admin.industries.restore");
   const tArchive = useTranslations("admin.industries.archive");
   const tHardDelete = useTranslations("admin.industries.hardDelete");
@@ -177,16 +222,32 @@ export function IndustriesList() {
   const tFilters = useTranslations("filters");
   const utils = trpc.useUtils();
 
-  const panel = useDetailPanelRoute("/industries", "industry");
+  const panel = useDetailPanelRoute("/data/industries", "industry");
   const industryParam = panel.selectedId;
 
   const [rawSearch, setRawSearch] = useState("");
+  const search = useDebounced(rawSearch.trim(), 250);
   const [showArchived, setShowArchived] = useState(false);
   const [confirmMode, setConfirmMode] = useState<ConfirmMode>(null);
 
+  const paginationLabels = usePaginationLabels();
+  const pagination = usePaginatedList({ resetKey: [search, showArchived] });
+
   const query = trpc.projects.industries.list.useQuery(
-    { includeDeleted: showArchived },
-    { refetchOnWindowFocus: false },
+    {
+      includeDeleted: showArchived,
+      search: search.length > 0 ? search : undefined,
+      limit: pagination.limit,
+      cursor: pagination.cursor,
+    },
+    { refetchOnWindowFocus: false, placeholderData: keepPreviousData },
+  );
+
+  // The panel edits a row that may not be on the current page (deep link, or
+  // paged away), so fetch it by id rather than searching the visible rows.
+  const industryQuery = trpc.projects.industries.getById.useQuery(
+    { id: industryParam! },
+    { enabled: !panel.isCreate && !!industryParam && industryParam !== "new" },
   );
 
   const restoreMutation = trpc.projects.industries.restore.useMutation({
@@ -215,36 +276,103 @@ export function IndustriesList() {
     onError: (err) => toast.error(tHardDelete("error", { message: err.message })),
   });
 
-  const updateMutation = trpc.projects.industries.update.useMutation({
-    onSuccess: () => {
-      toast.success(tForm("updateSuccess"));
-      utils.projects.industries.list.invalidate();
-    },
-    onError: (err) => toast.error(tForm("updateError", { message: err.message })),
-  });
+  const displayRows = query.data?.items ?? [];
 
-  const rows = query.data ?? [];
-  const active = rows.filter((r) => !r.deletedAt);
-  const search = rawSearch.trim().toLowerCase();
-  const base = showArchived ? rows : active;
-  const displayRows = search
-    ? base.filter(
-        (r) =>
-          r.displayName.toLowerCase().includes(search) || r.slug.toLowerCase().includes(search),
-      )
-    : base;
-
-  const editRow = rows.find((r) => r.id === industryParam);
+  const editRow = industryQuery.data;
 
   const sheetMode:
     | { type: "create" }
-    | { type: "edit"; id: string; displayName: string; slug: string }
+    | { type: "edit"; id: string; displayName: string; slug: string; description: string | null }
     | null =
     industryParam === "new"
       ? { type: "create" }
       : editRow
-        ? { type: "edit", id: editRow.id, displayName: editRow.displayName, slug: editRow.slug }
+        ? {
+            type: "edit",
+            id: editRow.id,
+            displayName: editRow.displayName,
+            slug: editRow.slug,
+            description: editRow.description,
+          }
         : null;
+
+  type IndustryRow = (typeof displayRows)[number];
+
+  const layout = useDataTableLayout("industries-table");
+
+  const filterConfigs: FilterConfig[] = [
+    {
+      id: "archived",
+      label: t("archivedFilterLabel"),
+      value: showArchived ? "all" : "active",
+      onValueChange: (v) => setShowArchived(v === "all"),
+      options: [
+        { value: "active", label: t("activeOnly") },
+        { value: "all", label: t("includeArchived") },
+      ],
+    },
+  ];
+
+  const primaryColumn: PrimaryColumnDef<IndustryRow> = {
+    header: t("columns.name"),
+    headerIcon: FIELD_TYPE_ICON.text,
+    label: (row) => row.displayName,
+    subtext: (row) =>
+      row.deletedAt ? (
+        <Badge variant="outline" size="sm" className="text-muted-foreground">
+          {t("archivedBadge")}
+        </Badge>
+      ) : undefined,
+    href: (row) => (row.deletedAt ? undefined : `/data/industries?industry=${row.id}`),
+    enableSorting: true,
+    sortAccessor: (row) => row.displayName,
+  };
+
+  const industryColumns: DataColumnDef<IndustryRow>[] = [
+    {
+      id: "slug",
+      header: t("columns.slug"),
+      headerIcon: FIELD_TYPE_ICON.text,
+      cell: (row) => <span className="font-mono text-xs text-muted-foreground">{row.slug}</span>,
+      enableSorting: true,
+      sortAccessor: (row) => row.slug,
+    },
+    {
+      id: "created",
+      header: t("columns.created"),
+      headerIcon: FIELD_TYPE_ICON.date,
+      cell: (row) => (
+        <span className="text-xs text-muted-foreground">{formatDate(row.createdAt)}</span>
+      ),
+      enableSorting: true,
+      sortAccessor: (row) => new Date(row.createdAt),
+    },
+  ];
+
+  const toolsLabels: TableToolsLabels = {
+    tools: tTable("tools"),
+    close: tFilters("close"),
+    columns: tTable("columns"),
+    reset: tTable("reset"),
+    sort: {
+      label: tTable("sorting"),
+      ascending: tTable("sortAscending"),
+      descending: tTable("sortDescending"),
+      none: tTable("sortNone"),
+      addField: tTable("sortAddField"),
+      remove: tTable("sortRemove"),
+      reset: tTable("sortReset"),
+    },
+    filters: {
+      trigger: tFilters("button"),
+      title: tFilters("title"),
+      close: tFilters("close"),
+      searchPlaceholder: tFilters("searchPlaceholder"),
+      noResults: tFilters("noResults"),
+      clearAll: tFilters("clearAll"),
+      resetField: tFilters("resetField"),
+    },
+  };
 
   return (
     <>
@@ -256,30 +384,18 @@ export function IndustriesList() {
             placeholder={t("searchPlaceholder")}
           />
         }
-        filter={
-          <FilterMenu
-            labels={{
-              trigger: tFilters("button"),
-              title: tFilters("title"),
-              close: tFilters("close"),
-            }}
-            filters={[
-              {
-                id: "archived",
-                label: t("archivedFilterLabel"),
-                value: showArchived ? "all" : "active",
-                onValueChange: (v) => setShowArchived(v === "all"),
-                options: [
-                  { value: "active", label: t("activeOnly") },
-                  { value: "all", label: t("includeArchived") },
-                ],
-              },
-            ]}
+        tools={
+          <TableTools
+            layout={layout}
+            primaryColumn={primaryColumn}
+            columns={industryColumns}
+            filters={filterConfigs}
+            labels={toolsLabels}
           />
         }
         actions={
-          <Button size="sm" onClick={panel.openCreate}>
-            <Plus className="mr-1 h-4 w-4" aria-hidden />
+          <Button onClick={panel.openCreate}>
+            <Plus className="h-4 w-4" aria-hidden />
             {t("newIndustry")}
           </Button>
         }
@@ -288,19 +404,23 @@ export function IndustriesList() {
       <TableDetailLayout
         open={panel.isOpen}
         onClose={panel.close}
+        storageKey="industries"
         panelClassName="sm:max-w-md"
         panel={
           <>
-            <PanelHeaderBar
-              onCollapse={panel.close}
-              collapseLabel={t("collapsePanel")}
+            <SheetTitle className="sr-only">
+              {panel.isCreate ? t("panelCreateTitle") : t("panelEditTitle")}
+            </SheetTitle>
+            <PanelHeader
+              title={panel.isCreate ? t("panelCreateTitle") : t("panelEditTitle")}
+              onClose={panel.close}
               fullPageHref={
-                !panel.isCreate && industryParam ? `/industries/${industryParam}` : undefined
+                !panel.isCreate && industryParam ? `/data/industries/${industryParam}` : undefined
               }
               fullPageLabel={t("openFullPage")}
             />
             <div className="flex-1 overflow-y-auto px-6 py-6">
-              {query.isLoading && !panel.isCreate && (
+              {industryQuery.isLoading && !panel.isCreate && (
                 <div className="space-y-4 pt-2">
                   <Skeleton className="h-7 w-40" />
                   <Skeleton className="h-10 w-full" />
@@ -310,7 +430,7 @@ export function IndustriesList() {
               {sheetMode && (
                 <IndustryFormContent key={industryParam} mode={sheetMode} onClose={panel.close} />
               )}
-              {!query.isLoading && !sheetMode && !panel.isCreate && (
+              {!industryQuery.isLoading && !sheetMode && !panel.isCreate && (
                 <p className="text-sm text-muted-foreground">{t("notFound")}</p>
               )}
             </div>
@@ -321,11 +441,9 @@ export function IndustriesList() {
             data={displayRows}
             getRowId={(row) => row.id}
             storageKey="industries-table"
+            layout={layout}
             labels={{
-              columns: tTable("columns"),
-              reset: tTable("reset"),
               rowActions: tTable("rowActions"),
-              openPanel: tTable("openPanel"),
               errorTitle: tTable("loadError"),
               retry: tTable("retry"),
             }}
@@ -333,55 +451,10 @@ export function IndustriesList() {
             isLoading={query.isLoading}
             isError={query.isError}
             onRetry={() => query.refetch()}
-            emptyState={
-              search
-                ? t("emptyFiltered")
-                : showArchived && active.length > 0
-                  ? t("emptyArchived")
-                  : t("empty")
-            }
-            primaryColumn={{
-              header: t("columns.name"),
-              label: (row) => row.displayName,
-              subtext: (row) =>
-                row.deletedAt ? (
-                  <Badge variant="outline" size="sm" className="text-muted-foreground">
-                    {t("archivedBadge")}
-                  </Badge>
-                ) : undefined,
-              href: (row) => (row.deletedAt ? undefined : `/industries?industry=${row.id}`),
-              enableSorting: true,
-              sortAccessor: (row) => row.displayName,
-              edit: {
-                getValue: (row) => row.displayName,
-                maxLength: 80,
-                onSave: (row, value) => updateMutation.mutate({ id: row.id, displayName: value }),
-              },
-            }}
-            columns={[
-              {
-                id: "slug",
-                header: t("columns.slug"),
-                cell: (row) => (
-                  <span className="font-mono text-xs text-muted-foreground">{row.slug}</span>
-                ),
-                enableSorting: true,
-                sortAccessor: (row) => row.slug,
-                edit: {
-                  getValue: (row) => row.slug,
-                  onSave: (row, value) => updateMutation.mutate({ id: row.id, slug: value }),
-                },
-              },
-              {
-                id: "created",
-                header: t("columns.created"),
-                cell: (row) => (
-                  <span className="text-xs text-muted-foreground">{formatDate(row.createdAt)}</span>
-                ),
-                enableSorting: true,
-                sortAccessor: (row) => new Date(row.createdAt),
-              },
-            ]}
+            emptyState={search ? t("emptyFiltered") : t("empty")}
+            pagination={pagination.getFooterProps(query.data, paginationLabels)}
+            primaryColumn={primaryColumn}
+            columns={industryColumns}
             rowActions={(row) =>
               row.deletedAt
                 ? [

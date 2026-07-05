@@ -27,6 +27,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { PanelHeader } from "@/components/patterns";
 import { formatRelativeTime } from "@/lib/format-time";
 import { trpc } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
@@ -145,59 +146,57 @@ export function NotificationsBell() {
       </SheetTrigger>
       <SheetContent
         side="right"
-        // Lift the SheetContent built-in close X above the in-content
-        // scroll region so it stays clickable. Same trick as the
-        // user-menu drawer.
-        className="flex w-full flex-col gap-0 p-0 sm:max-w-md [&>button]:z-50"
+        hideClose
+        className="flex w-full flex-col gap-0 p-0 sm:max-w-md"
         aria-label={t("popoverAriaLabel")}
       >
         <SheetTitle className="sr-only">{t("title")}</SheetTitle>
+        <PanelHeader
+          title={t("title")}
+          onClose={() => setOpen(false)}
+          actions={
+            count > 0
+              ? [
+                  {
+                    icon: Check,
+                    label: t("markAllRead"),
+                    onSelect: () => markAllRead.mutate(),
+                    disabled: markAllRead.isPending,
+                  },
+                ]
+              : []
+          }
+        />
 
-        <div className="border-b border-border p-4 pr-12">
-          <h2 className="text-lg font-semibold tracking-tight">{t("title")}</h2>
-          {/* Filter tabs : Unread first since that's the actionable
-              subset. Active style is a subtle filled pill ; inactive
-              is muted text. */}
-          <div className="mt-3 flex items-center justify-between gap-2">
-            <div
-              role="tablist"
-              aria-label={t("filterTabsAria")}
-              className="flex gap-1 rounded-md border border-border p-1"
-            >
-              {(["unread", "all"] as const).map((value) => {
-                const active = filter === value;
-                return (
-                  <button
-                    key={value}
-                    type="button"
-                    role="tab"
-                    aria-selected={active}
-                    onClick={() => setFilter(value)}
-                    className={cn(
-                      "cursor-pointer rounded px-3 py-1 text-xs transition-colors",
-                      active
-                        ? "bg-muted font-medium text-foreground"
-                        : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
-                    )}
-                  >
-                    {value === "unread" ? t("filterUnread") : t("filterAll")}
-                  </button>
-                );
-              })}
-            </div>
-            {count > 0 && (
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => markAllRead.mutate()}
-                disabled={markAllRead.isPending}
-                className="h-7 px-2 text-xs"
-              >
-                <Check className="h-3 w-3" aria-hidden />
-                {t("markAllRead")}
-              </Button>
-            )}
+        {/* Filter tabs sub-bar : Unread first since that's the actionable
+            subset. Fixed below the header so it stays put while the list
+            scrolls. */}
+        <div className="flex shrink-0 items-center border-b border-border px-4 py-2">
+          <div
+            role="tablist"
+            aria-label={t("filterTabsAria")}
+            className="flex gap-1 rounded-md border border-border p-1"
+          >
+            {(["unread", "all"] as const).map((value) => {
+              const active = filter === value;
+              return (
+                <button
+                  key={value}
+                  type="button"
+                  role="tab"
+                  aria-selected={active}
+                  onClick={() => setFilter(value)}
+                  className={cn(
+                    "cursor-pointer rounded px-3 py-1 text-xs transition-colors",
+                    active
+                      ? "bg-muted font-medium text-foreground"
+                      : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
+                  )}
+                >
+                  {value === "unread" ? t("filterUnread") : t("filterAll")}
+                </button>
+              );
+            })}
           </div>
         </div>
 

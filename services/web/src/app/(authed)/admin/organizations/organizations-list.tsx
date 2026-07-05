@@ -8,9 +8,14 @@ import {
   DataTable,
   FilterBar,
   FilterBarSearch,
-  PanelHeaderBar,
+  PanelHeader,
   TableDetailLayout,
+  TableTools,
+  useDataTableLayout,
   useDetailPanelRoute,
+  type DataColumnDef,
+  type PrimaryColumnDef,
+  type TableToolsLabels,
 } from "@/components/patterns";
 import { SheetTitle } from "@/components/ui/sheet";
 import { OrganizationLogo } from "@/components/organization-logo";
@@ -30,6 +35,7 @@ function useDebounced<T>(value: T, ms: number): T {
 export function OrganizationsList() {
   const t = useTranslations("admin.organizations");
   const tTable = useTranslations("table");
+  const tFilters = useTranslations("filters");
   const panel = useDetailPanelRoute("/admin/organizations", "organization");
   const [rawSearch, setRawSearch] = useState("");
   const search = useDebounced(rawSearch.trim(), 250);
@@ -48,6 +54,58 @@ export function OrganizationsList() {
   const hasMore = Boolean(query.data?.nextCursor);
   const canLoadMore = hasMore && limit < 100;
 
+  type OrgRow = (typeof items)[number];
+
+  const layout = useDataTableLayout("admin-organizations-table");
+
+  const primaryColumn: PrimaryColumnDef<OrgRow> = {
+    header: t("columns.name"),
+    leading: (org) => (
+      <OrganizationLogo logoUrl={org.logoUrl ? rewriteForCurrentHost(org.logoUrl) : null} size="sm" />
+    ),
+    label: (org) => org.displayName,
+    subtext: (org) => <span className="font-mono">{org.slug}</span>,
+    href: (org) => `/admin/organizations?organization=${org.id}`,
+    enableSorting: true,
+    sortAccessor: (org) => org.displayName,
+  };
+
+  const orgColumns: DataColumnDef<OrgRow>[] = [
+    {
+      id: "color",
+      header: t("columns.color"),
+      align: "right",
+      // Swatch always renders ; null primaryColor falls back to
+      // white so a fresh org still shows a (bordered) dot.
+      cell: (org) => (
+        <span className="ml-auto flex justify-end">
+          <span
+            aria-hidden
+            className="h-4 w-4 shrink-0 rounded-full border border-border"
+            style={{ backgroundColor: org.primaryColor ?? "#FFFFFF" }}
+          />
+        </span>
+      ),
+      size: 96,
+    },
+  ];
+
+  const toolsLabels: TableToolsLabels = {
+    tools: tTable("tools"),
+    close: tFilters("close"),
+    columns: tTable("columns"),
+    reset: tTable("reset"),
+    sort: {
+      label: tTable("sorting"),
+      ascending: tTable("sortAscending"),
+      descending: tTable("sortDescending"),
+      none: tTable("sortNone"),
+      addField: tTable("sortAddField"),
+      remove: tTable("sortRemove"),
+      reset: tTable("sortReset"),
+    },
+  };
+
   return (
     <div className="space-y-3">
       <FilterBar
@@ -59,24 +117,33 @@ export function OrganizationsList() {
             aria-label={t("searchLabel")}
           />
         }
+        tools={
+          <TableTools
+            layout={layout}
+            primaryColumn={primaryColumn}
+            columns={orgColumns}
+            labels={toolsLabels}
+          />
+        }
       />
 
       <TableDetailLayout
         open={panel.isOpen}
         onClose={panel.close}
+        storageKey="admin-organizations"
         panelClassName="sm:max-w-xl"
         panel={
           <>
-            <PanelHeaderBar
-              onCollapse={panel.close}
-              collapseLabel={t("collapsePanel")}
+            <SheetTitle className="sr-only">{t("panelTitle")}</SheetTitle>
+            <PanelHeader
+              title={t("panelTitle")}
+              onClose={panel.close}
               fullPageHref={
                 panel.selectedId ? `/admin/organizations/${panel.selectedId}` : undefined
               }
               fullPageLabel={t("openFullPage")}
             />
             <div className="flex-1 overflow-y-auto px-6 py-6">
-              <SheetTitle className="sr-only">{t("panelTitle")}</SheetTitle>
               {panel.selectedId && (
                 <OrganizationDetail
                   key={panel.selectedId}
@@ -92,11 +159,9 @@ export function OrganizationsList() {
             data={items}
             getRowId={(o) => o.id}
             storageKey="admin-organizations-table"
+            layout={layout}
             labels={{
-              columns: tTable("columns"),
-              reset: tTable("reset"),
               rowActions: tTable("rowActions"),
-              openPanel: tTable("openPanel"),
               errorTitle: tTable("loadError"),
               retry: tTable("retry"),
             }}
@@ -105,39 +170,8 @@ export function OrganizationsList() {
             isError={query.isError}
             onRetry={() => query.refetch()}
             emptyState={search ? t("emptySearch", { query: search }) : t("empty")}
-            primaryColumn={{
-              header: t("columns.name"),
-              leading: (org) => (
-                <OrganizationLogo
-                  logoUrl={org.logoUrl ? rewriteForCurrentHost(org.logoUrl) : null}
-                  size="sm"
-                />
-              ),
-              label: (org) => org.displayName,
-              subtext: (org) => <span className="font-mono">{org.slug}</span>,
-              href: (org) => `/admin/organizations?organization=${org.id}`,
-              enableSorting: true,
-              sortAccessor: (org) => org.displayName,
-            }}
-            columns={[
-              {
-                id: "color",
-                header: t("columns.color"),
-                align: "right",
-                // Swatch always renders ; null primaryColor falls back to
-                // white so a fresh org still shows a (bordered) dot.
-                cell: (org) => (
-                  <span className="ml-auto flex justify-end">
-                    <span
-                      aria-hidden
-                      className="h-4 w-4 shrink-0 rounded-full border border-border"
-                      style={{ backgroundColor: org.primaryColor ?? "#FFFFFF" }}
-                    />
-                  </span>
-                ),
-                size: 96,
-              },
-            ]}
+            primaryColumn={primaryColumn}
+            columns={orgColumns}
           />
         }
       />

@@ -10,9 +10,14 @@ import {
   DataTable,
   FilterBar,
   FilterBarSearch,
-  PanelHeaderBar,
+  PanelHeader,
   TableDetailLayout,
+  TableTools,
+  useDataTableLayout,
   useDetailPanelRoute,
+  type DataColumnDef,
+  type PrimaryColumnDef,
+  type TableToolsLabels,
 } from "@/components/patterns";
 import {
   Select,
@@ -41,6 +46,7 @@ const ADMIN_ROLE_KEY = "ADMIN";
 export function RolesManager() {
   const t = useTranslations("admin.rbac.manager");
   const tTable = useTranslations("table");
+  const tFilters = useTranslations("filters");
   const panel = useDetailPanelRoute("/admin/rbac", "role");
 
   const status = trpc.organizations.bootstrapStatus.useQuery(undefined, {
@@ -94,6 +100,64 @@ export function RolesManager() {
   }, [allRoles, trimmedSearch]);
   const showOrgPicker = !isSingleTenant && orgs.length > 0;
 
+  type RoleRow = (typeof allRoles)[number];
+
+  const layout = useDataTableLayout("admin-roles-table");
+
+  const primaryColumn: PrimaryColumnDef<RoleRow> = {
+    header: t("columns.name"),
+    leading: (role) => (
+      <span
+        aria-hidden
+        className="h-3 w-3 shrink-0 rounded-full border border-border"
+        style={{ backgroundColor: role.color ?? "#71717a" }}
+      />
+    ),
+    label: (role) => role.name,
+    subtext: (role) => role.description ?? undefined,
+    href: (role) => `/admin/rbac?role=${role.id}`,
+    enableSorting: true,
+    sortAccessor: (role) => role.name,
+  };
+
+  const roleColumns: DataColumnDef<RoleRow>[] = [
+    {
+      id: "type",
+      header: t("columns.type"),
+      cell: (role) =>
+        role.builtIn ? (
+          <span className="flex items-center gap-2">
+            <Badge variant="secondary" size="sm">
+              <Lock className="h-3 w-3" aria-hidden />
+              {t("badges.builtIn")}
+            </Badge>
+            {role.key === ADMIN_ROLE_KEY && (
+              <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                {t("badges.allPermissions")}
+              </span>
+            )}
+          </span>
+        ) : null,
+      size: 200,
+    },
+  ];
+
+  const toolsLabels: TableToolsLabels = {
+    tools: tTable("tools"),
+    close: tFilters("close"),
+    columns: tTable("columns"),
+    reset: tTable("reset"),
+    sort: {
+      label: tTable("sorting"),
+      ascending: tTable("sortAscending"),
+      descending: tTable("sortDescending"),
+      none: tTable("sortNone"),
+      addField: tTable("sortAddField"),
+      remove: tTable("sortRemove"),
+      reset: tTable("sortReset"),
+    },
+  };
+
   return (
     <div className="space-y-4">
       {showOrgPicker && (
@@ -130,6 +194,14 @@ export function RolesManager() {
             aria-label={t("searchAria")}
           />
         }
+        tools={
+          <TableTools
+            layout={layout}
+            primaryColumn={primaryColumn}
+            columns={roleColumns}
+            labels={toolsLabels}
+          />
+        }
         actions={
           <Button
             type="button"
@@ -146,12 +218,16 @@ export function RolesManager() {
       <TableDetailLayout
         open={panel.isOpen}
         onClose={panel.close}
+        storageKey="admin-roles"
         panelClassName="sm:max-w-2xl"
         panel={
           <>
-            <PanelHeaderBar
-              onCollapse={panel.close}
-              collapseLabel={t("collapsePanel")}
+            <SheetTitle className="sr-only">
+              {panel.isCreate ? t("panelCreateTitle") : t("panelEditTitle")}
+            </SheetTitle>
+            <PanelHeader
+              title={panel.isCreate ? t("panelCreateTitle") : t("panelEditTitle")}
+              onClose={panel.close}
               fullPageHref={
                 !panel.isCreate && panel.selectedId
                   ? `/admin/rbac/roles/${panel.selectedId}`
@@ -160,7 +236,6 @@ export function RolesManager() {
               fullPageLabel={t("openFullPage")}
             />
             <div className="flex-1 overflow-y-auto px-6 py-6">
-              <SheetTitle className="sr-only">{t("panelTitle")}</SheetTitle>
               {panel.isCreate ? (
                 <RoleEditor
                   key="new"
@@ -186,11 +261,9 @@ export function RolesManager() {
             data={visibleRoles}
             getRowId={(role) => role.id}
             storageKey="admin-roles-table"
+            layout={layout}
             labels={{
-              columns: tTable("columns"),
-              reset: tTable("reset"),
               rowActions: tTable("rowActions"),
-              openPanel: tTable("openPanel"),
               errorTitle: tTable("loadError"),
               retry: tTable("retry"),
             }}
@@ -201,42 +274,8 @@ export function RolesManager() {
             emptyState={
               trimmedSearch !== "" ? t("emptySearch", { query: search.trim() }) : t("empty")
             }
-            primaryColumn={{
-              header: t("columns.name"),
-              leading: (role) => (
-                <span
-                  aria-hidden
-                  className="h-3 w-3 shrink-0 rounded-full border border-border"
-                  style={{ backgroundColor: role.color ?? "#71717a" }}
-                />
-              ),
-              label: (role) => role.name,
-              subtext: (role) => role.description ?? undefined,
-              href: (role) => `/admin/rbac?role=${role.id}`,
-              enableSorting: true,
-              sortAccessor: (role) => role.name,
-            }}
-            columns={[
-              {
-                id: "type",
-                header: t("columns.type"),
-                cell: (role) =>
-                  role.builtIn ? (
-                    <span className="flex items-center gap-2">
-                      <Badge variant="secondary" size="sm">
-                        <Lock className="h-3 w-3" aria-hidden />
-                        {t("badges.builtIn")}
-                      </Badge>
-                      {role.key === ADMIN_ROLE_KEY && (
-                        <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                          {t("badges.allPermissions")}
-                        </span>
-                      )}
-                    </span>
-                  ) : null,
-                size: 200,
-              },
-            ]}
+            primaryColumn={primaryColumn}
+            columns={roleColumns}
           />
         }
       />

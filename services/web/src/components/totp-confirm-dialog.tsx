@@ -11,12 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  InputOTP,
-  InputOTPGroup,
-  InputOTPSeparator,
-  InputOTPSlot,
-} from "@/components/ui/input-otp";
+import { OtpCodeInput } from "@/components/otp-code-input";
 import { Label } from "@/components/ui/label";
 
 /**
@@ -106,27 +101,14 @@ export function TotpConfirmDialog({
           <Label htmlFor="totpDialogCode" className="self-start">
             {t("label")}
           </Label>
-          <InputOTP
+          <OtpCodeInput
             id="totpDialogCode"
-            maxLength={6}
             value={code}
-            onChange={(value) => setCode(value)}
-            inputMode="numeric"
-            autoComplete="one-time-code"
-            autoFocus
-          >
-            <InputOTPGroup>
-              <InputOTPSlot index={0} />
-              <InputOTPSlot index={1} />
-              <InputOTPSlot index={2} />
-            </InputOTPGroup>
-            <InputOTPSeparator />
-            <InputOTPGroup>
-              <InputOTPSlot index={3} />
-              <InputOTPSlot index={4} />
-              <InputOTPSlot index={5} />
-            </InputOTPGroup>
-          </InputOTP>
+            onChange={setCode}
+            onComplete={(value) => {
+              if (!pending) void onConfirm(value.trim());
+            }}
+          />
           {errorKey && <p className="self-start text-xs text-destructive">{tErrors(errorKey)}</p>}
           <DialogFooter className="w-full gap-2 sm:gap-2">
             <Button

@@ -10,10 +10,15 @@ import {
   DataTable,
   FilterBar,
   FilterBarSearch,
-  FilterMenu,
-  PanelHeaderBar,
+  PanelHeader,
   TableDetailLayout,
+  TableTools,
+  useDataTableLayout,
   useDetailPanelRoute,
+  type DataColumnDef,
+  type FilterConfig,
+  type PrimaryColumnDef,
+  type TableToolsLabels,
 } from "@/components/patterns";
 import {
   Select,
@@ -112,6 +117,87 @@ export function WebhooksManager() {
       ? t("orgPicker.platform")
       : (orgsQuery.data?.items.find((o) => o.id === selectedOrgValue)?.displayName ?? "");
 
+  type EndpointRow = (typeof allEndpoints)[number];
+
+  const layout = useDataTableLayout("admin-webhooks-table");
+
+  const filterConfigs: FilterConfig[] = [
+    {
+      id: "status",
+      label: t("filters.status"),
+      value: statusFilter,
+      onValueChange: (v) => setStatusFilter(v as StatusFilter),
+      options: [
+        { value: "all", label: t("filters.allStatuses") },
+        { value: "active", label: t("filters.status_active") },
+        { value: "disabled", label: t("filters.status_disabled") },
+        { value: "failing", label: t("filters.status_failing") },
+      ],
+    },
+  ];
+
+  const primaryColumn: PrimaryColumnDef<EndpointRow> = {
+    header: t("columns.name"),
+    label: (ep) => ep.name,
+    subtext: (ep) => <span className="font-mono">{ep.url}</span>,
+    href: (ep) => `/admin/webhooks?webhook=${ep.id}`,
+    enableSorting: true,
+    sortAccessor: (ep) => ep.name,
+    size: 320,
+  };
+
+  const endpointColumns: DataColumnDef<EndpointRow>[] = [
+    {
+      id: "status",
+      header: t("columns.status"),
+      cell: (ep) => (
+        <span className="flex flex-wrap items-center gap-2">
+          <StatusBadge status={ep.status} />
+          {ep.consecutiveFailures > 0 && ep.status === "active" && (
+            <Badge variant="warning" size="sm">
+              {t("badges.failing", {
+                count: ep.consecutiveFailures,
+              })}
+            </Badge>
+          )}
+        </span>
+      ),
+      size: 180,
+    },
+    {
+      id: "subscriptions",
+      header: t("columns.subscriptions"),
+      align: "right",
+      cell: (ep) => <span className="text-muted-foreground">{ep.subscriptions.length}</span>,
+      enableSorting: true,
+      sortAccessor: (ep) => ep.subscriptions.length,
+      size: 120,
+    },
+  ];
+
+  const toolsLabels: TableToolsLabels = {
+    tools: tTable("tools"),
+    close: tFilters("close"),
+    columns: tTable("columns"),
+    reset: tTable("reset"),
+    sort: {
+      label: tTable("sorting"),
+      ascending: tTable("sortAscending"),
+      descending: tTable("sortDescending"),
+      none: tTable("sortNone"),
+      addField: tTable("sortAddField"),
+      remove: tTable("sortRemove"),
+      reset: tTable("sortReset"),
+    },
+    filters: {
+      trigger: tFilters("button"),
+      title: tFilters("title"),
+      close: tFilters("close"),
+      clearAll: tFilters("clearAll"),
+      resetField: tFilters("resetField"),
+    },
+  };
+
   return (
     <div className="space-y-4">
       {showOrgPicker && (
@@ -147,27 +233,13 @@ export function WebhooksManager() {
             aria-label={t("searchAria")}
           />
         }
-        filter={
-          <FilterMenu
-            labels={{
-              trigger: tFilters("button"),
-              title: tFilters("title"),
-              close: tFilters("close"),
-            }}
-            filters={[
-              {
-                id: "status",
-                label: t("filters.status"),
-                value: statusFilter,
-                onValueChange: (v) => setStatusFilter(v as StatusFilter),
-                options: [
-                  { value: "all", label: t("filters.allStatuses") },
-                  { value: "active", label: t("filters.status_active") },
-                  { value: "disabled", label: t("filters.status_disabled") },
-                  { value: "failing", label: t("filters.status_failing") },
-                ],
-              },
-            ]}
+        tools={
+          <TableTools
+            layout={layout}
+            primaryColumn={primaryColumn}
+            columns={endpointColumns}
+            filters={filterConfigs}
+            labels={toolsLabels}
           />
         }
         actions={
@@ -186,12 +258,16 @@ export function WebhooksManager() {
       <TableDetailLayout
         open={panel.isOpen}
         onClose={panel.close}
+        storageKey="admin-webhooks"
         panelClassName="sm:max-w-2xl"
         panel={
           <>
-            <PanelHeaderBar
-              onCollapse={panel.close}
-              collapseLabel={t("collapsePanel")}
+            <SheetTitle className="sr-only">
+              {panel.isCreate ? t("panelCreateTitle") : t("panelEditTitle")}
+            </SheetTitle>
+            <PanelHeader
+              title={panel.isCreate ? t("panelCreateTitle") : t("panelEditTitle")}
+              onClose={panel.close}
               fullPageHref={
                 !panel.isCreate && panel.selectedId
                   ? `/admin/webhooks/${panel.selectedId}`
@@ -200,7 +276,6 @@ export function WebhooksManager() {
               fullPageLabel={t("openFullPage")}
             />
             <div className="flex-1 overflow-y-auto px-6 py-6">
-              <SheetTitle className="sr-only">{t("panelTitle")}</SheetTitle>
               {panel.isCreate ? (
                 <WebhookEditor
                   key="new"
@@ -229,11 +304,9 @@ export function WebhooksManager() {
             data={visibleEndpoints}
             getRowId={(ep) => ep.id}
             storageKey="admin-webhooks-table"
+            layout={layout}
             labels={{
-              columns: tTable("columns"),
-              reset: tTable("reset"),
               rowActions: tTable("rowActions"),
-              openPanel: tTable("openPanel"),
               errorTitle: tTable("loadError"),
               retry: tTable("retry"),
             }}
@@ -244,45 +317,8 @@ export function WebhooksManager() {
             emptyState={
               trimmedSearch !== "" ? t("emptySearch", { query: search.trim() }) : t("empty")
             }
-            primaryColumn={{
-              header: t("columns.name"),
-              label: (ep) => ep.name,
-              subtext: (ep) => <span className="font-mono">{ep.url}</span>,
-              href: (ep) => `/admin/webhooks?webhook=${ep.id}`,
-              enableSorting: true,
-              sortAccessor: (ep) => ep.name,
-              size: 320,
-            }}
-            columns={[
-              {
-                id: "status",
-                header: t("columns.status"),
-                cell: (ep) => (
-                  <span className="flex flex-wrap items-center gap-2">
-                    <StatusBadge status={ep.status} />
-                    {ep.consecutiveFailures > 0 && ep.status === "active" && (
-                      <Badge variant="warning" size="sm">
-                        {t("badges.failing", {
-                          count: ep.consecutiveFailures,
-                        })}
-                      </Badge>
-                    )}
-                  </span>
-                ),
-                size: 180,
-              },
-              {
-                id: "subscriptions",
-                header: t("columns.subscriptions"),
-                align: "right",
-                cell: (ep) => (
-                  <span className="text-muted-foreground">{ep.subscriptions.length}</span>
-                ),
-                enableSorting: true,
-                sortAccessor: (ep) => ep.subscriptions.length,
-                size: 120,
-              },
-            ]}
+            primaryColumn={primaryColumn}
+            columns={endpointColumns}
           />
         }
       />

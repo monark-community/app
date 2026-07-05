@@ -46,25 +46,23 @@ export function FieldInput({ def, labels }: { def: FieldDef; labels: FieldLabels
   }
 }
 
-/** Static per-type metadata for table wiring (alignment, inline edit). */
+/** Static per-type metadata for table wiring (alignment). */
 export interface FieldTypeMeta {
   /** Default cell alignment. */
   align: "left" | "right";
-  /** Whether a simple text/number inline `CellEdit` is meaningful. */
-  inlineEditable: boolean;
 }
 
 export const FIELD_TYPE_META: Record<FieldType, FieldTypeMeta> = {
-  text: { align: "left", inlineEditable: true },
-  longText: { align: "left", inlineEditable: false },
-  richText: { align: "left", inlineEditable: false },
-  number: { align: "right", inlineEditable: true },
-  boolean: { align: "left", inlineEditable: false },
-  date: { align: "left", inlineEditable: false },
-  datetime: { align: "left", inlineEditable: false },
-  singleSelect: { align: "left", inlineEditable: false },
-  multiSelect: { align: "left", inlineEditable: false },
-  relation: { align: "left", inlineEditable: false },
-  url: { align: "left", inlineEditable: true },
-  email: { align: "left", inlineEditable: true },
+  text: { align: "left" },
+  longText: { align: "left" },
+  richText: { align: "left" },
+  number: { align: "right" },
+  boolean: { align: "left" },
+  date: { align: "left" },
+  datetime: { align: "left" },
+  singleSelect: { align: "left" },
+  multiSelect: { align: "left" },
+  relation: { align: "left" },
+  url: { align: "left" },
+  email: { align: "left" },
 };

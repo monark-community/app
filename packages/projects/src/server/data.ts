@@ -1,4 +1,11 @@
 import { getDb, type Prisma } from "@monark/db";
+import {
+  cursorFindArgs,
+  resolveLimit,
+  toPage,
+  type Paginated,
+  type PaginationArgs,
+} from "@monark/common/pagination";
 
 // Local mirror of the Prisma enum — `@monark/db` will re-export the
 // generated `ProjectPublicStatus` after the next `pnpm db:generate`,
@@ -123,35 +130,49 @@ export async function findProjectBySlug(
   });
 }
 
-export type ListProjectsInput = {
+export type ListProjectsInput = PaginationArgs & {
   organizationId: string;
-  publicStatus?: ProjectPublicStatus;
-  industryId?: string;
+  /** Match any of these statuses (OR) ; empty / omitted = no status filter. */
+  publicStatuses?: ProjectPublicStatus[];
+  /** Match projects tagged with any of these industries (OR). */
+  industryIds?: string[];
   search?: string;
   includeDeleted?: boolean;
 };
 
-export async function listProjects(input: ListProjectsInput): Promise<ProjectListRow[]> {
+export async function listProjects(input: ListProjectsInput): Promise<Paginated<ProjectListRow>> {
   const db = getDb();
-  return db.project.findMany({
-    where: {
-      organizationId: input.organizationId,
-      ...(input.includeDeleted ? {} : { deletedAt: null }),
-      ...(input.publicStatus ? { publicStatus: input.publicStatus } : {}),
-      ...(input.industryId ? { industries: { some: { id: input.industryId } } } : {}),
-      ...(input.search && input.search.trim().length > 0
-        ? {
-            OR: [
-              { title: { contains: input.search, mode: "insensitive" } },
-              { slug: { contains: input.search, mode: "insensitive" } },
-              { keywords: { has: input.search.toLowerCase() } },
-            ],
-          }
-        : {}),
-    },
-    include: { industries: true },
-    orderBy: [{ updatedAt: "desc" }, { id: "desc" }],
-  });
+  const where: Prisma.ProjectWhereInput = {
+    organizationId: input.organizationId,
+    ...(input.includeDeleted ? {} : { deletedAt: null }),
+    ...(input.publicStatuses && input.publicStatuses.length > 0
+      ? { publicStatus: { in: input.publicStatuses } }
+      : {}),
+    ...(input.industryIds && input.industryIds.length > 0
+      ? { industries: { some: { id: { in: input.industryIds } } } }
+      : {}),
+    ...(input.search && input.search.trim().length > 0
+      ? {
+          OR: [
+            { title: { contains: input.search, mode: "insensitive" } },
+            { slug: { contains: input.search, mode: "insensitive" } },
+            { keywords: { has: input.search.toLowerCase() } },
+          ],
+        }
+      : {}),
+  };
+  const limit = resolveLimit(input.limit);
+  const [rows, total] = await Promise.all([
+    db.project.findMany({
+      where,
+      include: { industries: true },
+      // Stable keyset ordering must end in `id` so the cursor is deterministic.
+      orderBy: [{ updatedAt: "desc" }, { id: "desc" }],
+      ...cursorFindArgs(limit, input.cursor),
+    }),
+    db.project.count({ where }),
+  ]);
+  return toPage(rows, total, limit);
 }
 
 export type CreateProjectInput = {
@@ -288,15 +309,34 @@ export async function hardDeleteProject(id: string): Promise<void> {
 // ── Industries ───────────────────────────────────────────
 
 export async function listIndustries(
-  opts: {
+  opts: PaginationArgs & {
     includeDeleted?: boolean;
+    search?: string;
   } = {},
-): Promise<IndustryRow[]> {
+): Promise<Paginated<IndustryRow>> {
   const db = getDb();
-  return db.industry.findMany({
-    where: opts.includeDeleted ? {} : { deletedAt: null },
-    orderBy: [{ displayName: "asc" }],
-  });
+  const where: Prisma.IndustryWhereInput = {
+    ...(opts.includeDeleted ? {} : { deletedAt: null }),
+    ...(opts.search && opts.search.trim().length > 0
+      ? {
+          OR: [
+            { displayName: { contains: opts.search, mode: "insensitive" } },
+            { slug: { contains: opts.search, mode: "insensitive" } },
+          ],
+        }
+      : {}),
+  };
+  const limit = resolveLimit(opts.limit);
+  const [rows, total] = await Promise.all([
+    db.industry.findMany({
+      where,
+      // `displayName` isn't unique, so append `id` for a deterministic keyset.
+      orderBy: [{ displayName: "asc" }, { id: "asc" }],
+      ...cursorFindArgs(limit, opts.cursor),
+    }),
+    db.industry.count({ where }),
+  ]);
+  return toPage(rows, total, limit);
 }
 
 export async function findIndustryById(id: string): Promise<IndustryRow | null> {
@@ -307,6 +347,7 @@ export async function findIndustryById(id: string): Promise<IndustryRow | null> 
 export async function createIndustry(input: {
   slug: string;
   displayName: string;
+  description?: string | null;
 }): Promise<IndustryRow> {
   const db = getDb();
   return db.industry.create({ data: input });
@@ -314,7 +355,7 @@ export async function createIndustry(input: {
 
 export async function updateIndustry(
   id: string,
-  patch: { slug?: string; displayName?: string },
+  patch: { slug?: string; displayName?: string; description?: string | null },
 ): Promise<IndustryRow> {
   const db = getDb();
   return db.industry.update({ where: { id }, data: patch });

@@ -3,6 +3,10 @@ import authPasswordChanged from "../templates/auth/password-changed";
 import authTotpEnabled from "../templates/auth/totp-enabled";
 import authTotpDisabled from "../templates/auth/totp-disabled";
 import authAllDevicesRevoked from "../templates/auth/all-devices-revoked";
+import authSignedIn from "../templates/auth/signed-in";
+import authDeviceRevoked from "../templates/auth/device-revoked";
+import authRecoveryCodeUsed from "../templates/auth/recovery-code-used";
+import authRecoveryCodesRegenerated from "../templates/auth/recovery-codes-regenerated";
 import accountEmailChanged from "../templates/account/email-changed";
 import accountDeletionScheduled from "../templates/account/deletion-scheduled";
 import accountDeletionCanceled from "../templates/account/deletion-canceled";
@@ -13,11 +17,13 @@ import { registerNotificationKind } from "../contracts/registry";
 let registered = false;
 
 /**
- * Registers the eight core notification kinds (auth + account)
- * shipped with the platform : new device, password changed, TOTP
- * enable / disable, all-devices revoked, email change receipt, and
- * the two account-deletion lifecycle notices. Idempotent — calling
- * twice is a no-op so the api boot path can re-run on hot reloads.
+ * Registers the core notification kinds (auth + account + webhook
+ * operator alerts) shipped with the platform : new device, sign-in
+ * alert, password changed, TOTP enable / disable, recovery-code used,
+ * recovery-codes regenerated, single-device + all-devices revoked,
+ * email change receipt, and the two account-deletion lifecycle
+ * notices. Idempotent — calling twice is a no-op so the api boot path
+ * can re-run on hot reloads.
  *
  * Extended modules add their own kinds by calling
  * `registerNotificationKind(kind, def, messages)` directly from their
@@ -85,6 +91,72 @@ export function registerCoreNotificationKinds(): void {
       template: "auth/all-devices-revoked",
     },
     authAllDevicesRevoked,
+  );
+
+  // Optional per-sign-in alert. Email-only + default-OFF : most users
+  // rely on `auth.new-device` (which only fires for unrecognised
+  // devices) ; this is the opt-in "email me every single sign-in" knob
+  // for the security-conscious. No IN_APP channel — a bell entry per
+  // login would drown the feed.
+  registerNotificationKind(
+    "auth.signed-in",
+    {
+      category: "SECURITY",
+      channels: ["EMAIL"],
+      defaultEnabled: { EMAIL: false },
+      requiredEmail: false,
+      template: "auth/signed-in",
+    },
+    authSignedIn,
+  );
+
+  // Single-device sign-out receipt. Complements `auth.all-devices-revoked`
+  // (the bulk "panic" sweep) ; the subscriber skips the per-device event
+  // when it's part of a bulk revoke so the user gets one email, not N.
+  // Opt-out-able — not every user wants a receipt for routine session
+  // management.
+  registerNotificationKind(
+    "auth.device-revoked",
+    {
+      category: "SECURITY",
+      channels: ["EMAIL", "IN_APP"],
+      defaultEnabled: { EMAIL: true, IN_APP: true },
+      requiredEmail: false,
+      template: "auth/device-revoked",
+    },
+    authDeviceRevoked,
+  );
+
+  // A two-factor recovery code was consumed. requiredEmail because a
+  // recovery-code sign-in bypasses the authenticator, so an attacker who
+  // obtained a code could otherwise silence the one signal that would
+  // tip off the legitimate owner.
+  registerNotificationKind(
+    "auth.recovery-code-used",
+    {
+      category: "SECURITY",
+      channels: ["EMAIL", "IN_APP"],
+      defaultEnabled: { EMAIL: true, IN_APP: true },
+      requiredEmail: true,
+      template: "auth/recovery-code-used",
+    },
+    authRecoveryCodeUsed,
+  );
+
+  // The user's backup codes were regenerated (old codes invalidated).
+  // requiredEmail : regenerating codes is a credential-management action
+  // an account owner must always be told about, since it changes the
+  // account-recovery surface.
+  registerNotificationKind(
+    "auth.recovery-codes-regenerated",
+    {
+      category: "SECURITY",
+      channels: ["EMAIL", "IN_APP"],
+      defaultEnabled: { EMAIL: true, IN_APP: true },
+      requiredEmail: true,
+      template: "auth/recovery-codes-regenerated",
+    },
+    authRecoveryCodesRegenerated,
   );
 
   registerNotificationKind(

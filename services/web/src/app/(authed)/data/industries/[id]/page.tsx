@@ -20,7 +20,7 @@ export default async function IndustryPage({ params }: { params: Promise<{ id: s
   return (
     <section className="mx-auto max-w-250 space-y-6">
       <Link
-        href="/industries"
+        href="/data/industries"
         className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
       >
         <ArrowLeft className="h-4 w-4" aria-hidden />

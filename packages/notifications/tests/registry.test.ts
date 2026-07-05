@@ -37,14 +37,21 @@ describe("notifications/registry shape after registerCoreNotificationKinds", () 
 
   it("requires email for every SECURITY-category kind", () => {
     // Most SECURITY kinds are required-email so an operator who's
-    // opted out of every other channel still gets the alert ; per-
-    // permanent-failure webhook deliveries are an explicit
-    // exception (operators opt out via the prefs UI to keep a
-    // flapping receiver from spamming the inbox). The endpoint-
-    // auto-disabled kind covers the actionable signal so dropping
-    // requiredEmail on the per-failure kind doesn't lose coverage.
+    // opted out of every other channel still gets the alert. The
+    // exceptions are deliberate :
+    //   - `webhooks.delivery-permanently-failed` : operators opt out
+    //     via the prefs UI to keep a flapping receiver from spamming
+    //     the inbox ; the endpoint-auto-disabled kind still covers the
+    //     actionable signal so no coverage is lost.
+    //   - `auth.signed-in` : an opt-IN, default-off "email me every
+    //     login" alert ; forcing it on would contradict default-off.
+    //   - `auth.device-revoked` : a routine single-session sign-out
+    //     receipt users can silence ; the forced all-devices-revoked
+    //     kind still covers the account-safety "panic" case.
     const REQUIRED_EMAIL_EXCEPTIONS: ReadonlySet<string> = new Set([
       "webhooks.delivery-permanently-failed",
+      "auth.signed-in",
+      "auth.device-revoked",
     ]);
     for (const desc of listNotificationKindDescriptors()) {
       if (desc.category === "SECURITY" && !REQUIRED_EMAIL_EXCEPTIONS.has(desc.kind)) {

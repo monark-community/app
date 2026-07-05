@@ -243,13 +243,16 @@ export interface RichTextToolbarLabels {
   code: string;
   heading1: string;
   heading2: string;
+  heading3: string;
+  heading4: string;
+  paragraph: string;
+  /** aria-label for the heading / text-style dropdown trigger. */
+  textStyle: string;
   bulletList: string;
   orderedList: string;
   blockquote: string;
   link: string;
   unlink: string;
-  undo: string;
-  redo: string;
   linkUrlPlaceholder: string;
   linkApply: string;
 }

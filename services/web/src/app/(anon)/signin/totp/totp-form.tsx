@@ -5,12 +5,7 @@ import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import {
-  InputOTP,
-  InputOTPGroup,
-  InputOTPSeparator,
-  InputOTPSlot,
-} from "@/components/ui/input-otp";
+import { OtpCodeInput } from "@/components/otp-code-input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { verifyTotpChallengeAction, type TotpChallengeErrorCode } from "./actions";
@@ -22,16 +17,23 @@ export function TotpForm() {
   const [errorCode, setErrorCode] = useState<TotpChallengeErrorCode | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  function onSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  // Shared by the submit button and the OTP's auto-submit-on-complete, so
+  // the sixth digit validates instantly without reaching for the button.
+  function runVerify(value: string) {
+    if (isPending) return;
     setErrorCode(null);
     startTransition(async () => {
       const result = await verifyTotpChallengeAction({
-        code: code.trim(),
+        code: value.trim(),
         mode,
       });
       if (result && !result.ok) setErrorCode(result.errorCode);
     });
+  }
+
+  function onSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    runVerify(code);
   }
 
   return (
@@ -43,27 +45,12 @@ export function TotpForm() {
               <Label htmlFor="code" className="self-start">
                 {t("labels.code")}
               </Label>
-              <InputOTP
+              <OtpCodeInput
                 id="code"
-                maxLength={6}
                 value={code}
-                onChange={(value) => setCode(value)}
-                inputMode="numeric"
-                autoComplete="one-time-code"
-                autoFocus
-              >
-                <InputOTPGroup>
-                  <InputOTPSlot index={0} />
-                  <InputOTPSlot index={1} />
-                  <InputOTPSlot index={2} />
-                </InputOTPGroup>
-                <InputOTPSeparator />
-                <InputOTPGroup>
-                  <InputOTPSlot index={3} />
-                  <InputOTPSlot index={4} />
-                  <InputOTPSlot index={5} />
-                </InputOTPGroup>
-              </InputOTP>
+                onChange={setCode}
+                onComplete={runVerify}
+              />
             </div>
           ) : (
             <div className="grid gap-2">

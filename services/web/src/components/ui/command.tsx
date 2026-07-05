@@ -7,6 +7,7 @@ import { Search } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { useIsMobile } from "@/hooks/use-is-mobile";
 
 const Command = React.forwardRef<
   React.ElementRef<typeof CommandPrimitive>,
@@ -23,11 +24,39 @@ const Command = React.forwardRef<
 ));
 Command.displayName = CommandPrimitive.displayName;
 
-const CommandDialog = ({ children, ...props }: DialogProps) => {
+const CommandDialog = ({
+  children,
+  shouldFilter,
+  label,
+  ...props
+}: DialogProps & { shouldFilter?: boolean; label?: string }) => {
+  const isMobile = useIsMobile();
   return (
     <Dialog {...props}>
-      <DialogContent className="overflow-hidden p-0">
-        <Command className="[&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted-foreground [&_[cmdk-group]:not([hidden])_~[cmdk-group]]:pt-0 [&_[cmdk-group]]:px-2 [&_[cmdk-input-wrapper]_svg]:h-5 [&_[cmdk-input-wrapper]_svg]:w-5 [&_[cmdk-input]]:h-12 [&_[cmdk-item]]:px-2 [&_[cmdk-item]]:py-3 [&_[cmdk-item]_svg]:h-5 [&_[cmdk-item]_svg]:w-5">
+      <DialogContent
+        className="overflow-hidden p-0"
+        aria-label={label}
+        // Only take over the whole screen on mobile (search pinned top, results
+        // fill below). On desktop we must NOT enable `mobileFullScreen` : its
+        // `md:` styles (padding / gap / rounded / max-h) turn the tight command
+        // palette into a padded modal box. Gated on `isMobile` so desktop keeps
+        // its original edge-to-edge `p-0` dialog.
+        mobileFullScreen={isMobile}
+        // On mobile, don't pull focus into the input on open — the on-screen
+        // keyboard would immediately cover the results. Let the user take in the
+        // menu first and tap the field when ready. Desktop keeps type-to-search.
+        onOpenAutoFocus={isMobile ? (e) => e.preventDefault() : undefined}
+      >
+        <Command
+          shouldFilter={shouldFilter}
+          label={label}
+          className={cn(
+            "[&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted-foreground [&_[cmdk-group]:not([hidden])_~[cmdk-group]]:pt-0 [&_[cmdk-group]]:px-2 [&_[cmdk-input-wrapper]_svg]:h-5 [&_[cmdk-input-wrapper]_svg]:w-5 [&_[cmdk-input]]:h-12 [&_[cmdk-item]]:px-2 [&_[cmdk-item]]:py-3 [&_[cmdk-item]_svg]:h-5 [&_[cmdk-item]_svg]:w-5",
+            // Full-screen : let the list grow past the desktop 300px cap and
+            // fill the remaining height (it keeps its own vertical scroll).
+            isMobile && "[&_[cmdk-list]]:max-h-none [&_[cmdk-list]]:flex-1",
+          )}
+        >
           {children}
         </Command>
       </DialogContent>

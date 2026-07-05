@@ -1,24 +1,24 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { listFlagKeys } from "@monark/feature-flags/contracts";
 import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc";
 import { CollapsibleSection } from "../collapsible-section";
 
-const KEYS = listFlagKeys();
-
 export function FeatureFlagsPanel() {
   const t = useTranslations("devOverlay");
-  const { data, isLoading, error, refetch, isFetching } = trpc.featureFlags.getMany.useQuery(
-    { keys: KEYS, scope: {} },
-    { refetchOnWindowFocus: false },
-  );
+  // Resolve every registered flag at the caller's own session scope. The
+  // flag-key registry is server-only (populated at api boot), so the keys
+  // come back with the query rather than a client-side `listFlagKeys()`
+  // (which is always empty in the browser).
+  const { data, isLoading, error, refetch, isFetching } =
+    trpc.featureFlags.getAllForSession.useQuery(undefined, { refetchOnWindowFocus: false });
 
-  const onCount = data ? KEYS.filter((k) => data[k]).length : 0;
+  const keys = data ? Object.keys(data).sort() : [];
+  const onCount = keys.filter((k) => data?.[k]).length;
   const badge = data ? (
     <span className="rounded-full bg-border px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
-      {t("badges.flagsOn", { on: onCount, total: KEYS.length })}
+      {t("badges.flagsOn", { on: onCount, total: keys.length })}
     </span>
   ) : null;
 
@@ -31,9 +31,9 @@ export function FeatureFlagsPanel() {
             {t("errorPrefix")} <span className="font-mono">{error.message}</span>
           </p>
         )}
-        {data && (
+        {data && keys.length > 0 && (
           <ul className="space-y-1 text-xs font-mono">
-            {KEYS.map((key) => (
+            {keys.map((key) => (
               <li key={key} className="flex items-center justify-between gap-3">
                 <span className="truncate">{key}</span>
                 <span className={data[key] ? "text-emerald-400" : "text-muted-foreground"}>
@@ -42,6 +42,9 @@ export function FeatureFlagsPanel() {
               </li>
             ))}
           </ul>
+        )}
+        {data && keys.length === 0 && (
+          <p className="text-xs opacity-60">{t("featureFlags.empty")}</p>
         )}
         <p className="text-[10px] text-muted-foreground">{t("featureFlags.scopeNote")}</p>
         <Button

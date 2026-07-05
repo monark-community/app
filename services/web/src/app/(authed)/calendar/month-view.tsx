@@ -328,7 +328,7 @@ export function MonthView({
         startAt: payload.startAt.toISOString(),
         endAt: payload.endAt.toISOString(),
       });
-      await utils.calendar.events.listForDay.fetch(rangeQuery);
+      await utils.calendar.events.listForDay.invalidate(rangeQuery);
       setPopoverState(null);
       setSelectedEventId(null);
     },
@@ -349,7 +349,7 @@ export function MonthView({
         startAt: patch.startAt?.toISOString(),
         endAt: patch.endAt?.toISOString(),
       });
-      await utils.calendar.events.listForDay.fetch(rangeQuery);
+      await utils.calendar.events.listForDay.invalidate(rangeQuery);
       setPopoverState(null);
       setSelectedEventId(null);
     },
@@ -359,7 +359,7 @@ export function MonthView({
   const handleEventDelete = useCallback(
     async (eventId: string) => {
       await deleteEvent.mutateAsync({ id: eventId });
-      await utils.calendar.events.listForDay.fetch(rangeQuery);
+      await utils.calendar.events.listForDay.invalidate(rangeQuery);
       setPopoverState(null);
       setSelectedEventId(null);
     },

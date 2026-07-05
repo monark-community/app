@@ -10,7 +10,6 @@ import {
   ChevronLeft,
   ChevronRight,
   LayoutGrid,
-  Search,
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Kbd } from "@/components/ui/kbd";
@@ -22,8 +21,10 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { fr as frLocale, enUS } from "react-day-picker/locale";
 import { useIsMobile } from "@/hooks/use-is-mobile";
-import { CalendarSearch } from "./calendar-search";
 import { DayView } from "./day-view";
 import { MonthView } from "./month-view";
 import { WeekView } from "./week-view";
@@ -86,8 +87,8 @@ export function CalendarShell({
   const pathname = usePathname();
   const rawParams = useSearchParams();
   const t = useTranslations("calendar.shell");
-  const tSearch = useTranslations("calendar.search");
   const locale = useLocale();
+  const rdpLocale = locale === "fr" ? frLocale : enUS;
 
   // ── URL-driven state ───────────────────────────────────────────────────────
   // Keep a ref so keyboard-shortcut closures always read the latest params
@@ -106,10 +107,10 @@ export function CalendarShell({
   const effectiveView: CalendarViewType = isMobile && view !== "day" ? "day" : view;
 
   // ── Internal-only state ────────────────────────────────────────────────────
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [pendingCreateDefaults, setPendingCreateDefaults] = useState<PendingCreateDefaults | null>(
     null,
   );
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
 
   const weekStart = getWeekStart(selectedDate);
   const weekEnd = addDays(weekStart, 6);
@@ -136,11 +137,10 @@ export function CalendarShell({
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       const target = e.target as HTMLElement;
-      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
-        e.preventDefault();
-        setIsSearchOpen(true);
-        return;
-      }
+      // ⌘K / Ctrl+K is owned by the app-wide global-search palette
+      // (GlobalSearchProvider) ; the calendar no longer binds it to avoid
+      // two dialogs firing on the same keypress. The toolbar Search button
+      // still opens this page's own event search.
       if (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)
         return;
       if (e.key === "d" || e.key === "D") navigateTo({ view: "day" });
@@ -229,7 +229,7 @@ export function CalendarShell({
         <div className="flex shrink-0 items-center gap-1 border-b border-border px-4 py-1.5">
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="outline" size="sm" onClick={goToday}>
+              <Button variant="outline" size="sm" className="order-1" onClick={goToday}>
                 {t("today")}
               </Button>
             </TooltipTrigger>
@@ -239,7 +239,13 @@ export function CalendarShell({
           </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" onClick={prev} aria-label={prevLabel}>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="order-3 md:order-2"
+                onClick={prev}
+                aria-label={prevLabel}
+              >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
             </TooltipTrigger>
@@ -249,7 +255,13 @@ export function CalendarShell({
           </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" onClick={next} aria-label={nextLabel}>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="order-4 md:order-3"
+                onClick={next}
+                aria-label={nextLabel}
+              >
                 <ChevronRight className="h-4 w-4" />
               </Button>
             </TooltipTrigger>
@@ -257,31 +269,47 @@ export function CalendarShell({
               {nextLabel} <Kbd>→</Kbd>
             </TooltipContent>
           </Tooltip>
-          <span className="flex-1 truncate pl-1 text-sm font-semibold capitalize text-foreground">
-            {dateLabel}
-          </span>
-
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setIsSearchOpen(true)}
-                aria-label={tSearch("label")}
-              >
-                <Search className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="bottom">
-              {tSearch("label")} <Kbd>⌘K</Kbd>
-            </TooltipContent>
-          </Tooltip>
+          {isMobile ? (
+            // Mobile : the date label is a button that opens a date picker
+            // anchored right below it (a popover, not a full-screen modal).
+            <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="order-2 min-w-0 flex-1 justify-start gap-2 font-semibold capitalize"
+                >
+                  <CalendarDays className="h-4 w-4 shrink-0 opacity-70" aria-hidden />
+                  <span className="truncate">{dateLabel}</span>
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent align="start" className="w-auto p-0">
+                <Calendar
+                  mode="single"
+                  locale={rdpLocale}
+                  weekStartsOn={0}
+                  selected={selectedDate}
+                  defaultMonth={selectedDate}
+                  onSelect={(date) => {
+                    if (!date) return;
+                    navigateTo({ date, event: null });
+                    setDatePickerOpen(false);
+                  }}
+                  className="p-3"
+                />
+              </PopoverContent>
+            </Popover>
+          ) : (
+            <span className="order-4 flex-1 truncate pl-1 text-sm font-semibold capitalize text-foreground">
+              {dateLabel}
+            </span>
+          )}
 
           {/* Only Day view is available on mobile, so the switcher is hidden there. */}
           {!isMobile && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="gap-1.5">
+                <Button variant="outline" size="sm" className="order-5 gap-1.5">
                   {viewIcon}
                   {viewLabel}
                   <ChevronDown className="h-3.5 w-3.5 opacity-60" />
@@ -344,15 +372,6 @@ export function CalendarShell({
         )}
       </div>
 
-      <CalendarSearch
-        open={isSearchOpen}
-        onClose={() => setIsSearchOpen(false)}
-        onNavigate={(date, eventId) => {
-          navigateTo({ view: "day", date, event: eventId });
-          setIsSearchOpen(false);
-        }}
-        calendars={initialCalendars}
-      />
     </div>
   );
 }

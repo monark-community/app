@@ -6,3 +6,6 @@ build
 coverage
 pnpm-lock.yaml
 **/*.generated.ts
+# Supabase email templates use Go-template `{{ }}` interpolation inside HTML,
+# which prettier's HTML parser can't parse (hard error, not a style issue).
+supabase/templates

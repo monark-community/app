@@ -7,14 +7,6 @@ import { ShieldOff } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
   Select,
   SelectContent,
   SelectItem,
@@ -22,6 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ConfirmDialog } from "@/components/patterns";
 import { PageSection } from "@/components/page-section";
 import { TrustedDeviceCard } from "@/components/trusted-device-card";
 import { trpc } from "@/lib/trpc";
@@ -40,6 +33,7 @@ const DEFAULT_TTL = 90;
 
 export function TrustedDevicesSection({ currentDeviceId }: { currentDeviceId: string | null }) {
   const t = useTranslations("account.trustedDevices");
+  const tCommon = useTranslations("common");
   const router = useRouter();
   const utils = trpc.useUtils();
   const query = trpc.auth.trustedDevices.mine.useQuery(undefined, {
@@ -226,7 +220,7 @@ export function TrustedDevicesSection({ currentDeviceId }: { currentDeviceId: st
           onClick={() => void query.refetch()}
           disabled={query.isFetching}
         >
-          {query.isFetching ? "…" : t("refresh")}
+          {query.isFetching ? tCommon("loading") : t("refresh")}
         </Button>
         {list.length > 0 && (
           <Button
@@ -243,32 +237,18 @@ export function TrustedDevicesSection({ currentDeviceId }: { currentDeviceId: st
         )}
       </div>
 
-      <Dialog
+      <ConfirmDialog
         open={confirm !== null}
         onOpenChange={(open) => {
           if (!open && !isPending) setConfirm(null);
         }}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{dialogCopy.title}</DialogTitle>
-            <DialogDescription>{dialogCopy.description}</DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={() => setConfirm(null)}
-              disabled={isPending}
-            >
-              {t("cancel")}
-            </Button>
-            <Button type="button" variant="destructive" onClick={onConfirm} disabled={isPending}>
-              {isPending ? "…" : dialogCopy.confirm}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        title={dialogCopy.title}
+        description={dialogCopy.description}
+        cancelLabel={t("cancel")}
+        confirmLabel={dialogCopy.confirm}
+        isPending={isPending}
+        onConfirm={onConfirm}
+      />
     </PageSection>
   );
 }

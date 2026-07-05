@@ -6,8 +6,12 @@ import type {
   PasswordChangedEvent,
   TotpDisabledEvent,
   TotpEnabledEvent,
+  TotpRecoveryCodeUsedEvent,
+  TotpRecoveryCodesRegeneratedEvent,
   TrustedDeviceAddedEvent,
+  TrustedDeviceRevokedEvent,
   TrustedDevicesAllRevokedEvent,
+  UserSignedInEvent,
 } from "@monark/auth/contracts";
 import { listOrgAdminUserIds, listSysadminUserIds } from "@monark/rbac/server";
 import type {
@@ -136,6 +140,75 @@ export function registerNotificationSubscribers(): void {
     }
   });
 
+  // Opt-in per-sign-in alert (default-off). Fires on *every* successful
+  // sign-in ; a user who wants "email me every login" turns it on in
+  // prefs. Looks up the device label when the sign-in was tied to a
+  // recognised trusted device, else the template falls back to a
+  // generic label.
+  on<UserSignedInEvent>("user.signed-in", async (event) => {
+    try {
+      await notify(
+        "auth.signed-in",
+        { userId: event.userId },
+        {
+          deviceLabel: await resolveDeviceLabel(event.trustedDeviceId),
+          occurredAt: event.occurredAt,
+        },
+      );
+    } catch (err) {
+      logger.error({ err, event }, "auth.signed-in subscriber failed");
+    }
+  });
+
+  // Single-device sign-out receipt. Skipped for the per-row events of a
+  // bulk "revoke every device" sweep — that path emits its own
+  // `trusted-devices.all-revoked` so the user gets one email, not N.
+  on<TrustedDeviceRevokedEvent>("trusted-device.revoked", async (event) => {
+    if (event.bulk) return;
+    try {
+      await notify(
+        "auth.device-revoked",
+        { userId: event.userId },
+        {
+          deviceLabel: await resolveDeviceLabel(event.deviceId),
+          occurredAt: event.occurredAt,
+        },
+      );
+    } catch (err) {
+      logger.error({ err, event }, "auth.device-revoked subscriber failed");
+    }
+  });
+
+  on<TotpRecoveryCodeUsedEvent>("totp.recovery-code-used", async (event) => {
+    try {
+      await notify(
+        "auth.recovery-code-used",
+        { userId: event.userId },
+        {
+          remainingCodes: event.remainingCodes,
+          occurredAt: event.occurredAt,
+        },
+      );
+    } catch (err) {
+      logger.error({ err, event }, "auth.recovery-code-used subscriber failed");
+    }
+  });
+
+  on<TotpRecoveryCodesRegeneratedEvent>("totp.recovery-codes-regenerated", async (event) => {
+    try {
+      await notify(
+        "auth.recovery-codes-regenerated",
+        { userId: event.userId },
+        {
+          count: event.count,
+          occurredAt: event.occurredAt,
+        },
+      );
+    } catch (err) {
+      logger.error({ err, event }, "auth.recovery-codes-regenerated subscriber failed");
+    }
+  });
+
   on<UserEmailChangedEvent>("user.email-changed", async (event) => {
     try {
       await notify(
@@ -244,6 +317,27 @@ export function registerNotificationSubscribers(): void {
       logger.error({ err, event }, "webhooks.endpoint-auto-disabled subscriber failed");
     }
   });
+}
+
+/**
+ * Best-effort trusted-device label for the sign-in / device-revoked
+ * receipts. Returns null when there's no device id (a sign-in not tied
+ * to a recognised device) or the row can't be found (already hard-
+ * deleted, transient DB error) ; the template's enrich step falls a
+ * null back to a locale-appropriate generic label.
+ */
+async function resolveDeviceLabel(deviceId: string | undefined): Promise<string | null> {
+  if (!deviceId) return null;
+  try {
+    const db = getDb();
+    const row = await db.trustedDevice.findUnique({
+      where: { id: deviceId },
+      select: { label: true },
+    });
+    return row?.label ?? null;
+  } catch {
+    return null;
+  }
 }
 
 /**

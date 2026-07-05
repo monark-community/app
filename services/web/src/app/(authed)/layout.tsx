@@ -1,6 +1,7 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
+import { GlobalSearchProvider } from "@/components/global-search";
 import { RecoveryCodeReminder } from "@/components/recovery-code-reminder";
 import { isSystemBootstrapped } from "@/lib/bootstrap-gate";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -123,13 +124,15 @@ export default async function AuthedLayout({ children }: { children: ReactNode }
   }
 
   return (
-    <>
+    // GlobalSearchProvider wraps the whole authed tree so the ⌘K palette
+    // works on every route and the sidebar trigger can open it via context.
+    <GlobalSearchProvider>
       {children}
       {/* Global post-sign-in modal that nudges (or forces) the user to
           handle a recently-spent recovery code or a low remaining
           count. State lives server-side so closing the tab without
           handling it re-prompts on the next sign-in. */}
       <RecoveryCodeReminder />
-    </>
+    </GlobalSearchProvider>
   );
 }

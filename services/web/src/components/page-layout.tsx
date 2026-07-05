@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { cn } from "@/lib/utils";
 
 type PageLayoutProps = {
   /**
@@ -26,11 +27,15 @@ type PageLayoutProps = {
  * to `left:0` directly under the AppBar (`top:14` = `3.5rem`),
  * full viewport height, with a `border-r` separator. The right
  * rail mirrors on the right (when supplied). Both are
- * `position: fixed`, so they're outside the document flow and
- * don't push the content sideways. That means the content stays
- * `mx-auto`-centered on the *viewport* regardless of which rails
- * are mounted — adding or removing a rail is a no-op for the
- * content's horizontal position.
+ * `position: fixed`, so they're outside the document flow.
+ *
+ * The content box reserves each present rail's width (`xl:pl-72` /
+ * `xl:pr-72`), so `mx-auto` centers the content in the region
+ * *between* the rails rather than on the whole viewport. Without
+ * this the content floats at the viewport centre with a fixed rail
+ * sitting in the gutter — an off-centre look, and any full-bleed
+ * hero (see `UserBanner`) would spill under the rail. A page with
+ * no rails keeps its content viewport-centred (both paddings off).
  *
  * Below `xl`: rails are hidden ; the content takes the full row
  * with the same `mx-auto max-w-2xl` cap. (The same nav data is
@@ -61,7 +66,9 @@ export function PageLayout({ sidebar, rightRail, children }: PageLayoutProps) {
         </aside>
       )}
 
-      <div className="mx-auto w-full max-w-2xl space-y-6">{children}</div>
+      <div className={cn(sidebar && "xl:pl-72", rightRail && "xl:pr-72")}>
+        <div className="mx-auto w-full max-w-2xl space-y-6">{children}</div>
+      </div>
 
       {rightRail && (
         <aside

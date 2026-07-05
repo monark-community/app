@@ -13,12 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  InputOTP,
-  InputOTPGroup,
-  InputOTPSeparator,
-  InputOTPSlot,
-} from "@/components/ui/input-otp";
+import { OtpCodeInput } from "@/components/otp-code-input";
 import { Label } from "@/components/ui/label";
 import { trpc } from "@/lib/trpc";
 
@@ -223,11 +218,11 @@ export function RecoveryCodeReminder() {
     });
   }
 
-  function onRegenWithTotp(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (totpCode.length < 6) return;
+  // Shared by the submit button and the OTP's auto-submit-on-complete.
+  function runRegen(codeValue: string) {
+    if (regenWithTotp.isPending || codeValue.length < 6) return;
     regenWithTotp.mutate(
-      { code: totpCode },
+      { code: codeValue },
       {
         onSuccess: (result) => {
           setNewCodes(result.recoveryCodes);
@@ -238,6 +233,11 @@ export function RecoveryCodeReminder() {
         },
       },
     );
+  }
+
+  function onRegenWithTotp(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    runRegen(totpCode);
   }
 
   function onConfirmSaved() {
@@ -330,27 +330,12 @@ export function RecoveryCodeReminder() {
             <Label htmlFor="reminderTotpCode" className="self-start">
               {t("totpPrompt")}
             </Label>
-            <InputOTP
+            <OtpCodeInput
               id="reminderTotpCode"
-              maxLength={6}
               value={totpCode}
-              onChange={(value) => setTotpCode(value)}
-              inputMode="numeric"
-              autoComplete="one-time-code"
-              autoFocus
-            >
-              <InputOTPGroup>
-                <InputOTPSlot index={0} />
-                <InputOTPSlot index={1} />
-                <InputOTPSlot index={2} />
-              </InputOTPGroup>
-              <InputOTPSeparator />
-              <InputOTPGroup>
-                <InputOTPSlot index={3} />
-                <InputOTPSlot index={4} />
-                <InputOTPSlot index={5} />
-              </InputOTPGroup>
-            </InputOTP>
+              onChange={setTotpCode}
+              onComplete={runRegen}
+            />
             <Button
               type="submit"
               className="w-full"

@@ -1,9 +1,10 @@
-import type { NotificationCategory, NotificationChannel } from "@monark/db";
+import type { NotificationChannel } from "@monark/db";
 import { getDb } from "@monark/db";
 import { getNotificationKindDef, type NotificationKind } from "../contracts/registry";
 
 export type PrefRow = {
-  category: NotificationCategory;
+  /** The notification kind this override targets (e.g. "auth.new-device"). */
+  kind: string;
   channel: NotificationChannel;
   enabled: boolean;
 };
@@ -29,7 +30,7 @@ export function resolveChannelEnabled(input: {
   // Notification rows pointing at it.
   if (!def) return false;
   if (def.requiredEmail && input.channel === "EMAIL") return true;
-  const match = input.rows.find((r) => r.category === def.category && r.channel === input.channel);
+  const match = input.rows.find((r) => r.kind === input.kind && r.channel === input.channel);
   if (match) return match.enabled;
   return def.defaultEnabled[input.channel] ?? false;
 }
@@ -43,7 +44,7 @@ export async function isChannelEnabled(input: {
   const db = getDb();
   const rows = await db.notificationPreference.findMany({
     where: { userId: input.userId },
-    select: { category: true, channel: true, enabled: true },
+    select: { kind: true, channel: true, enabled: true },
   });
   return resolveChannelEnabled({
     kind: input.kind,
@@ -57,7 +58,7 @@ export async function listPreferences(userId: string): Promise<PrefRow[]> {
   const db = getDb();
   return db.notificationPreference.findMany({
     where: { userId },
-    select: { category: true, channel: true, enabled: true },
+    select: { kind: true, channel: true, enabled: true },
   });
 }
 
@@ -68,22 +69,22 @@ export async function listPreferences(userId: string): Promise<PrefRow[]> {
  */
 export async function setPreference(input: {
   userId: string;
-  category: NotificationCategory;
+  kind: NotificationKind;
   channel: NotificationChannel;
   enabled: boolean;
 }): Promise<{ enabled: boolean }> {
   const db = getDb();
   await db.notificationPreference.upsert({
     where: {
-      userId_category_channel: {
+      userId_kind_channel: {
         userId: input.userId,
-        category: input.category,
+        kind: input.kind,
         channel: input.channel,
       },
     },
     create: {
       userId: input.userId,
-      category: input.category,
+      kind: input.kind,
       channel: input.channel,
       enabled: input.enabled,
     },

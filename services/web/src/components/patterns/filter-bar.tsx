@@ -1,43 +1,92 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 
 /**
- * Toolbar row that sits above a list / table. The search field and the
- * {@link FilterMenu} filter button travel together as one group (an 8px
- * gap between them) ; the primary CTA lands in the trailing `actions`
- * slot, pushed to the right.
+ * Pixel budget the `tools` slot may occupy before its controls should
+ * collapse into a single trigger. `null` until measured (or when rendered
+ * outside a {@link FilterBar}) — treat as unconstrained.
+ */
+const ToolsBudgetContext = createContext<number | null>(null);
+
+/** Read the measured tools budget inside a {@link FilterBar} `tools` slot. */
+export function useFilterBarToolsBudget(): number | null {
+  return useContext(ToolsBudgetContext);
+}
+
+/**
+ * Toolbar row that sits above a list / table. Three slots :
  *
- * Layout follows the viewport: on mobile the search+filter group grows to
- * fill the row (search takes the available width) ; on desktop the group
- * shrinks to content, so the search field holds its fixed width.
+ * - `search` — the query field, left-aligned (pair with {@link FilterBarSearch}).
+ * - `tools` — the list controls (filters / sorting / columns ; pair with
+ *   `TableTools`), right-aligned just left of the actions. The row measures
+ *   the space available to this slot and exposes it via
+ *   {@link useFilterBarToolsBudget}, so the controls can collapse into a
+ *   single trigger when the row gets tight.
+ * - `actions` — the primary CTA, right-most. Never collapses.
  *
- * Presentational only — the caller supplies the concrete `search` /
- * `filter` / `actions` nodes (i18n stays with the caller). Pair the
- * `search` slot with {@link FilterBarSearch} and the `filter` slot with
- * {@link FilterMenu}.
+ * Presentational only — the caller supplies the concrete nodes (i18n stays
+ * with the caller).
  */
 export function FilterBar({
   search,
-  filter,
+  tools,
   actions,
   className,
 }: {
   search?: ReactNode;
-  filter?: ReactNode;
+  tools?: ReactNode;
   actions?: ReactNode;
   className?: string;
 }) {
+  const rowRef = useRef<HTMLDivElement>(null);
+  const searchRef = useRef<HTMLDivElement>(null);
+  const actionsRef = useRef<HTMLDivElement>(null);
+  const [budget, setBudget] = useState<number | null>(null);
+
+  // Space left for the tools = row minus the search field, the actions, and
+  // the inter-group gaps. Re-measured on resize via ResizeObserver.
+  useEffect(() => {
+    const row = rowRef.current;
+    if (!row) return;
+    const GAPS = 24;
+    const compute = () => {
+      const searchW = searchRef.current?.offsetWidth ?? 0;
+      const actionsW = actionsRef.current?.offsetWidth ?? 0;
+      setBudget(Math.max(0, row.clientWidth - searchW - actionsW - GAPS));
+    };
+    compute();
+    // ResizeObserver is absent in jsdom / older SSR contexts ; the one-shot
+    // compute above is enough there.
+    if (typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(compute);
+    ro.observe(row);
+    if (actionsRef.current) ro.observe(actionsRef.current);
+    return () => ro.disconnect();
+  }, []);
+
   return (
-    <div className={cn("flex flex-wrap items-center gap-2", className)}>
-      <div className="flex flex-1 items-center gap-2 md:flex-none">
-        {search}
-        {filter}
+    <div ref={rowRef} className={cn("flex flex-wrap items-center gap-2", className)}>
+      {search != null && (
+        <div ref={searchRef} className="flex min-w-0 flex-1 items-center md:flex-none">
+          {search}
+        </div>
+      )}
+      <div className="ml-auto flex items-center gap-2">
+        {tools != null && (
+          <ToolsBudgetContext.Provider value={budget}>
+            <div className="flex items-center gap-2">{tools}</div>
+          </ToolsBudgetContext.Provider>
+        )}
+        {actions != null && (
+          <div ref={actionsRef} className="flex items-center gap-2">
+            {actions}
+          </div>
+        )}
       </div>
-      {actions != null && <div className="ml-auto flex items-center gap-2">{actions}</div>}
     </div>
   );
 }

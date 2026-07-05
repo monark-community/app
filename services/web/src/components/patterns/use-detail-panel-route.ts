@@ -9,11 +9,11 @@ import { useRouter, useSearchParams } from "next/navigation";
  * is deep-linkable and back/forward works: `?<param>=<id>` opens an
  * editor, `?<param>=new` opens the create form, no param closes it.
  *
- * @param basePath the route without the param, e.g. `/projects`
+ * @param basePath the route without the param, e.g. `/data/projects`
  * @param param    the search-param key, e.g. `"project"`
  *
  * @example
- * const panel = useDetailPanelRoute("/projects", "project")
+ * const panel = useDetailPanelRoute("/data/projects", "project")
  * panel.isOpen        // boolean — is the sheet open
  * panel.isCreate      // is it the create form (`?project=new`)
  * panel.selectedId    // the raw param value, or null

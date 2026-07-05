@@ -1,17 +1,38 @@
-export { FilterBar, FilterBarSearch } from "./filter-bar";
-export { FilterMenu } from "./filter-menu";
+export { FilterBar, FilterBarSearch, useFilterBarToolsBudget } from "./filter-bar";
+export { FilterMenu, FilterFieldControl, activeFilterCount, isFilterActive } from "./filter-menu";
 export type { FilterConfig, FilterMenuLabels, FilterOption } from "./filter-menu";
-export { PanelHeaderBar } from "./panel-header-bar";
+export { PanelHeader } from "./panel-header";
+export type { PanelHeaderAction, PanelHeaderLeft } from "./panel-header";
+export { FieldRow } from "./field-row";
+export { PageSection } from "@/components/page-section";
+export type { PageSectionTone } from "@/components/page-section";
+export { MultiSelect } from "./multi-select";
+export type { MultiSelectOption, MultiSelectLabels } from "./multi-select";
+export { DiscussionSection, useDiscussionPreview } from "./discussion-section";
+export type { DiscussionComment, DiscussionLabels } from "./discussion-section";
+export { GroupedMultiSelect } from "./grouped-multi-select";
+export type {
+  GroupedMultiSelectGroup,
+  GroupedMultiSelectItem,
+  GroupedMultiSelectLabels,
+} from "./grouped-multi-select";
 export { FormActionsFooter } from "./form-actions-footer";
 export { ConfirmDialog } from "./confirm-dialog";
 export { TableDetailLayout } from "./table-detail-layout";
 export { useDetailPanelRoute } from "./use-detail-panel-route";
 export { DataTable } from "./data-table/data-table";
+export { DataTablePagination, usePaginatedList } from "./data-table/pagination";
+export { TableTools } from "./data-table/table-tools";
+export type { TableToolsLabels } from "./data-table/table-tools";
+export { useDataTableLayout, reconcileColumnOrder } from "./data-table/use-data-table-layout";
+export type { DataTableLayout } from "./data-table/use-data-table-layout";
 export type {
-  CellEdit,
   DataColumnDef,
   DataTableLabels,
+  DataTablePaginationLabels,
+  DataTablePaginationProps,
   DataTableProps,
+  DataTableSortLabels,
   PrimaryColumnDef,
   RowAction,
   SortAccessor,

@@ -84,7 +84,6 @@ export function IndustryEditForm({
           required
           autoFocus
         />
-        <p className="text-xs text-muted-foreground">{t("displayNameHelp")}</p>
       </div>
 
       <div className="space-y-1.5">
@@ -98,7 +97,6 @@ export function IndustryEditForm({
         {slugPreview && (
           <p className="text-xs text-muted-foreground">{t("slugPreview", { slug: slugPreview })}</p>
         )}
-        <p className="text-xs text-muted-foreground">{t("slugHelp")}</p>
       </div>
 
       <DirtyFormBar

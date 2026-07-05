@@ -55,7 +55,7 @@ export type IndustryUpdatedEvent = DomainEventBase & {
   type: "industry.updated";
   industryId: string;
   actorId: string;
-  changed: Array<"displayName" | "slug">;
+  changed: Array<"displayName" | "slug" | "description">;
   previousSlug?: string;
 };
 

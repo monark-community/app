@@ -139,6 +139,9 @@ importers:
       '@monark/common':
         specifier: workspace:*
         version: link:../common
+      '@monark/components':
+        specifier: workspace:*
+        version: link:../components
       '@monark/db':
         specifier: workspace:*
         version: link:../db

@@ -5,8 +5,8 @@ import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { ColorInput } from "@/components/ui/color-input";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import { FieldRow } from "@/components/patterns";
 import { DirtyFormBar } from "@/components/dirty-form-bar";
 import { OrganizationLogoEditor } from "@/components/organization-logo-editor";
 import { PageHeader } from "@/components/page-header";
@@ -201,41 +201,40 @@ export function OrganizationDetail({
           onRemove={onLogoRemove}
         />
 
-        <div className="space-y-2">
-          <Label htmlFor="org-displayName">{t("labels.displayName")}</Label>
-          <Input
-            id="org-displayName"
-            value={displayName}
-            onChange={(event) => setDisplayName(event.target.value)}
-            placeholder={t("placeholders.displayName")}
-            maxLength={120}
-          />
-        </div>
+        <div className="@container space-y-5">
+          <FieldRow label={t("labels.displayName")} htmlFor="org-displayName">
+            <Input
+              id="org-displayName"
+              value={displayName}
+              onChange={(event) => setDisplayName(event.target.value)}
+              placeholder={t("placeholders.displayName")}
+              maxLength={120}
+            />
+          </FieldRow>
 
-        <div className="space-y-2">
-          <Label htmlFor="org-slug">{t("labels.slug")}</Label>
-          <Input
-            id="org-slug"
-            value={slug}
-            onChange={(event) => setSlug(event.target.value.toLowerCase())}
-            placeholder={t("placeholders.slug")}
-            className="font-mono"
-            maxLength={60}
-          />
-          <p className="text-xs text-muted-foreground">{t("slugHint")}</p>
-        </div>
+          <FieldRow label={t("labels.slug")} htmlFor="org-slug">
+            <Input
+              id="org-slug"
+              value={slug}
+              onChange={(event) => setSlug(event.target.value.toLowerCase())}
+              placeholder={t("placeholders.slug")}
+              className="font-mono"
+              maxLength={60}
+            />
+            <p className="text-xs text-muted-foreground">{t("slugHint")}</p>
+          </FieldRow>
 
-        <div className="space-y-2">
-          <Label htmlFor="org-primary-color">{t("labels.primaryColor")}</Label>
-          <ColorInput
-            id="org-primary-color"
-            value={primaryColor}
-            onChange={setPrimaryColor}
-            placeholder="#F0870C"
-            defaultColor="#ffffff"
-            aria-label={t("labels.primaryColor")}
-          />
-          <p className="text-xs text-muted-foreground">{t("primaryColorHint")}</p>
+          <FieldRow label={t("labels.primaryColor")} htmlFor="org-primary-color">
+            <ColorInput
+              id="org-primary-color"
+              value={primaryColor}
+              onChange={setPrimaryColor}
+              placeholder="#F0870C"
+              defaultColor="#ffffff"
+              aria-label={t("labels.primaryColor")}
+            />
+            <p className="text-xs text-muted-foreground">{t("primaryColorHint")}</p>
+          </FieldRow>
         </div>
       </div>
 

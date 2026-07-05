@@ -4,6 +4,7 @@ import { useFormContext } from "react-hook-form";
 import { Checkbox } from "@/components/ui/checkbox";
 import { FormControl, FormDescription, FormField, FormItem, FormLabel } from "@/components/ui/form";
 import { Switch } from "@/components/ui/switch";
+import { FIELD_TYPE_ICON } from "../field-icons";
 import type { BooleanFieldDef, FieldInputProps } from "../types";
 
 /**
@@ -13,6 +14,7 @@ import type { BooleanFieldDef, FieldInputProps } from "../types";
  */
 export function BooleanField({ def }: FieldInputProps<BooleanFieldDef>) {
   const { control } = useFormContext();
+  const TypeIcon = FIELD_TYPE_ICON[def.type];
   return (
     <FormField
       control={control}
@@ -22,7 +24,10 @@ export function BooleanField({ def }: FieldInputProps<BooleanFieldDef>) {
         return (
           <FormItem className="flex flex-row items-center justify-between gap-4 rounded-lg border border-border p-3">
             <div className="space-y-0.5">
-              <FormLabel>{def.label}</FormLabel>
+              <FormLabel className="flex items-center gap-1.5">
+                <TypeIcon className="h-3.5 w-3.5 shrink-0 text-muted-foreground/70" aria-hidden />
+                {def.label}
+              </FormLabel>
               {def.description ? <FormDescription>{def.description}</FormDescription> : null}
             </div>
             <FormControl>

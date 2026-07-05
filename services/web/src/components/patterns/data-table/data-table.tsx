@@ -1,13 +1,11 @@
 "use client";
 
-import { Fragment, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   type ColumnDef,
-  type ColumnSizingState,
   type Header,
-  type SortingState,
-  type VisibilityState,
   flexRender,
   getCoreRowModel,
   getSortedRowModel,
@@ -30,38 +28,28 @@ import {
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import {
-  ChevronDown,
-  ChevronUp,
-  ChevronsUpDown,
-  MoreHorizontal,
-  PanelRight,
-  RotateCcw,
-  SlidersHorizontal,
-} from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, GripVertical, MoreHorizontal } from "lucide-react";
+import { DragHandle } from "@monark/components/ui/drag-handle";
 import { cn } from "@/lib/utils";
-import { useIsMobile } from "@/hooks/use-is-mobile";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
-  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
-import type { CellEdit, DataTableProps, PrimaryColumnDef, RowAction, SortAccessor } from "./types";
-
-const PRIMARY_ID = "__primary";
-const ACTIONS_ID = "__actions";
-
-type PersistedLayout = {
-  columnOrder: string[];
-  columnVisibility: VisibilityState;
-  columnSizing: ColumnSizingState;
-  sorting: SortingState;
-};
+import {
+  ACTIONS_COLUMN_ID,
+  PRIMARY_COLUMN_ID,
+  type DataTableProps,
+  type PrimaryColumnDef,
+  type RowAction,
+  type SortAccessor,
+} from "./types";
+import { reconcileColumnOrder, useDataTableLayout } from "./use-data-table-layout";
+import { DataTablePagination } from "./pagination";
 
 function normalizeSort(value: string | number | Date | null | undefined): string | number {
   if (value == null) return "";
@@ -73,15 +61,12 @@ function toAccessor<TData>(acc: SortAccessor<TData>) {
   return (row: TData) => normalizeSort(acc(row));
 }
 
-/** Reconcile a stored data-column order against the current column set:
- *  keep known ids in their saved order, append any newly-added columns. */
-function reconcileOrder(stored: string[], current: string[]): string[] {
-  const set = new Set(current);
-  const kept = stored.filter((id) => set.has(id));
-  const appended = current.filter((id) => !kept.includes(id));
-  return [...kept, ...appended];
-}
-
+/**
+ * The standard list table. Renders rows only — the toolbar controls
+ * (filters / sorting / column layout) live in `TableTools`, wired to the
+ * same `useDataTableLayout` state. Headers still click-to-sort and
+ * drag-to-reorder in place.
+ */
 export function DataTable<TData>({
   data,
   getRowId,
@@ -89,6 +74,7 @@ export function DataTable<TData>({
   columns,
   rowActions,
   storageKey,
+  layout: externalLayout,
   labels,
   selectedRowId,
   isLoading = false,
@@ -96,67 +82,28 @@ export function DataTable<TData>({
   onRetry,
   skeletonRows = 3,
   emptyState,
+  pagination,
   className,
-  chrome = "calm",
 }: DataTableProps<TData>) {
-  const calm = chrome === "calm";
+  const router = useRouter();
+
+  // Standalone fallback so a table without toolbar controls still persists
+  // its layout. Unused (but still mounted — rules of hooks) when the screen
+  // passes a shared layout in.
+  const internalLayout = useDataTableLayout(storageKey);
+  const layout = externalLayout ?? internalLayout;
+
   const defaultDataOrder = useMemo(() => columns.map((c) => c.id), [columns]);
-
-  const [dataColumnOrder, setDataColumnOrder] = useState<string[]>(defaultDataOrder);
-  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
-  const [columnSizing, setColumnSizing] = useState<ColumnSizingState>({});
-  const [sorting, setSorting] = useState<SortingState>([]);
-  const [hydrated, setHydrated] = useState(false);
-
-  // Load persisted layout after mount (client-only, avoids an SSR mismatch).
-  useEffect(() => {
-    try {
-      const raw = window.localStorage.getItem(storageKey);
-      if (raw) {
-        const p = JSON.parse(raw) as Partial<PersistedLayout>;
-        if (Array.isArray(p.columnOrder))
-          setDataColumnOrder(reconcileOrder(p.columnOrder, defaultDataOrder));
-        if (p.columnVisibility) setColumnVisibility(p.columnVisibility);
-        if (p.columnSizing) setColumnSizing(p.columnSizing);
-        if (Array.isArray(p.sorting)) setSorting(p.sorting);
-      }
-    } catch {
-      // ignore corrupt / unavailable storage
-    }
-    setHydrated(true);
-  }, [storageKey, defaultDataOrder]);
-
-  useEffect(() => {
-    if (!hydrated) return;
-    const layout: PersistedLayout = {
-      columnOrder: dataColumnOrder,
-      columnVisibility,
-      columnSizing,
-      sorting,
-    };
-    try {
-      window.localStorage.setItem(storageKey, JSON.stringify(layout));
-    } catch {
-      // ignore
-    }
-  }, [hydrated, storageKey, dataColumnOrder, columnVisibility, columnSizing, sorting]);
-
-  function resetLayout() {
-    try {
-      window.localStorage.removeItem(storageKey);
-    } catch {
-      // ignore
-    }
-    setDataColumnOrder(defaultDataOrder);
-    setColumnVisibility({});
-    setColumnSizing({});
-    setSorting([]);
-  }
+  const dataColumnOrder = useMemo(
+    () => reconcileColumnOrder(layout.columnOrder, defaultDataOrder),
+    [layout.columnOrder, defaultDataOrder],
+  );
 
   const tableColumns = useMemo<ColumnDef<TData>[]>(() => {
     const primaryDef: ColumnDef<TData> = {
-      id: PRIMARY_ID,
+      id: PRIMARY_COLUMN_ID,
       header: primaryColumn.header,
+      meta: { headerIcon: primaryColumn.headerIcon },
       enableHiding: false,
       enableSorting: !!(primaryColumn.enableSorting && primaryColumn.sortAccessor),
       size: primaryColumn.size ?? 280,
@@ -164,14 +111,13 @@ export function DataTable<TData>({
       ...(primaryColumn.enableSorting && primaryColumn.sortAccessor
         ? { accessorFn: toAccessor(primaryColumn.sortAccessor) }
         : {}),
-      cell: ({ row }) => (
-        <PrimaryCell row={row.original} def={primaryColumn} openPanelLabel={labels.openPanel} />
-      ),
+      cell: ({ row }) => <PrimaryCell row={row.original} def={primaryColumn} />,
     };
 
     const dataDefs: ColumnDef<TData>[] = columns.map((c) => ({
       id: c.id,
       header: c.header,
+      meta: { headerIcon: c.headerIcon },
       enableHiding: c.enableHiding ?? true,
       enableSorting: !!(c.enableSorting && c.sortAccessor),
       size: c.size ?? 160,
@@ -179,16 +125,7 @@ export function DataTable<TData>({
       ...(c.enableSorting && c.sortAccessor ? { accessorFn: toAccessor(c.sortAccessor) } : {}),
       cell: ({ row }) => (
         <div className={cn("truncate", c.align === "right" && "text-right")}>
-          {c.edit ? (
-            <EditableCell
-              row={row.original}
-              edit={c.edit}
-              display={c.cell(row.original)}
-              ariaLabel={c.header}
-            />
-          ) : (
-            c.cell(row.original)
-          )}
+          {c.cell(row.original)}
         </div>
       ),
     }));
@@ -196,7 +133,7 @@ export function DataTable<TData>({
     const actionsDef: ColumnDef<TData>[] = rowActions
       ? [
           {
-            id: ACTIONS_ID,
+            id: ACTIONS_COLUMN_ID,
             header: "",
             enableHiding: false,
             enableSorting: false,
@@ -220,7 +157,7 @@ export function DataTable<TData>({
   }, [primaryColumn, columns, rowActions, labels.rowActions]);
 
   const columnOrder = useMemo(
-    () => [PRIMARY_ID, ...dataColumnOrder, ...(rowActions ? [ACTIONS_ID] : [])],
+    () => [PRIMARY_COLUMN_ID, ...dataColumnOrder, ...(rowActions ? [ACTIONS_COLUMN_ID] : [])],
     [dataColumnOrder, rowActions],
   );
 
@@ -228,10 +165,15 @@ export function DataTable<TData>({
     data,
     columns: tableColumns,
     getRowId: (row) => getRowId(row),
-    state: { columnOrder, columnVisibility, columnSizing, sorting },
-    onColumnVisibilityChange: setColumnVisibility,
-    onColumnSizingChange: setColumnSizing,
-    onSortingChange: setSorting,
+    state: {
+      columnOrder,
+      columnVisibility: layout.columnVisibility,
+      columnSizing: layout.columnSizing,
+      sorting: layout.sorting,
+    },
+    onColumnVisibilityChange: layout.setColumnVisibility,
+    onColumnSizingChange: layout.setColumnSizing,
+    onSortingChange: layout.setSorting,
     columnResizeMode: "onChange",
     enableColumnResizing: true,
     getCoreRowModel: getCoreRowModel(),
@@ -249,96 +191,77 @@ export function DataTable<TData>({
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
-    setDataColumnOrder((prev) => {
-      const from = prev.indexOf(String(active.id));
-      const to = prev.indexOf(String(over.id));
-      if (from < 0 || to < 0) return prev;
-      return arrayMove(prev, from, to);
-    });
+    // Reorder against the reconciled order (a stale stored order may be
+    // missing recently-added column ids).
+    const from = dataColumnOrder.indexOf(String(active.id));
+    const to = dataColumnOrder.indexOf(String(over.id));
+    if (from < 0 || to < 0) return;
+    layout.setColumnOrder(arrayMove(dataColumnOrder, from, to));
   }
 
   const visibleColumnCount = table.getVisibleLeafColumns().length;
-  const hideableColumns = table.getAllColumns().filter((c) => c.getCanHide());
   const rows = table.getRowModel().rows;
 
-  const columnMenu = (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        {calm ? (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7 bg-background/80"
-            aria-label={labels.columns}
-          >
-            <SlidersHorizontal className="h-4 w-4" aria-hidden />
-          </Button>
-        ) : (
-          <Button variant="ghost" size="sm" className="gap-1.5">
-            <SlidersHorizontal className="h-4 w-4" aria-hidden />
-            {labels.columns}
-          </Button>
-        )}
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-52">
-        {hideableColumns.map((c) => (
-          <DropdownMenuCheckboxItem
-            key={c.id}
-            checked={c.getIsVisible()}
-            onCheckedChange={(v) => c.toggleVisibility(!!v)}
-            onSelect={(e) => e.preventDefault()}
-          >
-            {String(c.columnDef.header ?? c.id)}
-          </DropdownMenuCheckboxItem>
-        ))}
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onSelect={resetLayout}>
-          <RotateCcw className="mr-2 h-4 w-4" aria-hidden />
-          {labels.reset}
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
+  // Own first-paint gate, independent of `layout.hydrated`. A bare mount
+  // effect always runs on the first post-paint commit, so this reliably flips
+  // even if the layout lives in a parent whose hydration flag never reaches us
+  // (a suspended / memoized parent, a remount race). It is the escape hatch
+  // that guarantees the table can't get *stuck* in the skeleton.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
+  // Keep the whole table in a skeleton until the persisted column layout has
+  // resolved — otherwise headers + rows paint in the default order/visibility
+  // and then jump when localStorage loads. In the normal path `layout.hydrated`
+  // and `mounted` flip in the same batched re-render, so the first non-skeleton
+  // paint already has the resolved order (no flash). `mounted` alone is enough
+  // to leave the skeleton, so a stuck hydration flag can never wedge it.
+  const configResolved = layout.hydrated || mounted;
+  const showSkeleton = isLoading || !configResolved;
 
   return (
-    <div className={cn("group/table relative flex w-full min-w-0 flex-col", className)}>
-      {calm ? (
-        // Calm : the layout menu floats in the top-right corner and only
-        // fades in on hover / focus, so a quiet list shows no chrome bar.
-        <div className="pointer-events-none absolute right-1 top-1 z-10 opacity-0 transition-opacity group-hover/table:opacity-100 focus-within:opacity-100 [&>*]:pointer-events-auto">
-          {columnMenu}
-        </div>
-      ) : (
-        <div className="flex items-center justify-end border-b border-border px-2 py-1.5">
-          {columnMenu}
-        </div>
-      )}
-
+    <div className={cn("flex w-full min-w-0 flex-col", className)}>
       <div className="overflow-x-auto">
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <table className="min-w-full table-fixed text-sm" style={{ width: table.getTotalSize() }}>
             <thead className="bg-muted/30">
-              {table.getHeaderGroups().map((headerGroup) => (
-                <tr
-                  key={headerGroup.id}
-                  className="text-left text-xs uppercase tracking-wide text-muted-foreground"
-                >
-                  <SortableContext items={dataColumnOrder} strategy={horizontalListSortingStrategy}>
-                    {headerGroup.headers.map((header) => {
-                      const isReorderable =
-                        header.column.id !== PRIMARY_ID && header.column.id !== ACTIONS_ID;
-                      return isReorderable ? (
-                        <SortableHeader key={header.id} header={header} calm={calm} />
-                      ) : (
-                        <StaticHeader key={header.id} header={header} calm={calm} />
-                      );
-                    })}
-                  </SortableContext>
+              {!configResolved ? (
+                // Skeleton headers until the column config resolves, so they
+                // never flash in the default order then reorder.
+                <tr className="text-left text-xs uppercase tracking-wide text-muted-foreground">
+                  {table.getVisibleLeafColumns().map((col) => (
+                    <th key={col.id} className="h-9 px-4" style={{ width: col.getSize() }}>
+                      {col.id !== ACTIONS_COLUMN_ID && <Skeleton className="h-3 w-16 max-w-full" />}
+                    </th>
+                  ))}
                 </tr>
-              ))}
+              ) : (
+                table.getHeaderGroups().map((headerGroup) => (
+                  <tr
+                    key={headerGroup.id}
+                    className="text-left text-xs uppercase tracking-wide text-muted-foreground"
+                  >
+                    <SortableContext
+                      items={dataColumnOrder}
+                      strategy={horizontalListSortingStrategy}
+                    >
+                      {headerGroup.headers.map((header) => {
+                        const isReorderable =
+                          header.column.id !== PRIMARY_COLUMN_ID &&
+                          header.column.id !== ACTIONS_COLUMN_ID;
+                        return isReorderable ? (
+                          <SortableHeader key={header.id} header={header} />
+                        ) : (
+                          <StaticHeader key={header.id} header={header} />
+                        );
+                      })}
+                    </SortableContext>
+                  </tr>
+                ))
+              )}
             </thead>
             <tbody>
-              {isLoading &&
+              {showSkeleton &&
                 Array.from({ length: skeletonRows }).map((_, r) => (
                   <tr key={r} className="border-t border-border">
                     {table.getVisibleLeafColumns().map((col) => (
@@ -349,7 +272,7 @@ export function DataTable<TData>({
                   </tr>
                 ))}
 
-              {!isLoading && isError && rows.length === 0 && (
+              {!showSkeleton && isError && rows.length === 0 && (
                 <tr>
                   <td
                     colSpan={visibleColumnCount}
@@ -367,7 +290,7 @@ export function DataTable<TData>({
                 </tr>
               )}
 
-              {!isLoading && !isError && rows.length === 0 && (
+              {!showSkeleton && !isError && rows.length === 0 && (
                 <tr>
                   <td
                     colSpan={visibleColumnCount}
@@ -378,14 +301,41 @@ export function DataTable<TData>({
                 </tr>
               )}
 
-              {!isLoading &&
+              {!showSkeleton &&
                 rows.map((row) => {
                   const isSelected = selectedRowId != null && row.id === selectedRowId;
+                  // The whole row activates the primary column (open the detail
+                  // panel / navigate), so clicking anywhere behaves like clicking
+                  // the primary label. Only when the primary is actually
+                  // actionable for this row (a link href or an onSelect).
+                  const rowHref = primaryColumn.href?.(row.original);
+                  const canActivate = !!rowHref || !!primaryColumn.onSelect;
                   return (
                     <tr
                       key={row.id}
+                      onClick={
+                        canActivate
+                          ? (e) => {
+                              // Let a real interactive control inside the row own
+                              // its own click (the primary link, the row-actions
+                              // button, inline links / inputs), and don't hijack a
+                              // text selection drag.
+                              if (
+                                (e.target as Element).closest(
+                                  "a, button, input, select, textarea, [role='button'], [role='menuitem']",
+                                )
+                              ) {
+                                return;
+                              }
+                              if (window.getSelection()?.toString()) return;
+                              if (rowHref) router.push(rowHref);
+                              else primaryColumn.onSelect?.(row.original);
+                            }
+                          : undefined
+                      }
                       className={cn(
                         "border-t border-border transition-colors",
+                        canActivate && "cursor-pointer",
                         isSelected
                           ? "bg-primary/10 ring-1 ring-inset ring-primary"
                           : "hover:bg-muted/30",
@@ -407,29 +357,33 @@ export function DataTable<TData>({
           </table>
         </DndContext>
       </div>
+
+      {pagination && !showSkeleton && (
+        <DataTablePagination
+          {...pagination}
+          // Freeze paging while a fetch is in flight so a fast double-click
+          // can't skip a page (keepPreviousData keeps the old nextCursor).
+          canPrev={pagination.canPrev && !isLoading}
+          canNext={pagination.canNext && !isLoading}
+        />
+      )}
     </div>
   );
 }
 
 /** Header for the pinned primary / actions columns: sortable-by-click if
  *  the column allows it, resizable, but never draggable. */
-function StaticHeader<TData>({ header, calm }: { header: Header<TData, unknown>; calm: boolean }) {
+function StaticHeader<TData>({ header }: { header: Header<TData, unknown> }) {
   return (
     <th className="group/th relative h-9 px-4 font-medium" style={{ width: header.getSize() }}>
-      <HeaderLabel header={header} calm={calm} />
+      <HeaderLabel header={header} />
       <ResizeHandle header={header} />
     </th>
   );
 }
 
 /** Reorderable data-column header — drag to move, click to sort. */
-function SortableHeader<TData>({
-  header,
-  calm,
-}: {
-  header: Header<TData, unknown>;
-  calm: boolean;
-}) {
+function SortableHeader<TData>({ header }: { header: Header<TData, unknown> }) {
   const { setNodeRef, attributes, listeners, transform, transition, isDragging } = useSortable({
     id: header.column.id,
   });
@@ -444,12 +398,17 @@ function SortableHeader<TData>({
         transition,
       }}
     >
-      <HeaderLabel
-        header={header}
-        calm={calm}
-        dragAttributes={attributes}
-        dragListeners={listeners}
+      {/* Reorder affordance : a grip that fades in on hover / focus so a
+          data-column header reads as draggable, not just cursor-pointer.
+          Purely indicative — the whole HeaderLabel owns the dnd listeners —
+          so it stays pointer-events-none + aria-hidden and sits in the left
+          padding gutter, where it can't shift the header text out of line
+          with the body cells below. */}
+      <GripVertical
+        aria-hidden
+        className="pointer-events-none absolute left-1 top-1/2 h-3 w-3 -translate-y-1/2 text-muted-foreground/50 opacity-0 transition-opacity group-hover/th:opacity-100 group-focus-within/th:opacity-100"
       />
+      <HeaderLabel header={header} dragAttributes={attributes} dragListeners={listeners} />
       <ResizeHandle header={header} />
     </th>
   );
@@ -457,18 +416,22 @@ function SortableHeader<TData>({
 
 function HeaderLabel<TData>({
   header,
-  calm,
   dragAttributes,
   dragListeners,
 }: {
   header: Header<TData, unknown>;
-  calm: boolean;
   dragAttributes?: ReturnType<typeof useSortable>["attributes"];
   dragListeners?: ReturnType<typeof useSortable>["listeners"];
 }) {
   const canSort = header.column.getCanSort();
   const sorted = header.column.getIsSorted();
+  // 1-based position in the multi-sort priority list, shown next to the
+  // arrow so "sorted by Status, then Budget" is readable off the headers.
+  // Only when 2+ sorts are stacked — a lone sort's arrow says it all.
+  const sortIndex = header.column.getSortIndex();
+  const multiSort = header.getContext().table.getState().sorting.length > 1;
   const content = flexRender(header.column.columnDef.header, header.getContext());
+  const HeaderIcon = header.column.columnDef.meta?.headerIcon;
 
   return (
     <button
@@ -481,20 +444,29 @@ function HeaderLabel<TData>({
         canSort || dragListeners ? "cursor-pointer" : "cursor-default",
       )}
     >
+      {HeaderIcon && (
+        <HeaderIcon className="h-3.5 w-3.5 shrink-0 text-muted-foreground/70" aria-hidden />
+      )}
       <span className="truncate">{content}</span>
       {canSort &&
-        (sorted === "asc" ? (
-          <ChevronUp className="h-3.5 w-3.5 shrink-0" aria-hidden />
-        ) : sorted === "desc" ? (
-          <ChevronDown className="h-3.5 w-3.5 shrink-0" aria-hidden />
-        ) : (
-          // Idle sort hint. In calm mode it stays hidden until the header is
-          // hovered, so a quiet table shows no per-column arrows.
-          <ChevronsUpDown
-            className={cn(
-              "h-3.5 w-3.5 shrink-0 text-muted-foreground/50",
-              calm && "opacity-0 transition-opacity group-hover/th:opacity-100",
+        (sorted ? (
+          <span className="flex shrink-0 items-center" aria-hidden>
+            {sorted === "asc" ? (
+              <ArrowUp className="h-3.5 w-3.5 shrink-0" />
+            ) : (
+              <ArrowDown className="h-3.5 w-3.5 shrink-0" />
             )}
+            {multiSort && (
+              <span className="text-[10px] font-semibold leading-none tabular-nums text-muted-foreground">
+                {sortIndex + 1}
+              </span>
+            )}
+          </span>
+        ) : (
+          // Idle sort hint — hidden until the header is hovered, so a quiet
+          // table shows no per-column arrows.
+          <ArrowUpDown
+            className="h-3.5 w-3.5 shrink-0 text-muted-foreground/50 opacity-0 transition-opacity group-hover/th:opacity-100"
             aria-hidden
           />
         ))}
@@ -505,177 +477,45 @@ function HeaderLabel<TData>({
 function ResizeHandle<TData>({ header }: { header: Header<TData, unknown> }) {
   if (!header.column.getCanResize()) return null;
   return (
-    <div
+    <DragHandle
+      orientation="vertical"
+      active={header.column.getIsResizing()}
       onMouseDown={header.getResizeHandler()}
       onTouchStart={header.getResizeHandler()}
       onClick={(e) => e.stopPropagation()}
-      className={cn(
-        "absolute right-0 top-0 h-full w-1.5 cursor-col-resize touch-none select-none",
-        "hover:bg-border",
-        header.column.getIsResizing() && "bg-primary",
-      )}
+      className="absolute right-0 top-0 h-full w-1.5"
     />
   );
 }
 
-function PrimaryCell<TData>({
-  row,
-  def,
-  openPanelLabel,
-}: {
-  row: TData;
-  def: PrimaryColumnDef<TData>;
-  openPanelLabel: string;
-}) {
-  const isMobile = useIsMobile();
+function PrimaryCell<TData>({ row, def }: { row: TData; def: PrimaryColumnDef<TData> }) {
   const label = def.label(row);
   const subtext = def.subtext?.(row);
   const leading = def.leading?.(row);
   const href = def.href?.(row);
-  const canOpen = !!href || !!def.onSelect;
-  // Inline editing is a pointer-precise, hover-driven affordance ; on
-  // touch it collides with "tap the row to open the panel", so on mobile
-  // the primary label opens the panel instead of entering edit mode.
-  const editable = !!def.edit && !isMobile;
-
-  // The open-panel affordance: an icon next to the label. On desktop it
-  // reveals on cell hover (and is the *only* way to open the panel when
-  // the label is inline-editable) ; on mobile it stays visible as a tap
-  // target since hover doesn't exist.
-  const openIcon = canOpen ? (
-    <Button
-      asChild={!!href}
-      variant="ghost"
-      size="icon"
-      className={cn(
-        "h-6 w-6 shrink-0 text-muted-foreground transition-opacity focus-visible:opacity-100",
-        isMobile ? "opacity-100" : "opacity-0 group-hover:opacity-100",
-      )}
-      {...(href ? {} : { onClick: () => def.onSelect?.(row) })}
-    >
-      {href ? (
-        <Link href={href} aria-label={openPanelLabel}>
-          <PanelRight className="h-3.5 w-3.5" aria-hidden />
-        </Link>
-      ) : (
-        <>
-          <PanelRight className="h-3.5 w-3.5" aria-hidden />
-          <span className="sr-only">{openPanelLabel}</span>
-        </>
-      )}
-    </Button>
-  ) : null;
 
   return (
-    <div className="group flex min-w-0 items-center gap-3">
+    <div className="flex min-w-0 items-center gap-3">
       {leading != null && <div className="shrink-0">{leading}</div>}
       <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-1">
-          <div className="min-w-0 flex-1">
-            {editable && def.edit ? (
-              <EditableCell
-                row={row}
-                edit={def.edit}
-                display={<span className="font-medium text-foreground">{label}</span>}
-                ariaLabel={def.header}
-                displayClassName="font-medium text-foreground"
-              />
-            ) : href ? (
-              <Link
-                href={href}
-                className="block truncate font-medium text-foreground hover:underline"
-              >
-                {label}
-              </Link>
-            ) : (
-              <span className="block truncate font-medium text-foreground">{label}</span>
-            )}
-          </div>
-          {openIcon}
-        </div>
+        {href ? (
+          <Link href={href} className="block truncate font-medium text-foreground hover:underline">
+            {label}
+          </Link>
+        ) : def.onSelect ? (
+          <button
+            type="button"
+            onClick={() => def.onSelect?.(row)}
+            className="block max-w-full truncate text-left font-medium text-foreground hover:underline"
+          >
+            {label}
+          </button>
+        ) : (
+          <span className="block truncate font-medium text-foreground">{label}</span>
+        )}
         {subtext != null && <div className="truncate text-xs text-muted-foreground">{subtext}</div>}
       </div>
     </div>
-  );
-}
-
-/**
- * Inline-editable value. Read view shows `display` (the column's normal
- * cell content) with a click-to-edit affordance ; editing swaps in a
- * text input that commits on Enter / blur and reverts on Escape.
- */
-function EditableCell<TData>({
-  row,
-  edit,
-  display,
-  ariaLabel,
-  displayClassName,
-}: {
-  row: TData;
-  edit: CellEdit<TData>;
-  display: ReactNode;
-  ariaLabel: string;
-  displayClassName?: string;
-}) {
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState("");
-  // Set when Escape cancels, so the blur that fires as the input unmounts
-  // doesn't commit the reverted draft.
-  const cancelledRef = useRef(false);
-
-  function begin() {
-    setDraft(edit.getValue(row));
-    cancelledRef.current = false;
-    setEditing(true);
-  }
-
-  function commit() {
-    if (cancelledRef.current) {
-      cancelledRef.current = false;
-      return;
-    }
-    const next = draft.trim();
-    if (next && next !== edit.getValue(row)) edit.onSave(row, next);
-    setEditing(false);
-  }
-
-  if (editing) {
-    return (
-      <input
-        autoFocus
-        value={draft}
-        onChange={(e) => setDraft(e.target.value)}
-        onFocus={(e) => e.target.select()}
-        onBlur={commit}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") {
-            e.preventDefault();
-            commit();
-          } else if (e.key === "Escape") {
-            e.preventDefault();
-            cancelledRef.current = true;
-            setEditing(false);
-          }
-        }}
-        maxLength={edit.maxLength}
-        placeholder={edit.placeholder}
-        aria-label={ariaLabel}
-        className="h-7 w-full rounded border border-input bg-background px-1.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-primary"
-      />
-    );
-  }
-
-  return (
-    <button
-      type="button"
-      onClick={begin}
-      className={cn(
-        "-mx-1 block max-w-full cursor-text truncate rounded px-1 text-left hover:bg-muted/60",
-        displayClassName,
-      )}
-    >
-      {display}
-    </button>
   );
 }
 
@@ -692,7 +532,13 @@ function RowActionsMenu<TData>({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="h-7 w-7">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7"
+          // Keep the row's activation click from firing when opening the menu.
+          onClick={(e) => e.stopPropagation()}
+        >
           <MoreHorizontal className="h-4 w-4" aria-hidden />
           <span className="sr-only">{label}</span>
         </Button>

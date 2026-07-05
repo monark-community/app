@@ -11,10 +11,15 @@ import {
   DataTable,
   FilterBar,
   FilterBarSearch,
-  FilterMenu,
-  PanelHeaderBar,
+  PanelHeader,
   TableDetailLayout,
+  TableTools,
+  useDataTableLayout,
   useDetailPanelRoute,
+  type DataColumnDef,
+  type FilterConfig,
+  type PrimaryColumnDef,
+  type TableToolsLabels,
 } from "@/components/patterns";
 import { SheetTitle } from "@/components/ui/sheet";
 import { rewriteForCurrentHost } from "@/lib/dev-host-rewrite";
@@ -22,7 +27,10 @@ import { trpc } from "@/lib/trpc";
 import { InviteUserDialog } from "./invite-user-dialog";
 import { UserDetail } from "./[id]/user-detail";
 
-type StatusFilter = "all" | "active" | "pending" | "disabled" | "pending-deletion";
+// A user's lifecycle bucket. "pending" is synthetic — it maps to open
+// invites (rows that have no real user status yet), so it drives invite
+// visibility rather than the user-status query.
+type StatusValue = "active" | "pending" | "disabled" | "pending-deletion";
 
 type EmailVerifiedFilter = "all" | "verified" | "unverified";
 
@@ -71,8 +79,8 @@ export function UsersList() {
   // come from `rbac.adminListRoles` against the singleton org's id —
   // multi-tenant deploys would need a richer "global role filter"
   // (deferred to backlog).
-  const [roleFilter, setRoleFilter] = useState<string>("all");
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [roleFilter, setRoleFilter] = useState<string[]>([]);
+  const [statusFilter, setStatusFilter] = useState<StatusValue[]>([]);
   const [emailFilter, setEmailFilter] = useState<EmailVerifiedFilter>("all");
   const [joinedFilter, setJoinedFilter] = useState<JoinedFilter>("all");
   const [inviteOpen, setInviteOpen] = useState(false);
@@ -114,9 +122,13 @@ export function UsersList() {
   // `pending` slice shows only invites and skips the user fetch
   // entirely. Other statuses translate to the server's filter set.
   const statusesForUsers = useMemo(() => {
-    if (statusFilter === "all") return undefined;
-    if (statusFilter === "pending") return []; // sentinel : skip user fetch
-    return [statusFilter];
+    if (statusFilter.length === 0) return undefined; // no status filter : all users
+    // Drop the synthetic "pending" (invites) ; what's left are real user
+    // statuses. An empty result (only "pending" was picked) is the sentinel
+    // that skips the user fetch entirely and shows invites alone.
+    return statusFilter.filter(
+      (s): s is "active" | "disabled" | "pending-deletion" => s !== "pending",
+    );
   }, [statusFilter]);
 
   const usersEnabled = statusesForUsers !== undefined ? statusesForUsers.length > 0 : true;
@@ -124,11 +136,9 @@ export function UsersList() {
     {
       search: search || undefined,
       limit,
-      roleIds: roleFilter !== "all" ? [roleFilter] : undefined,
+      roleIds: roleFilter.length > 0 ? roleFilter : undefined,
       statuses:
-        statusesForUsers && statusesForUsers.length > 0
-          ? (statusesForUsers as Array<"active" | "disabled" | "pending-deletion">)
-          : undefined,
+        statusesForUsers && statusesForUsers.length > 0 ? statusesForUsers : undefined,
       emailVerified:
         emailFilter === "verified" ? true : emailFilter === "unverified" ? false : undefined,
       joinedAfter: joinedAfterIso,
@@ -144,11 +154,11 @@ export function UsersList() {
   // unless the operator explicitly narrowed to a non-pending bucket
   // (active/disabled/pending-deletion → hide invites since they don't
   // belong to those statuses).
-  const showInvites = statusFilter === "all" || statusFilter === "pending";
+  const showInvites = statusFilter.length === 0 || statusFilter.includes("pending");
   const invitesQuery = trpc.organizations.invites.adminListAll.useQuery(
     {
       search: search || undefined,
-      roleIds: roleFilter !== "all" ? [roleFilter] : undefined,
+      roleIds: roleFilter.length > 0 ? roleFilter : undefined,
     },
     {
       enabled: showInvites,
@@ -200,6 +210,152 @@ export function UsersList() {
     [invites, users],
   );
 
+  type UserRow = (typeof rows)[number];
+
+  const layout = useDataTableLayout("admin-users-table");
+
+  const filterConfigs: FilterConfig[] = [
+    {
+      id: "role",
+      type: "multiSelect",
+      label: t("filters.role"),
+      value: roleFilter,
+      onValueChange: setRoleFilter,
+      options: (rolesQuery.data ?? []).map((role) => ({
+        value: role.id,
+        label: role.name,
+      })),
+    },
+    {
+      id: "status",
+      type: "multiSelect",
+      label: t("filters.status"),
+      value: statusFilter,
+      onValueChange: (v) => setStatusFilter(v as StatusValue[]),
+      options: [
+        { value: "active", label: t("filters.status_active") },
+        { value: "pending", label: t("filters.status_pending") },
+        { value: "disabled", label: t("filters.status_disabled") },
+        {
+          value: "pending-deletion",
+          label: t("filters.status_pending-deletion"),
+        },
+      ],
+    },
+    {
+      id: "joined",
+      label: t("filters.joined"),
+      value: joinedFilter,
+      onValueChange: (v) => setJoinedFilter(v as JoinedFilter),
+      options: [
+        { value: "all", label: t("filters.joinedAll") },
+        { value: "7d", label: t("filters.joined_7d") },
+        { value: "30d", label: t("filters.joined_30d") },
+        { value: "90d", label: t("filters.joined_90d") },
+      ],
+    },
+    {
+      id: "emailVerified",
+      label: t("filters.emailVerified"),
+      value: emailFilter,
+      onValueChange: (v) => setEmailFilter(v as EmailVerifiedFilter),
+      options: [
+        { value: "all", label: t("filters.emailAll") },
+        { value: "verified", label: t("filters.email_verified") },
+        {
+          value: "unverified",
+          label: t("filters.email_unverified"),
+        },
+      ],
+    },
+  ];
+
+  const primaryColumn: PrimaryColumnDef<UserRow> = {
+    header: t("columns.user"),
+    leading: (row) =>
+      row.kind === "invite" ? (
+        <span
+          aria-hidden
+          className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground"
+        >
+          <Mail className="h-4 w-4" />
+        </span>
+      ) : (
+        <Avatar className="h-9 w-9 shrink-0">
+          {row.user.avatarUrl && (
+            <AvatarImage src={rewriteForCurrentHost(row.user.avatarUrl)} alt="" />
+          )}
+          <AvatarFallback className="text-xs">
+            {initialsFor(row.user.displayName, row.user.email)}
+          </AvatarFallback>
+        </Avatar>
+      ),
+    label: (row) =>
+      row.kind === "invite" ? row.invite.email : (row.user.displayName ?? row.user.email),
+    subtext: (row) =>
+      row.kind === "invite"
+        ? `${row.invite.role.name} · ${row.invite.organization.displayName}`
+        : row.user.displayName
+          ? row.user.email
+          : undefined,
+    href: (row) => (row.kind === "user" ? `/admin/users?user=${row.user.id}` : undefined),
+    size: 320,
+  };
+
+  const userColumns: DataColumnDef<UserRow>[] = [
+    {
+      id: "status",
+      header: t("columns.status"),
+      align: "right",
+      cell: (row) =>
+        row.kind === "invite" ? (
+          <span className="inline-flex items-center gap-1 rounded-md bg-amber-400/10 px-2 py-0.5 text-xs text-amber-500">
+            {t("badges.pending")}
+          </span>
+        ) : (
+          <span className="flex items-center justify-end gap-2">
+            {row.user.disabledAt && (
+              <span className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+                <ShieldOff className="h-3 w-3" aria-hidden />
+                {t("badges.disabled")}
+              </span>
+            )}
+            {row.user.deletedAt && (
+              <span className="inline-flex items-center gap-1 rounded-md bg-amber-400/10 px-2 py-0.5 text-xs text-amber-500">
+                <Clock className="h-3 w-3" aria-hidden />
+                {t("badges.pendingDeletion")}
+              </span>
+            )}
+          </span>
+        ),
+      size: 220,
+    },
+  ];
+
+  const toolsLabels: TableToolsLabels = {
+    tools: tTable("tools"),
+    close: tFilters("close"),
+    columns: tTable("columns"),
+    reset: tTable("reset"),
+    sort: {
+      label: tTable("sorting"),
+      ascending: tTable("sortAscending"),
+      descending: tTable("sortDescending"),
+      none: tTable("sortNone"),
+      addField: tTable("sortAddField"),
+      remove: tTable("sortRemove"),
+      reset: tTable("sortReset"),
+    },
+    filters: {
+      trigger: tFilters("button"),
+      title: tFilters("title"),
+      close: tFilters("close"),
+      clearAll: tFilters("clearAll"),
+      resetField: tFilters("resetField"),
+      valueCount: (count) => tFilters("activeValues", { count }),
+    },
+  };
+
   return (
     <div className="space-y-3">
       <FilterBar
@@ -211,70 +367,13 @@ export function UsersList() {
             aria-label={t("searchLabel")}
           />
         }
-        filter={
-          <FilterMenu
-            labels={{
-              trigger: tFilters("button"),
-              title: tFilters("title"),
-              close: tFilters("close"),
-            }}
-            filters={[
-              {
-                id: "role",
-                label: t("filters.role"),
-                value: roleFilter,
-                onValueChange: setRoleFilter,
-                options: [
-                  { value: "all", label: t("filters.allRoles") },
-                  ...(rolesQuery.data ?? []).map((role) => ({
-                    value: role.id,
-                    label: role.name,
-                  })),
-                ],
-              },
-              {
-                id: "status",
-                label: t("filters.status"),
-                value: statusFilter,
-                onValueChange: (v) => setStatusFilter(v as StatusFilter),
-                options: [
-                  { value: "all", label: t("filters.allStatuses") },
-                  { value: "active", label: t("filters.status_active") },
-                  { value: "pending", label: t("filters.status_pending") },
-                  { value: "disabled", label: t("filters.status_disabled") },
-                  {
-                    value: "pending-deletion",
-                    label: t("filters.status_pending-deletion"),
-                  },
-                ],
-              },
-              {
-                id: "joined",
-                label: t("filters.joined"),
-                value: joinedFilter,
-                onValueChange: (v) => setJoinedFilter(v as JoinedFilter),
-                options: [
-                  { value: "all", label: t("filters.joinedAll") },
-                  { value: "7d", label: t("filters.joined_7d") },
-                  { value: "30d", label: t("filters.joined_30d") },
-                  { value: "90d", label: t("filters.joined_90d") },
-                ],
-              },
-              {
-                id: "emailVerified",
-                label: t("filters.emailVerified"),
-                value: emailFilter,
-                onValueChange: (v) => setEmailFilter(v as EmailVerifiedFilter),
-                options: [
-                  { value: "all", label: t("filters.emailAll") },
-                  { value: "verified", label: t("filters.email_verified") },
-                  {
-                    value: "unverified",
-                    label: t("filters.email_unverified"),
-                  },
-                ],
-              },
-            ]}
+        tools={
+          <TableTools
+            layout={layout}
+            primaryColumn={primaryColumn}
+            columns={userColumns}
+            filters={filterConfigs}
+            labels={toolsLabels}
           />
         }
         actions={
@@ -288,17 +387,20 @@ export function UsersList() {
       <TableDetailLayout
         open={panel.isOpen}
         onClose={panel.close}
+        storageKey="admin-users"
         panelClassName="sm:max-w-2xl"
         panel={
           <>
-            <PanelHeaderBar
-              onCollapse={panel.close}
-              collapseLabel={t("collapsePanel")}
+            <SheetTitle className="sr-only">
+              {panel.isCreate ? t("panelCreateTitle") : t("panelEditTitle")}
+            </SheetTitle>
+            <PanelHeader
+              title={panel.isCreate ? t("panelCreateTitle") : t("panelEditTitle")}
+              onClose={panel.close}
               fullPageHref={panel.selectedId ? `/admin/users/${panel.selectedId}` : undefined}
               fullPageLabel={t("openFullPage")}
             />
             <div className="flex-1 overflow-y-auto px-6 py-6">
-              <SheetTitle className="sr-only">{t("panelTitle")}</SheetTitle>
               {panel.selectedId && (
                 <UserDetail
                   key={panel.selectedId}
@@ -314,11 +416,9 @@ export function UsersList() {
             data={rows}
             getRowId={(row) => row.id}
             storageKey="admin-users-table"
+            layout={layout}
             labels={{
-              columns: tTable("columns"),
-              reset: tTable("reset"),
               rowActions: tTable("rowActions"),
-              openPanel: tTable("openPanel"),
               errorTitle: tTable("loadError"),
               retry: tTable("retry"),
             }}
@@ -331,66 +431,8 @@ export function UsersList() {
             }}
             skeletonRows={4}
             emptyState={search ? t("emptySearch", { query: search }) : t("empty")}
-            primaryColumn={{
-              header: t("columns.user"),
-              leading: (row) =>
-                row.kind === "invite" ? (
-                  <span
-                    aria-hidden
-                    className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground"
-                  >
-                    <Mail className="h-4 w-4" />
-                  </span>
-                ) : (
-                  <Avatar className="h-9 w-9 shrink-0">
-                    {row.user.avatarUrl && (
-                      <AvatarImage src={rewriteForCurrentHost(row.user.avatarUrl)} alt="" />
-                    )}
-                    <AvatarFallback className="text-xs">
-                      {initialsFor(row.user.displayName, row.user.email)}
-                    </AvatarFallback>
-                  </Avatar>
-                ),
-              label: (row) =>
-                row.kind === "invite" ? row.invite.email : (row.user.displayName ?? row.user.email),
-              subtext: (row) =>
-                row.kind === "invite"
-                  ? `${row.invite.role.name} · ${row.invite.organization.displayName}`
-                  : row.user.displayName
-                    ? row.user.email
-                    : undefined,
-              href: (row) => (row.kind === "user" ? `/admin/users?user=${row.user.id}` : undefined),
-              size: 320,
-            }}
-            columns={[
-              {
-                id: "status",
-                header: t("columns.status"),
-                align: "right",
-                cell: (row) =>
-                  row.kind === "invite" ? (
-                    <span className="inline-flex items-center gap-1 rounded-md bg-amber-400/10 px-2 py-0.5 text-xs text-amber-500">
-                      {t("badges.pending")}
-                    </span>
-                  ) : (
-                    <span className="flex items-center justify-end gap-2">
-                      {row.user.disabledAt && (
-                        <span className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-0.5 text-xs text-muted-foreground">
-                          <ShieldOff className="h-3 w-3" aria-hidden />
-                          {t("badges.disabled")}
-                        </span>
-                      )}
-                      {row.user.deletedAt && (
-                        <span className="inline-flex items-center gap-1 rounded-md bg-amber-400/10 px-2 py-0.5 text-xs text-amber-500">
-                          <Clock className="h-3 w-3" aria-hidden />
-                          {t("badges.pendingDeletion")}
-                        </span>
-                      )}
-                    </span>
-                  ),
-                size: 220,
-              },
-            ]}
+            primaryColumn={primaryColumn}
+            columns={userColumns}
             rowActions={(row) =>
               row.kind === "invite"
                 ? [

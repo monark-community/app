@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import { FormDescription, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { FIELD_TYPE_ICON } from "./field-icons";
 import type { FieldDef } from "./types";
 
 /**
@@ -20,21 +21,25 @@ export function FieldShell({
   counter,
   className,
 }: {
-  def: Pick<FieldDef, "label" | "description" | "required">;
+  def: Pick<FieldDef, "type" | "label" | "description" | "required">;
   children: ReactNode;
   counter?: ReactNode;
   className?: string;
 }) {
+  const TypeIcon = FIELD_TYPE_ICON[def.type];
   return (
     <FormItem className={className}>
       {def.label ? (
-        <FormLabel>
-          {def.label}
-          {def.required ? (
-            <span className="text-destructive" aria-hidden>
-              {" *"}
-            </span>
-          ) : null}
+        <FormLabel className="flex items-center gap-1.5">
+          <TypeIcon className="h-3.5 w-3.5 shrink-0 text-muted-foreground/70" aria-hidden />
+          <span>
+            {def.label}
+            {def.required ? (
+              <span className="text-destructive" aria-hidden>
+                {" *"}
+              </span>
+            ) : null}
+          </span>
         </FormLabel>
       ) : null}
       {children}

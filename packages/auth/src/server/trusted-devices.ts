@@ -265,6 +265,12 @@ export async function revokeTrustedDevice(input: {
   userId: string;
   deviceId: string;
   scope?: "user" | "admin";
+  /**
+   * Set by `revokeAllTrustedDevices` so downstream notification
+   * subscribers can suppress the per-device email during a bulk sweep
+   * (the sweep emits a single `trusted-devices.all-revoked` instead).
+   */
+  bulk?: boolean;
 }): Promise<void> {
   const db = getDb();
   const now = new Date();
@@ -325,6 +331,7 @@ export async function revokeTrustedDevice(input: {
     userId: input.userId,
     deviceId: input.deviceId,
     scope: input.scope ?? "user",
+    bulk: input.bulk ?? false,
     occurredAt: now,
   };
   await emit(event);
@@ -338,10 +345,10 @@ export async function revokeTrustedDevice(input: {
 //
 // Emits `trusted-devices.all-revoked` once at the end with the actual
 // count revoked ; individual `trusted-device.revoked` events still fire
-// per row inside revokeTrustedDevice for audit / per-device subscribers.
-// The notifications module subscribes to the bulk event so the user only
-// gets one "every session ended" email instead of N "device X revoked"
-// emails.
+// per row inside revokeTrustedDevice (with `bulk: true`) for audit /
+// per-device subscribers. The notifications module's per-device
+// subscriber skips the bulk rows, so the user gets one "every session
+// ended" email instead of N "device X revoked" receipts.
 //
 // Returns the number of devices successfully revoked. A best-effort count ;
 // individual failures are swallowed so one bad row doesn't strand the others.
@@ -361,6 +368,7 @@ export async function revokeAllTrustedDevices(input: {
         userId: input.userId,
         deviceId: row.id,
         scope: input.scope,
+        bulk: true,
       });
       count += 1;
     } catch (err) {

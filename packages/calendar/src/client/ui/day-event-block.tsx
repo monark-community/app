@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { DragHandle } from "@monark/components/ui/drag-handle";
 import type { CalendarEvent } from "../../contracts/types";
 import { HOUR_HEIGHT_PX } from "../constants";
 
@@ -95,13 +96,7 @@ export function DayEventBlock({
     ? { outline: `2px solid ${effectiveColor ?? "hsl(var(--primary))"}`, outlineOffset: "1px" }
     : {};
 
-  const [resizeHover, setResizeHover] = useState(false);
   const [isResizeDragging, setIsResizeDragging] = useState(false);
-
-  // Reveal the resize handle on hover (mouse), while selected (a tap selects the
-  // event), or unconditionally on coarse-pointer devices where there is no hover.
-  const handleVisible = resizeHover || isResizeDragging || selected;
-  const handleClass = `absolute inset-x-0 bottom-0 flex h-4 items-end justify-center pb-0.5 touch-none transition-opacity [@media(pointer:coarse)]:opacity-100 ${handleVisible ? "opacity-100" : "opacity-0"}`;
 
   const sharedHandlers = {
     // Pointer (not mouse) events unify mouse + touch, so drag-to-move works on
@@ -130,12 +125,12 @@ export function DayEventBlock({
 
   const resizeHandle =
     onDragStart && !isPunctual ? (
-      <div
-        aria-hidden
-        className={handleClass}
-        style={{ cursor: "ns-resize" }}
-        onMouseEnter={() => setResizeHover(true)}
-        onMouseLeave={() => setResizeHover(false)}
+      <DragHandle
+        orientation="horizontal"
+        color={effectiveColor ?? "hsl(var(--primary))"}
+        active={isResizeDragging || !!selected}
+        // Sit the grip against the very bottom edge of the block.
+        className="absolute inset-x-0 bottom-0 h-4 items-end pb-0.5"
         onPointerDown={(e) => {
           e.stopPropagation();
           setIsResizeDragging(true);
@@ -146,17 +141,7 @@ export function DayEventBlock({
           };
           document.addEventListener("pointerup", cleanup);
         }}
-      >
-        <div
-          style={{
-            height: 4,
-            width: 32,
-            borderRadius: 9999,
-            backgroundColor: effectiveColor ?? "hsl(var(--primary))",
-            opacity: 0.8,
-          }}
-        />
-      </div>
+      />
     ) : null;
 
   const content = isPunctual ? (
@@ -233,35 +218,7 @@ export function DayEventBlock({
       <div className={`h-full overflow-hidden rounded-sm px-3 ${showPadding ? "py-1" : ""}`}>
         {content}
       </div>
-      {onDragStart && !isPunctual && (
-        <div
-          aria-hidden
-          className={handleClass}
-          style={{ cursor: "ns-resize" }}
-          onMouseEnter={() => setResizeHover(true)}
-          onMouseLeave={() => setResizeHover(false)}
-          onPointerDown={(e) => {
-            e.stopPropagation();
-            setIsResizeDragging(true);
-            onDragStart("resize", e.clientY);
-            const cleanup = () => {
-              setIsResizeDragging(false);
-              document.removeEventListener("pointerup", cleanup);
-            };
-            document.addEventListener("pointerup", cleanup);
-          }}
-        >
-          <div
-            style={{
-              height: 4,
-              width: 32,
-              borderRadius: 9999,
-              backgroundColor: effectiveColor ?? "hsl(var(--primary))",
-              opacity: 0.8,
-            }}
-          />
-        </div>
-      )}
+      {resizeHandle}
     </div>
   );
 }

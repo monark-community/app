@@ -25,13 +25,13 @@ export type NotificationDeliveryFailedEvent = DomainEventBase & {
   reason: string;
 };
 
-// Fired when a user toggles a per-category-per-channel preference. Lets
-// the audit log capture compliance-relevant changes (opt-out of ACCOUNT
-// emails, etc.).
+// Fired when a user toggles a per-kind-per-channel preference. Lets the
+// audit log capture compliance-relevant changes (opt-out of a specific
+// account email, etc.).
 export type NotificationPreferenceChangedEvent = DomainEventBase & {
   type: "notification.preference-changed";
   userId: string;
-  category: NotificationCategory;
+  kind: NotificationKind;
   channel: NotificationChannel;
   enabled: boolean;
 };

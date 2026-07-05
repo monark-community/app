@@ -8,7 +8,7 @@ import { Clock, Monitor, Moon, Sun } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { FieldRow } from "@/components/patterns";
 import {
   Select,
   SelectContent,
@@ -315,87 +315,85 @@ export function ProfileSection() {
         </div>
       )}
 
-      <div className="grid gap-2">
-        <Label htmlFor="displayName">{t("labels.displayName")}</Label>
-        <Input
-          id="displayName"
-          value={displayName}
-          onChange={(event) => setDisplayName(event.target.value)}
-          placeholder={t("placeholders.displayName")}
-          maxLength={80}
-          disabled={readOnly}
-        />
-      </div>
+      <div className="@container space-y-5">
+        <FieldRow label={t("labels.displayName")} htmlFor="displayName">
+          <Input
+            id="displayName"
+            value={displayName}
+            onChange={(event) => setDisplayName(event.target.value)}
+            placeholder={t("placeholders.displayName")}
+            maxLength={80}
+            disabled={readOnly}
+          />
+        </FieldRow>
 
-      <div className="grid gap-2">
-        <div className="flex items-baseline justify-between">
-          <Label htmlFor="bio">{t("labels.bio")}</Label>
-          <span
-            className={`text-xs ${
-              Array.from(bio).length > BIO_MAX ? "text-destructive" : "text-muted-foreground"
-            }`}
-            aria-live="polite"
+        <FieldRow label={t("labels.bio")} htmlFor="bio">
+          <Textarea
+            id="bio"
+            value={bio}
+            onChange={(event) => setBio(event.target.value)}
+            placeholder={t("placeholders.bio")}
+            rows={4}
+            disabled={readOnly}
+          />
+          <div className="flex justify-end">
+            <span
+              className={`text-xs ${
+                Array.from(bio).length > BIO_MAX ? "text-destructive" : "text-muted-foreground"
+              }`}
+              aria-live="polite"
+            >
+              {Array.from(bio).length}/{BIO_MAX}
+            </span>
+          </div>
+        </FieldRow>
+
+        <FieldRow label={t("labels.locale")} htmlFor="locale-select">
+          <Select value={localeDraft} onValueChange={setLocaleDraft} disabled={readOnly}>
+            <SelectTrigger id="locale-select" className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {LOCALES.map((locale) => (
+                <SelectItem key={locale.value} value={locale.value}>
+                  {tLocale(locale.key)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </FieldRow>
+
+        <FieldRow label={t("labels.theme")} htmlFor="theme-select">
+          <Select
+            value={mounted ? themeDraft : "system"}
+            onValueChange={setThemeDraft}
+            disabled={readOnly}
           >
-            {Array.from(bio).length}/{BIO_MAX}
-          </span>
-        </div>
-        <Textarea
-          id="bio"
-          value={bio}
-          onChange={(event) => setBio(event.target.value)}
-          placeholder={t("placeholders.bio")}
-          rows={4}
-          disabled={readOnly}
-        />
-      </div>
-
-      <div className="grid gap-2">
-        <Label htmlFor="locale-select">{t("labels.locale")}</Label>
-        <Select value={localeDraft} onValueChange={setLocaleDraft} disabled={readOnly}>
-          <SelectTrigger id="locale-select" className="w-full">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {LOCALES.map((locale) => (
-              <SelectItem key={locale.value} value={locale.value}>
-                {tLocale(locale.key)}
+            <SelectTrigger id="theme-select" className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="light">
+                <span className="flex items-center gap-2">
+                  <Sun className="h-4 w-4" aria-hidden />
+                  {tTheme("light")}
+                </span>
               </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div className="grid gap-2">
-        <Label htmlFor="theme-select">{t("labels.theme")}</Label>
-        <Select
-          value={mounted ? themeDraft : "system"}
-          onValueChange={setThemeDraft}
-          disabled={readOnly}
-        >
-          <SelectTrigger id="theme-select" className="w-full">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="light">
-              <span className="flex items-center gap-2">
-                <Sun className="h-4 w-4" aria-hidden />
-                {tTheme("light")}
-              </span>
-            </SelectItem>
-            <SelectItem value="dark">
-              <span className="flex items-center gap-2">
-                <Moon className="h-4 w-4" aria-hidden />
-                {tTheme("dark")}
-              </span>
-            </SelectItem>
-            <SelectItem value="system">
-              <span className="flex items-center gap-2">
-                <Monitor className="h-4 w-4" aria-hidden />
-                {tTheme("system")}
-              </span>
-            </SelectItem>
-          </SelectContent>
-        </Select>
+              <SelectItem value="dark">
+                <span className="flex items-center gap-2">
+                  <Moon className="h-4 w-4" aria-hidden />
+                  {tTheme("dark")}
+                </span>
+              </SelectItem>
+              <SelectItem value="system">
+                <span className="flex items-center gap-2">
+                  <Monitor className="h-4 w-4" aria-hidden />
+                  {tTheme("system")}
+                </span>
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        </FieldRow>
       </div>
 
       <ImageCropDialog

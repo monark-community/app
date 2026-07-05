@@ -39,6 +39,10 @@ const AUTH_EVENT_TYPES = {
   "totp.recovery-code-used": {
     description: "A recovery code was consumed (one-time, can never be re-used).",
   },
+  "totp.recovery-codes-regenerated": {
+    description:
+      "The user regenerated their two-factor recovery codes ; the previous batch was invalidated.",
+  },
 } as const;
 
 export function registerAuthEventTypes(): void {

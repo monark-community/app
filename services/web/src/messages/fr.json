@@ -30,13 +30,15 @@
       "code": "Code en ligne",
       "heading1": "Titre 1",
       "heading2": "Titre 2",
+      "heading3": "Titre 3",
+      "heading4": "Titre 4",
+      "paragraph": "Paragraphe",
+      "textStyle": "Style de texte",
       "bulletList": "Liste à puces",
       "orderedList": "Liste numérotée",
       "blockquote": "Citation",
       "link": "Lien",
       "unlink": "Retirer le lien",
-      "undo": "Annuler",
-      "redo": "Rétablir",
       "linkUrlPlaceholder": "Collez un lien…",
       "linkApply": "Appliquer"
     }
@@ -64,10 +66,34 @@
     "tagline": "Au service de la collaboration au sein de la communauté Web3.",
     "cancel": "Annuler",
     "save": "Enregistrer",
+    "close": "Fermer",
+    "more": "Plus d'options",
     "continue": "Continuer",
     "loading": "Chargement…",
     "chooseColor": "Choisir une couleur",
     "unsavedChanges": "Modifications non enregistrées"
+  },
+  "dataForm": {
+    "attributesTitle": "Attributs",
+    "attributesSubtitle": "Les champs structurés de cette fiche.",
+    "descriptionTitle": "Description",
+    "descriptionSubtitle": "Le contenu principal de cette fiche.",
+    "discussionTitle": "Discussion",
+    "discussionSubtitle": "Commentaires et notes de votre équipe.",
+    "discussion": {
+      "composerPlaceholder": "Écrire un commentaire…",
+      "submit": "Commenter",
+      "empty": "Aucun commentaire pour l'instant.",
+      "note": "Aperçu — les commentaires ne sont pas encore activés.",
+      "sample1Author": "Ava Martin",
+      "sample1Initials": "AM",
+      "sample1Time": "il y a 2 jours",
+      "sample1Body": "Beau travail pour la mise en ligne. Devrait-on impliquer l'équipe de design avant le prochain jalon ?",
+      "sample2Author": "Leo Nguyen",
+      "sample2Initials": "LN",
+      "sample2Time": "hier",
+      "sample2Body": "D'accord. J'ai laissé quelques notes sur les attributs ci-dessus ; rien de bloquant."
+    }
   },
   "imageCrop": {
     "cancel": "Annuler",
@@ -91,7 +117,10 @@
       "roles": "Rôles",
       "new": "Nouveau",
       "setup": "Configuration",
-      "calendar": "Calendrier"
+      "calendar": "Calendrier",
+      "data": "Données",
+      "projects": "Projets",
+      "industries": "Industries"
     },
     "apps": {
       "triggerAria": "Changer d'application",
@@ -115,14 +144,13 @@
       "empty": "Aucun module enregistré.",
       "items": {
         "calendar": "Calendrier",
-        "projects": "Projets",
-        "industries": "Industries"
+        "data": "Données"
       }
     },
     "userMenu": {
       "triggerAria": "Ouvrir le menu utilisateur",
       "aria": "Menu utilisateur",
-      "aboutYou": "À propos de vous",
+      "forYou": "Pour vous",
       "comingSoon": "Bientôt disponible",
       "links": {
         "profile": "Profil",
@@ -314,17 +342,67 @@
     "home": "Accueil"
   },
   "table": {
+    "tools": "Outils de liste",
     "columns": "Colonnes",
     "reset": "Réinitialiser la disposition",
+    "sorting": "Tri",
+    "sortAscending": "Croissant",
+    "sortDescending": "Décroissant",
+    "sortNone": "Aucun tri",
+    "sortAddField": "Ajouter un champ de tri",
+    "sortRemove": "Retirer le champ de tri",
+    "sortReset": "Réinitialiser le tri",
     "rowActions": "Actions de la ligne",
-    "openPanel": "Ouvrir les détails",
     "loadError": "Impossible de charger cette liste. Veuillez réessayer.",
-    "retry": "Réessayer"
+    "retry": "Réessayer",
+    "pagination": {
+      "showing": "Affichage de {from} à {to} sur {total}",
+      "rowsPerPage": "Lignes par page",
+      "previous": "Page précédente",
+      "next": "Page suivante"
+    }
   },
   "filters": {
     "button": "Filtres",
     "title": "Filtres",
-    "close": "Fermer"
+    "close": "Fermer",
+    "searchPlaceholder": "Chercher…",
+    "noResults": "Aucun résultat.",
+    "clearAll": "Réinitialiser les filtres",
+    "resetField": "Réinitialiser",
+    "activeValues": "{count} actifs"
+  },
+  "globalSearch": {
+    "trigger": "Rechercher",
+    "label": "Recherche globale",
+    "placeholder": "Rechercher projets, événements, pages…",
+    "searching": "Recherche…",
+    "empty": "Aucun résultat.",
+    "groups": {
+      "projects": "Projets",
+      "industries": "Secteurs",
+      "calendar": "Événements",
+      "navigation": "Aller à"
+    },
+    "routes": {
+      "dashboard": "Tableau de bord",
+      "calendar": "Calendrier",
+      "projects": "Projets",
+      "industries": "Secteurs",
+      "account": "Compte",
+      "admin": "Admin",
+      "adminUsers": "Utilisateurs",
+      "adminOrganizations": "Organisations",
+      "adminRbac": "Rôles et permissions",
+      "adminWebhooks": "Webhooks"
+    }
+  },
+  "data": {
+    "tabs": {
+      "nav": "Modèles de données",
+      "projects": "Projets",
+      "industries": "Industries"
+    }
   },
   "admin": {
     "title": "Admin",
@@ -345,10 +423,15 @@
       "placeholder": "La gestion des utilisateurs sera ajoutée ici.",
       "searchLabel": "Rechercher des utilisateurs",
       "searchPlaceholder": "Recherchez par courriel ou nom affiché…",
-      "columns": { "user": "Utilisateur", "status": "Statut" },
+      "columns": {
+        "user": "Utilisateur",
+        "status": "Statut"
+      },
       "collapsePanel": "Réduire le panneau",
       "openFullPage": "Ouvrir en pleine page",
       "panelTitle": "Utilisateur",
+      "panelCreateTitle": "Créer un utilisateur",
+      "panelEditTitle": "Modifier l’utilisateur",
       "empty": "Aucun utilisateur pour l'instant.",
       "emptySearch": "Aucun utilisateur ne correspond à « {query} ».",
       "loading": "Chargement…",
@@ -539,7 +622,10 @@
       "title": "Organisations",
       "subtitle": "Gérez les profils, l'image de marque et les slugs des organisations.",
       "placeholder": "L'édition des profils d'organisation sera ajoutée ici.",
-      "columns": { "name": "Organisation", "color": "Couleur" },
+      "columns": {
+        "name": "Organisation",
+        "color": "Couleur"
+      },
       "collapsePanel": "Réduire le panneau",
       "openFullPage": "Ouvrir en pleine page",
       "panelTitle": "Organisation",
@@ -610,10 +696,15 @@
         "createCta": "Nouveau rôle",
         "searchPlaceholder": "Rechercher un rôle…",
         "searchAria": "Rechercher un rôle par nom",
-        "columns": { "name": "Rôle", "type": "Type" },
+        "columns": {
+          "name": "Rôle",
+          "type": "Type"
+        },
         "collapsePanel": "Réduire le panneau",
         "openFullPage": "Ouvrir en pleine page",
         "panelTitle": "Rôle",
+        "panelCreateTitle": "Créer un rôle",
+        "panelEditTitle": "Modifier le rôle",
         "empty": "Aucun rôle pour l'instant. Créez-en un pour commencer.",
         "emptySearch": "Aucun rôle ne correspond à « {query} ».",
         "badges": {
@@ -640,7 +731,6 @@
         "searchPlaceholder": "Rechercher des permissions…",
         "searchAria": "Filtrer les permissions",
         "searchEmpty": "Aucune permission ne correspond.",
-        "categoryCount": "{selected} / {total}",
         "toggleAllAria": "Activer toutes les permissions de {category}",
         "categories": {
           "organization": "Organisation",
@@ -648,7 +738,8 @@
           "rbac": "Rôles et permissions",
           "platform": "Plateforme",
           "calendar": "Calendrier",
-          "projects": "Projets"
+          "projects": "Projets",
+          "industries": "Secteurs"
         },
         "nameRequired": "Le nom du rôle est requis.",
         "create": "Créer le rôle",
@@ -674,6 +765,8 @@
       "title": "Projets",
       "subtitle": "Suivez chaque projet détenu par l'organisation — de l'idée à la livraison.",
       "newProject": "Nouveau projet",
+      "panelCreateTitle": "Créer un projet",
+      "panelEditTitle": "Modifier le projet",
       "actions": {
         "edit": "Modifier",
         "archive": "Archiver",
@@ -712,6 +805,8 @@
       "columns": {
         "title": "Titre",
         "status": "Statut",
+        "url": "URL",
+        "keywords": "Mots-clés",
         "industries": "Industries",
         "updated": "Mis à jour"
       },
@@ -738,24 +833,23 @@
         "back": "Retour aux projets",
         "fields": {
           "title": "Titre",
-          "titleHelp": "Affiché comme titre principal sur les cartes et les pages de détail.",
           "slug": "Slug",
-          "slugHelp": "Minuscules, tirets uniquement. Utilisé dans les URLs. Dérivé du titre si laissé vide.",
           "slugPreview": "Sera enregistré sous {slug}",
           "url": "URL",
           "urlPlaceholder": "https://exemple.com/projet",
-          "urlHelp": "Optionnel. Lien vers une page marketing, une démo ou un dépôt.",
           "description": "Description",
-          "descriptionHelp": "Markdown. Rendu sur les surfaces publiques quand configuré.",
+          "descriptionPlaceholder": "Décrivez ce projet…",
           "publicStatus": "Statut public",
           "keywords": "Mots-clés",
-          "keywordsHelp": "Séparés par des virgules. Mis en minuscules + dé-dupliqués à l'enregistrement.",
-          "keywordsPlaceholder": "design system, accessibilité, tableau de bord",
-          "industries": "Industries",
-          "industriesHelp": "Choisissez une ou plusieurs dans la taxonomie."
+          "keywordsHelp": "Appuyez sur Entrée pour ajouter chaque mot-clé.",
+          "keywordsPlaceholder": "Ajouter un mot-clé…",
+          "keywordsAdd": "Ajouter un mot-clé",
+          "industries": "Industries"
         },
         "addIndustry": "Ajouter une industrie",
         "removeIndustry": "Retirer {name}",
+        "removeKeyword": "Retirer {name}",
+        "createKeyword": "Ajouter « {value} »",
         "noIndustries": "Aucune industrie sélectionnée.",
         "industriesEmpty": "Toutes les industries sont déjà sélectionnées.",
         "industriesSearchPlaceholder": "Chercher des industries",
@@ -786,6 +880,8 @@
       "title": "Secteurs",
       "subtitle": "Taxonomie de la plateforme que les projets utilisent pour déclarer leur secteur de marché.",
       "newIndustry": "Nouveau secteur",
+      "panelCreateTitle": "Créer un secteur",
+      "panelEditTitle": "Modifier le secteur",
       "searchPlaceholder": "Chercher par nom ou slug",
       "actions": {
         "edit": "Modifier",
@@ -815,10 +911,10 @@
         "createTitle": "Nouveau secteur",
         "editTitle": "Modifier le secteur",
         "displayName": "Nom",
-        "displayNameHelp": "Affiché aux utilisateurs sur les fiches projet et les menus de filtre.",
         "slug": "Slug",
-        "slugHelp": "Dérivé automatiquement du nom si laissé vide. Minuscules et tirets uniquement.",
         "slugPreview": "Sera enregistré sous {slug}",
+        "description": "Description",
+        "descriptionPlaceholder": "Décrivez ce secteur…",
         "save": "Enregistrer",
         "saving": "Enregistrement…",
         "create": "Créer le secteur",
@@ -874,6 +970,8 @@
         "collapsePanel": "Réduire le panneau",
         "openFullPage": "Ouvrir en pleine page",
         "panelTitle": "Point de terminaison webhook",
+        "panelCreateTitle": "Nouveau point de terminaison webhook",
+        "panelEditTitle": "Modifier le point de terminaison webhook",
         "searchPlaceholder": "Rechercher par nom, URL ou description…",
         "searchAria": "Rechercher des points de terminaison de webhook",
         "empty": "Aucun point de terminaison de webhook dans cette portée pour l'instant.",
@@ -935,7 +1033,6 @@
           "emptySearch": "Aucun événement ne correspond à « {query} ».",
           "moduleToggleAriaAll": "Basculer tous les événements de {module}",
           "moduleAllAsPrefix": "Tous (préfixe)",
-          "moduleSelectionCount": "{selected} / {total}",
           "customSectionTitle": "Événements personnalisés absents du registre. Ils reçoivent toujours les livraisons ; supprimez une puce pour vous désabonner.",
           "customRemoveAria": "Supprimer l'abonnement personnalisé sur « {type} »"
         },
@@ -972,7 +1069,11 @@
       "deliveries": {
         "back": "Retour au point de terminaison",
         "title": "Livraisons",
-        "columns": { "event": "Événement", "status": "Statut", "when": "Mise en file" },
+        "columns": {
+          "event": "Événement",
+          "status": "Statut",
+          "when": "Mise en file"
+        },
         "empty": "Aucune livraison pour l'instant. Les points de terminaison accumulent des lignes dès qu'un événement correspondant est émis.",
         "attemptsCount": "{count, plural, =0 {Aucune tentative} one {# tentative} other {# tentatives}}",
         "createdAt": "Mise en file d'attente {date}",
@@ -1060,11 +1161,13 @@
       },
       "prefs": {
         "title": "Préférences de notification",
-        "subtitle": "Choisissez les catégories à recevoir, et sur quel canal.",
+        "subtitle": "Choisissez les événements qui vous envoient un courriel. Les alertes dans l'application sont gérées pour vous.",
         "categoryLabel": "Catégorie",
         "categories": {
           "SECURITY": "Sécurité",
-          "ACCOUNT": "Compte"
+          "ACCOUNT": "Compte",
+          "ACTIVITY": "Activité",
+          "DIGEST": "Résumé"
         },
         "categoryDescriptions": {
           "SECURITY": "Alertes de connexion, changements de mot de passe, activation/désactivation de la double authentification. Le courriel est obligatoire pour ces événements et ne peut pas être désactivé ; il protège votre compte contre les accès non autorisés.",
@@ -1075,8 +1178,44 @@
           "IN_APP": "In-app",
           "EMAIL": "Courriel"
         },
-        "enableAria": "Activer {category} sur {channel}",
-        "disableAria": "Désactiver {category} sur {channel}",
+        "enableAria": "Activer {kind} sur {channel}",
+        "disableAria": "Désactiver {kind} sur {channel}",
+        "searchPlaceholder": "Rechercher des notifications…",
+        "searchAria": "Rechercher des notifications",
+        "searchEmpty": "Aucune notification ne correspond à votre recherche.",
+        "empty": "Aucune notification disponible.",
+        "kinds": {
+          "auth_new-device": "Connexion depuis un nouvel appareil",
+          "auth_password-changed": "Mot de passe modifié",
+          "auth_totp-enabled": "Double authentification activée",
+          "auth_totp-disabled": "Double authentification désactivée",
+          "auth_all-devices-revoked": "Toutes les sessions déconnectées",
+          "auth_signed-in": "Alerte de connexion",
+          "auth_device-revoked": "Appareil déconnecté",
+          "auth_recovery-code-used": "Code de récupération utilisé",
+          "auth_recovery-codes-regenerated": "Codes de récupération remplacés",
+          "account_email-changed": "Adresse e-mail modifiée",
+          "account_deletion-scheduled": "Suppression du compte planifiée",
+          "account_deletion-canceled": "Suppression du compte annulée",
+          "webhooks_delivery-permanently-failed": "Échec de livraison du webhook",
+          "webhooks_endpoint-auto-disabled": "Point de terminaison webhook désactivé automatiquement",
+          "calendar_event_reminder": "Rappel d’événement"
+        },
+        "kindDescriptions": {
+          "auth_new-device": "Lorsque votre compte est connecté depuis un appareil que nous ne reconnaissons pas.",
+          "auth_password-changed": "Lorsque le mot de passe de votre compte est modifié.",
+          "auth_totp-enabled": "Lorsque la double authentification est activée.",
+          "auth_totp-disabled": "Lorsque la double authentification est désactivée.",
+          "auth_all-devices-revoked": "Lorsque tous les appareils connectés sont déconnectés d'un coup.",
+          "auth_signed-in": "À chaque connexion réussie, pas seulement depuis un nouvel appareil.",
+          "auth_device-revoked": "Lorsqu'un appareil ou une session est déconnecté de votre compte.",
+          "auth_recovery-code-used": "Lorsqu'un de vos codes de récupération à deux facteurs est utilisé pour se connecter.",
+          "auth_recovery-codes-regenerated": "Lorsque vos codes de récupération à deux facteurs sont remplacés par un nouveau lot.",
+          "webhooks_delivery-permanently-failed": "Lorsqu'une livraison de webhook échoue définitivement après toutes les tentatives.",
+          "webhooks_endpoint-auto-disabled": "Lorsqu'un point de terminaison de webhook est automatiquement désactivé après des échecs répétés.",
+          "account_deletion-scheduled": "Lorsque votre compte est programmé pour suppression, avec la date limite du délai de grâce."
+        },
+        "toggleAllAria": "Basculer tous les courriels {category}",
         "forcedBadge": "Requis",
         "forcedTooltip": "Les courriels de sécurité ne peuvent pas être désactivés ; ils protègent votre compte.",
         "resetButton": "Rétablir les paramètres par défaut",
@@ -1382,7 +1521,10 @@
     "title": "Outils dev",
     "toggleHint": "Alt+D pour basculer",
     "themeSwitchTo": "Passer au thème {theme}",
-    "theme": { "light": "clair", "dark": "sombre" },
+    "theme": {
+      "light": "clair",
+      "dark": "sombre"
+    },
     "refetch": "Recharger",
     "signUp": "Inscription",
     "signIn": "Connexion",
@@ -1459,17 +1601,27 @@
     },
     "apiHealth": {
       "pinging": "ping…",
-      "fields": { "pong": "pong", "at": "à" }
+      "fields": {
+        "pong": "pong",
+        "at": "à"
+      }
     },
     "currentOrg": {
       "none": "Aucune organisation active.",
       "resolving": "résolution…",
       "inferred": "aucune réclamation ; déduit des appartenances",
-      "fields": { "slug": "slug", "name": "nom", "id": "id" },
+      "fields": {
+        "slug": "slug",
+        "name": "nom",
+        "id": "id"
+      },
       "memberships": "appartenances ({count})"
     },
     "rbac": {
-      "fields": { "primary": "principal", "roles": "rôles" },
+      "fields": {
+        "primary": "principal",
+        "roles": "rôles"
+      },
       "permissions": "permissions ({count})",
       "noneGranted": "Aucune accordée.",
       "dash": "—"
@@ -1513,7 +1665,8 @@
       "resolving": "résolution…",
       "on": "actif",
       "off": "inactif",
-      "scopeNote": "Résolu avec une portée vide (aucun userId / orgId / rôle)."
+      "empty": "Aucun indicateur de fonctionnalité enregistré.",
+      "scopeNote": "Résolu pour votre session (votre utilisateur + organisation active)."
     },
     "errorPrefix": "erreur :"
   },
@@ -1526,6 +1679,8 @@
       "moreOptions": "Plus d'options",
       "editCalendar": "Modifier",
       "archiveCalendar": "Archiver",
+      "showCalendar": "Afficher le calendrier",
+      "hideCalendar": "Masquer le calendrier",
       "archiveConfirmTitle": "Archiver le calendrier ?",
       "archiveConfirmDescription": "Le calendrier est masqué de la liste. Ses événements sont conservés et vous pourrez le restaurer plus tard.",
       "archiveConfirmAction": "Archiver",
@@ -1558,6 +1713,7 @@
       "nextWeek": "Semaine suivante",
       "prevMonth": "Mois précédent",
       "nextMonth": "Mois suivant",
+      "goToDate": "Aller à la date",
       "day": "Jour",
       "week": "Semaine",
       "month": "Mois"
@@ -1576,13 +1732,6 @@
       "fri": "Ven",
       "sat": "Sam",
       "sun": "Dim"
-    },
-    "search": {
-      "label": "Rechercher des événements",
-      "placeholder": "Rechercher des événements…",
-      "typeToSearch": "Tapez au moins 2 caractères pour rechercher",
-      "searching": "Recherche en cours…",
-      "empty": "Aucun événement trouvé"
     },
     "dayView": {
       "allDayLabel": "Toute la journée",
@@ -1613,6 +1762,8 @@
         "participantsLabel": "Participants",
         "participantsPlaceholder": "Ajouter des participants",
         "discardConfirm": "Vous avez des modifications non enregistrées. Les ignorer ?",
+        "discardTitle": "Ignorer les modifications ?",
+        "discardCta": "Ignorer",
         "cancel": "Annuler",
         "create": "Créer",
         "remindersLabel": "Rappels",
@@ -1620,6 +1771,7 @@
         "reminderUnitHours": "heures",
         "reminderUnitDays": "jours",
         "reminderUnitWeeks": "semaines",
+        "reminderBefore": "avant",
         "addReminder": "Ajouter un rappel",
         "removeReminder": "Supprimer le rappel"
       }

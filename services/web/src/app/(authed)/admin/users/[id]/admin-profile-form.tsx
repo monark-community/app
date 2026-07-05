@@ -4,7 +4,6 @@ import { type ReactNode, useEffect, useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -13,6 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { FieldRow } from "@/components/patterns";
 import { UserBanner, type UserBannerEditConfig } from "@/components/user-banner";
 import { rewriteForCurrentHost } from "@/lib/dev-host-rewrite";
 import { trpc } from "@/lib/trpc";
@@ -57,6 +57,7 @@ export function AdminProfileForm({
   badges,
   backHref,
   backLabel,
+  bleed = true,
 }: {
   user: User;
   /** Status pills (disabled / pendingDeletion) rendered next to the headline. */
@@ -64,6 +65,9 @@ export function AdminProfileForm({
   /** Back-button affordance rendered as an overlay in the banner's top-left. */
   backHref?: string;
   backLabel?: string;
+  /** Passed to {@link UserBanner} — `"container"` bleeds to a panel's
+   *  edges, `true` bleeds to the viewport (full page). */
+  bleed?: boolean | "container";
 }) {
   const t = useTranslations("admin.users.profileForm");
   const tLocale = useTranslations("account.profile.locales");
@@ -212,6 +216,7 @@ export function AdminProfileForm({
         badges={badges}
         backHref={backHref}
         backLabel={backLabel}
+        bleed={bleed}
         edit={editConfig}
       />
       {(bannerError || avatarError) && (
@@ -225,56 +230,55 @@ export function AdminProfileForm({
         </div>
       )}
 
-      <div className="grid gap-2">
-        <Label htmlFor="admin-displayName">{t("labels.displayName")}</Label>
-        <Input
-          id="admin-displayName"
-          value={displayName}
-          onChange={(event) => setDisplayName(event.target.value)}
-          onBlur={onBlurDisplayName}
-          placeholder={t("placeholders.displayName")}
-          maxLength={80}
-          disabled={readOnly}
-        />
-      </div>
+      <div className="@container space-y-5">
+        <FieldRow label={t("labels.displayName")} htmlFor="admin-displayName">
+          <Input
+            id="admin-displayName"
+            value={displayName}
+            onChange={(event) => setDisplayName(event.target.value)}
+            onBlur={onBlurDisplayName}
+            placeholder={t("placeholders.displayName")}
+            maxLength={80}
+            disabled={readOnly}
+          />
+        </FieldRow>
 
-      <div className="grid gap-2">
-        <div className="flex items-baseline justify-between">
-          <Label htmlFor="admin-bio">{t("labels.bio")}</Label>
-          <span
-            className={`text-xs ${
-              Array.from(bio).length > BIO_MAX ? "text-destructive" : "text-muted-foreground"
-            }`}
-            aria-live="polite"
-          >
-            {Array.from(bio).length}/{BIO_MAX}
-          </span>
-        </div>
-        <Textarea
-          id="admin-bio"
-          value={bio}
-          onChange={(event) => setBio(event.target.value)}
-          onBlur={onBlurBio}
-          placeholder={t("placeholders.bio")}
-          rows={4}
-          disabled={readOnly}
-        />
-      </div>
+        <FieldRow label={t("labels.bio")} htmlFor="admin-bio">
+          <Textarea
+            id="admin-bio"
+            value={bio}
+            onChange={(event) => setBio(event.target.value)}
+            onBlur={onBlurBio}
+            placeholder={t("placeholders.bio")}
+            rows={4}
+            disabled={readOnly}
+          />
+          <div className="flex justify-end">
+            <span
+              className={`text-xs ${
+                Array.from(bio).length > BIO_MAX ? "text-destructive" : "text-muted-foreground"
+              }`}
+              aria-live="polite"
+            >
+              {Array.from(bio).length}/{BIO_MAX}
+            </span>
+          </div>
+        </FieldRow>
 
-      <div className="grid gap-2">
-        <Label htmlFor="admin-locale">{t("labels.locale")}</Label>
-        <Select value={user.localePreference} onValueChange={onLocaleChange} disabled={readOnly}>
-          <SelectTrigger id="admin-locale" className="w-full">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {LOCALES.map((locale) => (
-              <SelectItem key={locale.value} value={locale.value}>
-                {tLocale(locale.key)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <FieldRow label={t("labels.locale")} htmlFor="admin-locale">
+          <Select value={user.localePreference} onValueChange={onLocaleChange} disabled={readOnly}>
+            <SelectTrigger id="admin-locale" className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {LOCALES.map((locale) => (
+                <SelectItem key={locale.value} value={locale.value}>
+                  {tLocale(locale.key)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </FieldRow>
       </div>
     </div>
   );

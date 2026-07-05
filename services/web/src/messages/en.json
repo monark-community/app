@@ -30,13 +30,15 @@
       "code": "Inline code",
       "heading1": "Heading 1",
       "heading2": "Heading 2",
+      "heading3": "Heading 3",
+      "heading4": "Heading 4",
+      "paragraph": "Paragraph",
+      "textStyle": "Text style",
       "bulletList": "Bullet list",
       "orderedList": "Numbered list",
       "blockquote": "Quote",
       "link": "Link",
       "unlink": "Remove link",
-      "undo": "Undo",
-      "redo": "Redo",
       "linkUrlPlaceholder": "Paste a link…",
       "linkApply": "Apply"
     }
@@ -46,10 +48,34 @@
     "tagline": "Fostering collaboration within the Web3 community.",
     "cancel": "Cancel",
     "save": "Save",
+    "close": "Close",
+    "more": "More options",
     "continue": "Continue",
     "loading": "Loading…",
     "chooseColor": "Choose color",
     "unsavedChanges": "Unsaved changes"
+  },
+  "dataForm": {
+    "attributesTitle": "Attributes",
+    "attributesSubtitle": "The structured fields for this record.",
+    "descriptionTitle": "Description",
+    "descriptionSubtitle": "The main content for this record.",
+    "discussionTitle": "Discussion",
+    "discussionSubtitle": "Comments and notes from your team.",
+    "discussion": {
+      "composerPlaceholder": "Write a comment…",
+      "submit": "Comment",
+      "empty": "No comments yet.",
+      "note": "Preview — commenting isn't enabled yet.",
+      "sample1Author": "Ava Martin",
+      "sample1Initials": "AM",
+      "sample1Time": "2 days ago",
+      "sample1Body": "Nice work getting this shipped. Should we loop in the design team before the next milestone?",
+      "sample2Author": "Leo Nguyen",
+      "sample2Initials": "LN",
+      "sample2Time": "yesterday",
+      "sample2Body": "Agreed. I left a couple of notes on the attributes above ; nothing blocking."
+    }
   },
   "setup": {
     "eyebrow": "{appName} setup",
@@ -91,7 +117,10 @@
       "roles": "Roles",
       "new": "New",
       "setup": "Setup",
-      "calendar": "Calendar"
+      "calendar": "Calendar",
+      "data": "Data",
+      "projects": "Projects",
+      "industries": "Industries"
     },
     "apps": {
       "triggerAria": "Switch app",
@@ -115,14 +144,13 @@
       "empty": "No module registered.",
       "items": {
         "calendar": "Calendar",
-        "projects": "Projects",
-        "industries": "Industries"
+        "data": "Data"
       }
     },
     "userMenu": {
       "triggerAria": "Open user menu",
       "aria": "User menu",
-      "aboutYou": "About you",
+      "forYou": "For you",
       "comingSoon": "Coming soon",
       "links": {
         "profile": "Profile",
@@ -314,17 +342,67 @@
     "home": "Home"
   },
   "table": {
+    "tools": "List tools",
     "columns": "Columns",
     "reset": "Reset layout",
+    "sorting": "Sorting",
+    "sortAscending": "Ascending",
+    "sortDescending": "Descending",
+    "sortNone": "No sorting",
+    "sortAddField": "Add sort field",
+    "sortRemove": "Remove sort field",
+    "sortReset": "Reset sorting",
     "rowActions": "Row actions",
-    "openPanel": "Open details",
     "loadError": "Couldn't load this list. Please try again.",
-    "retry": "Retry"
+    "retry": "Retry",
+    "pagination": {
+      "showing": "Showing {from}–{to} of {total}",
+      "rowsPerPage": "Rows per page",
+      "previous": "Previous page",
+      "next": "Next page"
+    }
   },
   "filters": {
     "button": "Filters",
     "title": "Filters",
-    "close": "Close"
+    "close": "Close",
+    "searchPlaceholder": "Search…",
+    "noResults": "No results.",
+    "clearAll": "Reset filters",
+    "resetField": "Reset",
+    "activeValues": "{count} Active"
+  },
+  "globalSearch": {
+    "trigger": "Search",
+    "label": "Global search",
+    "placeholder": "Search projects, events, pages…",
+    "searching": "Searching…",
+    "empty": "No results found.",
+    "groups": {
+      "projects": "Projects",
+      "industries": "Industries",
+      "calendar": "Events",
+      "navigation": "Go to"
+    },
+    "routes": {
+      "dashboard": "Dashboard",
+      "calendar": "Calendar",
+      "projects": "Projects",
+      "industries": "Industries",
+      "account": "Account",
+      "admin": "Admin",
+      "adminUsers": "Users",
+      "adminOrganizations": "Organizations",
+      "adminRbac": "Roles & permissions",
+      "adminWebhooks": "Webhooks"
+    }
+  },
+  "data": {
+    "tabs": {
+      "nav": "Data models",
+      "projects": "Projects",
+      "industries": "Industries"
+    }
   },
   "admin": {
     "title": "Admin",
@@ -345,10 +423,15 @@
       "placeholder": "User management lands here.",
       "searchLabel": "Search users",
       "searchPlaceholder": "Search by email or display name…",
-      "columns": { "user": "User", "status": "Status" },
+      "columns": {
+        "user": "User",
+        "status": "Status"
+      },
       "collapsePanel": "Collapse panel",
       "openFullPage": "Open full page",
       "panelTitle": "User",
+      "panelCreateTitle": "Create new user",
+      "panelEditTitle": "Edit user",
       "empty": "No users yet.",
       "emptySearch": "No users match \"{query}\".",
       "loading": "Loading…",
@@ -539,7 +622,10 @@
       "title": "Organizations",
       "subtitle": "Manage organization profiles, branding, and slugs.",
       "placeholder": "Organization profile editing lands here.",
-      "columns": { "name": "Organization", "color": "Color" },
+      "columns": {
+        "name": "Organization",
+        "color": "Color"
+      },
       "collapsePanel": "Collapse panel",
       "openFullPage": "Open full page",
       "panelTitle": "Organization",
@@ -610,10 +696,15 @@
         "createCta": "New role",
         "searchPlaceholder": "Search roles…",
         "searchAria": "Search roles by name",
-        "columns": { "name": "Role", "type": "Type" },
+        "columns": {
+          "name": "Role",
+          "type": "Type"
+        },
         "collapsePanel": "Collapse panel",
         "openFullPage": "Open full page",
         "panelTitle": "Role",
+        "panelCreateTitle": "Create a role",
+        "panelEditTitle": "Edit role",
         "empty": "No roles yet. Create one to get started.",
         "emptySearch": "No role matches “{query}”.",
         "badges": {
@@ -640,7 +731,6 @@
         "searchPlaceholder": "Search permissions…",
         "searchAria": "Filter permissions",
         "searchEmpty": "No permission matches that search.",
-        "categoryCount": "{selected} / {total}",
         "toggleAllAria": "Toggle every permission in {category}",
         "categories": {
           "organization": "Organization",
@@ -648,7 +738,8 @@
           "rbac": "Roles & permissions",
           "platform": "Platform",
           "calendar": "Calendar",
-          "projects": "Projects"
+          "projects": "Projects",
+          "industries": "Industries"
         },
         "nameRequired": "Role name is required.",
         "create": "Create role",
@@ -674,6 +765,8 @@
       "title": "Projects",
       "subtitle": "Track every project the organization owns — idea through completed.",
       "newProject": "New project",
+      "panelCreateTitle": "Create new project",
+      "panelEditTitle": "Edit project",
       "actions": {
         "edit": "Edit",
         "archive": "Archive",
@@ -712,6 +805,8 @@
       "columns": {
         "title": "Title",
         "status": "Status",
+        "url": "URL",
+        "keywords": "Keywords",
         "industries": "Industries",
         "updated": "Updated"
       },
@@ -738,24 +833,23 @@
         "back": "Back to projects",
         "fields": {
           "title": "Title",
-          "titleHelp": "Shown as the primary heading on cards and detail pages.",
           "slug": "Slug",
-          "slugHelp": "Lowercase, dashes-only. Used in URLs. Auto-derived from the title if you leave it blank.",
           "slugPreview": "Will be saved as {slug}",
           "url": "URL",
           "urlPlaceholder": "https://example.com/project",
-          "urlHelp": "Optional. Link to a marketing page, demo, or repository.",
           "description": "Description",
-          "descriptionHelp": "Markdown. Rendered on public surfaces when configured.",
+          "descriptionPlaceholder": "Describe this project…",
           "publicStatus": "Public status",
           "keywords": "Keywords",
-          "keywordsHelp": "Comma-separated. Lowercased + de-duplicated on save.",
-          "keywordsPlaceholder": "design system, accessibility, dashboard",
-          "industries": "Industries",
-          "industriesHelp": "Pick one or more from the taxonomy."
+          "keywordsHelp": "Press Enter to add each keyword.",
+          "keywordsPlaceholder": "Add a keyword…",
+          "keywordsAdd": "Add keyword",
+          "industries": "Industries"
         },
         "addIndustry": "Add industry",
         "removeIndustry": "Remove {name}",
+        "removeKeyword": "Remove {name}",
+        "createKeyword": "Add \"{value}\"",
         "noIndustries": "No industries selected.",
         "industriesEmpty": "All industries are already selected.",
         "industriesSearchPlaceholder": "Search industries",
@@ -786,6 +880,8 @@
       "title": "Industries",
       "subtitle": "Platform-wide taxonomy that projects use to declare their market sector.",
       "newIndustry": "New industry",
+      "panelCreateTitle": "Create new industry",
+      "panelEditTitle": "Edit industry",
       "searchPlaceholder": "Search by name or slug",
       "actions": {
         "edit": "Edit",
@@ -815,10 +911,10 @@
         "createTitle": "New industry",
         "editTitle": "Edit industry",
         "displayName": "Name",
-        "displayNameHelp": "Shown to users on project cards and filter menus.",
         "slug": "Slug",
-        "slugHelp": "Auto-derived from the name if left blank. Lowercase, dashes only.",
         "slugPreview": "Will be saved as {slug}",
+        "description": "Description",
+        "descriptionPlaceholder": "Describe this industry…",
         "save": "Save",
         "saving": "Saving…",
         "create": "Create industry",
@@ -866,10 +962,16 @@
           "platform": "Platform (no org scope)"
         },
         "createCta": "New endpoint",
-        "columns": { "name": "Endpoint", "status": "Status", "subscriptions": "Events" },
+        "columns": {
+          "name": "Endpoint",
+          "status": "Status",
+          "subscriptions": "Events"
+        },
         "collapsePanel": "Collapse panel",
         "openFullPage": "Open full page",
         "panelTitle": "Webhook endpoint",
+        "panelCreateTitle": "New webhook endpoint",
+        "panelEditTitle": "Edit webhook endpoint",
         "searchPlaceholder": "Search by name, URL, or description…",
         "searchAria": "Search webhook endpoints",
         "empty": "No webhook endpoints in this scope yet.",
@@ -931,7 +1033,6 @@
           "emptySearch": "No event matches “{query}”.",
           "moduleToggleAriaAll": "Toggle every event in {module}",
           "moduleAllAsPrefix": "All (prefix)",
-          "moduleSelectionCount": "{selected} / {total}",
           "customSectionTitle": "Custom events not in the registry. Still receive deliveries ; remove a chip to unsubscribe.",
           "customRemoveAria": "Remove the custom subscription on “{type}”"
         },
@@ -968,7 +1069,11 @@
       "deliveries": {
         "back": "Back to endpoint",
         "title": "Deliveries",
-        "columns": { "event": "Event", "status": "Status", "when": "Queued" },
+        "columns": {
+          "event": "Event",
+          "status": "Status",
+          "when": "Queued"
+        },
         "empty": "No deliveries yet. Endpoints accumulate rows as soon as a matching event fires.",
         "attemptsCount": "{count, plural, =0 {No attempts} one {# attempt} other {# attempts}}",
         "createdAt": "Queued {date}",
@@ -1056,11 +1161,13 @@
       },
       "prefs": {
         "title": "Notification preferences",
-        "subtitle": "Pick which categories reach you, and on which channel.",
+        "subtitle": "Choose which events email you. In-app alerts are managed for you.",
         "categoryLabel": "Category",
         "categories": {
           "SECURITY": "Security",
-          "ACCOUNT": "Account"
+          "ACCOUNT": "Account",
+          "ACTIVITY": "Activity",
+          "DIGEST": "Digest"
         },
         "categoryDescriptions": {
           "SECURITY": "Sign-in alerts, password changes, two-factor enable/disable. Email is required for these and can't be turned off ; they protect your account from unauthorised access.",
@@ -1071,8 +1178,44 @@
           "IN_APP": "In-app",
           "EMAIL": "Email"
         },
-        "enableAria": "Enable {category} on {channel}",
-        "disableAria": "Disable {category} on {channel}",
+        "enableAria": "Enable {kind} on {channel}",
+        "disableAria": "Disable {kind} on {channel}",
+        "searchPlaceholder": "Search notifications…",
+        "searchAria": "Search notifications",
+        "searchEmpty": "No notifications match your search.",
+        "empty": "No notifications available.",
+        "kinds": {
+          "auth_new-device": "New device sign-in",
+          "auth_password-changed": "Password changed",
+          "auth_totp-enabled": "Two-factor authentication enabled",
+          "auth_totp-disabled": "Two-factor authentication disabled",
+          "auth_all-devices-revoked": "All sessions signed out",
+          "auth_signed-in": "Sign-in alert",
+          "auth_device-revoked": "Device signed out",
+          "auth_recovery-code-used": "Recovery code used",
+          "auth_recovery-codes-regenerated": "Recovery codes replaced",
+          "account_email-changed": "Email address changed",
+          "account_deletion-scheduled": "Account deletion scheduled",
+          "account_deletion-canceled": "Account deletion canceled",
+          "webhooks_delivery-permanently-failed": "Webhook delivery failed",
+          "webhooks_endpoint-auto-disabled": "Webhook endpoint auto-disabled",
+          "calendar_event_reminder": "Event reminder"
+        },
+        "kindDescriptions": {
+          "auth_new-device": "When your account is signed in to from a device we don't recognise.",
+          "auth_password-changed": "When your account password is changed.",
+          "auth_totp-enabled": "When two-factor authentication is turned on.",
+          "auth_totp-disabled": "When two-factor authentication is turned off.",
+          "auth_all-devices-revoked": "When every signed-in device is signed out at once.",
+          "auth_signed-in": "On every successful sign-in, not just from new devices.",
+          "auth_device-revoked": "When a single device or session is signed out of your account.",
+          "auth_recovery-code-used": "When one of your two-factor recovery codes is used to sign in.",
+          "auth_recovery-codes-regenerated": "When your two-factor recovery codes are replaced with a new set.",
+          "webhooks_delivery-permanently-failed": "When a webhook delivery fails for good after every retry.",
+          "webhooks_endpoint-auto-disabled": "When a webhook endpoint is automatically disabled after repeated failures.",
+          "account_deletion-scheduled": "When your account is scheduled for deletion, with the grace-period deadline."
+        },
+        "toggleAllAria": "Toggle all {category} emails",
         "forcedBadge": "Required",
         "forcedTooltip": "Security emails can't be disabled ; they protect your account.",
         "resetButton": "Reset to defaults",
@@ -1378,7 +1521,10 @@
     "title": "Dev overlay",
     "toggleHint": "Alt+D to toggle",
     "themeSwitchTo": "Switch to {theme} theme",
-    "theme": { "light": "light", "dark": "dark" },
+    "theme": {
+      "light": "light",
+      "dark": "dark"
+    },
     "refetch": "Refetch",
     "signUp": "Sign up",
     "signIn": "Sign in",
@@ -1455,17 +1601,27 @@
     },
     "apiHealth": {
       "pinging": "pinging…",
-      "fields": { "pong": "pong", "at": "at" }
+      "fields": {
+        "pong": "pong",
+        "at": "at"
+      }
     },
     "currentOrg": {
       "none": "No active org.",
       "resolving": "resolving…",
       "inferred": "no claim ; inferred from memberships",
-      "fields": { "slug": "slug", "name": "name", "id": "id" },
+      "fields": {
+        "slug": "slug",
+        "name": "name",
+        "id": "id"
+      },
       "memberships": "memberships ({count})"
     },
     "rbac": {
-      "fields": { "primary": "primary", "roles": "roles" },
+      "fields": {
+        "primary": "primary",
+        "roles": "roles"
+      },
       "permissions": "permissions ({count})",
       "noneGranted": "None granted.",
       "dash": "—"
@@ -1509,7 +1665,8 @@
       "resolving": "resolving…",
       "on": "on",
       "off": "off",
-      "scopeNote": "Resolved against an empty scope (no userId / orgId / role)."
+      "empty": "No feature flags registered.",
+      "scopeNote": "Resolved for your session (your user + active org)."
     },
     "errorPrefix": "error:"
   },
@@ -1522,6 +1679,8 @@
       "moreOptions": "More options",
       "editCalendar": "Edit",
       "archiveCalendar": "Archive",
+      "showCalendar": "Show calendar",
+      "hideCalendar": "Hide calendar",
       "archiveConfirmTitle": "Archive calendar?",
       "archiveConfirmDescription": "The calendar is hidden from the list. Its events are kept and you can restore it later.",
       "archiveConfirmAction": "Archive",
@@ -1554,6 +1713,7 @@
       "nextWeek": "Next week",
       "prevMonth": "Previous month",
       "nextMonth": "Next month",
+      "goToDate": "Go to date",
       "day": "Day",
       "week": "Week",
       "month": "Month"
@@ -1572,13 +1732,6 @@
       "fri": "Fri",
       "sat": "Sat",
       "sun": "Sun"
-    },
-    "search": {
-      "label": "Search events",
-      "placeholder": "Search events…",
-      "typeToSearch": "Type at least 2 characters to search",
-      "searching": "Searching…",
-      "empty": "No events found"
     },
     "dayView": {
       "allDayLabel": "All day",
@@ -1609,6 +1762,8 @@
         "participantsLabel": "Participants",
         "participantsPlaceholder": "Add participants",
         "discardConfirm": "You have unsaved changes. Discard them?",
+        "discardTitle": "Discard changes?",
+        "discardCta": "Discard",
         "cancel": "Cancel",
         "create": "Create",
         "remindersLabel": "Reminders",
@@ -1616,6 +1771,7 @@
         "reminderUnitHours": "hours",
         "reminderUnitDays": "days",
         "reminderUnitWeeks": "weeks",
+        "reminderBefore": "before",
         "addReminder": "Add reminder",
         "removeReminder": "Remove reminder"
       }

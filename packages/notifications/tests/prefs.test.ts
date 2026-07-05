@@ -41,7 +41,9 @@ describe("notifications/prefs.resolveChannelEnabled", () => {
   });
 
   it("respects an explicit override row", () => {
-    const rows: PrefRow[] = [{ category: "ACCOUNT", channel: "IN_APP", enabled: false }];
+    const rows: PrefRow[] = [
+      { kind: "account.deletion-scheduled", channel: "IN_APP", enabled: false },
+    ];
     expect(
       resolveChannelEnabled({
         kind: "account.deletion-scheduled",
@@ -52,8 +54,8 @@ describe("notifications/prefs.resolveChannelEnabled", () => {
   });
 
   it("forces SECURITY x EMAIL on regardless of an opt-out row", () => {
-    // Even with a SECURITY/EMAIL=false row, requiredEmail forces it back on.
-    const rows: PrefRow[] = [{ category: "SECURITY", channel: "EMAIL", enabled: false }];
+    // Even with a per-kind EMAIL=false row, requiredEmail forces it back on.
+    const rows: PrefRow[] = [{ kind: "auth.password-changed", channel: "EMAIL", enabled: false }];
     expect(
       resolveChannelEnabled({
         kind: "auth.password-changed",
@@ -64,7 +66,7 @@ describe("notifications/prefs.resolveChannelEnabled", () => {
   });
 
   it("forces does NOT apply to non-EMAIL channels of SECURITY", () => {
-    const rows: PrefRow[] = [{ category: "SECURITY", channel: "IN_APP", enabled: false }];
+    const rows: PrefRow[] = [{ kind: "auth.password-changed", channel: "IN_APP", enabled: false }];
     expect(
       resolveChannelEnabled({
         kind: "auth.password-changed",
@@ -74,15 +76,15 @@ describe("notifications/prefs.resolveChannelEnabled", () => {
     ).toBe(false);
   });
 
-  it("ignores rows for unrelated categories", () => {
-    const rows: PrefRow[] = [{ category: "DIGEST", channel: "EMAIL", enabled: true }];
+  it("ignores rows for unrelated kinds", () => {
+    const rows: PrefRow[] = [{ kind: "auth.new-device", channel: "EMAIL", enabled: true }];
     expect(
       resolveChannelEnabled({
         kind: "account.deletion-scheduled",
         channel: "EMAIL",
         rows,
       }),
-    ).toBe(true); // registry default for ACCOUNT/EMAIL
+    ).toBe(true); // registry default for account.deletion-scheduled/EMAIL
   });
 
   it("returns false for a channel not declared in the kind's defaults", () => {

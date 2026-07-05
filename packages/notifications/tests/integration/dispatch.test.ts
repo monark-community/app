@@ -182,7 +182,7 @@ describe("notify — opt-out semantics", () => {
     // user disabling ACCOUNT/IN_APP should suppress the row entirely.
     await setPreference({
       userId: USER_EN,
-      category: "ACCOUNT",
+      kind: "account.email-changed",
       channel: "IN_APP",
       enabled: false,
     });
@@ -202,7 +202,7 @@ describe("notify — opt-out semantics", () => {
   it("forces EMAIL through even when the override row is disabled (requiredEmail)", async () => {
     await setPreference({
       userId: USER_EN,
-      category: "SECURITY",
+      kind: "auth.password-changed",
       channel: "EMAIL",
       enabled: false,
     });
@@ -243,7 +243,7 @@ describe("preferences round-trip", () => {
   it("setPreference upserts a single row + isChannelEnabled reads it", async () => {
     await setPreference({
       userId: USER_EN,
-      category: "ACCOUNT",
+      kind: "account.email-changed",
       channel: "IN_APP",
       enabled: false,
     });
@@ -257,7 +257,7 @@ describe("preferences round-trip", () => {
     // Flip back ; same compound key, second upsert path.
     await setPreference({
       userId: USER_EN,
-      category: "ACCOUNT",
+      kind: "account.email-changed",
       channel: "IN_APP",
       enabled: true,
     });
@@ -281,13 +281,13 @@ describe("preferences round-trip", () => {
   it("resetPreferences clears every override row for the user", async () => {
     await setPreference({
       userId: USER_EN,
-      category: "ACCOUNT",
+      kind: "account.email-changed",
       channel: "IN_APP",
       enabled: false,
     });
     await setPreference({
       userId: USER_EN,
-      category: "SECURITY",
+      kind: "auth.password-changed",
       channel: "IN_APP",
       enabled: false,
     });
@@ -299,7 +299,7 @@ describe("preferences round-trip", () => {
   it("does not leak prefs across users", async () => {
     await setPreference({
       userId: USER_EN,
-      category: "ACCOUNT",
+      kind: "account.email-changed",
       channel: "IN_APP",
       enabled: false,
     });

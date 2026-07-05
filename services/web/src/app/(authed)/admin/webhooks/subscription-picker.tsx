@@ -1,13 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo } from "react";
 import { useTranslations } from "next-intl";
-import { ChevronDown, ChevronRight, Search, X } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Input } from "@/components/ui/input";
+import { X } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { GroupedMultiSelect, type GroupedMultiSelectGroup } from "@/components/patterns";
 import { trpc } from "@/lib/trpc";
 
 export type SubscriptionDraft = {
@@ -69,8 +66,6 @@ function commonDottedPrefix(eventTypes: string[]): string | null {
  */
 export function SubscriptionPicker({ subscriptions, onChange }: SubscriptionPickerProps) {
   const t = useTranslations("admin.webhooks.editor.picker");
-  const [search, setSearch] = useState("");
-  const [openModules, setOpenModules] = useState<Set<string>>(new Set());
   const eventTypes = trpc.webhooks.listEventTypes.useQuery(undefined, {
     refetchOnWindowFocus: false,
     staleTime: 5 * 60 * 1000,
@@ -126,49 +121,38 @@ export function SubscriptionPicker({ subscriptions, onChange }: SubscriptionPick
     });
   }, [subscriptions, knownPrefixes, knownTypes, eventTypes.isLoading]);
 
-  const trimmedSearch = search.trim().toLowerCase();
-  const filteredGroups = useMemo(() => {
-    if (!eventTypes.data) return [];
-    if (trimmedSearch === "") return eventTypes.data.groups;
-    return eventTypes.data.groups
-      .map((g) => ({
-        module: g.module,
-        events: g.events.filter(
-          (e) =>
-            e.type.toLowerCase().includes(trimmedSearch) ||
-            e.description.toLowerCase().includes(trimmedSearch),
-        ),
-      }))
-      .filter((g) => g.events.length > 0);
-  }, [eventTypes.data, trimmedSearch]);
+  // Types covered by an active prefix subscription — folded into `isChecked`
+  // so the shared selector shows every event in a prefixed module as checked
+  // (and the module header as "all") without needing to know about prefixes.
+  const prefixCoveredTypes = useMemo(() => {
+    const set = new Set<string>();
+    for (const group of eventTypes.data?.groups ?? []) {
+      const prefix = commonDottedPrefix(group.events.map((e) => e.type));
+      if (prefix !== null && prefixSet.has(prefix)) {
+        for (const ev of group.events) set.add(ev.type);
+      }
+    }
+    return set;
+  }, [eventTypes.data, prefixSet]);
 
-  // Auto-expand every group with hits while a search is active.
-  // Tracks the previous needle so an operator who manually collapses
-  // a group after expanding doesn't get clobbered on the next
-  // keystroke.
-  const previousNeedle = useRef("");
-  useEffect(() => {
-    if (trimmedSearch === previousNeedle.current) return;
-    previousNeedle.current = trimmedSearch;
-    if (trimmedSearch === "") return;
-    setOpenModules(new Set(filteredGroups.map((g) => g.module)));
-  }, [trimmedSearch, filteredGroups]);
+  // One group per module for the shared grouped selector (module names
+  // render mono). The selector owns search + expand ; pass the full list.
+  const groups = useMemo<GroupedMultiSelectGroup[]>(
+    () =>
+      (eventTypes.data?.groups ?? []).map((g) => ({
+        key: g.module,
+        label: g.module,
+        monoLabel: true,
+        items: g.events.map((e) => ({
+          value: e.type,
+          primary: e.type,
+          secondary: e.description,
+        })),
+      })),
+    [eventTypes.data],
+  );
 
-  function toggleModuleOpen(module: string, open: boolean) {
-    setOpenModules((current) => {
-      const out = new Set(current);
-      if (open) out.add(module);
-      else out.delete(module);
-      return out;
-    });
-  }
-
-  function toggleEventInGroup(
-    group: { events: Array<{ type: string }> },
-    type: string,
-    on: boolean,
-  ) {
-    const types = group.events.map((e) => e.type);
+  function toggleEventInGroup(types: string[], type: string, on: boolean) {
     const prefix = commonDottedPrefix(types);
     const prefixActive = prefix !== null && prefixSet.has(prefix);
 
@@ -205,11 +189,7 @@ export function SubscriptionPicker({ subscriptions, onChange }: SubscriptionPick
     }
   }
 
-  function toggleAllInGroup(
-    group: { module: string; events: Array<{ type: string }> },
-    next: boolean,
-  ) {
-    const types = group.events.map((e) => e.type);
+  function toggleAllInGroup(types: string[], next: boolean) {
     const prefix = commonDottedPrefix(types);
     const groupTypeSet = new Set(types);
 
@@ -290,135 +270,31 @@ export function SubscriptionPicker({ subscriptions, onChange }: SubscriptionPick
         </div>
       )}
 
-      <div className="relative">
-        <Search
-          className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
-          aria-hidden
-        />
-        <Input
-          type="search"
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-          placeholder={t("searchPlaceholder")}
-          aria-label={t("searchAria")}
-          className="pl-8"
-        />
-      </div>
-
-      <div className="space-y-2 rounded-md border border-border p-2">
-        {filteredGroups.length === 0 ? (
-          <p className="px-2 py-4 text-center text-xs text-muted-foreground">
-            {trimmedSearch !== "" ? t("emptySearch", { query: search.trim() }) : t("registryEmpty")}
-          </p>
-        ) : (
-          filteredGroups.map((group) => {
-            const prefix = commonDottedPrefix(group.events.map((e) => e.type));
-            const prefixOn = prefix !== null && prefixSet.has(prefix);
-            return (
-              <ModuleSection
-                key={group.module}
-                module={group.module}
-                events={group.events}
-                exactSet={exactSet}
-                prefixOn={prefixOn}
-                open={openModules.has(group.module)}
-                onOpenChange={(next) => toggleModuleOpen(group.module, next)}
-                onToggleAll={(next) => toggleAllInGroup(group, next)}
-                onToggleExact={(type, next) => toggleEventInGroup(group, type, next)}
-              />
-            );
-          })
-        )}
-      </div>
+      <GroupedMultiSelect
+        groups={groups}
+        isChecked={(type) => exactSet.has(type) || prefixCoveredTypes.has(type)}
+        onToggleItem={(group, type, next) =>
+          toggleEventInGroup(
+            group.items.map((i) => i.value),
+            type,
+            next,
+          )
+        }
+        onToggleGroup={(group, selectAll) =>
+          toggleAllInGroup(
+            group.items.map((i) => i.value),
+            selectAll,
+          )
+        }
+        renderEmpty={(query) =>
+          query !== "" ? t("emptySearch", { query }) : t("registryEmpty")
+        }
+        labels={{
+          searchPlaceholder: t("searchPlaceholder"),
+          searchAria: t("searchAria"),
+          toggleAllAria: (module) => t("moduleToggleAriaAll", { module }),
+        }}
+      />
     </div>
-  );
-}
-
-function ModuleSection({
-  module,
-  events,
-  exactSet,
-  prefixOn,
-  open,
-  onOpenChange,
-  onToggleAll,
-  onToggleExact,
-}: {
-  module: string;
-  events: Array<{ type: string; description: string }>;
-  exactSet: Set<string>;
-  prefixOn: boolean;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onToggleAll: (next: boolean) => void;
-  onToggleExact: (type: string, next: boolean) => void;
-}) {
-  const t = useTranslations("admin.webhooks.editor.picker");
-  const total = events.length;
-  const selectedCount = prefixOn
-    ? total
-    : events.reduce((acc, ev) => acc + (exactSet.has(ev.type) ? 1 : 0), 0);
-  const state: "none" | "some" | "all" =
-    selectedCount === 0 ? "none" : selectedCount === total ? "all" : "some";
-
-  return (
-    <Collapsible open={open} onOpenChange={onOpenChange}>
-      <div className="flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-muted/40">
-        <Checkbox
-          checked={state === "all"}
-          indeterminate={state === "some"}
-          onChange={(event) => onToggleAll(event.target.checked)}
-          aria-label={t("moduleToggleAriaAll", { module })}
-          onClick={(event) => event.stopPropagation()}
-        />
-        <CollapsibleTrigger asChild>
-          <button
-            type="button"
-            className="flex flex-1 items-center justify-between gap-2 rounded-sm text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-          >
-            <span className="flex items-center gap-1.5 text-sm font-medium">
-              {open ? (
-                <ChevronDown className="h-4 w-4 text-muted-foreground" aria-hidden />
-              ) : (
-                <ChevronRight className="h-4 w-4 text-muted-foreground" aria-hidden />
-              )}
-              <span className="font-mono">{module}</span>
-            </span>
-            <Badge
-              variant={state === "all" ? "primary" : "secondary"}
-              size="sm"
-              className="shrink-0"
-            >
-              {t("moduleSelectionCount", {
-                selected: selectedCount,
-                total,
-              })}
-            </Badge>
-          </button>
-        </CollapsibleTrigger>
-      </div>
-      <CollapsibleContent>
-        <ul className="space-y-1 px-2 pb-1 pt-1">
-          {events.map((ev) => {
-            const checked = exactSet.has(ev.type) || prefixOn;
-            return (
-              <li key={ev.type}>
-                <label className="flex cursor-pointer items-start gap-2 rounded-md border border-border px-3 py-2 text-sm">
-                  <Checkbox
-                    checked={checked}
-                    onChange={(event) => onToggleExact(ev.type, event.target.checked)}
-                    aria-label={ev.type}
-                  />
-                  <span className="flex-1 space-y-0.5">
-                    <span className="block font-mono text-xs">{ev.type}</span>
-                    <span className="block text-xs text-muted-foreground">{ev.description}</span>
-                  </span>
-                </label>
-              </li>
-            );
-          })}
-        </ul>
-      </CollapsibleContent>
-    </Collapsible>
   );
 }

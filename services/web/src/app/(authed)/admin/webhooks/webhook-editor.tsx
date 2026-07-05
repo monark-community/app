@@ -22,6 +22,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { DangerCard, DangerRow } from "@/components/danger-card";
+import { ConfirmDialog, FieldRow } from "@/components/patterns";
 import { DirtyFormBar } from "@/components/dirty-form-bar";
 import { PageHeader } from "@/components/page-header";
 import { PageSection } from "@/components/page-section";
@@ -119,6 +120,7 @@ export function WebhookEditor(
   // acknowledges the reveal, so the secret can't be lost by an immediate
   // route change / panel remount.
   const [pendingCreatedId, setPendingCreatedId] = useState<string | null>(null);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
 
   useEffect(() => {
     if (!isEdit || !endpointQuery.data) return;
@@ -320,10 +322,8 @@ export function WebhookEditor(
     else router.replace(`/admin/webhooks/${id}`);
   }
 
-  function handleDelete() {
-    if (!isEdit) return;
-    const url = endpointQuery.data?.url ?? "";
-    if (!confirm(t("deleteConfirm", { url }))) return;
+  function confirmDelete() {
+    if (props.mode !== "edit") return;
     deleteMutation.mutate({ id: props.endpointId });
   }
 
@@ -382,9 +382,9 @@ export function WebhookEditor(
 
   return (
     <div className={inPanel ? "space-y-8 pb-20" : "space-y-8"}>
-      {inPanel ? (
-        <h2 className="text-lg font-semibold tracking-tight">{headerTitle}</h2>
-      ) : (
+      {/* Panel mode : the PanelHeader shows the create/edit title, so the
+          content skips it. Full page keeps the PageHeader. */}
+      {!inPanel && (
         <PageHeader
           title={headerTitle}
           subtitle={props.mode === "create" ? t("createSubtitle") : t("editSubtitle")}
@@ -424,49 +424,47 @@ export function WebhookEditor(
         </Card>
 
         <PageSection title={t("endpointSectionTitle")}>
-          {showScope && (
-            <div className="space-y-2">
-              <Label htmlFor="webhook-scope">{t("scopeLabel")}</Label>
-              <Input id="webhook-scope" value={orgScopeLabel} disabled readOnly />
-              <p className="text-xs text-muted-foreground">{t("scopeHint")}</p>
-            </div>
-          )}
+          <div className="@container space-y-5">
+            {showScope && (
+              <FieldRow label={t("scopeLabel")} htmlFor="webhook-scope">
+                <Input id="webhook-scope" value={orgScopeLabel} disabled readOnly />
+                <p className="text-xs text-muted-foreground">{t("scopeHint")}</p>
+              </FieldRow>
+            )}
 
-          <div className="space-y-2">
-            <Label htmlFor="webhook-name">{t("nameLabel")}</Label>
-            <Input
-              id="webhook-name"
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-              placeholder={t("namePlaceholder")}
-              maxLength={80}
-              required
-            />
-            <p className="text-xs text-muted-foreground">{t("nameHint")}</p>
-          </div>
+            <FieldRow label={t("nameLabel")} htmlFor="webhook-name">
+              <Input
+                id="webhook-name"
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+                placeholder={t("namePlaceholder")}
+                maxLength={80}
+                required
+              />
+              <p className="text-xs text-muted-foreground">{t("nameHint")}</p>
+            </FieldRow>
 
-          <div className="space-y-2">
-            <Label htmlFor="webhook-url">{t("urlLabel")}</Label>
-            <Input
-              id="webhook-url"
-              type="url"
-              value={url}
-              onChange={(event) => setUrl(event.target.value)}
-              placeholder="https://example.com/webhooks/monark"
-              required
-            />
-            <p className="text-xs text-muted-foreground">{t("urlHint")}</p>
-          </div>
+            <FieldRow label={t("urlLabel")} htmlFor="webhook-url">
+              <Input
+                id="webhook-url"
+                type="url"
+                value={url}
+                onChange={(event) => setUrl(event.target.value)}
+                placeholder="https://example.com/webhooks/monark"
+                required
+              />
+              <p className="text-xs text-muted-foreground">{t("urlHint")}</p>
+            </FieldRow>
 
-          <div className="space-y-2">
-            <Label htmlFor="webhook-description">{t("descriptionLabel")}</Label>
-            <Textarea
-              id="webhook-description"
-              value={description}
-              onChange={(event) => setDescription(event.target.value)}
-              placeholder={t("descriptionPlaceholder")}
-              rows={2}
-            />
+            <FieldRow label={t("descriptionLabel")} htmlFor="webhook-description">
+              <Textarea
+                id="webhook-description"
+                value={description}
+                onChange={(event) => setDescription(event.target.value)}
+                placeholder={t("descriptionPlaceholder")}
+                rows={2}
+              />
+            </FieldRow>
           </div>
         </PageSection>
 
@@ -501,7 +499,7 @@ export function WebhookEditor(
               <Button
                 type="button"
                 variant="destructive"
-                onClick={handleDelete}
+                onClick={() => setConfirmDeleteOpen(true)}
                 disabled={deleteMutation.isPending}
               >
                 {t("deleteCta")}
@@ -586,6 +584,17 @@ export function WebhookEditor(
           )}
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={confirmDeleteOpen}
+        onOpenChange={setConfirmDeleteOpen}
+        title={t("deleteCta")}
+        description={t("deleteConfirm", { url: endpointQuery.data?.url ?? "" })}
+        cancelLabel={t("cancel")}
+        confirmLabel={t("deleteCta")}
+        isPending={deleteMutation.isPending}
+        onConfirm={confirmDelete}
+      />
 
       <DirtyFormBar
         containment={containment}

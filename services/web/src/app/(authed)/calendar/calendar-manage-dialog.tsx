@@ -1,14 +1,12 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { useTranslations } from "next-intl";
 import type { CalendarDef } from "@monark/calendar/contracts";
-import { FormActionsFooter } from "@/components/patterns";
-import { Button } from "@/components/ui/button";
+import { FieldRow, FormActionsFooter } from "@/components/patterns";
 import { ColorInput } from "@/components/ui/color-input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 
@@ -49,7 +47,6 @@ export function CalendarManageDialog({
   const isMobile = useIsMobile();
   const isEdit = calendar !== undefined;
   const [form, setForm] = useState<FormState>(() => buildDefaultForm(calendar));
-  const confirmedDeleteIdRef = useRef<string | null>(null);
 
   // Reset form every time the dialog opens (handles both create and edit).
   const [prevOpen, setPrevOpen] = useState(open);
@@ -84,15 +81,18 @@ export function CalendarManageDialog({
   const triggerDelete =
     isEdit && onDelete && calendar
       ? () => {
-          confirmedDeleteIdRef.current = calendar.id;
+          const id = calendar.id;
           onClose();
+          // Defer past the dialog's close cleanup: the delete's refetch
+          // unmounts this subtree, and if that happens mid-close Radix never
+          // restores `body` pointer-events, freezing the whole page.
+          setTimeout(() => onDelete(id), 0);
         }
       : undefined;
 
   const fields = (
     <>
-      <div className="flex flex-col gap-1">
-        <Label htmlFor="cm-name">{t("nameLabel")}</Label>
+      <FieldRow label={t("nameLabel")} htmlFor="cm-name">
         <Input
           id="cm-name"
           placeholder={t("namePlaceholder")}
@@ -106,31 +106,28 @@ export function CalendarManageDialog({
           }}
           autoFocus={!isMobile}
         />
-      </div>
+      </FieldRow>
 
-      <div className="flex flex-col gap-1">
-        <Label htmlFor="cm-desc">{t("descriptionLabel")}</Label>
+      <FieldRow label={t("descriptionLabel")} htmlFor="cm-desc">
         <Textarea
           id="cm-desc"
           rows={2}
           value={form.description}
           onChange={(e) => set("description", e.target.value)}
         />
-      </div>
+      </FieldRow>
 
-      <div className="flex flex-col gap-1">
-        <Label htmlFor="cm-color">{t("colorLabel")}</Label>
+      <FieldRow label={t("colorLabel")} htmlFor="cm-color">
         <ColorInput
           id="cm-color"
           value={form.color}
           onChange={(hex) => set("color", hex)}
           aria-label={t("colorLabel")}
         />
-      </div>
+      </FieldRow>
 
       {roles.length > 0 && (
-        <div className="flex flex-col gap-2">
-          <Label>{t("rolesLabel")}</Label>
+        <FieldRow label={t("rolesLabel")}>
           <div className="flex flex-col gap-1 rounded-md border border-input p-2">
             {roles.map((role) => (
               <label
@@ -147,7 +144,7 @@ export function CalendarManageDialog({
               </label>
             ))}
           </div>
-        </div>
+        </FieldRow>
       )}
     </>
   );
@@ -162,13 +159,6 @@ export function CalendarManageDialog({
           // keyboard before the user can see the form.
           if (isMobile) e.preventDefault();
         }}
-        onCloseAutoFocus={() => {
-          const id = confirmedDeleteIdRef.current;
-          if (id && onDelete) {
-            confirmedDeleteIdRef.current = null;
-            onDelete(id);
-          }
-        }}
       >
         {isMobile ? (
           <>
@@ -182,7 +172,9 @@ export function CalendarManageDialog({
               }}
               className="flex min-h-0 flex-1 flex-col"
             >
-              <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4">{fields}</div>
+              <div className="@container min-h-0 flex-1 space-y-4 overflow-y-auto p-4">
+                {fields}
+              </div>
               <FormActionsFooter
                 submitLabel={t("save")}
                 cancelLabel={t("cancel")}
@@ -198,28 +190,23 @@ export function CalendarManageDialog({
             <DialogHeader>
               <DialogTitle>{heading}</DialogTitle>
             </DialogHeader>
-            <div className="flex flex-col gap-4 pt-2">{fields}</div>
-
-            <div className="mt-2 flex items-center gap-2">
-              {triggerDelete && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-destructive hover:text-destructive"
-                  onClick={triggerDelete}
-                >
-                  {t("delete")}
-                </Button>
-              )}
-              <div className="ml-auto flex gap-2">
-                <Button variant="ghost" size="sm" onClick={onClose}>
-                  {t("cancel")}
-                </Button>
-                <Button size="sm" onClick={handleSave}>
-                  {t("save")}
-                </Button>
-              </div>
-            </div>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleSave();
+              }}
+              className="@container flex flex-col gap-4 pt-2"
+            >
+              {fields}
+              <FormActionsFooter
+                submitLabel={t("save")}
+                cancelLabel={t("cancel")}
+                onCancel={onClose}
+                onDelete={triggerDelete}
+                deleteLabel={t("delete")}
+                className="mt-2"
+              />
+            </form>
           </>
         )}
       </DialogContent>

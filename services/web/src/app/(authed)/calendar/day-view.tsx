@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { useLocale, useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
 import type {
   CalendarDef,
   CalendarEvent,
@@ -9,11 +9,9 @@ import type {
   CalendarEventType,
 } from "@monark/calendar/contracts";
 import {
-  DayColumnsArea,
-  DayColumnHeader,
-  DayDateHeader,
+  CurrentTimeIndicator,
+  DaySchedule,
   DayTimeline,
-  COLUMN_HEADER_HEIGHT,
   HOUR_HEIGHT_PX,
   TOTAL_HEIGHT_PX,
 } from "@monark/calendar/client";
@@ -66,16 +64,6 @@ function localDayRange(date: Date): { startAt: string; endAt: string } {
   const end = new Date(date);
   end.setHours(23, 59, 59, 999);
   return { startAt: start.toISOString(), endAt: end.toISOString() };
-}
-
-function deriveColumns(calendars: CalendarDef[]) {
-  return calendars.map((cal) => ({
-    id: cal.id,
-    title: cal.name,
-    description: cal.description,
-    color: cal.color,
-    schedule: [] as CalendarEvent[],
-  }));
 }
 
 function addOneHour(t: CalendarEventTime): CalendarEventTime {
@@ -140,8 +128,8 @@ export function DayView({
   >({ open: false });
 
   const t = useTranslations("calendar.dayView.newEvent");
-  const locale = useLocale();
   const columnsRef = useRef<HTMLDivElement>(null);
+  const didInitialScrollRef = useRef(false);
   const utils = trpc.useUtils();
 
   // ── Data fetching ───────────────────────────────────────
@@ -183,20 +171,33 @@ export function DayView({
     });
   }, []);
 
-  const columns = useMemo(
-    () => deriveColumns(calendars).filter((col) => !hiddenCalendarIds.has(col.id)),
+  // Visible calendars drive both what renders and each event's color. Events
+  // from every visible calendar are merged into one column (color-coded and
+  // laid out side-by-side only where they overlap) rather than one column per
+  // calendar, so empty calendars cost no horizontal space.
+  const visibleCalendars = useMemo(
+    () => calendars.filter((c) => !hiddenCalendarIds.has(c.id)),
     [calendars, hiddenCalendarIds],
+  );
+  const colorMap = useMemo(
+    () => Object.fromEntries(calendars.map((c) => [c.id, c.color])),
+    [calendars],
+  );
+  const visibleCalendarIds = useMemo(
+    () => new Set(visibleCalendars.map((c) => c.id)),
+    [visibleCalendars],
   );
   const pendingEditEventId = dragState?.eventId ?? pendingEventEdit?.eventId ?? null;
 
-  const { eventsMap, allDayEventsMap } = useMemo<{
-    eventsMap: Record<string, CalendarEvent[]>;
-    allDayEventsMap: Record<string, CalendarEvent[]>;
+  const { timedEvents, allDayEvents } = useMemo<{
+    timedEvents: CalendarEvent[];
+    allDayEvents: CalendarEvent[];
   }>(() => {
     const raw = eventsQuery.data ?? [];
-    const map: Record<string, CalendarEvent[]> = {};
-    const allDayMap: Record<string, CalendarEvent[]> = {};
+    const timed: CalendarEvent[] = [];
+    const allDay: CalendarEvent[] = [];
     for (const ev of raw) {
+      if (!visibleCalendarIds.has(ev.calendarId)) continue;
       const converted: CalendarEvent = {
         ...ev,
         startAt: new Date(ev.startAt),
@@ -205,57 +206,55 @@ export function DayView({
         location: ev.location ?? undefined,
         participants: ev.participants ?? undefined,
         reminders: ev.reminders?.map((r) => r.minutesBefore) ?? undefined,
+        color: colorMap[ev.calendarId],
       };
-      if (ev.eventType === "ALL_DAY") {
-        if (!allDayMap[ev.calendarId]) allDayMap[ev.calendarId] = [];
-        allDayMap[ev.calendarId]!.push(converted);
-      } else {
-        if (!map[ev.calendarId]) map[ev.calendarId] = [];
-        map[ev.calendarId]!.push(converted);
-      }
+      if (ev.eventType === "ALL_DAY") allDay.push(converted);
+      else timed.push(converted);
     }
-    // Apply position override: live drag takes priority, then post-drop pending edit
-    if (dragState) {
-      const { eventId, columnId, currentStartMin, currentEndMin } = dragState;
-      if (map[columnId]) {
-        map[columnId] = map[columnId]!.map((ev) => {
-          if (ev.id !== eventId) return ev;
+
+    // Position override: live drag wins, then a post-drop pending edit. Both
+    // match by id across the merged list.
+    const override = dragState
+      ? (ev: CalendarEvent) => {
+          if (ev.id !== dragState.eventId) return ev;
           const startAt = new Date(selectedDate);
-          startAt.setHours(Math.floor(currentStartMin / 60), currentStartMin % 60, 0, 0);
+          startAt.setHours(
+            Math.floor(dragState.currentStartMin / 60),
+            dragState.currentStartMin % 60,
+            0,
+            0,
+          );
           const endAt = new Date(selectedDate);
-          endAt.setHours(Math.floor(currentEndMin / 60), currentEndMin % 60, 0, 0);
+          endAt.setHours(
+            Math.floor(dragState.currentEndMin / 60),
+            dragState.currentEndMin % 60,
+            0,
+            0,
+          );
           return { ...ev, startAt, endAt };
-        });
-      }
-    } else if (pendingEventEdit) {
-      const { eventId, columnId, startAt, endAt } = pendingEventEdit;
-      if (map[columnId]) {
-        map[columnId] = map[columnId]!.map((ev) => {
-          if (ev.id !== eventId) return ev;
-          return { ...ev, startAt, endAt };
-        });
-      }
-    }
-    // Calendar-switch ghost: move the edited/created event to a different column immediately
+        }
+      : pendingEventEdit
+        ? (ev: CalendarEvent) => {
+            if (ev.id !== pendingEventEdit.eventId) return ev;
+            return { ...ev, startAt: pendingEventEdit.startAt, endAt: pendingEventEdit.endAt };
+          }
+        : null;
+    let merged = override ? timed.map(override) : timed;
+
+    // Calendar-switch ghost: recolor the edited/created event to the target
+    // calendar immediately (no column to move between now).
     if (pendingEditCalendarId) {
       const targetEventId = pendingEventEdit?.eventId ?? selectedEventId;
       if (targetEventId) {
-        let movedEvent: CalendarEvent | undefined;
-        for (const calId of Object.keys(map)) {
-          const idx = map[calId]!.findIndex((ev) => ev.id === targetEventId);
-          if (idx !== -1) {
-            movedEvent = map[calId]![idx];
-            map[calId] = map[calId]!.filter((_, i) => i !== idx);
-            break;
-          }
-        }
-        if (movedEvent) {
-          if (!map[pendingEditCalendarId]) map[pendingEditCalendarId] = [];
-          map[pendingEditCalendarId].push({ ...movedEvent, calendarId: pendingEditCalendarId });
-        }
+        merged = merged.map((ev) =>
+          ev.id === targetEventId
+            ? { ...ev, calendarId: pendingEditCalendarId, color: colorMap[pendingEditCalendarId] }
+            : ev,
+        );
       }
     }
-    // Ghost slot for in-progress event creation (hidden when ALL_DAY type selected)
+
+    // Ghost slot for in-progress event creation (hidden when ALL_DAY selected).
     if (pendingSlot?.columnId && pendingEventType !== "ALL_DAY") {
       const startAt = new Date(selectedDate);
       startAt.setHours(pendingSlot.startTime.hour, pendingSlot.startTime.minute, 0, 0);
@@ -267,13 +266,12 @@ export function DayView({
               d.setHours(pendingSlot.endTime.hour, pendingSlot.endTime.minute, 0, 0);
               return d;
             })();
-      const cid = pendingSlot.columnId;
-      if (!map[cid]) map[cid] = [];
-      map[cid] = [
-        ...map[cid],
+      merged = [
+        ...merged,
         {
           id: "__pending__",
-          calendarId: cid,
+          calendarId: pendingSlot.columnId,
+          color: colorMap[pendingSlot.columnId],
           startAt,
           endAt,
           title: t("heading"),
@@ -281,9 +279,11 @@ export function DayView({
         },
       ];
     }
-    return { eventsMap: map, allDayEventsMap: allDayMap };
+    return { timedEvents: merged, allDayEvents: allDay };
   }, [
     eventsQuery.data,
+    visibleCalendarIds,
+    colorMap,
     pendingSlot,
     pendingEventType,
     selectedDate,
@@ -294,7 +294,7 @@ export function DayView({
     selectedEventId,
   ]);
 
-  const hasAllDayEvents = columns.some((col) => (allDayEventsMap[col.id]?.length ?? 0) > 0);
+  const hasAllDayEvents = allDayEvents.length > 0;
 
   // ── Mutations ───────────────────────────────────────────
   const createEvent = trpc.calendar.events.create.useMutation();
@@ -338,7 +338,7 @@ export function DayView({
 
   const handleSlotClick = useCallback(
     (
-      columnId: string,
+      _columnId: string,
       time: CalendarEventTime,
       anchorX: number,
       anchorY: number,
@@ -349,22 +349,25 @@ export function DayView({
         lastDraggedEventIdRef.current = null;
         return;
       }
+      // One merged column, so a slot click can't imply a calendar — default to
+      // the first visible one ; the popover's calendar picker changes it.
+      const defaultCal = visibleCalendars[0]?.id ?? calendars[0]?.id ?? "";
       const endTime = addOneHour(time);
       setSelectedEventId(null);
       setPendingEventType("STANDARD");
       setPendingEventEdit(null);
       setPendingEditCalendarId(null);
-      setPendingSlot({ columnId: columnId || (calendars[0]?.id ?? ""), startTime: time, endTime });
+      setPendingSlot({ columnId: defaultCal, startTime: time, endTime });
       setPopoverState({
         mode: "create",
         anchorX,
         anchorY,
         side,
         startTime: time,
-        defaultCalendarId: columnId || undefined,
+        defaultCalendarId: defaultCal || undefined,
       });
     },
-    [calendars],
+    [calendars, visibleCalendars],
   );
 
   const handleEventClick = useCallback(
@@ -420,7 +423,7 @@ export function DayView({
         const ps = pendingSlotRef.current;
         const rect = columnsRef.current.getBoundingClientRect();
         const scrollTop = columnsRef.current.scrollTop;
-        const yInSchedule = clientY - rect.top - COLUMN_HEADER_HEIGHT + scrollTop;
+        const yInSchedule = clientY - rect.top + scrollTop;
         const cursorMin = (yInSchedule / TOTAL_HEIGHT_PX) * (24 * 60);
         const startMin = ps.startTime.hour * 60 + ps.startTime.minute;
         const endMin = ps.endTime.hour * 60 + ps.endTime.minute;
@@ -442,7 +445,7 @@ export function DayView({
       const durationMin = isPunctual ? 0 : Math.max(endMin - startMin, 15);
       const rect = columnsRef.current.getBoundingClientRect();
       const scrollTop = columnsRef.current.scrollTop;
-      const yInSchedule = clientY - rect.top - COLUMN_HEADER_HEIGHT + scrollTop;
+      const yInSchedule = clientY - rect.top + scrollTop;
       const cursorMin = (yInSchedule / TOTAL_HEIGHT_PX) * (24 * 60);
       clearPopover();
       setDragState({
@@ -486,10 +489,7 @@ export function DayView({
       const scrollTop = columnsRef.current?.scrollTop ?? 0;
       const anchorX = (columnsRect?.left ?? 0) + 64;
       const anchorY =
-        (columnsRect?.top ?? 0) +
-        COLUMN_HEADER_HEIGHT +
-        (startMin / 60) * HOUR_HEIGHT_PX -
-        scrollTop;
+        (columnsRect?.top ?? 0) + (startMin / 60) * HOUR_HEIGHT_PX - scrollTop;
       setSelectedEventId(null);
       setPendingEventType(type);
       setPendingSlot({ columnId: calendarId, startTime, endTime });
@@ -575,7 +575,7 @@ export function DayView({
         startAt: payload.startAt.toISOString(),
         endAt: payload.endAt.toISOString(),
       });
-      await utils.calendar.events.listForDay.fetch(localDayRange(selectedDate));
+      await utils.calendar.events.listForDay.invalidate(localDayRange(selectedDate));
       clearPopover();
     },
     [createEvent, clearPopover, selectedDate, utils.calendar.events.listForDay],
@@ -595,7 +595,7 @@ export function DayView({
         startAt: patch.startAt?.toISOString(),
         endAt: patch.endAt?.toISOString(),
       });
-      await utils.calendar.events.listForDay.fetch(localDayRange(selectedDate));
+      await utils.calendar.events.listForDay.invalidate(localDayRange(selectedDate));
       clearPopover();
     },
     [updateEvent, clearPopover, selectedDate, utils.calendar.events.listForDay],
@@ -604,7 +604,7 @@ export function DayView({
   const handleEventDelete = useCallback(
     async (eventId: string) => {
       await deleteEvent.mutateAsync({ id: eventId });
-      await utils.calendar.events.listForDay.fetch(localDayRange(selectedDate));
+      await utils.calendar.events.listForDay.invalidate(localDayRange(selectedDate));
       clearPopover();
     },
     [deleteEvent, clearPopover, selectedDate, utils.calendar.events.listForDay],
@@ -693,8 +693,7 @@ export function DayView({
     const timer = setTimeout(() => {
       const columnsRect = columnsRef.current?.getBoundingClientRect();
       const anchorX = (columnsRect?.left ?? 80) + 80;
-      const anchorY =
-        (columnsRect?.top ?? 0) + COLUMN_HEADER_HEIGHT + Math.min(eventYInGrid, HOUR_HEIGHT_PX);
+      const anchorY = (columnsRect?.top ?? 0) + Math.min(eventYInGrid, HOUR_HEIGHT_PX);
       setSelectedEventId(event.id);
       setPendingSlot(null);
       setPendingEventEdit({
@@ -729,6 +728,21 @@ export function DayView({
     return () => clearTimeout(timer);
   }, [pendingCreateDefaults]);
 
+  // On first open, scroll the timeline so the current time is in view (with a
+  // couple of hours of lead-in above it). Skipped when we're navigating
+  // straight to a specific event / create slot, which own the scroll position.
+  useLayoutEffect(() => {
+    if (didInitialScrollRef.current) return;
+    if (focusEventId || pendingCreateDefaults) return;
+    const el = columnsRef.current;
+    if (!el) return;
+    didInitialScrollRef.current = true;
+    const now = new Date();
+    const nowMin = now.getHours() * 60 + now.getMinutes();
+    const nowY = (nowMin / (24 * 60)) * TOTAL_HEIGHT_PX;
+    el.scrollTop = Math.max(0, nowY - HOUR_HEIGHT_PX * 2);
+  }, [focusEventId, pendingCreateDefaults]);
+
   // Document-level mouse tracking while dragging an event block
   useLayoutEffect(() => {
     if (!isDragging) return;
@@ -738,7 +752,7 @@ export function DayView({
       if (!ds || !columnsRef.current) return;
       const rect = columnsRef.current.getBoundingClientRect();
       const scrollTop = columnsRef.current.scrollTop;
-      const yInSchedule = e.clientY - rect.top - COLUMN_HEADER_HEIGHT + scrollTop;
+      const yInSchedule = e.clientY - rect.top + scrollTop;
       const cursorMin = (yInSchedule / TOTAL_HEIGHT_PX) * (24 * 60);
 
       setDragState((prev) => {
@@ -842,7 +856,7 @@ export function DayView({
       if (!pd || !columnsRef.current) return;
       const rect = columnsRef.current.getBoundingClientRect();
       const scrollTop = columnsRef.current.scrollTop;
-      const yInSchedule = e.clientY - rect.top - COLUMN_HEADER_HEIGHT + scrollTop;
+      const yInSchedule = e.clientY - rect.top + scrollTop;
       const cursorMin = (yInSchedule / TOTAL_HEIGHT_PX) * (24 * 60);
       if (pd.type === "resize") {
         const ps = pendingSlotRef.current;
@@ -929,80 +943,63 @@ export function DayView({
         className="relative flex-1"
         style={{ overflowY: popoverState || isPendingDragging ? "hidden" : "auto" }}
       >
-        {/* Sticky header: column headers + optional all-day row */}
-        <div className="sticky top-0 z-40 flex flex-col border-b border-border bg-background shadow-sm">
-          <div className="flex">
-            <div
-              className="flex w-16 shrink-0 items-center justify-center border-r border-border"
-              style={{ height: COLUMN_HEADER_HEIGHT }}
-            >
-              <DayDateHeader date={selectedDate} locale={locale} />
+        {/* Sticky all-day row (only when there are all-day events). The old
+            per-calendar name/date header row is gone — it reserved height with
+            nothing useful to show now that calendars are merged into one grid. */}
+        {hasAllDayEvents && (
+          <div className="sticky top-0 z-40 flex border-b border-border bg-background shadow-sm">
+            <div className="w-16 shrink-0 border-r border-border py-1" />
+            <div className="flex flex-1 flex-col gap-px px-1 py-1 min-w-0">
+              {allDayEvents.map((ev) => {
+                const borderColor = ev.color ?? undefined;
+                const bgColor = ev.color ? `${ev.color}4D` : undefined;
+                return (
+                  <button
+                    key={ev.id}
+                    type="button"
+                    className={`truncate rounded-sm border-l-2 px-1 text-left text-xs font-medium leading-5 ${selectedEventId === ev.id ? "ring-2 ring-primary" : ""} ${!ev.color ? "border-primary bg-primary/15 text-foreground" : "text-foreground"}`}
+                    style={{ borderLeftColor: borderColor, backgroundColor: bgColor }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const rect = e.currentTarget.getBoundingClientRect();
+                      const side: "left" | "right" =
+                        window.innerWidth - rect.right < 660 ? "left" : "right";
+                      handleEventClick(ev, side === "left" ? rect.left : rect.right, rect.top, side);
+                    }}
+                  >
+                    {ev.title}
+                  </button>
+                );
+              })}
             </div>
-            {columns.map((col) => (
-              <div
-                key={col.id}
-                className="flex min-w-0 flex-1 border-r border-border last:border-r-0"
-              >
-                <DayColumnHeader
-                  title={col.title}
-                  description={col.description}
-                  color={col.color}
-                />
-              </div>
-            ))}
           </div>
-          {hasAllDayEvents && (
-            <div className="flex border-t border-border">
-              <div className="flex w-16 shrink-0 items-center justify-center border-r border-border py-1" />
-              <div className="flex flex-1 flex-col gap-px px-1 py-1 min-w-0">
-                {columns.flatMap((col) =>
-                  (allDayEventsMap[col.id] ?? []).map((ev) => {
-                    const borderColor = col.color ?? undefined;
-                    const bgColor = col.color ? `${col.color}4D` : undefined;
-                    return (
-                      <button
-                        key={ev.id}
-                        type="button"
-                        className={`truncate rounded-sm border-l-2 px-1 text-left text-xs font-medium leading-5 ${selectedEventId === ev.id ? "ring-2 ring-primary" : ""} ${!col.color ? "border-primary bg-primary/15 text-foreground" : "text-foreground"}`}
-                        style={{ borderLeftColor: borderColor, backgroundColor: bgColor }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          const rect = e.currentTarget.getBoundingClientRect();
-                          const side: "left" | "right" =
-                            window.innerWidth - rect.right < 660 ? "left" : "right";
-                          handleEventClick(
-                            ev,
-                            side === "left" ? rect.left : rect.right,
-                            rect.top,
-                            side,
-                          );
-                        }}
-                      >
-                        {ev.title}
-                      </button>
-                    );
-                  }),
-                )}
-              </div>
-            </div>
-          )}
-        </div>
+        )}
 
-        {/* Scrollable body: hour labels + column schedules side-by-side */}
+        {/* Scrollable body: hour labels + one merged, color-coded schedule */}
         <div className="flex">
           <DayTimeline date={selectedDate} hideHeader />
-          <DayColumnsArea
-            columns={columns}
-            eventsMap={eventsMap}
-            selectedEventId={selectedEventId}
-            pendingEditEventId={pendingEditEventId}
-            hideHeader
-            onSlotClick={handleSlotClick}
-            onEventClick={handleEventClick}
-            onDragStart={(event, columnId, type, clientY) =>
-              handleDragStart({ event, columnId, type, clientY })
-            }
-          />
+          <div className="relative flex-1" style={{ height: TOTAL_HEIGHT_PX }}>
+            {Array.from({ length: 24 }, (_, h) => (
+              <div
+                key={h}
+                className="pointer-events-none absolute left-0 right-0 border-t border-border"
+                style={{ top: h * HOUR_HEIGHT_PX, height: HOUR_HEIGHT_PX }}
+                aria-hidden
+              />
+            ))}
+            <CurrentTimeIndicator />
+            <DaySchedule
+              columnId="day"
+              events={timedEvents}
+              selectedEventId={selectedEventId}
+              pendingEditEventId={pendingEditEventId}
+              onSlotClick={handleSlotClick}
+              onEventClick={handleEventClick}
+              onDragStart={(event, _columnId, type, clientY) =>
+                handleDragStart({ event, columnId: event.calendarId, type, clientY })
+              }
+            />
+          </div>
         </div>
       </div>
 

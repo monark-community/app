@@ -8,6 +8,14 @@
  */
 @import "tw-animate-css";
 
+/*
+ * Tailwind v4 auto-detects classes in this app's own tree but not in symlinked
+ * workspace packages under `node_modules`. Register the shared UI package so
+ * utilities authored inside `@monark/components` (e.g. the `DragHandle` grip)
+ * generate — without this a class used *only* there is silently dropped.
+ */
+@source "../../../../packages/components/src/**/*.{ts,tsx}";
+
 @custom-variant dark (&:is(.dark *));
 
 html,

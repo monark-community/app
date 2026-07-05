@@ -13,12 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  InputOTP,
-  InputOTPGroup,
-  InputOTPSeparator,
-  InputOTPSlot,
-} from "@/components/ui/input-otp";
+import { OtpCodeInput } from "@/components/otp-code-input";
 import { Label } from "@/components/ui/label";
 import { PageSection } from "@/components/page-section";
 import { trpc } from "@/lib/trpc";
@@ -161,11 +156,12 @@ function TotpEnrollDialog({
     });
   }, [open, beginEnrollment, onOpenChange, t]);
 
-  async function onConfirm() {
-    if (stage.kind !== "verify") return;
+  async function onConfirm(codeValue: string) {
+    if (stage.kind !== "verify" || confirmEnrollment.isPending) return;
+    if (codeValue.trim().length !== 6) return;
     try {
       const result = await confirmEnrollment.mutateAsync({
-        code: enrollCode.trim(),
+        code: codeValue.trim(),
       });
       setStage({ kind: "recovery", codes: result.recoveryCodes });
       setEnrollCode("");
@@ -229,27 +225,12 @@ function TotpEnrollDialog({
           <div className="grid gap-3 py-2">
             <Label htmlFor="enrollCode">{t("enrollCodePrompt")}</Label>
             <div className="flex justify-center">
-              <InputOTP
+              <OtpCodeInput
                 id="enrollCode"
-                maxLength={6}
                 value={enrollCode}
-                onChange={(value) => setEnrollCode(value)}
-                inputMode="numeric"
-                autoComplete="one-time-code"
-                autoFocus
-              >
-                <InputOTPGroup>
-                  <InputOTPSlot index={0} />
-                  <InputOTPSlot index={1} />
-                  <InputOTPSlot index={2} />
-                </InputOTPGroup>
-                <InputOTPSeparator />
-                <InputOTPGroup>
-                  <InputOTPSlot index={3} />
-                  <InputOTPSlot index={4} />
-                  <InputOTPSlot index={5} />
-                </InputOTPGroup>
-              </InputOTP>
+                onChange={setEnrollCode}
+                onComplete={onConfirm}
+              />
             </div>
           </div>
         )}
@@ -282,7 +263,7 @@ function TotpEnrollDialog({
               </Button>
               <Button
                 type="button"
-                onClick={onConfirm}
+                onClick={() => onConfirm(enrollCode)}
                 disabled={confirmEnrollment.isPending || enrollCode.length < 6}
               >
                 {confirmEnrollment.isPending ? t("confirming") : t("confirm")}
@@ -326,9 +307,10 @@ function TotpDisableDialog({
     if (open) setCode("");
   }, [open]);
 
-  async function onSubmit() {
+  async function onSubmit(codeValue: string) {
+    if (disable.isPending || codeValue.trim().length !== 6) return;
     try {
-      await disable.mutateAsync({ code: code.trim() });
+      await disable.mutateAsync({ code: codeValue.trim() });
       onOpenChange(false);
       toast.success(t("disabledSuccess"));
     } catch (err) {
@@ -346,27 +328,12 @@ function TotpDisableDialog({
         <div className="grid gap-2 py-2">
           <Label htmlFor="disableCode">{t("disablePrompt")}</Label>
           <div className="flex justify-center">
-            <InputOTP
+            <OtpCodeInput
               id="disableCode"
-              maxLength={6}
               value={code}
-              onChange={(value) => setCode(value)}
-              inputMode="numeric"
-              autoComplete="one-time-code"
-              autoFocus
-            >
-              <InputOTPGroup>
-                <InputOTPSlot index={0} />
-                <InputOTPSlot index={1} />
-                <InputOTPSlot index={2} />
-              </InputOTPGroup>
-              <InputOTPSeparator />
-              <InputOTPGroup>
-                <InputOTPSlot index={3} />
-                <InputOTPSlot index={4} />
-                <InputOTPSlot index={5} />
-              </InputOTPGroup>
-            </InputOTP>
+              onChange={setCode}
+              onComplete={onSubmit}
+            />
           </div>
         </div>
         <DialogFooter>
@@ -381,7 +348,7 @@ function TotpDisableDialog({
           <Button
             type="button"
             variant="destructive"
-            onClick={onSubmit}
+            onClick={() => onSubmit(code)}
             disabled={disable.isPending || code.length < 6}
           >
             {disable.isPending ? t("disablePending") : t("disable")}
@@ -416,9 +383,10 @@ function TotpRegenerateDialog({
     }
   }, [open]);
 
-  async function onSubmit() {
+  async function onSubmit(codeValue: string) {
+    if (regenerate.isPending || codeValue.trim().length !== 6) return;
     try {
-      const result = await regenerate.mutateAsync({ code: code.trim() });
+      const result = await regenerate.mutateAsync({ code: codeValue.trim() });
       setStage({ kind: "recovery", codes: result.recoveryCodes });
       setCode("");
       toast.success(t("regeneratedSuccess"));
@@ -443,27 +411,12 @@ function TotpRegenerateDialog({
           <div className="grid gap-2 py-2">
             <Label htmlFor="regenCode">{t("regeneratePrompt")}</Label>
             <div className="flex justify-center">
-              <InputOTP
+              <OtpCodeInput
                 id="regenCode"
-                maxLength={6}
                 value={code}
-                onChange={(value) => setCode(value)}
-                inputMode="numeric"
-                autoComplete="one-time-code"
-                autoFocus
-              >
-                <InputOTPGroup>
-                  <InputOTPSlot index={0} />
-                  <InputOTPSlot index={1} />
-                  <InputOTPSlot index={2} />
-                </InputOTPGroup>
-                <InputOTPSeparator />
-                <InputOTPGroup>
-                  <InputOTPSlot index={3} />
-                  <InputOTPSlot index={4} />
-                  <InputOTPSlot index={5} />
-                </InputOTPGroup>
-              </InputOTP>
+                onChange={setCode}
+                onComplete={onSubmit}
+              />
             </div>
           </div>
         )}
@@ -483,7 +436,7 @@ function TotpRegenerateDialog({
               </Button>
               <Button
                 type="button"
-                onClick={onSubmit}
+                onClick={() => onSubmit(code)}
                 disabled={regenerate.isPending || code.length < 6}
               >
                 {regenerate.isPending ? t("regeneratePending") : t("regenerate")}

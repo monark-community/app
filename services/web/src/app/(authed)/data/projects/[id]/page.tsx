@@ -34,7 +34,7 @@ export default async function ProjectEditPage({ params }: { params: Promise<{ id
   return (
     <section className="mx-auto max-w-250 space-y-6">
       <Link
-        href="/projects"
+        href="/data/projects"
         className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
       >
         <ArrowLeft className="h-4 w-4" aria-hidden />

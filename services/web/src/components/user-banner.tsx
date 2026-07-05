@@ -91,6 +91,7 @@ export function UserBanner({
   backLabel,
   className,
   edit,
+  bleed = true,
 }: {
   bannerUrl: string | null;
   avatarUrl: string | null;
@@ -110,6 +111,17 @@ export function UserBanner({
   backLabel?: string;
   className?: string;
   edit?: UserBannerEditConfig;
+  /**
+   * How the banner escapes its surrounding padding:
+   *  - `true` (default) — full *viewport*-width via the `w-screen` bleed,
+   *    for full-page surfaces (`/account/profile`, `/admin/users/[id]`).
+   *  - `"container"` — bleed to the edges of a padded detail panel by
+   *    cancelling its standard `px-6 py-6` gutter (`-mx-6 -mt-6`), so the
+   *    banner spans the panel edge-to-edge while the fields below stay
+   *    padded. The avatar / headline row re-pads itself to line up.
+   *  - `false` — no bleed ; the banner sits at its container's width.
+   */
+  bleed?: boolean | "container";
 }) {
   const initials = initialsFromName(displayName, email);
   const headline = displayName ?? email ?? "";
@@ -118,6 +130,15 @@ export function UserBanner({
 
   const editable = Boolean(edit);
   const readOnly = edit?.readOnly ?? false;
+  const viewportBleed = bleed === true;
+  const containerBleed = bleed === "container";
+  // With the viewport bleed on, the inner rows re-constrain to the page
+  // content gutter ; otherwise they fill the (already narrow) container.
+  const contentWrap = viewportBleed ? "mx-auto w-full max-w-2xl" : "w-full";
+  // In container-bleed mode the section escaped the panel's `px-6`, so the
+  // avatar / headline row re-adds that gutter to align with the fields
+  // below ; other modes keep the row flush to its wrap.
+  const contentPad = containerBleed ? "px-6" : "";
 
   function pickBanner() {
     if (!edit || readOnly) return;
@@ -302,15 +323,27 @@ export function UserBanner({
   return (
     <section
       className={cn(
-        // Full-viewport-width bleed : `w-screen` + the
-        // `ml-[calc(50%-50vw)]` trick pulls the section to the edges of
-        // the *viewport* regardless of how deeply nested it is in
-        // PageLayout's centered max-width column. The avatar / headline
-        // row below re-constrains itself to the original content gutter
-        // so the visual identity treatment stays anchored where the
-        // form fields below sit. `-mt-8` flushes the top edge against
-        // the AppBar (matching the layout's `pt-8`).
-        "relative -mt-8 w-screen ml-[calc(50%-50vw)]",
+        // Full-bleed hero. Below `xl` there are no PageLayout rails, so the
+        // `w-screen` + `ml-[calc(50%-50vw)]` trick pulls the section to the
+        // *viewport* edges regardless of how deeply it's nested in the
+        // centered content column. At `xl+` PageLayout docks its content into
+        // the region to the right of the fixed `w-72` (18rem) sidebar, so the
+        // bleed must match : span from the sidebar's right edge to the
+        // viewport's right edge (`w-[calc(100vw-18rem)]`, offset so its left
+        // edge lands at 18rem). This keeps the hero — and its centered hover
+        // pen — aligned with the docked content instead of spilling under the
+        // sidebar. (Assumes the standard PageLayout dock ; the two full-page
+        // banner surfaces both render under a sidebar.) The avatar / headline
+        // row below re-constrains itself to the content gutter so it stays
+        // anchored where the form fields sit. `-mt-8` flushes the top edge
+        // against the AppBar (matching the layout's `pt-8`). `"container"`
+        // bleed instead cancels a detail panel's `px-6 py-6` gutter ; `false`
+        // leaves it at its container's width.
+        viewportBleed
+          ? "relative -mt-8 w-screen ml-[calc(50%-50vw)] xl:w-[calc(100vw-18rem)] xl:ml-[calc(30rem-50vw)]"
+          : containerBleed
+            ? "relative -mx-6 -mt-6"
+            : "relative",
         className,
       )}
     >
@@ -321,7 +354,7 @@ export function UserBanner({
         // below ; without this it would jump to the actual viewport's
         // top-left corner, well outside the content area.
         <div className="pointer-events-none absolute inset-x-0 top-0 z-20">
-          <div className="mx-auto w-full max-w-2xl">
+          <div className={contentWrap}>
             <Link
               href={backHref}
               aria-label={backLabel}
@@ -332,7 +365,7 @@ export function UserBanner({
           </div>
         </div>
       )}
-      <div className="mx-auto w-full max-w-2xl">
+      <div className={cn("mx-auto w-full max-w-2xl", contentPad)}>
         <div className="relative -mt-8 flex items-end gap-3 sm:-mt-10">
           {avatarBlock}
           <div className="min-w-0 flex-1 pb-1">

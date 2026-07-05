@@ -18,7 +18,13 @@ import {
   type FieldDef,
   type RelationOption,
 } from "@/components/fields";
-import { DataTable } from "@/components/patterns";
+import {
+  DataTable,
+  FilterBar,
+  TableTools,
+  useDataTableLayout,
+  type PrimaryColumnDef,
+} from "@/components/patterns";
 
 const STATUS = [
   { value: "idea", label: "Idea", tone: "secondary" as const },
@@ -215,6 +221,13 @@ export default function FieldsGalleryPage() {
     [labels],
   );
 
+  const layout = useDataTableLayout("dev-fields-gallery");
+
+  const primaryColumn: PrimaryColumnDef<Row> = {
+    header: "Title",
+    label: (r) => r.title,
+  };
+
   function onSubmit(values: FieldValues) {
     toast.success("Submitted (see console)");
     console.log("AutoForm values", values);
@@ -239,22 +252,41 @@ export default function FieldsGalleryPage() {
         <p className="mb-6 text-sm text-muted-foreground">
           A DataTable whose columns are built with fieldColumn.
         </p>
-        <DataTable<Row>
-          data={ROWS}
-          getRowId={(r) => r.id}
-          storageKey="dev-fields-gallery"
-          primaryColumn={{
-            header: "Title",
-            label: (r) => r.title,
-          }}
-          columns={columns}
-          labels={{
-            columns: "Columns",
-            reset: "Reset layout",
-            rowActions: "Row actions",
-            openPanel: "Open",
-          }}
-        />
+        <div className="space-y-3">
+          <FilterBar
+            tools={
+              <TableTools
+                layout={layout}
+                primaryColumn={primaryColumn}
+                columns={columns}
+                labels={{
+                  tools: "List tools",
+                  close: "Close",
+                  columns: "Columns",
+                  reset: "Reset layout",
+                  sort: {
+                    label: "Sorting",
+                    ascending: "Ascending",
+                    descending: "Descending",
+                    none: "No sorting",
+                    addField: "Add sort field",
+                    remove: "Remove sort field",
+                    reset: "Reset sorting",
+                  },
+                }}
+              />
+            }
+          />
+          <DataTable<Row>
+            data={ROWS}
+            getRowId={(r) => r.id}
+            storageKey="dev-fields-gallery"
+            layout={layout}
+            primaryColumn={primaryColumn}
+            columns={columns}
+            labels={{ rowActions: "Row actions" }}
+          />
+        </div>
       </section>
     </div>
   );

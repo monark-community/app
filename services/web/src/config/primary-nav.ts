@@ -1,4 +1,4 @@
-import { CalendarDays, FolderKanban, Tags } from "lucide-react";
+import { CalendarDays, Database } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 /**
@@ -52,6 +52,8 @@ export type PrimaryNavEntry = {
  */
 export const PRIMARY_NAV: PrimaryNavEntry[] = [
   { id: "calendar", href: "/calendar", icon: CalendarDays },
-  { id: "projects", href: "/projects", icon: FolderKanban },
-  { id: "industries", href: "/industries", icon: Tags },
+  // Custom data models (projects, industries, …) are grouped under the
+  // Data section ; its own secondary nav (DataSidebar) lists the models.
+  // `/data` server-redirects to the first model.
+  { id: "data", href: "/data", icon: Database },
 ];

@@ -106,7 +106,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
               <RouteProgress />
               {children}
               <DevOverlay />
-              <Toaster position="bottom-right" />
+              <Toaster position="bottom-center" />
             </TrpcProvider>
           </ThemeProvider>
         </NextIntlClientProvider>

@@ -51,6 +51,14 @@ function payloadFor<K extends NotificationKind>(kind: K): NotificationDataMap[K]
       return { occurredAt } as NotificationDataMap[K];
     case "auth.all-devices-revoked":
       return { count: 3, occurredAt } as NotificationDataMap[K];
+    case "auth.signed-in":
+      return { deviceLabel: "Pixel 7", occurredAt } as NotificationDataMap[K];
+    case "auth.device-revoked":
+      return { deviceLabel: "Pixel 7", occurredAt } as NotificationDataMap[K];
+    case "auth.recovery-code-used":
+      return { remainingCodes: 7, occurredAt } as NotificationDataMap[K];
+    case "auth.recovery-codes-regenerated":
+      return { count: 10, occurredAt } as NotificationDataMap[K];
     case "account.email-changed":
       return {
         previousEmail: "old@example.com",

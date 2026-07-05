@@ -7,6 +7,7 @@ import { ChevronRight, LogOut, User } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { PanelHeader } from "@/components/patterns";
 import { signOutAction } from "@/app/(anon)/signin/actions";
 import { rewriteForCurrentHost } from "@/lib/dev-host-rewrite";
 import { trpc } from "@/lib/trpc";
@@ -98,24 +99,24 @@ export function UserMenu() {
         </button>
       </SheetTrigger>
       {/*
-        Drop the SheetContent default p-6 + gap-4 ; we want a flex
-        column with its own padded scroll region + a sticky logout
-        footer. SheetContent's built-in X close affordance sits at
-        top-4 right-4 ; we keep enough top padding on the inner
-        scroll region so the avatar header doesn't crash into it.
+        Drop the SheetContent default p-6 + gap-4 so the drawer is a
+        flush flex column : PanelHeader at the top, then the scroll
+        region hard against it with no top padding, so the banner runs
+        edge-to-edge right under the header. Logout lives in the content
+        flow at the bottom (no sticky footer).
       */}
       <SheetContent
         side="right"
-        // `[&>button]:z-50` lifts SheetContent's built-in close X
-        // above the banner backdrop. The primitive renders the
-        // close button as the first child of SheetContent ; without
-        // an explicit z-index, my banner (later in DOM, also a
-        // positioned ancestor) was stacking on top of the X and
-        // hiding it.
-        className="flex w-full flex-col gap-0 p-0 sm:max-w-sm [&>button]:z-50"
+        hideClose
+        className="flex w-full flex-col gap-0 p-0 sm:max-w-sm"
         aria-label={t("aria")}
       >
-        <SheetTitle className="sr-only">{t("aria")}</SheetTitle>
+        <SheetTitle className="sr-only">{headline || t("aria")}</SheetTitle>
+        <PanelHeader
+          title={headline || t("aria")}
+          subtitle={displayName ? (email ?? undefined) : undefined}
+          onClose={() => setOpen(false)}
+        />
 
         <div className="flex flex-1 flex-col overflow-y-auto pb-4">
           {/*
@@ -141,27 +142,25 @@ export function UserMenu() {
             />
           </div>
           {/*
-            Identity row centred on the banner's bottom edge. Avatar
-            is h-12 (48px) ; pulling the row up by half its height
-            (-mt-6 = -24px) lands the avatar's middle exactly on the
-            banner edge. `pr-12` reserves space for the SheetContent
-            built-in close X at top-4 right-4 (which now layers above
-            the banner thanks to the `[&>button]:z-50` rule above).
+            Identity avatar, anchored to the banner's bottom-left and scaled
+            up from that corner. `-mt-14` pulls the h-20 (80px) avatar up so
+            its bottom edge stays put — avatar height + negative margin stays a
+            constant 24px, so nothing below shifts — while the extra height
+            grows up into the banner.
           */}
-          <div className="relative -mt-6 flex items-center gap-3 px-4 pr-12">
-            <Avatar className="h-12 w-12 shrink-0">
+          <div className="relative -mt-14 flex items-center gap-3 px-4">
+            <Avatar className="h-20 w-20 shrink-0 border-4 border-background">
               {avatarUrl && <AvatarImage src={avatarUrl} alt="" />}
               <AvatarFallback
                 className={
                   avatarUrl
-                    ? "text-sm"
+                    ? "text-xl"
                     : "bg-[linear-gradient(135deg,var(--brand-primary)_0%,var(--brand-accent)_100%)] text-(--brand-foreground)"
                 }
               >
-                {avatarUrl ? initials : <User className="h-5 w-5" aria-hidden />}
+                {avatarUrl ? initials : <User className="h-8 w-8" aria-hidden />}
               </AvatarFallback>
             </Avatar>
-            <p className="truncate text-lg font-semibold tracking-tight">{headline}</p>
           </div>
 
           <div className="mt-4 flex flex-col gap-4 px-4">
@@ -186,7 +185,7 @@ export function UserMenu() {
               section ; each row keeps a hover background so the click
               target still reads. */}
             <div className="mt-2 space-y-2">
-              <p className="text-xs font-medium text-muted-foreground">{t("aboutYou")}</p>
+              <p className="text-xs font-medium text-muted-foreground">{t("forYou")}</p>
               <ul className="border-t border-border pt-2">
                 {ABOUT_YOU_LINKS.map((link) => (
                   <li key={link.id}>
@@ -202,23 +201,20 @@ export function UserMenu() {
                 ))}
               </ul>
             </div>
-          </div>
-        </div>
 
-        {/* Sticky footer : Logout button. Outline variant + full-width
-            so it reads as the drawer's terminal action without
-            overpowering the rest of the chrome. */}
-        <div className="shrink-0 border-t border-border p-4">
-          <Button
-            type="button"
-            variant="default"
-            className="w-full justify-center"
-            onClick={onSignOut}
-            disabled={isSigningOut}
-          >
-            <LogOut className="h-4 w-4" aria-hidden />
-            <span>{isSigningOut ? t("signingOut") : t("signOut")}</span>
-          </Button>
+            {/* Logout : the drawer's terminal action, now in content flow
+                (no footer). Full-width so it still reads as terminal. */}
+            <Button
+              type="button"
+              variant="default"
+              className="mt-2 w-full justify-center"
+              onClick={onSignOut}
+              disabled={isSigningOut}
+            >
+              <LogOut className="h-4 w-4" aria-hidden />
+              <span>{isSigningOut ? t("signingOut") : t("signOut")}</span>
+            </Button>
+          </div>
         </div>
       </SheetContent>
     </Sheet>

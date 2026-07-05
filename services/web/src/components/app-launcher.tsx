@@ -5,6 +5,7 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { ExternalLink, Grip } from "lucide-react";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { PanelHeader } from "@/components/patterns";
 import { APPS } from "@/config/apps";
 import { cn } from "@/lib/utils";
 
@@ -43,18 +44,12 @@ export function AppLauncher() {
       </SheetTrigger>
       <SheetContent
         side="right"
-        // Lift the SheetContent built-in close X above the drawer body
-        // (matches the user-menu + notifications drawers) so it stays
-        // clickable.
-        className="flex w-full flex-col gap-0 p-0 sm:max-w-sm [&>button]:z-50"
+        hideClose
+        className="flex w-full flex-col gap-0 p-0 sm:max-w-sm"
         aria-label={t("aria")}
       >
         <SheetTitle className="sr-only">{t("title")}</SheetTitle>
-
-        <div className="border-b border-border p-4 pr-12">
-          <h2 className="text-lg font-semibold tracking-tight">{t("title")}</h2>
-          <p className="text-xs text-muted-foreground">{t("subtitle")}</p>
-        </div>
+        <PanelHeader title={t("title")} subtitle={t("subtitle")} onClose={() => setOpen(false)} />
 
         <div className="flex flex-1 flex-col overflow-y-auto p-4">
           {/*

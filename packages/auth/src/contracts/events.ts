@@ -44,6 +44,13 @@ export type TrustedDeviceRevokedEvent = DomainEventBase & {
   userId: string;
   deviceId: string;
   scope: "user" | "admin";
+  /**
+   * True when this revoke is one row of a bulk "revoke every device"
+   * sweep (see `revokeAllTrustedDevices`). Notification subscribers skip
+   * the per-device email in that case so the user gets a single
+   * `auth.all-devices-revoked` message instead of N receipts.
+   */
+  bulk?: boolean;
 };
 
 export type TrustedDevicesAllRevokedEvent = DomainEventBase & {
@@ -70,6 +77,13 @@ export type TotpRecoveryCodeUsedEvent = DomainEventBase & {
   remainingCodes: number;
 };
 
+export type TotpRecoveryCodesRegeneratedEvent = DomainEventBase & {
+  type: "totp.recovery-codes-regenerated";
+  userId: string;
+  /** How many fresh codes were issued (old codes are invalidated). */
+  count: number;
+};
+
 export type AuthEvents =
   | UserSignedUpEvent
   | UserSignedInEvent
@@ -81,4 +95,5 @@ export type AuthEvents =
   | TrustedDevicesAllRevokedEvent
   | TotpEnabledEvent
   | TotpDisabledEvent
-  | TotpRecoveryCodeUsedEvent;
+  | TotpRecoveryCodeUsedEvent
+  | TotpRecoveryCodesRegeneratedEvent;

@@ -40,6 +40,20 @@ export const featureFlagsRouter = router({
       return getFlags(input.keys, input.scope);
     }),
 
+  // Resolves *every* registered flag at the caller's own session scope
+  // (their user id + active org), derived from `ctx` — never trusted from
+  // input. Auth-gated like `get` / `getMany` : your own effective flag
+  // state isn't admin-only. The client can't enumerate flags itself (the
+  // key registry is populated only at api boot, server-side), so this is
+  // what the dev-overlay readout uses instead of a client-side key list.
+  getAllForSession: publicProcedure.query(({ ctx }) => {
+    if (!ctx.userId) throw new UnauthorizedError();
+    return getFlags(listFlagKeys(), {
+      userId: ctx.userId,
+      organizationId: ctx.activeOrganizationId ?? undefined,
+    });
+  }),
+
   // Definition + override listings are operator-facing admin config ; they
   // require the read permission (auto-granted to ADMIN / SYSADMIN).
   listDefinitions: publicProcedure.query(async ({ ctx }) => {

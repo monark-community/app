@@ -3,6 +3,7 @@ import { getTranslations } from "next-intl/server";
 import { AppBarBreadcrumb } from "@/components/app-bar-breadcrumb";
 import { AppLauncher } from "@/components/app-launcher";
 import { BrandedAppLogoView, type BrandedAppLogoData } from "@/components/branded-app-logo-view";
+import { GlobalSearchIconButton } from "@/components/global-search";
 import { NotificationsBell } from "@/components/notifications-bell";
 import { PrimaryNavMenu } from "@/components/primary-nav-menu";
 import { UserMenu } from "@/components/user-menu";
@@ -75,11 +76,17 @@ export async function AppBar() {
           <AppBarBreadcrumb />
         </div>
         <div className="flex items-center gap-4">
+          {/*
+            Right side order (left→right): global search + notifications
+            (tight cluster), then the user menu, then the "Monark Apps"
+            launcher as the right-most element of the whole appbar.
+          */}
           <div className="flex items-center gap-1">
-            <AppLauncher />
+            <GlobalSearchIconButton />
             <NotificationsBell />
           </div>
           <UserMenu />
+          <AppLauncher />
         </div>
       </div>
     </header>

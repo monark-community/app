@@ -3,7 +3,7 @@
 import { useMemo, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { fr as frLocale, enUS } from "react-day-picker/locale";
-import { Archive, Check, MoreHorizontal, Pencil, RotateCcw } from "lucide-react";
+import { Archive, MoreHorizontal, Pencil, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 import type { CalendarDef } from "@monark/calendar/contracts";
 import {
@@ -24,8 +24,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { pickContrastForeground } from "@/lib/color-contrast";
+import { cn } from "@/lib/utils";
 import { trpc } from "@/lib/trpc";
 
 type TodayEvent = {
@@ -36,6 +35,106 @@ type TodayEvent = {
   endAt: Date;
   eventType?: string | null;
 };
+
+/** Translated chrome for a {@link CalendarChip} (kept out per the i18n rule). */
+export interface CalendarChipLabels {
+  more: string;
+  edit: string;
+  archive: string;
+  show: string;
+  hide: string;
+}
+
+/**
+ * A calendar toggle pill: a rounded, calendar-colored border with a color dot
+ * and name ; tapping the body toggles the calendar's visibility (active =
+ * tinted fill, inactive = dimmed + transparent), and the trailing `…` opens an
+ * edit / archive menu. One component for both the desktop sidebar (`fullWidth`,
+ * stacked) and the mobile strip (content-width, inline-scrolling).
+ */
+export function CalendarChip({
+  cal,
+  visible,
+  onToggle,
+  onEdit,
+  onArchive,
+  canDelete,
+  labels,
+  fullWidth = false,
+}: {
+  cal: CalendarDef;
+  visible: boolean;
+  onToggle: () => void;
+  onEdit: () => void;
+  onArchive: () => void;
+  canDelete: boolean;
+  labels: CalendarChipLabels;
+  /** Stretch to fill the row (desktop sidebar) instead of sizing to content. */
+  fullWidth?: boolean;
+}) {
+  const color = cal.color ?? "hsl(var(--primary))";
+  return (
+    <div
+      className={cn(
+        "flex min-w-0 select-none items-center gap-0.5 whitespace-nowrap rounded-full border py-0.5 pl-3 pr-0.5 text-sm transition-colors",
+        fullWidth ? "w-full" : "shrink-0",
+      )}
+      style={{
+        borderColor: color,
+        backgroundColor: visible ? `${color}1a` : "transparent",
+        opacity: visible ? 1 : 0.55,
+      }}
+    >
+      <button
+        type="button"
+        role="checkbox"
+        aria-checked={visible}
+        aria-label={visible ? labels.hide : labels.show}
+        onClick={onToggle}
+        className={cn("flex min-w-0 items-center gap-1.5 py-0.5", fullWidth && "flex-1")}
+      >
+        <span
+          className="h-2.5 w-2.5 shrink-0 rounded-full"
+          style={{ backgroundColor: color }}
+          aria-hidden
+        />
+        <span className="truncate">{cal.name}</span>
+      </button>
+      {/* Non-modal: selecting "Archive" opens the parent's modal AlertDialog.
+          A modal menu sets `body { pointer-events: none }` while closing ; the
+          dialog's dismissable layer then captures that `none` as the body's
+          "original" and restores it to `none` on close, freezing the page.
+          Keeping the menu non-modal means it never touches body pointer-events. */}
+      <DropdownMenu modal={false}>
+        <DropdownMenuTrigger asChild>
+          <button
+            type="button"
+            aria-label={labels.more}
+            className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-foreground/10 hover:text-foreground"
+          >
+            <MoreHorizontal className="h-3.5 w-3.5" />
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-36">
+          <DropdownMenuItem onClick={onEdit}>
+            <Pencil className="mr-2 h-3.5 w-3.5" />
+            {labels.edit}
+          </DropdownMenuItem>
+          {canDelete && (
+            <DropdownMenuItem
+              className={cal.isPersonal ? "cursor-not-allowed opacity-50" : undefined}
+              disabled={cal.isPersonal}
+              onClick={() => !cal.isPersonal && onArchive()}
+            >
+              <Archive className="mr-2 h-3.5 w-3.5" />
+              {labels.archive}
+            </DropdownMenuItem>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
+  );
+}
 
 export function CalendarSidebar({
   selectedDate,
@@ -70,7 +169,6 @@ export function CalendarSidebar({
   const tCommon = useTranslations("common");
   const locale = useLocale() === "fr" ? frLocale : enUS;
   const [pendingDelete, setPendingDelete] = useState<CalendarDef | null>(null);
-  const confirmedDeleteIdRef = useRef<string | null>(null);
 
   // Archived (soft-deleted) calendars are managed here, self-contained : a
   // toggle fetches the include-deleted list and offers a Restore action, so
@@ -94,34 +192,13 @@ export function CalendarSidebar({
   });
   const calMap = useMemo(() => Object.fromEntries(calendars.map((c) => [c.id, c])), [calendars]);
 
-  // Mobile: a long-press on a calendar chip opens a bottom action drawer (edit /
-  // delete), since the chip's tap is already spoken for by the visibility toggle.
-  const [actionSheetCal, setActionSheetCal] = useState<CalendarDef | null>(null);
-  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const longPressFiredRef = useRef(false);
-  const pointerStartRef = useRef<{ x: number; y: number } | null>(null);
-
-  function cancelLongPress() {
-    if (longPressTimerRef.current) {
-      clearTimeout(longPressTimerRef.current);
-      longPressTimerRef.current = null;
-    }
-  }
-  function startLongPress(cal: CalendarDef, e: React.PointerEvent) {
-    longPressFiredRef.current = false;
-    pointerStartRef.current = { x: e.clientX, y: e.clientY };
-    cancelLongPress();
-    longPressTimerRef.current = setTimeout(() => {
-      longPressFiredRef.current = true;
-      setActionSheetCal(cal);
-    }, 450);
-  }
-  // A drag past the threshold is a strip-scroll, not a hold — let it scroll.
-  function onLongPressMove(e: React.PointerEvent) {
-    const start = pointerStartRef.current;
-    if (!start) return;
-    if (Math.abs(e.clientX - start.x) > 8 || Math.abs(e.clientY - start.y) > 8) cancelLongPress();
-  }
+  const chipLabels: CalendarChipLabels = {
+    more: t("moreOptions"),
+    edit: t("editCalendar"),
+    archive: t("archiveCalendar"),
+    show: t("showCalendar"),
+    hide: t("hideCalendar"),
+  };
 
   // Track the displayed month so the mini-calendar navigates when Today button fires
   const activeMonth = weekRange?.from ?? selectedDate;
@@ -196,82 +273,37 @@ export function CalendarSidebar({
           />
         )}
 
-        <div className="flex flex-col gap-1">
+        <div className="flex flex-col gap-1.5">
           <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             {t("myCalendars")}
           </p>
-          {calendars.map((cal) => {
-            const isVisible = !hiddenCalendarIds.has(cal.id);
-            const calColor = cal.color ?? "hsl(var(--primary))";
-            return (
-              <div
+          <div className="flex flex-col gap-1.5">
+            {calendars.map((cal) => (
+              <CalendarChip
                 key={cal.id}
-                className="group flex w-full items-center gap-1 rounded-md px-2 py-1 hover:bg-accent"
+                cal={cal}
+                visible={!hiddenCalendarIds.has(cal.id)}
+                onToggle={() => onToggleCalendar(cal.id)}
+                onEdit={() => onEditCalendar(cal)}
+                onArchive={() => setPendingDelete(cal)}
+                canDelete={!!canDelete}
+                labels={chipLabels}
+                fullWidth
+              />
+            ))}
+            {canManage && (
+              <button
+                type="button"
+                onClick={onAddCalendar}
+                className="flex w-full items-center gap-1 whitespace-nowrap rounded-full border border-dashed border-border px-3 py-1.5 text-sm text-muted-foreground hover:bg-accent hover:text-accent-foreground"
               >
-                <button
-                  type="button"
-                  role="checkbox"
-                  aria-checked={isVisible}
-                  aria-label={isVisible ? `Hide ${cal.name}` : `Show ${cal.name}`}
-                  onClick={() => onToggleCalendar(cal.id)}
-                  className="flex h-4 w-4 shrink-0 items-center justify-center rounded-sm border-2 transition-colors"
-                  style={{
-                    borderColor: calColor,
-                    backgroundColor: isVisible ? calColor : "transparent",
-                  }}
-                >
-                  {isVisible && (
-                    <Check
-                      className="h-2.5 w-2.5"
-                      strokeWidth={3}
-                      style={{ color: pickContrastForeground(calColor) }}
-                    />
-                  )}
-                </button>
-                <span className="flex-1 truncate text-sm">{cal.name}</span>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6 shrink-0 opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
-                      aria-label={t("moreOptions")}
-                    >
-                      <MoreHorizontal className="h-3.5 w-3.5" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-36">
-                    <DropdownMenuItem onClick={() => onEditCalendar(cal)}>
-                      <Pencil className="mr-2 h-3.5 w-3.5" />
-                      {t("editCalendar")}
-                    </DropdownMenuItem>
-                    {canDelete && (
-                      <DropdownMenuItem
-                        className={cal.isPersonal ? "cursor-not-allowed opacity-50" : undefined}
-                        disabled={cal.isPersonal}
-                        onClick={() => !cal.isPersonal && setPendingDelete(cal)}
-                      >
-                        <Archive className="mr-2 h-3.5 w-3.5" />
-                        {t("archiveCalendar")}
-                      </DropdownMenuItem>
-                    )}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            );
-          })}
-          {canManage && (
-            <button
-              type="button"
-              className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-              onClick={onAddCalendar}
-            >
-              <span className="h-3 w-3 shrink-0 text-center leading-none" aria-hidden>
-                +
-              </span>
-              <span>{t("addCalendar")}</span>
-            </button>
-          )}
+                <span className="leading-none" aria-hidden>
+                  +
+                </span>
+                {t("addCalendar")}
+              </button>
+            )}
+          </div>
         </div>
 
         {canManage && (
@@ -319,60 +351,21 @@ export function CalendarSidebar({
         )}
       </aside>
 
-      {/* Mobile: horizontal calendar-toggle strip in place of the sidebar.
+      {/* Mobile: horizontal calendar-chip strip in place of the sidebar.
           Date-picker and today-events are dropped ; toolbar arrows navigate. */}
       <div className="flex shrink-0 flex-row items-center gap-1.5 overflow-x-auto border-b border-border px-3 py-2 md:hidden">
-        {calendars.map((cal) => {
-          const isVisible = !hiddenCalendarIds.has(cal.id);
-          const calColor = cal.color ?? "hsl(var(--primary))";
-          return (
-            <div
-              key={cal.id}
-              className="flex shrink-0 select-none items-center gap-0.5 whitespace-nowrap rounded-full border py-0.5 pl-3 pr-0.5 text-sm transition-colors"
-              style={{
-                borderColor: calColor,
-                backgroundColor: isVisible ? `${calColor}1a` : "transparent",
-                opacity: isVisible ? 1 : 0.55,
-              }}
-            >
-              <button
-                type="button"
-                role="checkbox"
-                aria-checked={isVisible}
-                aria-label={isVisible ? `Hide ${cal.name}` : `Show ${cal.name}`}
-                onPointerDown={(e) => startLongPress(cal, e)}
-                onPointerMove={onLongPressMove}
-                onPointerUp={cancelLongPress}
-                onPointerLeave={cancelLongPress}
-                onContextMenu={(e) => e.preventDefault()}
-                onClick={() => {
-                  // Suppress the visibility toggle if this tap was consumed by a long-press.
-                  if (longPressFiredRef.current) {
-                    longPressFiredRef.current = false;
-                    return;
-                  }
-                  onToggleCalendar(cal.id);
-                }}
-                className="flex items-center gap-1.5 py-0.5"
-              >
-                <span
-                  className="h-2.5 w-2.5 shrink-0 rounded-full"
-                  style={{ backgroundColor: calColor }}
-                  aria-hidden
-                />
-                {cal.name}
-              </button>
-              <button
-                type="button"
-                aria-label={t("moreOptions")}
-                onClick={() => setActionSheetCal(cal)}
-                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-foreground/10 hover:text-foreground"
-              >
-                <MoreHorizontal className="h-3.5 w-3.5" />
-              </button>
-            </div>
-          );
-        })}
+        {calendars.map((cal) => (
+          <CalendarChip
+            key={cal.id}
+            cal={cal}
+            visible={!hiddenCalendarIds.has(cal.id)}
+            onToggle={() => onToggleCalendar(cal.id)}
+            onEdit={() => onEditCalendar(cal)}
+            onArchive={() => setPendingDelete(cal)}
+            canDelete={!!canDelete}
+            labels={chipLabels}
+          />
+        ))}
         {canManage && (
           <button
             type="button"
@@ -387,68 +380,13 @@ export function CalendarSidebar({
         )}
       </div>
 
-      {/* Mobile long-press action drawer */}
-      <Sheet
-        open={actionSheetCal != null}
-        onOpenChange={(open) => {
-          if (!open) setActionSheetCal(null);
-        }}
-      >
-        <SheetContent side="bottom" className="gap-3 rounded-t-xl p-4 pb-8">
-          <SheetHeader>
-            <SheetTitle className="truncate text-left">{actionSheetCal?.name}</SheetTitle>
-          </SheetHeader>
-          <div className="flex flex-col gap-1">
-            <button
-              type="button"
-              className="flex w-full items-center gap-3 rounded-md px-3 py-3 text-left text-sm hover:bg-accent"
-              onClick={() => {
-                const cal = actionSheetCal;
-                setActionSheetCal(null);
-                if (cal) onEditCalendar(cal);
-              }}
-            >
-              <Pencil className="h-4 w-4 shrink-0" />
-              {t("editCalendar")}
-            </button>
-            {canDelete && (
-              <button
-                type="button"
-                disabled={actionSheetCal?.isPersonal}
-                className={
-                  actionSheetCal?.isPersonal
-                    ? "flex w-full cursor-not-allowed items-center gap-3 rounded-md px-3 py-3 text-left text-sm opacity-50"
-                    : "flex w-full items-center gap-3 rounded-md px-3 py-3 text-left text-sm hover:bg-accent"
-                }
-                onClick={() => {
-                  const cal = actionSheetCal;
-                  setActionSheetCal(null);
-                  if (cal && !cal.isPersonal) setPendingDelete(cal);
-                }}
-              >
-                <Archive className="h-4 w-4 shrink-0" />
-                {t("archiveCalendar")}
-              </button>
-            )}
-          </div>
-        </SheetContent>
-      </Sheet>
-
       <AlertDialog
         open={pendingDelete != null}
         onOpenChange={(open) => {
           if (!open) setPendingDelete(null);
         }}
       >
-        <AlertDialogContent
-          onCloseAutoFocus={() => {
-            const id = confirmedDeleteIdRef.current;
-            if (id) {
-              confirmedDeleteIdRef.current = null;
-              void onDeleteCalendar(id);
-            }
-          }}
-        >
+        <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>{t("archiveConfirmTitle")}</AlertDialogTitle>
             <AlertDialogDescription>{t("archiveConfirmDescription")}</AlertDialogDescription>
@@ -459,10 +397,12 @@ export function CalendarSidebar({
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
-                if (pendingDelete) {
-                  confirmedDeleteIdRef.current = pendingDelete.id;
-                  setPendingDelete(null);
-                }
+                const cal = pendingDelete;
+                setPendingDelete(null);
+                // Defer past the dialog's close cleanup: the delete's refetch
+                // unmounts this subtree, and if that lands mid-close Radix never
+                // restores `body` pointer-events, freezing the whole page.
+                if (cal) setTimeout(() => void onDeleteCalendar(cal.id), 0);
               }}
             >
               {t("archiveConfirmAction")}

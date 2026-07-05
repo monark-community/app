@@ -486,15 +486,19 @@ model Notification {
 // only when the user explicitly toggles, keeping the table small and
 // letting registry defaults change without a backfill.
 model NotificationPreference {
-  id        String                @id @default(cuid())
+  id        String              @id @default(cuid())
   userId    String
-  user      User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  category  NotificationCategory
+  user      User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Per-KIND override (e.g. "auth.new-device"), not per-category — a user
+  // can silence one specific event without muting its whole category. The
+  // kind's `category` (from the registry) is only used to group the prefs
+  // UI. Unmatched kinds fall back to the registry default.
+  kind      String
   channel   NotificationChannel
   enabled   Boolean
-  updatedAt DateTime              @updatedAt
+  updatedAt DateTime            @updatedAt
 
-  @@unique([userId, category, channel])
+  @@unique([userId, kind, channel])
   @@index([userId])
 }
 
@@ -736,6 +740,9 @@ model Industry {
   // doesn't break any external links the public surface might mint.
   slug        String   @unique
   displayName String
+  // Optional long-form description, stored as sanitized WYSIWYG HTML
+  // (Tiptap output). Rendered via the shared RichTextView on read.
+  description String?
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

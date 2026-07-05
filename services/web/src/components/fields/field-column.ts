@@ -1,5 +1,6 @@
-import type { CellEdit, DataColumnDef, SortAccessor } from "@/components/patterns";
+import type { DataColumnDef, SortAccessor } from "@/components/patterns";
 import { renderFieldValue, type CellLabels } from "./cells";
+import { FIELD_TYPE_ICON, type FieldIcon } from "./field-icons";
 import { FIELD_TYPE_META } from "./registry";
 import { htmlToText } from "./rich-text";
 import type { FieldDef, RelationOption } from "./types";
@@ -45,13 +46,14 @@ export interface FieldColumnOptions<TData> {
   labels: CellLabels;
   /** Overrides the column header (defaults to `def.label`). */
   header?: string;
+  /** Overrides the type glyph before the header (`null` hides it entirely;
+   *  defaults to the field type's icon). */
+  headerIcon?: FieldIcon | null;
   /** Overrides the derived alignment. */
   align?: "left" | "right";
   /** Enables sorting (on by default). */
   enableSorting?: boolean;
   enableHiding?: boolean;
-  /** Inline text/number editor (only meaningful for editable field types). */
-  edit?: CellEdit<TData>;
   size?: number;
   minSize?: number;
 }
@@ -66,15 +68,18 @@ export function fieldColumn<TData>(
   opts: FieldColumnOptions<TData>,
 ): DataColumnDef<TData> {
   const meta = FIELD_TYPE_META[def.type];
+  // `undefined` → default to the type glyph ; `null` → explicitly hide it.
+  const headerIcon =
+    opts.headerIcon === undefined ? FIELD_TYPE_ICON[def.type] : (opts.headerIcon ?? undefined);
   return {
     id: def.name,
     header: opts.header ?? def.label,
+    headerIcon,
     cell: (row) => renderFieldValue(def, opts.accessor(row), opts.labels),
     align: opts.align ?? meta.align,
     enableSorting: opts.enableSorting ?? true,
     sortAccessor: deriveSortAccessor(def, opts.accessor),
     enableHiding: opts.enableHiding,
-    edit: opts.edit,
     size: opts.size,
     minSize: opts.minSize,
   };

@@ -11,6 +11,7 @@ import type {
   TotpDisabledEvent,
   TotpEnabledEvent,
   TotpRecoveryCodeUsedEvent,
+  TotpRecoveryCodesRegeneratedEvent,
 } from "../contracts/events";
 import { decryptSecret, encryptSecret } from "./crypto";
 const RECOVERY_CODE_COUNT = 10;
@@ -239,6 +240,15 @@ export async function regenerateRecoveryCodes(input: {
       data: hashes.map((codeHash) => ({ totpSecretId: secret.id, codeHash })),
     }),
   ]);
+
+  const event: TotpRecoveryCodesRegeneratedEvent = {
+    type: "totp.recovery-codes-regenerated",
+    userId: input.userId,
+    count: recoveryCodes.length,
+    occurredAt: new Date(),
+  };
+  await emit(event);
+
   return recoveryCodes;
 }
 

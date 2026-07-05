@@ -54,6 +54,24 @@ declare module "./registry" {
       count: number;
       occurredAt: Date;
     };
+    "auth.signed-in": {
+      // Best-effort device label ; null when the sign-in wasn't tied to a
+      // recognised trusted device (enrich falls it back to a locale string).
+      deviceLabel: string | null;
+      occurredAt: Date;
+    };
+    "auth.device-revoked": {
+      deviceLabel: string | null;
+      occurredAt: Date;
+    };
+    "auth.recovery-code-used": {
+      remainingCodes: number;
+      occurredAt: Date;
+    };
+    "auth.recovery-codes-regenerated": {
+      count: number;
+      occurredAt: Date;
+    };
     "account.email-changed": {
       previousEmail: string;
       newEmail: string;

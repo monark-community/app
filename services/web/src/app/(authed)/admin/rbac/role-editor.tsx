@@ -1,21 +1,24 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
-import { ChevronDown, ChevronRight, Lock, Search } from "lucide-react";
+import { Lock } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ColorInput } from "@/components/ui/color-input";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { DangerCard, DangerRow } from "@/components/danger-card";
+import {
+  ConfirmDialog,
+  FieldRow,
+  GroupedMultiSelect,
+  type GroupedMultiSelectGroup,
+} from "@/components/patterns";
 import { DirtyFormBar } from "@/components/dirty-form-bar";
 import { PageHeader } from "@/components/page-header";
 import { PageSection } from "@/components/page-section";
@@ -112,9 +115,8 @@ export function RoleEditor(
   const [description, setDescription] = useState("");
   const [color, setColor] = useState("");
   const [permissions, setPermissions] = useState<Set<string>>(new Set());
-  const [search, setSearch] = useState("");
-  const [openCategories, setOpenCategories] = useState<Set<string>>(new Set());
   const [hydrated, setHydrated] = useState(!isEdit);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
 
   // Edit mode hydrates form state from the loaded role (once). Create
   // mode starts with an empty form ; no hydration needed.
@@ -159,42 +161,22 @@ export function RoleEditor(
 
   const submitting = create.isPending || update.isPending || remove.isPending;
 
-  // Search index : lowercase needle, hit on key or description per
-  // permission. Empty needle is a no-op (all permissions visible).
-  const needle = search.trim().toLowerCase();
-  const filteredCategories = useMemo(() => {
-    const cats = permsQuery.data?.categories ?? [];
-    if (needle === "") return cats;
-    return cats
-      .map((cat) => ({
-        ...cat,
-        permissions: cat.permissions.filter(
-          (p) =>
-            p.key.toLowerCase().includes(needle) || p.description.toLowerCase().includes(needle),
-        ),
-      }))
-      .filter((cat) => cat.permissions.length > 0);
-  }, [permsQuery.data, needle]);
-
-  // While a search is active, expose every matching category. The
-  // ref-guarded check skips re-applying when the operator manually
-  // collapses a section ; the auto-expand only fires on needle change.
-  const previousNeedle = useRef("");
-  useEffect(() => {
-    if (needle === previousNeedle.current) return;
-    previousNeedle.current = needle;
-    if (needle === "") return;
-    setOpenCategories(new Set(filteredCategories.map((c) => c.category)));
-  }, [needle, filteredCategories]);
-
-  function toggleCategoryOpen(category: string, open: boolean) {
-    setOpenCategories((current) => {
-      const out = new Set(current);
-      if (open) out.add(category);
-      else out.delete(category);
-      return out;
-    });
-  }
+  // Permission catalog shaped for the shared grouped selector : one group
+  // per category, one row per permission (mono key + description). The
+  // selector owns search + expand ; we pass the full list.
+  const permissionGroups = useMemo<GroupedMultiSelectGroup[]>(
+    () =>
+      (permsQuery.data?.categories ?? []).map((cat) => ({
+        key: cat.category,
+        label: t(`categories.${cat.category}` as const),
+        items: cat.permissions.map((p) => ({
+          value: p.key,
+          primary: p.key,
+          secondary: p.description,
+        })),
+      })),
+    [permsQuery.data, t],
+  );
 
   function togglePermission(permission: string, next: boolean) {
     setPermissions((current) => {
@@ -205,14 +187,12 @@ export function RoleEditor(
     });
   }
 
-  function toggleCategoryAll(categoryPerms: ReadonlyArray<{ key: string }>) {
+  function setGroupSelection(group: GroupedMultiSelectGroup, selectAll: boolean) {
     setPermissions((current) => {
       const out = new Set(current);
-      const allSelected = categoryPerms.every((p) => out.has(p.key));
-      if (allSelected) {
-        for (const p of categoryPerms) out.delete(p.key);
-      } else {
-        for (const p of categoryPerms) out.add(p.key);
+      for (const item of group.items) {
+        if (selectAll) out.add(item.value);
+        else out.delete(item.value);
       }
       return out;
     });
@@ -287,11 +267,8 @@ export function RoleEditor(
     setPermissions(new Set());
   }
 
-  function onDelete() {
+  function confirmDelete() {
     if (!isEdit || !role) return;
-    if (!confirm(t("deleteConfirm", { name: role.name }))) {
-      return;
-    }
     remove.mutate({ id: role.id });
   }
 
@@ -320,11 +297,9 @@ export function RoleEditor(
 
   return (
     <div className={inPanel ? "space-y-8 pb-20" : "space-y-8"}>
-      {inPanel ? (
-        <h2 className="text-lg font-semibold tracking-tight">
-          {isEdit ? t("editTitle", { name: role?.name ?? "" }) : t("createTitle")}
-        </h2>
-      ) : (
+      {/* Panel mode : the PanelHeader shows the create/edit title, so the
+          content skips it. Full page keeps the PageHeader. */}
+      {!inPanel && (
         <PageHeader
           title={isEdit ? t("editTitle", { name: role?.name ?? "" }) : t("createTitle")}
           subtitle={isEdit ? t("editSubtitle") : t("createSubtitle")}
@@ -334,37 +309,36 @@ export function RoleEditor(
       )}
 
       <PageSection title={t("identitySectionTitle")}>
-        <div className="space-y-2">
-          <Label htmlFor="role-name">{t("nameLabel")}</Label>
-          <Input
-            id="role-name"
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            placeholder={t("namePlaceholder")}
-            maxLength={80}
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="role-description">{t("descriptionLabel")}</Label>
-          <Textarea
-            id="role-description"
-            value={description}
-            onChange={(event) => setDescription(event.target.value)}
-            placeholder={t("descriptionPlaceholder")}
-            rows={2}
-            maxLength={280}
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="role-color">{t("colorLabel")}</Label>
-          <ColorInput
-            id="role-color"
-            value={color}
-            onChange={setColor}
-            placeholder="#F0870C"
-            aria-label={t("colorLabel")}
-          />
-          <p className="text-xs text-muted-foreground">{t("colorHint")}</p>
+        <div className="@container space-y-5">
+          <FieldRow label={t("nameLabel")} htmlFor="role-name">
+            <Input
+              id="role-name"
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              placeholder={t("namePlaceholder")}
+              maxLength={80}
+            />
+          </FieldRow>
+          <FieldRow label={t("descriptionLabel")} htmlFor="role-description">
+            <Textarea
+              id="role-description"
+              value={description}
+              onChange={(event) => setDescription(event.target.value)}
+              placeholder={t("descriptionPlaceholder")}
+              rows={2}
+              maxLength={280}
+            />
+          </FieldRow>
+          <FieldRow label={t("colorLabel")} htmlFor="role-color">
+            <ColorInput
+              id="role-color"
+              value={color}
+              onChange={setColor}
+              placeholder="#F0870C"
+              aria-label={t("colorLabel")}
+            />
+            <p className="text-xs text-muted-foreground">{t("colorHint")}</p>
+          </FieldRow>
         </div>
       </PageSection>
 
@@ -387,42 +361,18 @@ export function RoleEditor(
             {t("permissionsAdminNote")}
           </p>
         ) : (
-          <>
-            <div className="relative">
-              <Search
-                className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
-                aria-hidden
-              />
-              <Input
-                type="search"
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder={t("searchPlaceholder")}
-                aria-label={t("searchAria")}
-                className="pl-8"
-              />
-            </div>
-            <div className="space-y-2 rounded-md border border-border p-2">
-              {filteredCategories.length === 0 ? (
-                <p className="px-2 py-4 text-center text-xs text-muted-foreground">
-                  {t("searchEmpty")}
-                </p>
-              ) : (
-                filteredCategories.map((cat) => (
-                  <CategorySection
-                    key={cat.category}
-                    categoryLabel={t(`categories.${cat.category}` as const)}
-                    permissions={cat.permissions}
-                    selected={permissions}
-                    open={openCategories.has(cat.category)}
-                    onOpenChange={(next) => toggleCategoryOpen(cat.category, next)}
-                    onToggleAll={() => toggleCategoryAll(cat.permissions)}
-                    onTogglePermission={togglePermission}
-                  />
-                ))
-              )}
-            </div>
-          </>
+          <GroupedMultiSelect
+            groups={permissionGroups}
+            isChecked={(value) => permissions.has(value)}
+            onToggleItem={(_group, value, next) => togglePermission(value, next)}
+            onToggleGroup={setGroupSelection}
+            renderEmpty={() => t("searchEmpty")}
+            labels={{
+              searchPlaceholder: t("searchPlaceholder"),
+              searchAria: t("searchAria"),
+              toggleAllAria: (category) => t("toggleAllAria", { category }),
+            }}
+          />
         )}
       </PageSection>
 
@@ -432,13 +382,29 @@ export function RoleEditor(
             title={t("deleteCta")}
             description={t("deleteRowDescription")}
             action={
-              <Button type="button" variant="destructive" onClick={onDelete} disabled={submitting}>
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={() => setConfirmDeleteOpen(true)}
+                disabled={submitting}
+              >
                 {t("deleteCta")}
               </Button>
             }
           />
         </DangerCard>
       )}
+
+      <ConfirmDialog
+        open={confirmDeleteOpen}
+        onOpenChange={setConfirmDeleteOpen}
+        title={t("deleteCta")}
+        description={t("deleteConfirm", { name: role?.name ?? "" })}
+        cancelLabel={t("cancel")}
+        confirmLabel={t("deleteCta")}
+        isPending={remove.isPending}
+        onConfirm={confirmDelete}
+      />
 
       <DirtyFormBar
         containment={containment}
@@ -455,91 +421,3 @@ export function RoleEditor(
   );
 }
 
-type CategoryPermission = {
-  key: string;
-  description: string;
-};
-
-function CategorySection({
-  categoryLabel,
-  permissions,
-  selected,
-  open,
-  onOpenChange,
-  onToggleAll,
-  onTogglePermission,
-}: {
-  categoryLabel: string;
-  permissions: ReadonlyArray<CategoryPermission>;
-  selected: Set<string>;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onToggleAll: () => void;
-  onTogglePermission: (permission: string, next: boolean) => void;
-}) {
-  const t = useTranslations("admin.rbac.editor");
-  const total = permissions.length;
-  const selectedCount = permissions.reduce(
-    (acc, perm) => acc + (selected.has(perm.key) ? 1 : 0),
-    0,
-  );
-  const state: "none" | "some" | "all" =
-    selectedCount === 0 ? "none" : selectedCount === total ? "all" : "some";
-
-  return (
-    <Collapsible open={open} onOpenChange={onOpenChange}>
-      <div className="flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-muted/40">
-        <Checkbox
-          checked={state === "all"}
-          indeterminate={state === "some"}
-          onChange={onToggleAll}
-          aria-label={t("toggleAllAria", { category: categoryLabel })}
-          onClick={(event) => event.stopPropagation()}
-        />
-        <CollapsibleTrigger asChild>
-          <button
-            type="button"
-            className="flex flex-1 items-center justify-between gap-2 rounded-sm text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-          >
-            <span className="flex items-center gap-1.5 text-sm font-medium">
-              {open ? (
-                <ChevronDown className="h-4 w-4 text-muted-foreground" aria-hidden />
-              ) : (
-                <ChevronRight className="h-4 w-4 text-muted-foreground" aria-hidden />
-              )}
-              {categoryLabel}
-            </span>
-            <Badge
-              variant={state === "all" ? "primary" : "secondary"}
-              size="sm"
-              className="shrink-0"
-            >
-              {t("categoryCount", { selected: selectedCount, total })}
-            </Badge>
-          </button>
-        </CollapsibleTrigger>
-      </div>
-      <CollapsibleContent>
-        <ul className="space-y-1 px-2 pb-1 pt-1">
-          {permissions.map((perm) => {
-            const checked = selected.has(perm.key);
-            return (
-              <li key={perm.key}>
-                <label className="flex cursor-pointer items-start gap-2 rounded-md border border-border px-3 py-2 text-sm">
-                  <Checkbox
-                    checked={checked}
-                    onChange={(event) => onTogglePermission(perm.key, event.target.checked)}
-                  />
-                  <span className="flex-1 space-y-0.5">
-                    <span className="block font-mono text-xs">{perm.key}</span>
-                    <span className="block text-xs text-muted-foreground">{perm.description}</span>
-                  </span>
-                </label>
-              </li>
-            );
-          })}
-        </ul>
-      </CollapsibleContent>
-    </Collapsible>
-  );
-}

@@ -83,6 +83,7 @@ export function UserDetail({
         badges={badges}
         backHref={inPanel ? undefined : "/admin/users"}
         backLabel={inPanel ? undefined : t("back")}
+        bleed={inPanel ? "container" : true}
       />
 
       <Separator />

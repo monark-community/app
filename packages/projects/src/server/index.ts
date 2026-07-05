@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { router, publicProcedure } from "@monark/common/trpc";
 import { emit, NotFoundError, UnauthorizedError, ValidationError } from "@monark/common";
+import { MAX_PAGE_SIZE } from "@monark/common/pagination";
 import { requireOrg } from "@monark/organizations/server";
 import { requirePermission } from "@monark/rbac/server";
 import type {
@@ -45,6 +46,14 @@ const slugSchema = z
 
 const PROJECT_STATUSES = ["IDEA", "PROTOTYPE_AVAILABLE", "IN_PROGRESS", "QA", "COMPLETED"] as const;
 
+// Shared cursor-pagination input fields ; spread into a list procedure's
+// input object. `limit` is bounded by the shared MAX_PAGE_SIZE ; `cursor`
+// is the id of the last row of the previous page.
+const paginationInput = {
+  limit: z.number().int().min(1).max(MAX_PAGE_SIZE).optional(),
+  cursor: z.string().min(1).nullish(),
+};
+
 const keywordsSchema = z
   .array(z.string().trim().min(1).max(40))
   .max(50)
@@ -85,12 +94,17 @@ const createIndustryInput = z.object({
   // Optional ; derived from displayName via `slugify` +
   // `findFreeIndustrySlug` when omitted.
   slug: slugSchema.optional(),
+  // Long-form WYSIWYG description, stored as sanitized HTML. `null` /
+  // omitted = no description.
+  description: z.string().max(50_000).nullish(),
 });
 
 const updateIndustryInput = z.object({
   id: z.string().min(1),
   displayName: z.string().trim().min(1).max(80).optional(),
   slug: slugSchema.optional(),
+  // `undefined` leaves it unchanged ; `null` clears it ; a string sets it.
+  description: z.string().max(50_000).nullish(),
 });
 
 // Two sub-routers : projects (org-scoped) and industries (platform-
@@ -105,10 +119,11 @@ export const projectsRouter = router({
     .input(
       z
         .object({
-          publicStatus: z.enum(PROJECT_STATUSES).optional(),
-          industryId: z.string().min(1).optional(),
+          publicStatuses: z.array(z.enum(PROJECT_STATUSES)).max(20).optional(),
+          industryIds: z.array(z.string().min(1)).max(50).optional(),
           search: z.string().trim().max(120).optional(),
           includeDeleted: z.boolean().optional(),
+          ...paginationInput,
         })
         .optional(),
     )
@@ -121,10 +136,12 @@ export const projectsRouter = router({
       await requirePermission(ctx, "projects.read", org.id);
       return listProjects({
         organizationId: org.id,
-        publicStatus: input?.publicStatus,
-        industryId: input?.industryId,
+        publicStatuses: input?.publicStatuses,
+        industryIds: input?.industryIds,
         search: input?.search,
         includeDeleted: input?.includeDeleted ?? false,
+        limit: input?.limit,
+        cursor: input?.cursor,
       });
     }),
 
@@ -317,13 +334,26 @@ export const projectsRouter = router({
   // ── Industries ─────────────────────────────────────────
   industries: router({
     list: publicProcedure
-      .input(z.object({ includeDeleted: z.boolean().optional() }).optional())
+      .input(
+        z
+          .object({
+            includeDeleted: z.boolean().optional(),
+            search: z.string().trim().max(120).optional(),
+            ...paginationInput,
+          })
+          .optional(),
+      )
       .query(async ({ ctx, input }) => {
         if (!ctx.userId) throw new UnauthorizedError();
         // Industries are platform-scope ; the org context here is just
         // for the admin gate's umbrella permission resolution.
         await requirePermission(ctx, "industries.read");
-        return listIndustries({ includeDeleted: input?.includeDeleted ?? false });
+        return listIndustries({
+          includeDeleted: input?.includeDeleted ?? false,
+          search: input?.search,
+          limit: input?.limit,
+          cursor: input?.cursor,
+        });
       }),
 
     getById: publicProcedure
@@ -350,7 +380,11 @@ export const projectsRouter = router({
           throw new ValidationError(`Industry slug "${slug}" is already taken.`);
         }
       }
-      const industry = await createIndustry({ slug, displayName: input.displayName });
+      const industry = await createIndustry({
+        slug,
+        displayName: input.displayName,
+        description: input.description ?? null,
+      });
 
       const event: IndustryCreatedEvent = {
         type: "industry.created",
@@ -387,12 +421,15 @@ export const projectsRouter = router({
       const updated = await updateIndustry(input.id, {
         displayName: input.displayName,
         slug: resolvedSlug,
+        description: input.description,
       });
 
       const changed: IndustryUpdatedEvent["changed"] = [];
       if (input.displayName !== undefined && input.displayName !== existing.displayName)
         changed.push("displayName");
       if (resolvedSlug && resolvedSlug !== existing.slug) changed.push("slug");
+      if (input.description !== undefined && input.description !== existing.description)
+        changed.push("description");
 
       if (changed.length > 0) {
         const event: IndustryUpdatedEvent = {

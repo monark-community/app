@@ -11,6 +11,7 @@ Extended module ; the projects catalog and the shared industry taxonomy that cla
 ## Key concepts
 
 - **Soft-delete + restore + hard-delete.** Both projects and industries carry a `deletedAt` column ; the default delete is a soft-delete (surfaced in the UI as **Archive**), `restore` clears it, and `{ hard: true }` removes the row. List queries hide soft-deleted rows unless `includeDeleted` is passed.
+- **Cursor pagination.** `listProjects` and `listIndustries` follow the shared `@monark/common/pagination` convention : they take `{ limit?, cursor? }`, return `{ items, nextCursor, total }` (the `total` is a `count()` on the same filter), and order on a stable `id`-terminated keyset. Both accept a `search` filter server-side. Callers that need every row (a filter dropdown) request a high `limit`.
 - **Auto-slugging.** `create` derives a slug from the title via `slugify` when the operator doesn't pin one ; `findFreeProjectSlug` appends `-2`, `-3`, … on collision so two similarly-titled projects in the same org both succeed. `update` resolves slug collisions the same way.
 - **Two permission scopes.** Project permissions are **org-scoped** (a Curator role can be limited to one org's projects) ; industry permissions are **platform-scoped** because the taxonomy is shared across orgs.
 - **Org isolation.** Every project read/write resolves `requireOrg`, gates on the relevant permission scoped to the org, and verifies `existing.organizationId === org.id` before mutating — the reference pattern other modules should follow.
@@ -42,5 +43,5 @@ Built-in `ADMIN` / `SYSADMIN` are auto-granted all of these via `hasPermission`'
 
 ## tRPC surface
 
-- `projects.list` / `getById` / `getBySlug` / `create` / `update` / `delete` / `restore`
-- `projects.industries.list` / `getById` / `create` / `update` / `delete` / `restore`
+- `projects.list` (paginated : `{ …filters, limit?, cursor? }` → `{ items, nextCursor, total }`) / `getById` / `getBySlug` / `create` / `update` / `delete` / `restore`
+- `projects.industries.list` (paginated, with `search`) / `getById` / `create` / `update` / `delete` / `restore`
