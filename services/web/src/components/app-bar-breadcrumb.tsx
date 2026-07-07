@@ -216,6 +216,12 @@ function pickCrumbForSegment({ before, segment }: { before: string; segment: str
   if (before === "/admin/webhooks" && segment !== "new") {
     return <WebhookNameCrumb id={segment} />;
   }
+  // `/admin/data-models/<id>` is the schema editor ; there's no "new"
+  // sibling route (creation happens in the list page's detail panel), so
+  // every segment here is a real id.
+  if (before === "/admin/data-models") {
+    return <DataModelNameCrumb id={segment} />;
+  }
   return <StaticCrumb segment={segment} />;
 }
 
@@ -275,6 +281,18 @@ function WebhookNameCrumb({ id }: { id: string }) {
   // the cuid while loading / on error so the breadcrumb always renders
   // something stable.
   const query = trpc.webhooks.get.useQuery(
+    { id },
+    { refetchOnWindowFocus: false, staleTime: Infinity, retry: false },
+  );
+  const label = query.data?.name || id;
+  return <span className="truncate">{label}</span>;
+}
+
+function DataModelNameCrumb({ id }: { id: string }) {
+  // Same caching / fallback shape as the role / user / org / webhook
+  // crumbs above : falls back to the raw id while loading or on error so
+  // the breadcrumb always renders something stable.
+  const query = trpc.dataModels.models.getById.useQuery(
     { id },
     { refetchOnWindowFocus: false, staleTime: Infinity, retry: false },
   );

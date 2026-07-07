@@ -137,8 +137,7 @@ export function UsersList() {
       search: search || undefined,
       limit,
       roleIds: roleFilter.length > 0 ? roleFilter : undefined,
-      statuses:
-        statusesForUsers && statusesForUsers.length > 0 ? statusesForUsers : undefined,
+      statuses: statusesForUsers && statusesForUsers.length > 0 ? statusesForUsers : undefined,
       emailVerified:
         emailFilter === "verified" ? true : emailFilter === "unverified" ? false : undefined,
       joinedAfter: joinedAfterIso,

@@ -23,6 +23,7 @@
     "@monark/calendar": "workspace:*",
     "@monark/common": "workspace:*",
     "@monark/components": "workspace:*",
+    "@monark/data-models": "workspace:*",
     "@monark/feature-flags": "workspace:*",
     "@hookform/resolvers": "^5.2.0",
     "@radix-ui/react-alert-dialog": "^1.1.14",

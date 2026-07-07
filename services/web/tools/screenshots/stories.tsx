@@ -171,7 +171,7 @@ const TOOLS_LABELS: TableToolsLabels = {
   tools: "List tools",
   close: "Close",
   columns: "Columns",
-  reset: "Reset layout",
+  reset: "Reset columns",
   sort: {
     label: "Sorting",
     ascending: "Ascending",

@@ -61,7 +61,10 @@ export function OrganizationsList() {
   const primaryColumn: PrimaryColumnDef<OrgRow> = {
     header: t("columns.name"),
     leading: (org) => (
-      <OrganizationLogo logoUrl={org.logoUrl ? rewriteForCurrentHost(org.logoUrl) : null} size="sm" />
+      <OrganizationLogo
+        logoUrl={org.logoUrl ? rewriteForCurrentHost(org.logoUrl) : null}
+        size="sm"
+      />
     ),
     label: (org) => org.displayName,
     subtext: (org) => <span className="font-mono">{org.slug}</span>,

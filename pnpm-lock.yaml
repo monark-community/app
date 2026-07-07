@@ -142,9 +142,15 @@ importers:
       '@monark/components':
         specifier: workspace:*
         version: link:../components
+      '@monark/data-models':
+        specifier: workspace:*
+        version: link:../data-models
       '@monark/db':
         specifier: workspace:*
         version: link:../db
+      '@monark/notifications':
+        specifier: workspace:*
+        version: link:../notifications
       '@monark/organizations':
         specifier: workspace:*
         version: link:../organizations
@@ -211,6 +217,34 @@ importers:
       react-dom:
         specifier: ^19.1.0
         version: 19.2.5(react@19.2.5)
+
+  packages/data-models:
+    dependencies:
+      '@monark/common':
+        specifier: workspace:*
+        version: link:../common
+      '@monark/db':
+        specifier: workspace:*
+        version: link:../db
+      '@monark/organizations':
+        specifier: workspace:*
+        version: link:../organizations
+      '@monark/rbac':
+        specifier: workspace:*
+        version: link:../rbac
+      zod:
+        specifier: ^3.23.0
+        version: 3.25.76
+    devDependencies:
+      '@monark/test-utils':
+        specifier: workspace:*
+        version: link:../test-utils
+      '@vitest/coverage-v8':
+        specifier: ^3.0.0
+        version: 3.2.4(vitest@3.2.4(@types/node@25.6.2)(jiti@2.6.1)(jsdom@25.0.1)(lightningcss@1.32.0)(msw@2.14.5(@types/node@25.6.2)(typescript@5.9.3))(tsx@4.21.0)(yaml@2.8.4))
+      vitest:
+        specifier: ^3.0.0
+        version: 3.2.4(@types/node@25.6.2)(jiti@2.6.1)(jsdom@25.0.1)(lightningcss@1.32.0)(msw@2.14.5(@types/node@25.6.2)(typescript@5.9.3))(tsx@4.21.0)(yaml@2.8.4)
 
   packages/db:
     dependencies:
@@ -331,34 +365,6 @@ importers:
       '@monark/users':
         specifier: workspace:*
         version: link:../users
-      zod:
-        specifier: ^3.25.76
-        version: 3.25.76
-    devDependencies:
-      '@monark/test-utils':
-        specifier: workspace:*
-        version: link:../test-utils
-      '@vitest/coverage-v8':
-        specifier: ^3.0.0
-        version: 3.2.4(vitest@3.2.4(@types/node@25.6.2)(jiti@2.6.1)(jsdom@25.0.1)(lightningcss@1.32.0)(msw@2.14.5(@types/node@25.6.2)(typescript@5.9.3))(tsx@4.21.0)(yaml@2.8.4))
-      vitest:
-        specifier: ^3.0.0
-        version: 3.2.4(@types/node@25.6.2)(jiti@2.6.1)(jsdom@25.0.1)(lightningcss@1.32.0)(msw@2.14.5(@types/node@25.6.2)(typescript@5.9.3))(tsx@4.21.0)(yaml@2.8.4)
-
-  packages/projects:
-    dependencies:
-      '@monark/common':
-        specifier: workspace:*
-        version: link:../common
-      '@monark/db':
-        specifier: workspace:*
-        version: link:../db
-      '@monark/organizations':
-        specifier: workspace:*
-        version: link:../organizations
-      '@monark/rbac':
-        specifier: workspace:*
-        version: link:../rbac
       zod:
         specifier: ^3.25.76
         version: 3.25.76
@@ -584,6 +590,9 @@ importers:
       '@monark/components':
         specifier: workspace:*
         version: link:../../packages/components
+      '@monark/data-models':
+        specifier: workspace:*
+        version: link:../../packages/data-models
       '@monark/feature-flags':
         specifier: workspace:*
         version: link:../../packages/feature-flags

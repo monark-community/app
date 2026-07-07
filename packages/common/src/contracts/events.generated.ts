@@ -2,20 +2,20 @@
 // Regenerate after changing any module's /contracts/events.ts or modules.manifest.ts.
 
 import type { AuthEvents } from "@monark/auth/contracts"
+import type { DataModelsEvents } from "@monark/data-models/contracts"
 import type { FeatureFlagsEvents } from "@monark/feature-flags/contracts"
 import type { NotificationsEvents } from "@monark/notifications/contracts"
 import type { OrganizationsEvents } from "@monark/organizations/contracts"
-import type { ProjectsEvents } from "@monark/projects/contracts"
 import type { RbacEvents } from "@monark/rbac/contracts"
 import type { UsersEvents } from "@monark/users/contracts"
 import type { WebhooksEvents } from "@monark/webhooks/contracts"
 
 export type DomainEvent =
   | AuthEvents
+  | DataModelsEvents
   | FeatureFlagsEvents
   | NotificationsEvents
   | OrganizationsEvents
-  | ProjectsEvents
   | RbacEvents
   | UsersEvents
   | WebhooksEvents

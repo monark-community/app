@@ -377,7 +377,10 @@ export function RichTextEditor({
         ...(describedBy ? { "aria-describedby": describedBy } : {}),
         // In fill mode the body flexes to the scroll area (so clicking anywhere
         // in the empty space focuses) ; otherwise it sizes to a min-height.
-        class: cn("rich-text-content px-3 py-2 text-sm focus:outline-none", fill && "min-h-0 flex-1"),
+        class: cn(
+          "rich-text-content px-3 py-2 text-sm focus:outline-none",
+          fill && "min-h-0 flex-1",
+        ),
         ...(fill ? {} : { style: `min-height:${minHeightRem}rem` }),
       },
     },

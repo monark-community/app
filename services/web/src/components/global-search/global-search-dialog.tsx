@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
-import { keepPreviousData } from "@tanstack/react-query";
 import { CalendarDays } from "lucide-react";
 import {
   CommandDialog,
@@ -17,17 +16,6 @@ import { trpc } from "@/lib/trpc";
 import { SEARCH_ROUTES } from "./routes";
 
 const MIN_QUERY = 2;
-const MAX_RESULTS = 8;
-
-type Section = "projects" | "industries" | "calendar";
-
-/** Which section's entities are "most relevant" for the current route. */
-function sectionOf(pathname: string): Section | null {
-  if (pathname.startsWith("/data/projects")) return "projects";
-  if (pathname.startsWith("/data/industries")) return "industries";
-  if (pathname.startsWith("/calendar")) return "calendar";
-  return null;
-}
 
 function useDebounced<T>(value: T, ms: number): T {
   const [debounced, setDebounced] = useState(value);
@@ -66,8 +54,9 @@ function formatDateParam(d: Date): string {
 
 /**
  * The global command palette body. Two result groups:
- *   1. Contextual — the current section's entities (projects / industries
- *      / calendar events), fetched live from the api.
+ *   1. Contextual — the current section's entities. Today only the calendar
+ *      contributes here (its events, fetched live from the api) ; other
+ *      surfaces are reached via the navigation group.
  *   2. Navigation — a "Go to" list of app sections filtered by the query.
  *
  * cmdk's built-in filtering is disabled (`shouldFilter={false}`) : the
@@ -85,7 +74,7 @@ export function GlobalSearchDialog({
   const locale = useLocale();
   const router = useRouter();
   const pathname = usePathname();
-  const section = sectionOf(pathname);
+  const inCalendar = pathname.startsWith("/calendar");
 
   const [query, setQuery] = useState("");
   const debounced = useDebounced(query.trim(), 250);
@@ -96,25 +85,11 @@ export function GlobalSearchDialog({
     if (open) setQuery("");
   }, [open]);
 
-  // Only the query for the current section runs, and only while the
-  // palette is open with a long-enough term.
-  const projectsQuery = trpc.projects.list.useQuery(
-    { search: debounced },
-    {
-      enabled: open && section === "projects" && canSearch,
-      placeholderData: keepPreviousData,
-    },
-  );
-  const industriesQuery = trpc.projects.industries.list.useQuery(
-    { search: debounced, limit: MAX_RESULTS },
-    {
-      enabled: open && section === "industries" && canSearch,
-      placeholderData: keepPreviousData,
-    },
-  );
+  // The contextual query runs only on the calendar, and only while the palette
+  // is open with a long-enough term.
   const eventsQuery = trpc.calendar.events.search.useQuery(
     { query: debounced },
-    { enabled: open && section === "calendar" && canSearch },
+    { enabled: open && inCalendar && canSearch },
   );
 
   const isAdminQuery = trpc.rbac.isAdmin.useQuery(undefined, {
@@ -129,33 +104,16 @@ export function GlobalSearchDialog({
     router.push(href);
   }
 
-  // Industries are searched + paged server-side (active rows only) ; take the
-  // first page as-is.
-  const industriesFiltered = useMemo(
-    () => (canSearch ? (industriesQuery.data?.items ?? []) : []),
-    [industriesQuery.data, canSearch],
-  );
+  const events = useMemo(() => eventsQuery.data ?? [], [eventsQuery.data]);
+  const contextLoading = inCalendar && eventsQuery.isFetching;
 
-  const contextLoading =
-    (section === "projects" && projectsQuery.isFetching) ||
-    (section === "industries" && industriesQuery.isFetching) ||
-    (section === "calendar" && eventsQuery.isFetching);
+  // Number of contextual results, so we can suppress the group heading entirely
+  // when a search comes back empty (otherwise the section title would sit under
+  // "No results found.").
+  const contextCount = inCalendar ? events.length : 0;
 
-  // Number of contextual results for the active section, so we can suppress the
-  // group heading entirely when a search comes back empty (otherwise the section
-  // title would sit under "No results found.").
-  const contextCount =
-    section === "projects"
-      ? Math.min((projectsQuery.data?.items ?? []).length, MAX_RESULTS)
-      : section === "industries"
-        ? industriesFiltered.length
-        : section === "calendar"
-          ? (eventsQuery.data ?? []).length
-          : 0;
-
-  // Only surface the "Searching…" row when the fetch is both slow (> 400ms)
-  // and we have nothing to show yet — keepPreviousData means a projects
-  // refetch keeps its old rows on screen, so there's no gap to fill.
+  // Only surface the "Searching…" row when the fetch is both slow (> 400ms) and
+  // we have nothing to show yet.
   const showSearching = useDelayed(contextLoading, 400) && contextCount === 0;
 
   const routes = SEARCH_ROUTES.filter((r) => !r.adminOnly || isAdmin);
@@ -176,57 +134,32 @@ export function GlobalSearchDialog({
       <CommandList>
         <CommandEmpty>{t("empty")}</CommandEmpty>
 
-        {section && canSearch && (contextCount > 0 || showSearching) && (
-          <CommandGroup heading={t(`groups.${section}`)}>
+        {inCalendar && canSearch && (contextCount > 0 || showSearching) && (
+          <CommandGroup heading={t("groups.calendar")}>
             {showSearching && (
               <CommandItem value="__loading" disabled>
                 {t("searching")}
               </CommandItem>
             )}
 
-            {section === "projects" &&
-              (projectsQuery.data?.items ?? []).slice(0, MAX_RESULTS).map((p) => (
+            {events.map((ev) => {
+              const startAt = new Date(ev.startAt);
+              return (
                 <CommandItem
-                  key={p.id}
-                  value={`project-${p.id}`}
-                  onSelect={() => go(`/data/projects?project=${p.id}`)}
+                  key={ev.id}
+                  value={`event-${ev.id}`}
+                  onSelect={() =>
+                    go(`/calendar?view=day&date=${formatDateParam(startAt)}&event=${ev.id}`)
+                  }
                 >
-                  <span className="min-w-0 flex-1 truncate">{p.title}</span>
-                  <span className="shrink-0 text-xs text-muted-foreground">{p.slug}</span>
+                  <CalendarDays className="text-muted-foreground" />
+                  <span className="min-w-0 flex-1 truncate">{ev.title}</span>
+                  <span className="shrink-0 text-xs text-muted-foreground">
+                    {dateFmt.format(startAt)}
+                  </span>
                 </CommandItem>
-              ))}
-
-            {section === "industries" &&
-              industriesFiltered.map((ind) => (
-                <CommandItem
-                  key={ind.id}
-                  value={`industry-${ind.id}`}
-                  onSelect={() => go(`/data/industries?industry=${ind.id}`)}
-                >
-                  <span className="min-w-0 flex-1 truncate">{ind.displayName}</span>
-                  <span className="shrink-0 text-xs text-muted-foreground">{ind.slug}</span>
-                </CommandItem>
-              ))}
-
-            {section === "calendar" &&
-              (eventsQuery.data ?? []).map((ev) => {
-                const startAt = new Date(ev.startAt);
-                return (
-                  <CommandItem
-                    key={ev.id}
-                    value={`event-${ev.id}`}
-                    onSelect={() =>
-                      go(`/calendar?view=day&date=${formatDateParam(startAt)}&event=${ev.id}`)
-                    }
-                  >
-                    <CalendarDays className="text-muted-foreground" />
-                    <span className="min-w-0 flex-1 truncate">{ev.title}</span>
-                    <span className="shrink-0 text-xs text-muted-foreground">
-                      {dateFmt.format(startAt)}
-                    </span>
-                  </CommandItem>
-                );
-              })}
+              );
+            })}
           </CommandGroup>
         )}
 

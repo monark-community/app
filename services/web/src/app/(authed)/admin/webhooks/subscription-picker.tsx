@@ -286,9 +286,7 @@ export function SubscriptionPicker({ subscriptions, onChange }: SubscriptionPick
             selectAll,
           )
         }
-        renderEmpty={(query) =>
-          query !== "" ? t("emptySearch", { query }) : t("registryEmpty")
-        }
+        renderEmpty={(query) => (query !== "" ? t("emptySearch", { query }) : t("registryEmpty"))}
         labels={{
           searchPlaceholder: t("searchPlaceholder"),
           searchAria: t("searchAria"),

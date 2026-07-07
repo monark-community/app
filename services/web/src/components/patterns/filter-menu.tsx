@@ -187,9 +187,10 @@ export const RESET_ROW_CLASS =
 export const INSET_SEPARATOR_CLASS = "my-1 h-px bg-border";
 
 /**
- * "Clear filters" action for the non-menu surfaces (mobile modal, the
- * collapsed-tools drill-in Popover / dialog). Disabled while nothing is active.
- * The desktop dropdown uses a `DropdownMenuItem` instead (menu semantics).
+ * "Reset filters" action for the non-menu surfaces (mobile modal, the
+ * collapsed-tools drill-in Popover / dialog). Callers only render it while at
+ * least one filter is active. The desktop dropdown uses a `DropdownMenuItem`
+ * instead (menu semantics).
  */
 export function FilterClearButton({
   filters,
@@ -203,9 +204,8 @@ export function FilterClearButton({
   return (
     <button
       type="button"
-      disabled={activeFilterCount(filters) === 0}
       onClick={() => clearAllFilters(filters)}
-      className={cn(RESET_ROW_CLASS, "disabled:pointer-events-none disabled:opacity-50", className)}
+      className={cn(RESET_ROW_CLASS, className)}
     >
       <RotateCcw className="mr-2 h-4 w-4" aria-hidden />
       {label}
@@ -309,7 +309,7 @@ export function FilterMenu({
               </div>
             ))}
           </div>
-          {labels.clearAll && (
+          {labels.clearAll && activeCount > 0 && (
             <div className="shrink-0 border-t border-border p-3">
               <FilterClearButton filters={filters} label={labels.clearAll} />
             </div>
@@ -343,13 +343,12 @@ export function FilterMenu({
             </DropdownMenuSub>
           );
         })}
-        {labels.clearAll && (
+        {labels.clearAll && activeCount > 0 && (
           <>
             <div className={INSET_SEPARATOR_CLASS} />
             <DropdownMenuItem
-              disabled={activeCount === 0}
-              // Keep the menu open so the cleared state (and the badge) is
-              // visible ; the item just disables itself once nothing's active.
+              // Only shown while something is active, so it never no-ops ; kept
+              // open on select so the cleared state (and badge) stays visible.
               onSelect={(e) => {
                 e.preventDefault();
                 clearAllFilters(filters);

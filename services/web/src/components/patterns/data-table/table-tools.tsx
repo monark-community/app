@@ -464,7 +464,7 @@ function MobileToolsDialog({
                   />
                 </div>
               ))}
-              {filterLabels.clearAll && (
+              {filterLabels.clearAll && activeFilterCount(filters) > 0 && (
                 <>
                   <div className="my-1 h-px bg-border" />
                   <FilterClearButton filters={filters} label={filterLabels.clearAll} />

@@ -519,9 +519,38 @@ export function NewEventPopover({
 
   const formBody = (
     <>
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-[2fr_1.15fr] md:gap-x-4 md:gap-y-0">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-[2fr_1.15fr] md:gap-x-4 md:gap-y-3">
+        {/* Event type — first field on mobile (where the two columns collapse
+            into one stacked column), pinned to the top of the right column on
+            desktop. Leading with it matters: the type decides which fields
+            appear below (times vs all-day dates). */}
+        <div className="flex flex-col gap-1 [&_label]:whitespace-nowrap md:col-start-2 md:row-start-1">
+          <Label>{tc("eventTypeLabel")}</Label>
+          <div className="flex h-9 rounded-md border border-input">
+            {(["STANDARD", "PUNCTUAL", "ALL_DAY"] as const).map((type) => (
+              <button
+                key={type}
+                type="button"
+                onClick={() => handleTypeChange(type)}
+                className={cn(
+                  "flex flex-1 items-center justify-center border-l border-input px-2 text-xs font-medium transition-colors first:rounded-l-md first:border-l-0 last:rounded-r-md",
+                  form.eventType === type
+                    ? "bg-primary text-primary-foreground"
+                    : "text-foreground hover:bg-muted",
+                )}
+              >
+                {type === "STANDARD"
+                  ? tc("eventTypeStandard")
+                  : type === "PUNCTUAL"
+                    ? tc("eventTypePunctual")
+                    : tc("eventTypeAllDay")}
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* Left column: title + description */}
-        <div className="flex min-h-0 flex-col gap-3">
+        <div className="flex min-h-0 flex-col gap-3 md:col-start-1 md:row-start-1 md:row-span-2">
           <div className="flex flex-col gap-1">
             <Label htmlFor="cal-title">{tc("titleLabel")}</Label>
             <Input
@@ -556,34 +585,11 @@ export function NewEventPopover({
           </div>
         </div>
 
-        {/* Right column: metadata — Type, Date, Times, Participants, Location,
-            Calendar, Reminders (top → bottom). */}
-        <div className="flex flex-col gap-3 [&_label]:whitespace-nowrap">
-          <div className="flex flex-col gap-1">
-            <Label>{tc("eventTypeLabel")}</Label>
-            <div className="flex h-9 rounded-md border border-input">
-              {(["STANDARD", "PUNCTUAL", "ALL_DAY"] as const).map((type) => (
-                <button
-                  key={type}
-                  type="button"
-                  onClick={() => handleTypeChange(type)}
-                  className={cn(
-                    "flex flex-1 items-center justify-center border-l border-input px-2 text-xs font-medium transition-colors first:rounded-l-md first:border-l-0 last:rounded-r-md",
-                    form.eventType === type
-                      ? "bg-primary text-primary-foreground"
-                      : "text-foreground hover:bg-muted",
-                  )}
-                >
-                  {type === "STANDARD"
-                    ? tc("eventTypeStandard")
-                    : type === "PUNCTUAL"
-                      ? tc("eventTypePunctual")
-                      : tc("eventTypeAllDay")}
-                </button>
-              ))}
-            </div>
-          </div>
-
+        {/* Right column: metadata — Date, Times, Participants, Location,
+            Calendar, Reminders (top → bottom). Type is rendered above (moved
+            out so it can lead on mobile) and pinned back to the top of this
+            column on desktop via grid placement. */}
+        <div className="flex flex-col gap-3 [&_label]:whitespace-nowrap md:col-start-2 md:row-start-2">
           {/* Non-ALL_DAY: editable date picker so user can move the event to a different day */}
           {!showAllDayDates && (
             <div className="flex flex-col gap-1">

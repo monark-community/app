@@ -530,7 +530,17 @@ function RowActionsMenu<TData>({
 }) {
   if (actions.length === 0) return null;
   return (
-    <DropdownMenu>
+    // `modal={false}` : Radix's default modal menu drives a body scroll-lock
+    // (`overflow: hidden`) on open. On mobile, a wide table already extends a
+    // little past the viewport, silently masked by the page's own
+    // `overflow-x: clip` — the scroll-lock's style swap disturbs that
+    // masking and the layout viewport blows out to the table's full width,
+    // visually breaking the whole page. A non-modal menu never touches body
+    // overflow, so it can't trigger that. Same class of fix as the
+    // `CalendarChip` menu (see the pointer-events-freeze case) ; this menu
+    // never opens a follow-up modal dialog itself, so there's no
+    // menu→dialog handoff to worry about.
+    <DropdownMenu modal={false}>
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"

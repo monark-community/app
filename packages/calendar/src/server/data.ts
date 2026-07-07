@@ -405,3 +405,75 @@ export async function listCalendarMembers({
     select: { id: true, displayName: true, email: true, avatarUrl: true },
   });
 }
+
+// ── Data Model materialization ───────────────────────────
+// Backs the calendar integration slot (registerCalendarModelIntegration) :
+// a Data Record with an enabled "calendar" mapping materializes into one of
+// these rows, keyed on (sourceModule, sourceRecordId) so repeated
+// data-models.record-* events upsert idempotently. Materialized as a
+// PUNCTUAL event (a point in time, not a range) since the integration only
+// maps one "time" slot, not separate start/end fields — `startAt`/`endAt`
+// are set equal, matching how PUNCTUAL events are already exempted from
+// the `endAt >= startAt` check elsewhere in this router.
+
+export async function upsertCalendarEventFromSource({
+  sourceModule,
+  sourceRecordId,
+  calendarId,
+  organizationId,
+  title,
+  at,
+}: {
+  sourceModule: string;
+  sourceRecordId: string;
+  calendarId: string;
+  organizationId: string;
+  title: string;
+  at: Date;
+}): Promise<CalendarEventRow> {
+  const db = getDb();
+  return db.calendarEvent.upsert({
+    where: { sourceModule_sourceRecordId: { sourceModule, sourceRecordId } },
+    create: {
+      calendarId,
+      organizationId,
+      title,
+      startAt: at,
+      endAt: at,
+      eventType: "PUNCTUAL",
+      sourceModule,
+      sourceRecordId,
+      deletedAt: null,
+    },
+    update: {
+      calendarId,
+      title,
+      startAt: at,
+      endAt: at,
+      // A record that stopped satisfying the mapping (and got soft-deleted
+      // here) can come back into compliance on a later edit ; un-delete it
+      // rather than leaving a stale materialized row hidden forever.
+      deletedAt: null,
+    },
+    include: { reminders: { select: { minutesBefore: true } } },
+  });
+}
+
+export async function softDeleteCalendarEventBySource(
+  sourceModule: string,
+  sourceRecordId: string,
+): Promise<void> {
+  const db = getDb();
+  await db.calendarEvent.updateMany({
+    where: { sourceModule, sourceRecordId, deletedAt: null },
+    data: { deletedAt: new Date() },
+  });
+}
+
+export async function hardDeleteCalendarEventBySource(
+  sourceModule: string,
+  sourceRecordId: string,
+): Promise<void> {
+  const db = getDb();
+  await db.calendarEvent.deleteMany({ where: { sourceModule, sourceRecordId } });
+}

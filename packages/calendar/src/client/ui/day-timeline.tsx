@@ -15,7 +15,7 @@ export function DayTimeline({
   hideHeader?: boolean;
 }) {
   return (
-    <div className="flex w-16 shrink-0 flex-col border-r border-border">
+    <div className="flex w-12 shrink-0 flex-col border-r border-border md:w-16">
       {!hideHeader && (
         <div
           style={{ height: headerHeight }}

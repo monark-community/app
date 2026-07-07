@@ -344,7 +344,7 @@
   "table": {
     "tools": "List tools",
     "columns": "Columns",
-    "reset": "Reset layout",
+    "reset": "Reset columns",
     "sorting": "Sorting",
     "sortAscending": "Ascending",
     "sortDescending": "Descending",
@@ -379,16 +379,12 @@
     "searching": "Searching…",
     "empty": "No results found.",
     "groups": {
-      "projects": "Projects",
-      "industries": "Industries",
       "calendar": "Events",
       "navigation": "Go to"
     },
     "routes": {
       "dashboard": "Dashboard",
       "calendar": "Calendar",
-      "projects": "Projects",
-      "industries": "Industries",
       "account": "Account",
       "admin": "Admin",
       "adminUsers": "Users",
@@ -399,10 +395,50 @@
   },
   "data": {
     "tabs": {
-      "nav": "Data models",
-      "projects": "Projects",
-      "industries": "Industries"
-    }
+      "nav": "Data models"
+    },
+    "records": {
+      "createCta": "New {model}",
+      "searchPlaceholder": "Search…",
+      "searchAria": "Search records",
+      "empty": "No records yet.",
+      "emptySearch": "No record matches “{query}”.",
+      "panelCreateTitle": "New {model}",
+      "openFullPage": "Open full page",
+      "untitled": "Untitled",
+      "notFound": "That record doesn't exist or you can't see it.",
+      "modelNotFound": "That Data Model doesn't exist or you can't see it.",
+      "columns": {
+        "updated": "Updated"
+      },
+      "actions": {
+        "delete": "Delete",
+        "restore": "Restore"
+      },
+      "delete": {
+        "title": "Delete record",
+        "description": "Delete this record? This can be undone from the archived view until permanently deleted.",
+        "confirm": "Delete",
+        "cancel": "Cancel",
+        "success": "Record deleted.",
+        "error": "Could not delete that record."
+      },
+      "restore": {
+        "success": "Record restored.",
+        "error": "Could not restore that record."
+      },
+      "createSuccess": "Record created.",
+      "createError": "Could not create that record.",
+      "updateSuccess": "Record updated.",
+      "updateError": "Could not update that record.",
+      "submit": "Save",
+      "cancel": "Cancel",
+      "backToList": "Back to {model}",
+      "archivedFilterLabel": "Status",
+      "activeOnly": "Active only",
+      "includeArchived": "Include deleted"
+    },
+    "empty": "No data models yet."
   },
   "admin": {
     "title": "Admin",
@@ -412,10 +448,9 @@
       "users": "Users",
       "organizations": "Organizations",
       "organization": "Organization",
-      "projects": "Projects",
-      "industries": "Industries",
       "rbac": "Roles & permissions",
-      "webhooks": "Webhooks"
+      "webhooks": "Webhooks",
+      "dataModels": "Data Models"
     },
     "users": {
       "title": "Users",
@@ -761,191 +796,6 @@
         "updateError": "Could not update that role."
       }
     },
-    "projects": {
-      "title": "Projects",
-      "subtitle": "Track every project the organization owns — idea through completed.",
-      "newProject": "New project",
-      "panelCreateTitle": "Create new project",
-      "panelEditTitle": "Edit project",
-      "actions": {
-        "edit": "Edit",
-        "archive": "Archive",
-        "restore": "Restore",
-        "delete": "Delete permanently"
-      },
-      "archivedBadge": "Archived",
-      "archivedFilterLabel": "Archived",
-      "activeOnly": "Active only",
-      "includeArchived": "Include archived",
-      "archive": {
-        "title": "Archive this project?",
-        "description": "The project will be hidden from the list. Its data is kept and you can restore it later.",
-        "cta": "Archive",
-        "cancel": "Cancel",
-        "success": "Project archived.",
-        "error": "Could not archive project. {message}"
-      },
-      "hardDelete": {
-        "title": "Permanently delete \"{name}\"?",
-        "description": "This removes the project record and all of its data. This cannot be undone.",
-        "cta": "Delete permanently",
-        "cancel": "Cancel",
-        "success": "Project deleted permanently.",
-        "error": "Could not delete project. {message}"
-      },
-      "restore": {
-        "success": "Project restored.",
-        "error": "Could not restore project. {message}"
-      },
-      "searchPlaceholder": "Search by title, slug, or keyword",
-      "filterStatusLabel": "Status",
-      "filterStatusAll": "All statuses",
-      "filterIndustryLabel": "Industry",
-      "filterIndustryAll": "All industries",
-      "columns": {
-        "title": "Title",
-        "status": "Status",
-        "url": "URL",
-        "keywords": "Keywords",
-        "industries": "Industries",
-        "updated": "Updated"
-      },
-      "empty": "No projects yet. Create the first one to get started.",
-      "emptyFiltered": "No projects match these filters.",
-      "emptyArchived": "No archived projects.",
-      "notFound": "Project not found.",
-      "openFullPage": "Open full page",
-      "collapsePanel": "Collapse panel",
-      "loading": "Loading projects…",
-      "loadError": "Could not load projects. Try again.",
-      "status": {
-        "IDEA": "Idea",
-        "PROTOTYPE_AVAILABLE": "Prototype available",
-        "IN_PROGRESS": "In progress",
-        "QA": "QA",
-        "COMPLETED": "Completed"
-      },
-      "form": {
-        "createTitle": "New project",
-        "createSubtitle": "Capture the essentials now — every field below can be edited later.",
-        "editTitle": "Edit project",
-        "editSubtitle": "Adjust details and save.",
-        "back": "Back to projects",
-        "fields": {
-          "title": "Title",
-          "slug": "Slug",
-          "slugPreview": "Will be saved as {slug}",
-          "url": "URL",
-          "urlPlaceholder": "https://example.com/project",
-          "description": "Description",
-          "descriptionPlaceholder": "Describe this project…",
-          "publicStatus": "Public status",
-          "keywords": "Keywords",
-          "keywordsHelp": "Press Enter to add each keyword.",
-          "keywordsPlaceholder": "Add a keyword…",
-          "keywordsAdd": "Add keyword",
-          "industries": "Industries"
-        },
-        "addIndustry": "Add industry",
-        "removeIndustry": "Remove {name}",
-        "removeKeyword": "Remove {name}",
-        "createKeyword": "Add \"{value}\"",
-        "noIndustries": "No industries selected.",
-        "industriesEmpty": "All industries are already selected.",
-        "industriesSearchPlaceholder": "Search industries",
-        "save": "Save",
-        "saving": "Saving…",
-        "create": "Create project",
-        "creating": "Creating…",
-        "cancel": "Cancel",
-        "delete": "Delete",
-        "dangerTitle": "Danger zone",
-        "dangerSubtitle": "Irreversible actions for this project.",
-        "deleteRowTitle": "Delete project",
-        "deleteRowDescription": "Soft-deletes the project. You can restore it later from the list.",
-        "deleteConfirm": "Delete this project?",
-        "deleteDescription": "This soft-deletes the project. You can restore it later from the list.",
-        "deleteConfirmCta": "Delete project",
-        "createSuccess": "Project created.",
-        "createError": "Could not create project. {message}",
-        "updateSuccess": "Project saved.",
-        "updateError": "Could not save project. {message}",
-        "deleteSuccess": "Project deleted.",
-        "deleteError": "Could not delete project. {message}",
-        "validationTitle": "Title is required.",
-        "validationUrl": "URL must be a full https:// or http:// link."
-      }
-    },
-    "industries": {
-      "title": "Industries",
-      "subtitle": "Platform-wide taxonomy that projects use to declare their market sector.",
-      "newIndustry": "New industry",
-      "panelCreateTitle": "Create new industry",
-      "panelEditTitle": "Edit industry",
-      "searchPlaceholder": "Search by name or slug",
-      "actions": {
-        "edit": "Edit",
-        "archive": "Archive",
-        "restore": "Restore",
-        "delete": "Delete permanently"
-      },
-      "archivedBadge": "Archived",
-      "showArchived": "Show archived",
-      "hideArchived": "Hide archived",
-      "archivedFilterLabel": "Archived",
-      "activeOnly": "Active only",
-      "includeArchived": "Include archived",
-      "columns": {
-        "name": "Name",
-        "slug": "Slug",
-        "created": "Created"
-      },
-      "empty": "No industries yet. Create the first one to get started.",
-      "emptyArchived": "No archived industries.",
-      "emptyFiltered": "No industries match your search.",
-      "notFound": "Industry not found.",
-      "openFullPage": "Open full page",
-      "collapsePanel": "Collapse panel",
-      "backToIndustries": "Back to industries",
-      "form": {
-        "createTitle": "New industry",
-        "editTitle": "Edit industry",
-        "displayName": "Name",
-        "slug": "Slug",
-        "slugPreview": "Will be saved as {slug}",
-        "description": "Description",
-        "descriptionPlaceholder": "Describe this industry…",
-        "save": "Save",
-        "saving": "Saving…",
-        "create": "Create industry",
-        "creating": "Creating…",
-        "cancel": "Cancel",
-        "createSuccess": "Industry created.",
-        "createError": "Could not create industry. {message}",
-        "updateSuccess": "Industry saved.",
-        "updateError": "Could not save industry. {message}"
-      },
-      "archive": {
-        "title": "Archive this industry?",
-        "description": "The industry will be hidden from menus. Existing project associations are kept and you can restore it later.",
-        "cta": "Archive",
-        "cancel": "Cancel",
-        "success": "Industry archived.",
-        "error": "Could not archive industry. {message}"
-      },
-      "hardDelete": {
-        "title": "Permanently delete \"{name}\"?",
-        "description": "This removes the industry record and all of its project associations. This cannot be undone.",
-        "cta": "Delete permanently",
-        "cancel": "Cancel",
-        "success": "Industry deleted permanently.",
-        "error": "Could not delete industry. {message}"
-      },
-      "restore": {
-        "success": "Industry restored.",
-        "error": "Could not restore industry. {message}"
-      }
-    },
     "webhooks": {
       "title": "Webhooks",
       "subtitle": "HTTP endpoints that receive every domain event the platform emits.",
@@ -1102,6 +952,179 @@
         "attemptLogEmpty": "No attempts recorded yet.",
         "networkError": "Network error",
         "durationMs": "{ms} ms"
+      }
+    },
+    "dataModels": {
+      "title": "Data Models",
+      "subtitle": "Define custom record types — name them, add fields, and configure how other modules can use them.",
+      "list": {
+        "createCta": "New Data Model",
+        "searchPlaceholder": "Search by name or key…",
+        "searchAria": "Search Data Models",
+        "columns": {
+          "name": "Name",
+          "scope": "Scope",
+          "updated": "Updated"
+        },
+        "scope": {
+          "organization": "Organization",
+          "platform": "Platform-wide"
+        },
+        "empty": "No Data Models yet.",
+        "emptySearch": "No Data Model matches “{query}”.",
+        "panelCreateTitle": "New Data Model",
+        "actions": {
+          "delete": "Delete",
+          "restore": "Restore"
+        },
+        "delete": {
+          "title": "Delete Data Model",
+          "description": "Delete “{name}”? Its fields and records are removed too. This can be undone from the archived view until permanently deleted.",
+          "confirm": "Delete",
+          "cancel": "Cancel",
+          "success": "Data Model deleted.",
+          "error": "Could not delete that Data Model."
+        },
+        "restore": {
+          "success": "Data Model restored.",
+          "error": "Could not restore that Data Model."
+        },
+        "archivedFilterLabel": "Status",
+        "activeOnly": "Active only",
+        "includeArchived": "Include deleted"
+      },
+      "create": {
+        "nameLabel": "Name",
+        "namePlaceholder": "e.g. Bug Report",
+        "keyLabel": "Key",
+        "keyPlaceholder": "auto-generated from name",
+        "keyHint": "URL-safe machine name. Auto-derived from the name if left blank ; immutable after creation.",
+        "descriptionLabel": "Description",
+        "descriptionPlaceholder": "Optional",
+        "scopeLabel": "Scope",
+        "scopeOrganization": "This organization",
+        "scopePlatform": "Platform-wide, shared across all organizations",
+        "submit": "Create",
+        "cancel": "Cancel",
+        "success": "Data Model created.",
+        "error": "Could not create that Data Model."
+      },
+      "editor": {
+        "back": "Back to Data Models",
+        "notFound": "That Data Model doesn't exist or you can't see it.",
+        "settings": {
+          "title": "Settings",
+          "subtitle": "Name, description, and which field backs the record title.",
+          "nameLabel": "Name",
+          "descriptionLabel": "Description",
+          "iconLabel": "Icon",
+          "iconPlaceholder": "Optional",
+          "titleFieldLabel": "Title field",
+          "titleFieldHint": "Which field's value is shown as each record's title in lists and links.",
+          "titleFieldNone": "None (records show as “Untitled”)",
+          "save": "Save",
+          "saving": "Saving…",
+          "cancel": "Cancel",
+          "success": "Settings saved.",
+          "error": "Could not save those settings."
+        },
+        "fields": {
+          "title": "Fields",
+          "subtitle": "The shape every record of this Data Model has.",
+          "addCta": "Add field",
+          "empty": "No fields yet. Add one to start shaping records.",
+          "dragToReorder": "Drag to reorder",
+          "reorderError": "Could not reorder fields.",
+          "requiredBadge": "Required",
+          "indexedBadge": "Indexed",
+          "archivedBadge": "Archived",
+          "actions": {
+            "edit": "Edit",
+            "archive": "Archive",
+            "unarchive": "Unarchive",
+            "requestIndex": "Index this field",
+            "makeTitleField": "Use as title field"
+          },
+          "archive": {
+            "title": "Archive field",
+            "description": "Archive “{label}”? It disappears from forms and the column picker, but past records keep their value under this key.",
+            "confirm": "Archive",
+            "cancel": "Cancel",
+            "success": "Field archived.",
+            "error": "Could not archive that field."
+          },
+          "unarchiveSuccess": "Field restored.",
+          "unarchiveError": "Could not restore that field.",
+          "indexRequested": "Index requested — it builds in the background.",
+          "indexError": "Could not request an index for that field.",
+          "indexStatus": {
+            "pending": "Index pending",
+            "building": "Building index…",
+            "ready": "Indexed",
+            "failed": "Index failed"
+          }
+        },
+        "fieldDialog": {
+          "createTitle": "Add field",
+          "editTitle": "Edit field",
+          "labelLabel": "Label",
+          "labelPlaceholder": "e.g. Due date",
+          "keyLabel": "Key",
+          "keyHint": "The property name inside every record. Auto-derived from the label ; immutable after creation.",
+          "descriptionLabel": "Description",
+          "typeLabel": "Type",
+          "typeHint": "Immutable after creation.",
+          "requiredLabel": "Required",
+          "types": {
+            "TEXT": "Text",
+            "LONG_TEXT": "Long text",
+            "RICH_TEXT": "Rich text",
+            "NUMBER": "Number",
+            "BOOLEAN": "Boolean",
+            "DATE": "Date",
+            "DATETIME": "Date & time",
+            "SELECT": "Single select",
+            "MULTI_SELECT": "Multi select",
+            "RELATION": "Relation",
+            "URL": "URL",
+            "EMAIL": "Email"
+          },
+          "config": {
+            "minLength": "Min length",
+            "maxLength": "Max length",
+            "min": "Min",
+            "max": "Max",
+            "integer": "Whole numbers only",
+            "options": "Options",
+            "optionValue": "Value",
+            "optionLabel": "Label",
+            "addOption": "Add option",
+            "removeOption": "Remove option",
+            "allowCustomValues": "Allow typing new options",
+            "relationTarget": "Target",
+            "relationTargetPlaceholder": "Select a target",
+            "cardinality": "Allow",
+            "cardinalityOne": "One",
+            "cardinalityMany": "Multiple",
+            "maxItems": "Max selections"
+          },
+          "submit": "Save",
+          "cancel": "Cancel",
+          "success": "Field saved.",
+          "error": "Could not save that field."
+        },
+        "integrations": {
+          "title": "Integrations",
+          "subtitle": "Map this Data Model's fields onto another module's requirements.",
+          "empty": "No modules have registered an integration yet.",
+          "enabledLabel": "Enabled",
+          "slotPlaceholder": "Select a field",
+          "requiredHint": "Required",
+          "save": "Save",
+          "success": "Integration saved.",
+          "error": "Could not save that integration.",
+          "missingRequired": "Map every required slot before enabling."
+        }
       }
     }
   },

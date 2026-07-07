@@ -7,8 +7,8 @@ export const MODULES = {
   "@monark/rbac": { tier: "core" },
   "@monark/notifications": { tier: "core" },
   "@monark/webhooks": { tier: "core" },
-  "@monark/projects": { tier: "extended" },
   "@monark/calendar": { tier: "extended" },
+  "@monark/data-models": { tier: "core" },
 } as const satisfies Record<string, { tier: "core" | "extended" }>;
 
 export type ModuleName = keyof typeof MODULES;

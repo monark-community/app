@@ -33,11 +33,6 @@ const ACKNOWLEDGED_GAPS = new Set<string>([
   // Calendar shipped without a domain-event contract ; its mutations should
   // emit events so webhooks can subscribe. Tracked in docs/todo/backlog.md.
   "@monark/calendar:events",
-  // Calendar's router + data layer have only a single unit test ; needs a
-  // testcontainer integration suite (see docs/review/maintainability.md).
-  "@monark/calendar:integration-tests",
-  // Projects is the reference extended module but has no integration suite yet.
-  "@monark/projects:integration-tests",
 ]);
 
 type Severity = "error" | "notice";

@@ -1,10 +1,8 @@
 import {
   Building2,
   CalendarDays,
-  FolderKanban,
   KeyRound,
   LayoutDashboard,
-  Layers,
   ShieldCheck,
   UserCircle,
   Users,
@@ -29,8 +27,6 @@ export type SearchRoute = {
 export const SEARCH_ROUTES: SearchRoute[] = [
   { id: "dashboard", href: "/", icon: LayoutDashboard },
   { id: "calendar", href: "/calendar", icon: CalendarDays },
-  { id: "projects", href: "/data/projects", icon: FolderKanban },
-  { id: "industries", href: "/data/industries", icon: Layers },
   { id: "account", href: "/account", icon: UserCircle },
   { id: "admin", href: "/admin", icon: ShieldCheck, adminOnly: true },
   { id: "adminUsers", href: "/admin/users", icon: Users, adminOnly: true },

@@ -948,7 +948,7 @@ export function DayView({
             nothing useful to show now that calendars are merged into one grid. */}
         {hasAllDayEvents && (
           <div className="sticky top-0 z-40 flex border-b border-border bg-background shadow-sm">
-            <div className="w-16 shrink-0 border-r border-border py-1" />
+            <div className="w-12 shrink-0 border-r border-border py-1 md:w-16" />
             <div className="flex flex-1 flex-col gap-px px-1 py-1 min-w-0">
               {allDayEvents.map((ev) => {
                 const borderColor = ev.color ?? undefined;

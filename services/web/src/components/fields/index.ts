@@ -8,6 +8,13 @@ export { useFieldStrings } from "./strings";
 export { useDebounced } from "./use-debounced";
 export { FieldCell, renderFieldValue, type CellLabels } from "./cells";
 export { fieldColumn, type FieldColumnOptions } from "./field-column";
+export {
+  dataFieldToFieldDef,
+  recordDataToDefaultValues,
+  type DataFieldForAdapter,
+  type DataFieldServerType,
+  type RelationSourceResolver,
+} from "./data-field-adapter";
 export { RichTextView } from "./rich-text-view";
 export { RichTextEditor } from "./inputs/rich-text-editor";
 export { htmlToText } from "./rich-text";

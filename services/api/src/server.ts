@@ -28,11 +28,16 @@ import {
 import {
   registerCalendarPermissions,
   registerCalendarNotificationKinds,
+  registerCalendarModelIntegration,
+  registerCalendarDataModelSubscriber,
   getPendingReminders,
   markReminderNotified,
   listCalendarMembers,
 } from "@monark/calendar/server";
-import { registerProjectsEventTypes, registerProjectsPermissions } from "@monark/projects/server";
+import {
+  registerDataModelsEventTypes,
+  registerDataModelsPermissions,
+} from "@monark/data-models/server";
 import { registerRbacEventTypes, registerRbacPermissions } from "@monark/rbac/server";
 import { registerUsersEventTypes, registerUsersPermissions } from "@monark/users/server";
 import {
@@ -64,9 +69,9 @@ registerAuthFeatureFlags();
 registerOrganizationsFeatureFlags();
 
 registerCalendarPermissions();
+registerDataModelsPermissions();
 registerFeatureFlagsPermissions();
 registerOrganizationsPermissions();
-registerProjectsPermissions();
 registerRbacPermissions();
 registerUsersPermissions();
 registerWebhooksPermissions();
@@ -78,10 +83,10 @@ registerWebhooksPermissions();
 // subscriber filter skips them to avoid recursion, so showing them
 // in the picker would be misleading.
 registerAuthEventTypes();
+registerDataModelsEventTypes();
 registerFeatureFlagsEventTypes();
 registerNotificationsEventTypes();
 registerOrganizationsEventTypes();
-registerProjectsEventTypes();
 registerRbacEventTypes();
 registerUsersEventTypes();
 
@@ -91,6 +96,12 @@ registerUsersEventTypes();
 registerCoreNotificationKinds();
 registerCalendarNotificationKinds();
 
+// Model-integration registrations declare a module's "slots" to the
+// polymorphic Data Models engine (@monark/data-models's
+// registerModelIntegration) — must run before any admin request could try
+// to save a mapping against a module that hasn't declared its slots yet.
+registerCalendarModelIntegration();
+
 // Domain event listeners are registered once at process boot. Add new ones
 // here as more event-driven side-effects come online. The organizations
 // subscriber MUST register before the webhook subscriber so the auto-
@@ -99,6 +110,7 @@ registerCalendarNotificationKinds();
 // receive a derived event. The webhook subscriber registers last so
 // its outbox writer sees a stable event-bus configuration.
 registerOrganizationsSubscribers();
+registerCalendarDataModelSubscriber();
 registerNotificationSubscribers();
 registerWebhookSubscribers();
 

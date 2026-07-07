@@ -368,5 +368,10 @@ export const calendarRouter = router({
 
 export { registerCalendarPermissions } from "./permissions";
 export { registerCalendarNotificationKinds } from "./notification-kinds";
+export { registerCalendarModelIntegration } from "./model-integration";
+export {
+  registerCalendarDataModelSubscriber,
+  _resetCalendarDataModelSubscriberForTesting,
+} from "./data-model-subscriber";
 export { getPendingReminders, markReminderNotified, listCalendarMembers } from "./data";
 export type { CalendarRow, CalendarEventRow, PendingReminderRow } from "./data";

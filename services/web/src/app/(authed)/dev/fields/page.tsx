@@ -263,7 +263,7 @@ export default function FieldsGalleryPage() {
                   tools: "List tools",
                   close: "Close",
                   columns: "Columns",
-                  reset: "Reset layout",
+                  reset: "Reset columns",
                   sort: {
                     label: "Sorting",
                     ascending: "Ascending",

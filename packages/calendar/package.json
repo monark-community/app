@@ -12,12 +12,16 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint src",
     "test": "vitest run --passWithNoTests",
-    "test:coverage": "vitest run --coverage --passWithNoTests"
+    "test:coverage": "vitest run --coverage --passWithNoTests",
+    "test:integration": "vitest run --config vitest.integration.config.ts --passWithNoTests",
+    "test:integration:coverage": "vitest run --config vitest.integration.config.ts --coverage --passWithNoTests"
   },
   "dependencies": {
     "@monark/common": "workspace:*",
     "@monark/components": "workspace:*",
+    "@monark/data-models": "workspace:*",
     "@monark/db": "workspace:*",
+    "@monark/notifications": "workspace:*",
     "@monark/organizations": "workspace:*",
     "@monark/rbac": "workspace:*",
     "zod": "^3.23.0"

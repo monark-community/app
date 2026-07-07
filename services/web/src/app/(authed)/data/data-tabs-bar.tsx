@@ -3,13 +3,20 @@
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { DataSidebar } from "./data-sidebar";
+import type { DataTab } from "./data-tabs";
 
 // The mobile / narrow-viewport secondary nav for the Data section. It
 // sticks just under the `h-14` AppBar (top-14), then plays the "hide on
 // scroll down, reveal on scroll up" trick so the tabs stay reachable
 // without permanently eating vertical space. On xl+ this is hidden and
 // the vertical rail takes over. (Mirror of AdminTabsBar.)
-export function DataTabsBar({ allowedIds }: { allowedIds: readonly string[] }) {
+export function DataTabsBar({
+  tabs,
+  allowedIds,
+}: {
+  tabs: readonly DataTab[];
+  allowedIds: readonly string[];
+}) {
   const [hidden, setHidden] = useState(false);
   const lastScrollY = useRef(0);
 
@@ -43,7 +50,7 @@ export function DataTabsBar({ allowedIds }: { allowedIds: readonly string[] }) {
         hidden && "-translate-y-[calc(100%+3.5rem)]",
       )}
     >
-      <DataSidebar orientation="horizontal" allowedIds={allowedIds} />
+      <DataSidebar orientation="horizontal" tabs={tabs} allowedIds={allowedIds} />
     </div>
   );
 }

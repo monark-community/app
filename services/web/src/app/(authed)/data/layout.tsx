@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { AppBar } from "@/components/app-bar";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createServerTrpcClient } from "@/lib/trpc-server";
-import { DATA_TABS } from "./data-tabs";
+import { DATA_TABS, type DataTab } from "./data-tabs";
 import { DataSidebar } from "./data-sidebar";
 import { DataTabsBar } from "./data-tabs-bar";
 
@@ -17,29 +17,48 @@ import { DataTabsBar } from "./data-tabs-bar";
  * Session is gated here ; per-model `<model>.read` permission checks
  * stay in each model's own route layout so a user with access to one
  * model but not another still gets bounced from the one they lack.
+ *
+ * The tab list is one entry per dynamically-registered Data Model this org
+ * (or the platform) has defined — fetched here, since it's per-org and
+ * DB-backed. Every model shares the same two permissions
+ * (`data-models.record-read` to see it, `data-models.read-schema` to
+ * resolve its fields — see `data/models/[modelKey]/layout.tsx`) ; the
+ * model-list query itself, scoped to the caller's org, is what the
+ * "allowed" filter really keys on. (`DATA_TABS` stays an empty extension
+ * point for any future bespoke non-model surface.)
  */
 export default async function DataLayout({ children }: { children: ReactNode }) {
   const supabase = await createSupabaseServerClient();
   const { data: sessionData } = await supabase.auth.getSession();
   if (!sessionData.session) return null;
 
-  // Filter the secondary nav to the models the user can actually read.
-  // Each model's route layout re-checks the same permission, so this is
-  // purely a UX affordance ; computed here (server) so no inaccessible
-  // tab ever flashes before a client-side filter could hide it.
   const api = createServerTrpcClient(sessionData.session.access_token);
   const perms = await api.rbac.myPermissions.query().catch(() => [] as string[]);
   const permSet = new Set(perms as string[]);
-  const allowedIds = DATA_TABS.filter((tab) => permSet.has(tab.permission)).map(
-    (tab) => tab.id,
-  );
+
+  const canBrowseRecords =
+    permSet.has("data-models.record-read") && permSet.has("data-models.read-schema");
+  const registeredModels = canBrowseRecords
+    ? await api.dataModels.models.list.query({ limit: 100 }).catch(() => ({ items: [] }))
+    : { items: [] };
+
+  const dynamicTabs: DataTab[] = registeredModels.items.map((model) => ({
+    id: `model:${model.key}`,
+    href: `/data/models/${model.key}`,
+    icon: "database",
+    permission: "data-models.record-read",
+    label: model.name,
+  }));
+
+  const tabs: DataTab[] = [...DATA_TABS, ...dynamicTabs];
+  const allowedIds = tabs.filter((tab) => permSet.has(tab.permission)).map((tab) => tab.id);
 
   return (
     <>
       <AppBar />
-      <DataTabsBar allowedIds={allowedIds} />
+      <DataTabsBar tabs={tabs} allowedIds={allowedIds} />
       <aside className="fixed left-0 top-14 z-20 hidden h-[calc(100vh-3.5rem)] w-72 overflow-y-auto border-r border-border bg-background p-4 xl:block">
-        <DataSidebar allowedIds={allowedIds} />
+        <DataSidebar tabs={tabs} allowedIds={allowedIds} />
       </aside>
       <main className="w-full px-4 pb-20 pt-8 sm:px-6 xl:pl-78">{children}</main>
     </>

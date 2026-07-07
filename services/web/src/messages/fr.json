@@ -344,7 +344,7 @@
   "table": {
     "tools": "Outils de liste",
     "columns": "Colonnes",
-    "reset": "Réinitialiser la disposition",
+    "reset": "Réinitialiser les colonnes",
     "sorting": "Tri",
     "sortAscending": "Croissant",
     "sortDescending": "Décroissant",
@@ -379,16 +379,12 @@
     "searching": "Recherche…",
     "empty": "Aucun résultat.",
     "groups": {
-      "projects": "Projets",
-      "industries": "Secteurs",
       "calendar": "Événements",
       "navigation": "Aller à"
     },
     "routes": {
       "dashboard": "Tableau de bord",
       "calendar": "Calendrier",
-      "projects": "Projets",
-      "industries": "Secteurs",
       "account": "Compte",
       "admin": "Admin",
       "adminUsers": "Utilisateurs",
@@ -399,10 +395,50 @@
   },
   "data": {
     "tabs": {
-      "nav": "Modèles de données",
-      "projects": "Projets",
-      "industries": "Industries"
-    }
+      "nav": "Modèles de données"
+    },
+    "records": {
+      "createCta": "Nouveau {model}",
+      "searchPlaceholder": "Rechercher…",
+      "searchAria": "Rechercher des enregistrements",
+      "empty": "Aucun enregistrement pour le moment.",
+      "emptySearch": "Aucun enregistrement ne correspond à « {query} ».",
+      "panelCreateTitle": "Nouveau {model}",
+      "openFullPage": "Ouvrir en pleine page",
+      "untitled": "Sans titre",
+      "notFound": "Cet enregistrement n'existe pas ou vous n'y avez pas accès.",
+      "modelNotFound": "Ce modèle de données n'existe pas ou vous n'y avez pas accès.",
+      "columns": {
+        "updated": "Mis à jour"
+      },
+      "actions": {
+        "delete": "Supprimer",
+        "restore": "Restaurer"
+      },
+      "delete": {
+        "title": "Supprimer l'enregistrement",
+        "description": "Supprimer cet enregistrement ? Cette action est réversible depuis la vue archivée jusqu'à la suppression définitive.",
+        "confirm": "Supprimer",
+        "cancel": "Annuler",
+        "success": "Enregistrement supprimé.",
+        "error": "Impossible de supprimer cet enregistrement."
+      },
+      "restore": {
+        "success": "Enregistrement restauré.",
+        "error": "Impossible de restaurer cet enregistrement."
+      },
+      "createSuccess": "Enregistrement créé.",
+      "createError": "Impossible de créer cet enregistrement.",
+      "updateSuccess": "Enregistrement mis à jour.",
+      "updateError": "Impossible de mettre à jour cet enregistrement.",
+      "submit": "Enregistrer",
+      "cancel": "Annuler",
+      "backToList": "Retour à {model}",
+      "archivedFilterLabel": "Statut",
+      "activeOnly": "Actifs uniquement",
+      "includeArchived": "Inclure les supprimés"
+    },
+    "empty": "Aucun modèle de données pour le moment."
   },
   "admin": {
     "title": "Admin",
@@ -412,10 +448,9 @@
       "users": "Utilisateurs",
       "organizations": "Organisations",
       "organization": "Organisation",
-      "projects": "Projets",
-      "industries": "Secteurs",
       "rbac": "Rôles et permissions",
-      "webhooks": "Webhooks"
+      "webhooks": "Webhooks",
+      "dataModels": "Modèles de données"
     },
     "users": {
       "title": "Utilisateurs",
@@ -761,191 +796,6 @@
         "updateError": "Impossible de mettre à jour ce rôle."
       }
     },
-    "projects": {
-      "title": "Projets",
-      "subtitle": "Suivez chaque projet détenu par l'organisation — de l'idée à la livraison.",
-      "newProject": "Nouveau projet",
-      "panelCreateTitle": "Créer un projet",
-      "panelEditTitle": "Modifier le projet",
-      "actions": {
-        "edit": "Modifier",
-        "archive": "Archiver",
-        "restore": "Restaurer",
-        "delete": "Supprimer définitivement"
-      },
-      "archivedBadge": "Archivé",
-      "archivedFilterLabel": "Archivés",
-      "activeOnly": "Actifs seulement",
-      "includeArchived": "Inclure les archivés",
-      "archive": {
-        "title": "Archiver ce projet ?",
-        "description": "Le projet sera masqué de la liste. Ses données sont conservées et vous pourrez le restaurer plus tard.",
-        "cta": "Archiver",
-        "cancel": "Annuler",
-        "success": "Projet archivé.",
-        "error": "Impossible d'archiver le projet. {message}"
-      },
-      "hardDelete": {
-        "title": "Supprimer définitivement \"{name}\" ?",
-        "description": "Cela supprime l'enregistrement du projet et toutes ses données. Cette action est irréversible.",
-        "cta": "Supprimer définitivement",
-        "cancel": "Annuler",
-        "success": "Projet supprimé définitivement.",
-        "error": "Impossible de supprimer le projet. {message}"
-      },
-      "restore": {
-        "success": "Projet restauré.",
-        "error": "Impossible de restaurer le projet. {message}"
-      },
-      "searchPlaceholder": "Chercher par titre, slug ou mot-clé",
-      "filterStatusLabel": "Statut",
-      "filterStatusAll": "Tous les statuts",
-      "filterIndustryLabel": "Industrie",
-      "filterIndustryAll": "Toutes les industries",
-      "columns": {
-        "title": "Titre",
-        "status": "Statut",
-        "url": "URL",
-        "keywords": "Mots-clés",
-        "industries": "Industries",
-        "updated": "Mis à jour"
-      },
-      "empty": "Aucun projet pour l'instant. Créez le premier pour démarrer.",
-      "emptyArchived": "Aucun projet archivé.",
-      "emptyFiltered": "Aucun projet ne correspond à ces filtres.",
-      "notFound": "Projet introuvable.",
-      "openFullPage": "Ouvrir en plein écran",
-      "collapsePanel": "Réduire le panneau",
-      "loading": "Chargement des projets…",
-      "loadError": "Impossible de charger les projets. Réessayez.",
-      "status": {
-        "IDEA": "Idée",
-        "PROTOTYPE_AVAILABLE": "Prototype disponible",
-        "IN_PROGRESS": "En cours",
-        "QA": "QA",
-        "COMPLETED": "Terminé"
-      },
-      "form": {
-        "createTitle": "Nouveau projet",
-        "createSubtitle": "Notez l'essentiel maintenant — chaque champ ci-dessous est modifiable plus tard.",
-        "editTitle": "Modifier le projet",
-        "editSubtitle": "Ajustez les détails et enregistrez.",
-        "back": "Retour aux projets",
-        "fields": {
-          "title": "Titre",
-          "slug": "Slug",
-          "slugPreview": "Sera enregistré sous {slug}",
-          "url": "URL",
-          "urlPlaceholder": "https://exemple.com/projet",
-          "description": "Description",
-          "descriptionPlaceholder": "Décrivez ce projet…",
-          "publicStatus": "Statut public",
-          "keywords": "Mots-clés",
-          "keywordsHelp": "Appuyez sur Entrée pour ajouter chaque mot-clé.",
-          "keywordsPlaceholder": "Ajouter un mot-clé…",
-          "keywordsAdd": "Ajouter un mot-clé",
-          "industries": "Industries"
-        },
-        "addIndustry": "Ajouter une industrie",
-        "removeIndustry": "Retirer {name}",
-        "removeKeyword": "Retirer {name}",
-        "createKeyword": "Ajouter « {value} »",
-        "noIndustries": "Aucune industrie sélectionnée.",
-        "industriesEmpty": "Toutes les industries sont déjà sélectionnées.",
-        "industriesSearchPlaceholder": "Chercher des industries",
-        "save": "Enregistrer",
-        "saving": "Enregistrement…",
-        "create": "Créer le projet",
-        "creating": "Création…",
-        "cancel": "Annuler",
-        "delete": "Supprimer",
-        "dangerTitle": "Zone sensible",
-        "dangerSubtitle": "Actions irréversibles pour ce projet.",
-        "deleteRowTitle": "Supprimer le projet",
-        "deleteRowDescription": "Supprime le projet en mode doux. Vous pouvez le restaurer depuis la liste.",
-        "deleteConfirm": "Supprimer ce projet ?",
-        "deleteDescription": "Le projet est supprimé en mode doux. Vous pouvez le restaurer depuis la liste.",
-        "deleteConfirmCta": "Supprimer le projet",
-        "createSuccess": "Projet créé.",
-        "createError": "Impossible de créer le projet. {message}",
-        "updateSuccess": "Projet enregistré.",
-        "updateError": "Impossible d'enregistrer le projet. {message}",
-        "deleteSuccess": "Projet supprimé.",
-        "deleteError": "Impossible de supprimer le projet. {message}",
-        "validationTitle": "Le titre est requis.",
-        "validationUrl": "L'URL doit être un lien complet https:// ou http://."
-      }
-    },
-    "industries": {
-      "title": "Secteurs",
-      "subtitle": "Taxonomie de la plateforme que les projets utilisent pour déclarer leur secteur de marché.",
-      "newIndustry": "Nouveau secteur",
-      "panelCreateTitle": "Créer un secteur",
-      "panelEditTitle": "Modifier le secteur",
-      "searchPlaceholder": "Chercher par nom ou slug",
-      "actions": {
-        "edit": "Modifier",
-        "archive": "Archiver",
-        "restore": "Restaurer",
-        "delete": "Supprimer définitivement"
-      },
-      "archivedBadge": "Archivé",
-      "showArchived": "Afficher les archivés",
-      "hideArchived": "Masquer les archivés",
-      "archivedFilterLabel": "Archivés",
-      "activeOnly": "Actifs seulement",
-      "includeArchived": "Inclure les archivés",
-      "columns": {
-        "name": "Nom",
-        "slug": "Slug",
-        "created": "Créé"
-      },
-      "empty": "Aucun secteur pour l'instant. Créez le premier pour commencer.",
-      "emptyArchived": "Aucun secteur archivé.",
-      "emptyFiltered": "Aucun secteur ne correspond à votre recherche.",
-      "notFound": "Secteur introuvable.",
-      "openFullPage": "Ouvrir en plein écran",
-      "collapsePanel": "Réduire le panneau",
-      "backToIndustries": "Retour aux secteurs",
-      "form": {
-        "createTitle": "Nouveau secteur",
-        "editTitle": "Modifier le secteur",
-        "displayName": "Nom",
-        "slug": "Slug",
-        "slugPreview": "Sera enregistré sous {slug}",
-        "description": "Description",
-        "descriptionPlaceholder": "Décrivez ce secteur…",
-        "save": "Enregistrer",
-        "saving": "Enregistrement…",
-        "create": "Créer le secteur",
-        "creating": "Création…",
-        "cancel": "Annuler",
-        "createSuccess": "Secteur créé.",
-        "createError": "Impossible de créer le secteur. {message}",
-        "updateSuccess": "Secteur enregistré.",
-        "updateError": "Impossible d'enregistrer le secteur. {message}"
-      },
-      "archive": {
-        "title": "Archiver ce secteur ?",
-        "description": "Le secteur sera masqué des menus. Les associations aux projets existants sont conservées et vous pourrez le restaurer plus tard.",
-        "cta": "Archiver",
-        "cancel": "Annuler",
-        "success": "Secteur archivé.",
-        "error": "Impossible d'archiver le secteur. {message}"
-      },
-      "hardDelete": {
-        "title": "Supprimer définitivement \"{name}\" ?",
-        "description": "Cela supprime l'enregistrement du secteur et toutes ses associations aux projets. Cette action est irréversible.",
-        "cta": "Supprimer définitivement",
-        "cancel": "Annuler",
-        "success": "Secteur supprimé définitivement.",
-        "error": "Impossible de supprimer le secteur. {message}"
-      },
-      "restore": {
-        "success": "Secteur restauré.",
-        "error": "Impossible de restaurer le secteur. {message}"
-      }
-    },
     "webhooks": {
       "title": "Webhooks",
       "subtitle": "Points de terminaison HTTP qui reçoivent chaque événement de domaine émis par la plateforme.",
@@ -1102,6 +952,179 @@
         "attemptLogEmpty": "Aucune tentative enregistrée pour l'instant.",
         "networkError": "Erreur réseau",
         "durationMs": "{ms} ms"
+      }
+    },
+    "dataModels": {
+      "title": "Modèles de données",
+      "subtitle": "Définissez des types d'enregistrements personnalisés — nommez-les, ajoutez des champs et configurez la façon dont les autres modules peuvent les utiliser.",
+      "list": {
+        "createCta": "Nouveau modèle de données",
+        "searchPlaceholder": "Rechercher par nom ou clé…",
+        "searchAria": "Rechercher des modèles de données",
+        "columns": {
+          "name": "Nom",
+          "scope": "Portée",
+          "updated": "Mis à jour"
+        },
+        "scope": {
+          "organization": "Organisation",
+          "platform": "Plateforme entière"
+        },
+        "empty": "Aucun modèle de données pour le moment.",
+        "emptySearch": "Aucun modèle de données ne correspond à « {query} ».",
+        "panelCreateTitle": "Nouveau modèle de données",
+        "actions": {
+          "delete": "Supprimer",
+          "restore": "Restaurer"
+        },
+        "delete": {
+          "title": "Supprimer le modèle de données",
+          "description": "Supprimer « {name} » ? Ses champs et ses enregistrements sont aussi supprimés. Cette action est réversible depuis la vue archivée jusqu'à la suppression définitive.",
+          "confirm": "Supprimer",
+          "cancel": "Annuler",
+          "success": "Modèle de données supprimé.",
+          "error": "Impossible de supprimer ce modèle de données."
+        },
+        "restore": {
+          "success": "Modèle de données restauré.",
+          "error": "Impossible de restaurer ce modèle de données."
+        },
+        "archivedFilterLabel": "Statut",
+        "activeOnly": "Actifs uniquement",
+        "includeArchived": "Inclure les supprimés"
+      },
+      "create": {
+        "nameLabel": "Nom",
+        "namePlaceholder": "ex. Rapport de bug",
+        "keyLabel": "Clé",
+        "keyPlaceholder": "généré automatiquement à partir du nom",
+        "keyHint": "Nom technique compatible URL. Dérivé automatiquement du nom si laissé vide ; immuable après création.",
+        "descriptionLabel": "Description",
+        "descriptionPlaceholder": "Optionnel",
+        "scopeLabel": "Portée",
+        "scopeOrganization": "Cette organisation",
+        "scopePlatform": "Plateforme entière, partagée entre toutes les organisations",
+        "submit": "Créer",
+        "cancel": "Annuler",
+        "success": "Modèle de données créé.",
+        "error": "Impossible de créer ce modèle de données."
+      },
+      "editor": {
+        "back": "Retour aux modèles de données",
+        "notFound": "Ce modèle de données n'existe pas ou vous n'y avez pas accès.",
+        "settings": {
+          "title": "Paramètres",
+          "subtitle": "Nom, description, et quel champ sert de titre à l'enregistrement.",
+          "nameLabel": "Nom",
+          "descriptionLabel": "Description",
+          "iconLabel": "Icône",
+          "iconPlaceholder": "Optionnel",
+          "titleFieldLabel": "Champ titre",
+          "titleFieldHint": "Quel champ est affiché comme titre de chaque enregistrement dans les listes et les liens.",
+          "titleFieldNone": "Aucun (les enregistrements s'affichent comme « Sans titre »)",
+          "save": "Enregistrer",
+          "saving": "Enregistrement…",
+          "cancel": "Annuler",
+          "success": "Paramètres enregistrés.",
+          "error": "Impossible d'enregistrer ces paramètres."
+        },
+        "fields": {
+          "title": "Champs",
+          "subtitle": "La structure que possède chaque enregistrement de ce modèle de données.",
+          "addCta": "Ajouter un champ",
+          "empty": "Aucun champ pour le moment. Ajoutez-en un pour commencer à définir vos enregistrements.",
+          "dragToReorder": "Glisser pour réordonner",
+          "reorderError": "Impossible de réordonner les champs.",
+          "requiredBadge": "Obligatoire",
+          "indexedBadge": "Indexé",
+          "archivedBadge": "Archivé",
+          "actions": {
+            "edit": "Modifier",
+            "archive": "Archiver",
+            "unarchive": "Désarchiver",
+            "requestIndex": "Indexer ce champ",
+            "makeTitleField": "Utiliser comme champ titre"
+          },
+          "archive": {
+            "title": "Archiver le champ",
+            "description": "Archiver « {label} » ? Il disparaît des formulaires et du sélecteur de colonnes, mais les enregistrements existants conservent leur valeur sous cette clé.",
+            "confirm": "Archiver",
+            "cancel": "Annuler",
+            "success": "Champ archivé.",
+            "error": "Impossible d'archiver ce champ."
+          },
+          "unarchiveSuccess": "Champ restauré.",
+          "unarchiveError": "Impossible de restaurer ce champ.",
+          "indexRequested": "Indexation demandée — elle se construit en arrière-plan.",
+          "indexError": "Impossible de demander une indexation pour ce champ.",
+          "indexStatus": {
+            "pending": "Indexation en attente",
+            "building": "Construction de l'index…",
+            "ready": "Indexé",
+            "failed": "Échec de l'indexation"
+          }
+        },
+        "fieldDialog": {
+          "createTitle": "Ajouter un champ",
+          "editTitle": "Modifier le champ",
+          "labelLabel": "Libellé",
+          "labelPlaceholder": "ex. Date d'échéance",
+          "keyLabel": "Clé",
+          "keyHint": "Le nom de propriété à l'intérieur de chaque enregistrement. Dérivé automatiquement du libellé ; immuable après création.",
+          "descriptionLabel": "Description",
+          "typeLabel": "Type",
+          "typeHint": "Immuable après création.",
+          "requiredLabel": "Obligatoire",
+          "types": {
+            "TEXT": "Texte",
+            "LONG_TEXT": "Texte long",
+            "RICH_TEXT": "Texte enrichi",
+            "NUMBER": "Nombre",
+            "BOOLEAN": "Booléen",
+            "DATE": "Date",
+            "DATETIME": "Date et heure",
+            "SELECT": "Sélection unique",
+            "MULTI_SELECT": "Sélection multiple",
+            "RELATION": "Relation",
+            "URL": "URL",
+            "EMAIL": "Courriel"
+          },
+          "config": {
+            "minLength": "Longueur min.",
+            "maxLength": "Longueur max.",
+            "min": "Min",
+            "max": "Max",
+            "integer": "Nombres entiers uniquement",
+            "options": "Options",
+            "optionValue": "Valeur",
+            "optionLabel": "Libellé",
+            "addOption": "Ajouter une option",
+            "removeOption": "Retirer l'option",
+            "allowCustomValues": "Autoriser la saisie de nouvelles options",
+            "relationTarget": "Cible",
+            "relationTargetPlaceholder": "Sélectionner une cible",
+            "cardinality": "Autoriser",
+            "cardinalityOne": "Un seul",
+            "cardinalityMany": "Plusieurs",
+            "maxItems": "Sélections max."
+          },
+          "submit": "Enregistrer",
+          "cancel": "Annuler",
+          "success": "Champ enregistré.",
+          "error": "Impossible d'enregistrer ce champ."
+        },
+        "integrations": {
+          "title": "Intégrations",
+          "subtitle": "Associez les champs de ce modèle aux besoins d'un autre module.",
+          "empty": "Aucun module n'a encore enregistré d'intégration.",
+          "enabledLabel": "Activée",
+          "slotPlaceholder": "Sélectionner un champ",
+          "requiredHint": "Obligatoire",
+          "save": "Enregistrer",
+          "success": "Intégration enregistrée.",
+          "error": "Impossible d'enregistrer cette intégration.",
+          "missingRequired": "Associez chaque emplacement obligatoire avant d'activer."
+        }
       }
     }
   },

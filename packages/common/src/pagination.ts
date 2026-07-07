@@ -14,8 +14,8 @@
  *   the page window), so a UI can render "Showing 1–25 of 340". It costs one
  *   extra `count()` per fetch ; run it alongside the page query.
  *
- * Reference implementation : `packages/projects/src/server/data.ts`
- * (`listProjects` / `listIndustries`).
+ * Reference implementation : `packages/data-models/src/server/data.ts`
+ * (`listDataModels` / `listDataRecords`).
  */
 
 /** Default page size when a caller does not specify one. */

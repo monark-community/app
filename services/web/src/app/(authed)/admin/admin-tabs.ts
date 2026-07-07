@@ -1,7 +1,7 @@
-import { Building2, KeyRound, Users, Webhook, type LucideIcon } from "lucide-react";
+import { Building2, Database, KeyRound, Users, Webhook, type LucideIcon } from "lucide-react";
 
 export type AdminTab = {
-  id: "organizations" | "users" | "rbac" | "webhooks";
+  id: "organizations" | "users" | "rbac" | "webhooks" | "dataModels";
   href: `/admin/${string}`;
   icon: LucideIcon;
 };
@@ -13,14 +13,17 @@ export type AdminTab = {
  * admins land on something actionable instead of an empty section
  * header).
  *
- * Projects and industries are module-level surfaces gated by
- * `projects.read` / `industries.read` permissions ; they live under
- * `/(authed)/projects` and `/(authed)/industries` and are reached via
- * the primary nav drawer instead.
+ * "dataModels" is the schema-builder for the polymorphic Data Models
+ * engine (@monark/data-models) — defining Data Models + their fields is
+ * an admin-caliber, shape-the-system operation like organizations/rbac,
+ * so it lives here rather than under `/data` (which is for *browsing
+ * records*, gated by the finer-grained `data-models.record-*`
+ * permissions instead of the coarse `isAdmin()` this section gates on).
  */
 export const ADMIN_TABS: ReadonlyArray<AdminTab> = [
   { id: "organizations", href: "/admin/organizations", icon: Building2 },
   { id: "users", href: "/admin/users", icon: Users },
   { id: "rbac", href: "/admin/rbac", icon: KeyRound },
   { id: "webhooks", href: "/admin/webhooks", icon: Webhook },
+  { id: "dataModels", href: "/admin/data-models", icon: Database },
 ];
