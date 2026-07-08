@@ -9,7 +9,12 @@ import {
 } from "@monark/common";
 import { MAX_PAGE_SIZE } from "@monark/common/pagination";
 import { requireOrg } from "@monark/organizations/server";
-import { hasPermission, requirePermission, type RbacContext } from "@monark/rbac/server";
+import {
+  getUserRoles,
+  hasPermission,
+  requirePermission,
+  type RbacContext,
+} from "@monark/rbac/server";
 import {
   perModelEventType,
   perModelPermissionDotted,
@@ -34,6 +39,9 @@ import {
   findDataModelById,
   findDataModelByKey,
   findDataRecordById,
+  getDataRecordRoleAccess,
+  isDataRecordRoleAccessible,
+  setDataRecordRoleAccess,
   findFreeDataFieldKey,
   findFreeDataModelKey,
   hardDeleteDataModel,
@@ -135,7 +143,7 @@ async function requireModelAccess(
   ctx: RbacContext,
   model: DataModelRow,
   permission: DataModelsPermission,
-): Promise<void> {
+): Promise<string> {
   // Callers only reach here after their own `if (!ctx.userId) throw ...`
   // guard, so this cast is safe — RbacContext types userId nullable because
   // the anonymous case is valid for other callers of requirePermission.
@@ -158,10 +166,25 @@ async function requireModelAccess(
     if (!okPerModel && !okGeneric) {
       throw new ForbiddenError(`Missing required permission: ${perModel}`);
     }
-    return;
+    return org.id;
   }
 
   await requirePermission(ctx, permission, org.id);
+  return org.id;
+}
+
+// Row-level access context for record reads : the caller's role ids, plus a
+// bypass for data admins (`data-models.manage-schema`, which ADMIN/SYSADMIN
+// short-circuit). Layered on top of the model-level `requireModelAccess`.
+async function recordAccessContext(
+  userId: string,
+  orgId: string,
+): Promise<{ roleIds: string[]; bypass: boolean }> {
+  const [roles, bypass] = await Promise.all([
+    getUserRoles(userId, orgId),
+    hasPermission(userId, "data-models.manage-schema", orgId),
+  ]);
+  return { roleIds: roles.map((r) => r.id), bypass };
 }
 
 async function requireModelById(id: string): Promise<DataModelRow> {
@@ -624,13 +647,16 @@ export const dataModelsRouter = router({
       .query(async ({ ctx, input }) => {
         if (!ctx.userId) throw new UnauthorizedError();
         const model = await requireModelById(input.dataModelId);
-        await requireModelAccess(ctx, model, "data-models.record-read");
+        const orgId = await requireModelAccess(ctx, model, "data-models.record-read");
+        const access = await recordAccessContext(ctx.userId, orgId);
         const page = await listDataRecords({
           dataModelId: input.dataModelId,
           includeDeleted: input.includeDeleted ?? false,
           search: input.search,
           limit: input.limit,
           cursor: input.cursor,
+          roleIds: access.roleIds,
+          bypassRoleAccess: access.bypass,
         });
         return { ...page, items: page.items.map(serializeRecord) };
       }),
@@ -642,7 +668,14 @@ export const dataModelsRouter = router({
         const record = await findDataRecordById(input.id);
         if (!record) throw new NotFoundError("DataRecord", input.id);
         const model = await requireModelById(record.dataModelId);
-        await requireModelAccess(ctx, model, "data-models.record-read");
+        const orgId = await requireModelAccess(ctx, model, "data-models.record-read");
+        // Row-level : a record restricted to certain roles is a 404 (not 403)
+        // for callers whose roles aren't on the list, so we don't leak that a
+        // record they can't see exists.
+        const access = await recordAccessContext(ctx.userId, orgId);
+        if (!(await isDataRecordRoleAccessible(record.id, access))) {
+          throw new NotFoundError("DataRecord", input.id);
+        }
         return serializeRecord(record);
       }),
 
@@ -694,7 +727,12 @@ export const dataModelsRouter = router({
         const existing = await findDataRecordById(input.id);
         if (!existing) throw new NotFoundError("DataRecord", input.id);
         const model = await requireModelById(existing.dataModelId);
-        await requireModelAccess(ctx, model, "data-models.record-write");
+        const orgId = await requireModelAccess(ctx, model, "data-models.record-write");
+        // Row-level : can't edit a record your roles can't see.
+        const access = await recordAccessContext(ctx.userId, orgId);
+        if (!(await isDataRecordRoleAccessible(existing.id, access))) {
+          throw new NotFoundError("DataRecord", input.id);
+        }
 
         const updated = await updateDataRecord(input.id, {
           slug: input.slug,
@@ -731,7 +769,12 @@ export const dataModelsRouter = router({
         const existing = await findDataRecordById(input.id);
         if (!existing) throw new NotFoundError("DataRecord", input.id);
         const model = await requireModelById(existing.dataModelId);
-        await requireModelAccess(ctx, model, "data-models.record-delete");
+        const orgId = await requireModelAccess(ctx, model, "data-models.record-delete");
+        // Row-level : can't delete a record your roles can't see.
+        const access = await recordAccessContext(ctx.userId, orgId);
+        if (!(await isDataRecordRoleAccessible(existing.id, access))) {
+          throw new NotFoundError("DataRecord", input.id);
+        }
 
         const hard = input.hard ?? false;
         if (hard) {
@@ -764,11 +807,44 @@ export const dataModelsRouter = router({
         // Restore uses record-write, not record-delete — mirrors
         // projects.restore / industries.restore, which gate on the write
         // permission (undoing a delete reads as an edit, not a deletion).
-        await requireModelAccess(ctx, model, "data-models.record-write");
+        const orgId = await requireModelAccess(ctx, model, "data-models.record-write");
+        const access = await recordAccessContext(ctx.userId, orgId);
+        if (!(await isDataRecordRoleAccessible(existing.id, access))) {
+          throw new NotFoundError("DataRecord", input.id);
+        }
         if (!existing.deletedAt) {
           throw new ValidationError("Data Record is not deleted.");
         }
         await restoreDataRecord(input.id);
+      }),
+
+    // ── Row-level access management ──
+    // Read/replace the roles allowed to see a record. Empty list = open to
+    // everyone who can access the model. Gated on `manage-schema` : deciding
+    // record visibility is a data-admin action, not a per-record-write one.
+    // Cross-org role ids are inert (their holders still fail the model-level
+    // org check), so no extra org validation is needed here.
+    getAccess: publicProcedure
+      .input(z.object({ id: z.string().min(1) }))
+      .query(async ({ ctx, input }) => {
+        if (!ctx.userId) throw new UnauthorizedError();
+        const record = await findDataRecordById(input.id);
+        if (!record) throw new NotFoundError("DataRecord", input.id);
+        const model = await requireModelById(record.dataModelId);
+        await requireModelAccess(ctx, model, "data-models.manage-schema");
+        return { roleIds: await getDataRecordRoleAccess(record.id) };
+      }),
+
+    setAccess: publicProcedure
+      .input(z.object({ id: z.string().min(1), roleIds: z.array(z.string().min(1)) }))
+      .mutation(async ({ ctx, input }) => {
+        if (!ctx.userId) throw new UnauthorizedError();
+        const record = await findDataRecordById(input.id);
+        if (!record) throw new NotFoundError("DataRecord", input.id);
+        const model = await requireModelById(record.dataModelId);
+        await requireModelAccess(ctx, model, "data-models.manage-schema");
+        await setDataRecordRoleAccess(record.id, input.roleIds);
+        return { roleIds: input.roleIds };
       }),
   }),
 });

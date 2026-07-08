@@ -39,7 +39,7 @@ Every model create/access check resolves the caller's active org (`requireOrg`) 
 
 **A record's title is denormalized and recomputed on every write.** `DataModel.titleFieldId` names which field backs `DataRecord.title` (falls back to `"Untitled"` when unset, or when the derived value is empty). `RICH_TEXT` title values are stripped to plain text via `stripHtmlTags` before deriving. `update` re-validates the _full_ merged object (existing `data` overlaid with the patch), not just the patched keys, so a partial edit can't silently leave a required field's constraint violated.
 
-**Record permissions are per-model, but model-wide (not per-row), in v1.** A record write gates on the per-model `data-models.<key>-record-<verb>` OR the generic `data-models.record-<verb>` — so access can be scoped to one model, but every record _within_ a model is still gated uniformly ; there's no way yet to grant a subset of records inside one model. See "Deferred" for the per-row follow-up.
+**Record access is two-layered : per-model permission, then per-record role access.** _Model layer_ — a record op gates on the per-model `data-models.<key>-record-<verb>` OR the generic `data-models.record-<verb>` (admins short-circuit) : can you touch this model's records at all. _Row layer_ — within a model you can access, a `DataRecord` with no `DataRecordRoleAccess` rows is visible to everyone (the default, fully backward-compatible) ; with rows, only those roles may read/edit/delete it. A restricted record is a **404** (not 403) for callers whose roles aren't listed, so its existence doesn't leak. Data admins (`data-models.manage-schema`, which ADMIN/SYSADMIN short-circuit) bypass the row layer ; note a blanket `data-models.record-read` does **not** bypass it — row-level is real privacy, not overridden by "read all". The filter mirrors `CalendarRoleAccess` (`server/data.ts`'s `recordRoleAccessWhere`). Set a record's access with `records.setAccess` ; read it with `records.getAccess`.
 
 **Mapping, not reserved field keys, for module integrations.** A module (e.g. `@monark/calendar`) declares named "slots" it needs — a type constraint, whether it's required, and (for `RELATION`) a `relationTarget` — via `registerModelIntegration(module, { slots, description })` at boot, mirroring the `registerPermissions`/`registerFlags` idiom. An admin then maps their own Data Model's fields onto those slots per-model (`DataModelIntegration.slotMappings`, a `slotKey -> DataField.id` map), validated by `upsertModelIntegration` against the registry (unknown module, wrong field type, mismatched `relationTarget`, or a required slot left unmapped while `enabled: true` are all rejected). Nothing here assumes any particular field key name — an admin free to name their own fields however they like, which is the whole point : reserved key names would force a fixed vocabulary onto a no-code surface and can't express "which of two date fields" or a relation-shaped requirement like "which calendar" at all.
 
@@ -51,32 +51,34 @@ Every model create/access check resolves the caller's active org (`requireOrg`) 
 
 All procedures are under `trpc.dataModels.*`.
 
-| Procedure                    | Permission                  | Notes                                                                        |
-| ---------------------------- | --------------------------- | ---------------------------------------------------------------------------- |
-| `models.list`                | `data-models.read-schema`   | Caller's org models, cursor-paginated                                        |
-| `models.getById`             | `data-models.read-schema`   |                                                                              |
-| `models.getByKey`            | `data-models.read-schema`   | Resolves `key` within the caller's active org                                |
-| `models.create`              | `data-models.manage-schema` | Always org-scoped to the caller's active org                                 |
-| `models.update`              | `data-models.manage-schema` | name / description / icon / `titleFieldId`                                   |
-| `models.delete`              | `data-models.manage-schema` | soft by default ; `hard: true` permanently removes                           |
-| `models.restore`             | `data-models.manage-schema` |                                                                              |
-| `fields.list`                | `data-models.read-schema`   | ordered by `position` ; not paginated (bounded per model)                    |
-| `fields.create`              | `data-models.manage-schema` | validates `config` against `fieldConfigSchemas[type]`                        |
-| `fields.update`              | `data-models.manage-schema` | `type` is immutable after create                                             |
-| `fields.reorder`             | `data-models.manage-schema` | full-list reorder ; rejects a partial/mismatched id set                      |
-| `fields.archive`             | `data-models.manage-schema` | clears `titleFieldId` if the archived field backed it                        |
-| `fields.unarchive`           | `data-models.manage-schema` |                                                                              |
-| `fields.requestIndex`        | `data-models.manage-schema` | provisions an expression index in the background ; returns immediately       |
-| `fields.indexStatus`         | `data-models.read-schema`   | `pending \| building \| ready \| failed`, or `null` if never requested       |
-| `records.list`               | `data-models.record-read`   | per-model `<key>-record-read` OR generic satisfies (all record rows below)   |
-| `records.getById`            | `data-models.record-read`   |                                                                              |
-| `records.create`             | `data-models.record-write`  | `data` validated against the model's active fields                           |
-| `records.update`             | `data-models.record-write`  | partial `data` merge, re-validated in full ; recomputes `title`              |
-| `records.delete`             | `data-models.record-delete` | soft by default ; `hard: true` permanently removes                           |
-| `records.restore`            | `data-models.record-write`  | mirrors `projects.restore` / `industries.restore` (write, not delete)        |
-| `integrations.listAvailable` | `data-models.read-schema`   | reads the in-memory registry, no DB ; every registered module's slot catalog |
-| `integrations.get`           | `data-models.read-schema`   | a model's saved `DataModelIntegration` rows, one per module                  |
-| `integrations.save`          | `data-models.manage-schema` | validates `slotMappings` against the module's registered slots               |
+| Procedure                    | Permission                  | Notes                                                                         |
+| ---------------------------- | --------------------------- | ----------------------------------------------------------------------------- |
+| `models.list`                | `data-models.read-schema`   | Caller's org models, cursor-paginated                                         |
+| `models.getById`             | `data-models.read-schema`   |                                                                               |
+| `models.getByKey`            | `data-models.read-schema`   | Resolves `key` within the caller's active org                                 |
+| `models.create`              | `data-models.manage-schema` | Always org-scoped to the caller's active org                                  |
+| `models.update`              | `data-models.manage-schema` | name / description / icon / `titleFieldId`                                    |
+| `models.delete`              | `data-models.manage-schema` | soft by default ; `hard: true` permanently removes                            |
+| `models.restore`             | `data-models.manage-schema` |                                                                               |
+| `fields.list`                | `data-models.read-schema`   | ordered by `position` ; not paginated (bounded per model)                     |
+| `fields.create`              | `data-models.manage-schema` | validates `config` against `fieldConfigSchemas[type]`                         |
+| `fields.update`              | `data-models.manage-schema` | `type` is immutable after create                                              |
+| `fields.reorder`             | `data-models.manage-schema` | full-list reorder ; rejects a partial/mismatched id set                       |
+| `fields.archive`             | `data-models.manage-schema` | clears `titleFieldId` if the archived field backed it                         |
+| `fields.unarchive`           | `data-models.manage-schema` |                                                                               |
+| `fields.requestIndex`        | `data-models.manage-schema` | provisions an expression index in the background ; returns immediately        |
+| `fields.indexStatus`         | `data-models.read-schema`   | `pending \| building \| ready \| failed`, or `null` if never requested        |
+| `records.list`               | `data-models.record-read`   | per-model `<key>-record-read` OR generic (all record rows) + row-level filter |
+| `records.getById`            | `data-models.record-read`   | 404 if the record is role-restricted and the caller lacks a listed role       |
+| `records.create`             | `data-models.record-write`  | `data` validated against the model's active fields                            |
+| `records.update`             | `data-models.record-write`  | partial `data` merge, re-validated in full ; row-level access enforced        |
+| `records.delete`             | `data-models.record-delete` | soft by default ; `hard: true` permanently removes ; row-level enforced       |
+| `records.restore`            | `data-models.record-write`  | mirrors `projects.restore` / `industries.restore` (write, not delete)         |
+| `records.getAccess`          | `data-models.manage-schema` | the role ids allowed to see a record (empty = open to all model-accessors)    |
+| `records.setAccess`          | `data-models.manage-schema` | replace a record's role-access list wholesale                                 |
+| `integrations.listAvailable` | `data-models.read-schema`   | reads the in-memory registry, no DB ; every registered module's slot catalog  |
+| `integrations.get`           | `data-models.read-schema`   | a model's saved `DataModelIntegration` rows, one per module                   |
+| `integrations.save`          | `data-models.manage-schema` | validates `slotMappings` against the module's registered slots                |
 
 ## Usage
 
@@ -147,5 +149,5 @@ The admin schema builder ([admin/data-models/[id]/model-editor.tsx](<../../servi
 ## Deferred
 
 - **`SELECT` / `MULTI_SELECT` option colors.** The config schema accepts a `color` per option, but the field editor doesn't offer a color picker yet ; options render without a swatch.
-- **Per-row (record-level) authorization** (`DataModelRoleAccess`, mirroring `CalendarRoleAccess`) — record access is model-wide in v1.
+- **Per-record access UI.** Row-level authorization (`DataRecordRoleAccess`) is enforced server-side and managed via `records.getAccess` / `records.setAccess`, but there's no admin UI yet to pick which roles can see a record — the record detail panel needs an "Access" control (mirroring the calendar role picker).
 - **Registry hygiene on hard delete.** A hard-deleted model's global registry entries linger until the next boot re-hydrates only live models. It's already hidden from every org's picker the moment the model is gone (the visibility resolver drops it), so this is cosmetic — the entry just isn't garbage-collected until restart.

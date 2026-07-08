@@ -234,11 +234,12 @@ model Role {
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
 
-  permissions    RolePermission[]
-  assignments    RoleAssignment[]
-  invites        Invite[]
-  flagOverrides  FeatureFlagOverride[]
-  calendarAccess CalendarRoleAccess[]
+  permissions       RolePermission[]
+  assignments       RoleAssignment[]
+  invites           Invite[]
+  flagOverrides     FeatureFlagOverride[]
+  calendarAccess    CalendarRoleAccess[]
+  dataRecordAccess  DataRecordRoleAccess[]
 
   // Each org can have its own list of role keys ; the built-in ADMIN
   // row's `(ADMIN, null)` slot is enforced uniquely too. PostgreSQL's
@@ -811,9 +812,29 @@ model DataRecord {
   // Partial-unique (dataModelId, slug) WHERE slug IS NOT NULL is added
   // by hand-written migration SQL, same reason as DataModel above.
 
+  roleAccess DataRecordRoleAccess[]
+
   @@index([dataModelId, deletedAt])
   @@index([organizationId, dataModelId])
   @@index([dataModelId, updatedAt])
+}
+
+// Per-record role access (row-level authorization), mirroring
+// CalendarRoleAccess. A DataRecord with NO rows here is visible to everyone
+// who can access its Data Model (the default, fully backward-compatible) ;
+// with rows, only those roles may read it — plus data admins
+// (`data-models.manage-schema`, which ADMIN/SYSADMIN short-circuit), who
+// bypass the row filter. Model-level access (per-model or generic record
+// permission) is still required first ; this only further restricts WHICH
+// records within an accessible model are visible.
+model DataRecordRoleAccess {
+  dataRecordId String
+  dataRecord   DataRecord @relation(fields: [dataRecordId], references: [id], onDelete: Cascade)
+  roleId       String
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([dataRecordId, roleId])
+  @@index([roleId])
 }
 
 // Which DataField(s) on a DataModel satisfy a given business-integration

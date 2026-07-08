@@ -416,27 +416,63 @@ export async function findFreeDataRecordSlug(
   throw new Error(`could not derive a free data record slug from ${JSON.stringify(desired)}`);
 }
 
+// ── Per-record role access (row-level authorization) ──────
+// Mirrors CalendarRoleAccess : a record with NO access rows is visible to
+// everyone who can access its model ; with rows, only those roles. Data
+// admins (`bypass`, resolved from `data-models.manage-schema` in the router)
+// skip the filter entirely. See the DataRecordRoleAccess model comment.
+
+/** Prisma `where` fragment restricting to records the caller's roles may see.
+ *  Empty (`{}`) when bypassing, so it composes harmlessly inside an `AND`. */
+function recordRoleAccessWhere(opts: {
+  roleIds: string[];
+  bypass: boolean;
+}): Prisma.DataRecordWhereInput {
+  if (opts.bypass) return {};
+  return {
+    OR: [
+      { roleAccess: { none: {} } },
+      ...(opts.roleIds.length > 0
+        ? [{ roleAccess: { some: { roleId: { in: opts.roleIds } } } }]
+        : []),
+    ],
+  };
+}
+
 export type ListDataRecordsInput = PaginationArgs & {
   dataModelId: string;
   includeDeleted?: boolean;
   search?: string;
+  /** Caller's role ids ; records are filtered to those the roles may access. */
+  roleIds?: string[];
+  /** When true (a data admin), the role-access filter is skipped. */
+  bypassRoleAccess?: boolean;
 };
 
 export async function listDataRecords(
   input: ListDataRecordsInput,
 ): Promise<Paginated<DataRecordRow>> {
   const db = getDb();
+  const search = input.search?.trim();
   const where: Prisma.DataRecordWhereInput = {
     dataModelId: input.dataModelId,
     ...(input.includeDeleted ? {} : { deletedAt: null }),
-    ...(input.search && input.search.trim().length > 0
-      ? {
-          OR: [
-            { title: { contains: input.search, mode: "insensitive" } },
-            { slug: { contains: input.search, mode: "insensitive" } },
-          ],
-        }
-      : {}),
+    AND: [
+      ...(search && search.length > 0
+        ? [
+            {
+              OR: [
+                { title: { contains: search, mode: "insensitive" as const } },
+                { slug: { contains: search, mode: "insensitive" as const } },
+              ],
+            },
+          ]
+        : []),
+      recordRoleAccessWhere({
+        roleIds: input.roleIds ?? [],
+        bypass: input.bypassRoleAccess ?? false,
+      }),
+    ],
   };
   const limit = resolveLimit(input.limit);
   const [rows, total] = await Promise.all([
@@ -453,6 +489,48 @@ export async function listDataRecords(
 export async function findDataRecordById(id: string): Promise<DataRecordRow | null> {
   const db = getDb();
   return db.dataRecord.findUnique({ where: { id } });
+}
+
+// True when the caller's roles may access this specific record (or `bypass`).
+// Layered AFTER the model-level permission check in the router.
+export async function isDataRecordRoleAccessible(
+  recordId: string,
+  opts: { roleIds: string[]; bypass: boolean },
+): Promise<boolean> {
+  if (opts.bypass) return true;
+  const db = getDb();
+  const hit = await db.dataRecord.findFirst({
+    where: { id: recordId, ...recordRoleAccessWhere({ ...opts, bypass: false }) },
+    select: { id: true },
+  });
+  return hit !== null;
+}
+
+/** The role ids explicitly granted access to a record (empty = open to all). */
+export async function getDataRecordRoleAccess(recordId: string): Promise<string[]> {
+  const db = getDb();
+  const rows = await db.dataRecordRoleAccess.findMany({
+    where: { dataRecordId: recordId },
+    select: { roleId: true },
+  });
+  return rows.map((r) => r.roleId);
+}
+
+/** Replace a record's role-access list wholesale. Empty `roleIds` opens it to
+ *  everyone who can access the model. */
+export async function setDataRecordRoleAccess(recordId: string, roleIds: string[]): Promise<void> {
+  const db = getDb();
+  const unique = [...new Set(roleIds)];
+  await db.$transaction([
+    db.dataRecordRoleAccess.deleteMany({ where: { dataRecordId: recordId } }),
+    ...(unique.length > 0
+      ? [
+          db.dataRecordRoleAccess.createMany({
+            data: unique.map((roleId) => ({ dataRecordId: recordId, roleId })),
+          }),
+        ]
+      : []),
+  ]);
 }
 
 export async function findDataRecordBySlug(
