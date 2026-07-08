@@ -44,6 +44,10 @@ interface ModelInfo {
   key: string;
   name: string;
   organizationId: string | null;
+  /** The field whose value backs `record.title` (shown as the primary column),
+   * or null when unset. That field is omitted from the data columns so it
+   * isn't rendered twice. */
+  titleFieldId: string | null;
 }
 
 // Hand-written rather than derived from the query's inferred type — see
@@ -241,34 +245,39 @@ export function RecordsList({ model }: { model: ModelInfo }) {
     enableSorting: true,
   };
 
-  // One column per active field. RELATION columns render a plain count
-  // badge rather than resolving labels — resolving every visible row's
-  // relation targets would mean an extra fetch per row per page ; the
-  // detail form (AutoForm) still fully resolves relation chips for the one
-  // record that's actually open, via `loadByIds`.
-  const columns: DataColumnDef<RawRecord>[] = activeFields.map((field, index) => {
-    const def = fieldDefs[index];
-    if (!def) throw new Error(`missing FieldDef for field ${field.key}`);
-    if (def.type === "relation") {
-      return {
-        id: field.key,
-        header: field.label,
-        cell: (r) => {
-          const value = r.data[field.key];
-          const count = Array.isArray(value) ? value.length : value ? 1 : 0;
-          return count > 0 ? (
-            <Badge variant="outline">{count}</Badge>
-          ) : (
-            <span className="text-muted-foreground">—</span>
-          );
-        },
-      };
-    }
-    return fieldColumn<RawRecord>(def, {
-      accessor: (r) => r.data[field.key],
-      labels: fieldChromeLabels,
-    });
-  });
+  // One column per active field, EXCEPT the title-backing field — its value is
+  // already the primary column's label (and sortable there), so a separate
+  // column would just repeat it. RELATION columns render a plain count badge
+  // rather than resolving labels — resolving every visible row's relation
+  // targets would mean an extra fetch per row per page ; the detail form
+  // (AutoForm) still fully resolves relation chips for the one record that's
+  // actually open, via `loadByIds`.
+  const columns: DataColumnDef<RawRecord>[] = activeFields
+    .map((field, index) => {
+      if (field.id === model.titleFieldId) return null;
+      const def = fieldDefs[index];
+      if (!def) throw new Error(`missing FieldDef for field ${field.key}`);
+      if (def.type === "relation") {
+        return {
+          id: field.key,
+          header: field.label,
+          cell: (r) => {
+            const value = r.data[field.key];
+            const count = Array.isArray(value) ? value.length : value ? 1 : 0;
+            return count > 0 ? (
+              <Badge variant="outline">{count}</Badge>
+            ) : (
+              <span className="text-muted-foreground">—</span>
+            );
+          },
+        } satisfies DataColumnDef<RawRecord>;
+      }
+      return fieldColumn<RawRecord>(def, {
+        accessor: (r) => r.data[field.key],
+        labels: fieldChromeLabels,
+      });
+    })
+    .filter((c): c is DataColumnDef<RawRecord> => c !== null);
 
   const recordInitial = recordQuery.data
     ? recordDataToDefaultValues(activeFields, recordQuery.data.data)
