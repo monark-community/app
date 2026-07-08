@@ -7,8 +7,11 @@ export {
   getEventTypeDescriptor,
   listEventTypes,
   listEventTypesByModule,
+  registerOrgScopedEventTypeVisibility,
+  orgVisibleEventTypes,
   _resetEventRegistryForTesting,
   type EventTypeDescriptor,
+  type OrgScopedEventTypeResolver,
 } from "./event-registry";
 export type { DomainEvent, DomainEventBase } from "./contracts/events";
 export {

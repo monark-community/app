@@ -1,7 +1,11 @@
 export { dataModelsRouter } from "./router";
 export { registerDataModelsPermissions } from "./permissions";
 export { registerDataModelsEventTypes } from "./event-types";
-export { hydrateDataModelRegistrations, registerDataModelRegistrations } from "./registrations";
+export {
+  hydrateDataModelRegistrations,
+  registerDataModelRegistrations,
+  registerDataModelVisibilityResolvers,
+} from "./registrations";
 export { requestFieldIndex, getFieldIndexStatus, type DataFieldIndexStatus } from "./indexing";
 export {
   registerModelIntegration,

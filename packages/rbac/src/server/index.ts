@@ -6,6 +6,7 @@ import {
   getPermissionDef,
   isKnownPermission,
   listPermissions,
+  orgVisiblePermissionKeys,
   permissionsByCategory,
   type Permission,
 } from "../contracts/permissions";
@@ -278,18 +279,30 @@ export const rbacRouter = router({
   adminListPermissions: publicProcedure.query(async ({ ctx }) => {
     await requireAdmin(ctx.userId);
     const grouped = permissionsByCategory();
+    // Org-scoped permissions (e.g. per-Data-Model record perms) are globally
+    // registered so they stay grantable + `isKnownPermission` passes, but a
+    // given org should only SEE the ones for its own models. Filter them by
+    // the registered visibility resolvers ; non-org-scoped perms always show.
+    const visible = await orgVisiblePermissionKeys(ctx.activeOrganizationId);
     const categories = Object.keys(grouped).sort();
     return {
-      categories: categories.map((category) => {
-        const keys = grouped[category] ?? [];
-        return {
-          category,
-          permissions: keys.map((key) => ({
-            key,
-            description: getPermissionDef(key)?.description ?? "",
-          })),
-        };
-      }),
+      categories: categories
+        .map((category) => {
+          const keys = (grouped[category] ?? []).filter((key) => {
+            const def = getPermissionDef(key);
+            return def?.orgScoped ? visible.has(key) : true;
+          });
+          return {
+            category,
+            permissions: keys.map((key) => ({
+              key,
+              description: getPermissionDef(key)?.description ?? "",
+            })),
+          };
+        })
+        // Drop categories emptied by the filter (an org that has no model in
+        // some other org's "Data Model: X" group shouldn't see the header).
+        .filter((c) => c.permissions.length > 0),
     };
   }),
 });
@@ -324,12 +337,15 @@ export {
   listPermissionDescriptors,
   permissionsByCategory,
   getPermissionDef,
+  registerOrgScopedPermissionVisibility,
+  orgVisiblePermissionKeys,
 } from "../contracts/permissions";
 export type {
   Permission,
   PermissionCategory,
   PermissionDef,
   PermissionDescriptor,
+  OrgScopedPermissionResolver,
 } from "../contracts/permissions";
 export { registerRbacPermissions } from "./rbac-permissions";
 export { registerRbacEventTypes } from "./event-types";

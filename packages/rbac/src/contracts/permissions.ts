@@ -23,6 +23,17 @@ export type PermissionCategory = string;
 export type PermissionDef = {
   description: string;
   category: PermissionCategory;
+  /**
+   * When true, this permission is org-scoped content — e.g. a per-Data-Model
+   * record permission whose `<key>` names a specific model. The key itself is
+   * still process-global and shared across orgs (two orgs with the same model
+   * key map to one registry entry, which is fine — enforcement scopes by the
+   * model's org), so it stays grantable everywhere and `isKnownPermission`
+   * passes. But the `/admin/rbac` catalog only SHOWS it to an org that a
+   * registered visibility resolver reports it visible for, so one org's model
+   * keys don't surface in another org's permission picker.
+   */
+  orgScoped?: boolean;
 };
 
 export type PermissionDescriptor = {
@@ -106,6 +117,40 @@ export function parsePermissionKey(dotted: string): { module: string; key: strin
   return { module: dotted.slice(0, i), key: dotted.slice(i + 1) };
 }
 
+// ── Org-scoped permission visibility ─────────────────────────────────
+// Resolvers report which `orgScoped` permission dotted keys are visible to a
+// given org in the /admin/rbac catalog. This keeps rbac ignorant of the
+// modules that own org-scoped permissions (e.g. @monark/data-models, whose
+// per-model keys depend on that org's live models) — they push a resolver at
+// boot rather than rbac importing them (which would be a layering cycle). The
+// permissions stay globally registered (so `isKnownPermission` + grant-time
+// validation pass) ; the resolver only gates DISPLAY.
+
+export type OrgScopedPermissionResolver = (
+  organizationId: string,
+) => Promise<Iterable<string>> | Iterable<string>;
+
+const orgScopedResolvers: OrgScopedPermissionResolver[] = [];
+
+export function registerOrgScopedPermissionVisibility(resolver: OrgScopedPermissionResolver): void {
+  orgScopedResolvers.push(resolver);
+}
+
+// Union of every resolver's visible keys for this org. Returns an empty set
+// for a null org (e.g. a sysadmin viewing the platform context), which hides
+// all `orgScoped` permissions rather than leaking them.
+export async function orgVisiblePermissionKeys(
+  organizationId: string | null,
+): Promise<Set<string>> {
+  const visible = new Set<string>();
+  if (organizationId === null) return visible;
+  for (const resolve of orgScopedResolvers) {
+    for (const key of await resolve(organizationId)) visible.add(key);
+  }
+  return visible;
+}
+
 export function _resetPermissionRegistryForTesting(): void {
   registry.clear();
+  orgScopedResolvers.length = 0;
 }

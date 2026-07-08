@@ -50,6 +50,8 @@ describe("data-models/registrations — registration", () => {
     const read = getPermissionDef(`data-models.${KEY}-record-read`);
     expect(read?.category).toBe("Data Model: Widgets");
     expect(read?.description).toContain("Widgets");
+    // Marked org-scoped so the RBAC catalog filters it by the caller's org.
+    expect(read?.orgScoped).toBe(true);
     expect(getPermissionDef(`data-models.${KEY}-record-write`)).toBeDefined();
     expect(getPermissionDef(`data-models.${KEY}-record-delete`)).toBeDefined();
   });

@@ -1,6 +1,6 @@
-import { registerEventTypes } from "@monark/common";
-import { registerPermissions } from "@monark/rbac/server";
-import { listAllDataModelsForRegistration } from "./data";
+import { registerEventTypes, registerOrgScopedEventTypeVisibility } from "@monark/common";
+import { registerOrgScopedPermissionVisibility, registerPermissions } from "@monark/rbac/server";
+import { listAllDataModelsForRegistration, listLiveDataModelsForOrg } from "./data";
 
 /**
  * Per-model integration into RBAC + the event-type registry (and, through
@@ -30,15 +30,17 @@ import { listAllDataModelsForRegistration } from "./data";
  * keys are stable for a model's lifetime ; only the human labels move on
  * rename.
  *
- * NOTE (multi-tenant): the registries are process-global and the readers
- * (`/admin/rbac`'s permission catalog, the webhooks event-type picker) list
- * them unfiltered. Under the current single-tenant deploy that's correct —
- * there is one org, so the global set IS that org's set. A true multi-tenant
- * deploy would leak one org's model keys into every org's picker and would
- * need those readers to filter the `data-models.<key>-*` entries by the
- * caller's org. Tracked in the package README's "Deferred" section. Likewise
- * a hard-deleted model's entries linger until the next boot re-hydrates only
- * live models.
+ * Multi-tenant safety: the entries are marked `orgScoped` and the display
+ * readers (`/admin/rbac`'s catalog, the webhook picker) only SHOW an org the
+ * entries a registered visibility resolver reports for it — see
+ * `registerDataModelVisibilityResolvers` below. The registered KEYS are still
+ * process-global + shared (two orgs with the same model key map to one entry),
+ * which is correct : enforcement scopes by the model's org, and a shared key
+ * stays grantable in any org that has the model. So there's no cross-org leak
+ * even though registration is global. A hard-deleted model's registry entry
+ * lingers until the next boot re-hydrates only live models, but it's already
+ * hidden from every org's picker the moment the model is gone (no live model →
+ * the resolver drops it).
  */
 
 export type RegistrableModel = { key: string; name: string };
@@ -94,27 +96,54 @@ export function registerDataModelRegistrations(model: RegistrableModel): void {
     [perModelPermissionKey(model.key, "read")]: {
       description: `Read records in the "${model.name}" Data Model.`,
       category,
+      orgScoped: true,
     },
     [perModelPermissionKey(model.key, "write")]: {
       description: `Create or edit records in the "${model.name}" Data Model.`,
       category,
+      orgScoped: true,
     },
     [perModelPermissionKey(model.key, "delete")]: {
       description: `Delete records in the "${model.name}" Data Model.`,
       category,
+      orgScoped: true,
     },
   });
 
   registerEventTypes(groupLabel(model.name), {
     [perModelEventType(model.key, "created")]: {
       description: `A record was created in the "${model.name}" Data Model.`,
+      orgScoped: true,
     },
     [perModelEventType(model.key, "updated")]: {
       description: `A record in the "${model.name}" Data Model was updated.`,
+      orgScoped: true,
     },
     [perModelEventType(model.key, "deleted")]: {
       description: `A record in the "${model.name}" Data Model was deleted.`,
+      orgScoped: true,
     },
+  });
+}
+
+// Register the org-scoped visibility resolvers once at api boot. They report,
+// for a given org, exactly the per-model permission keys + event types of that
+// org's LIVE models — so the RBAC catalog + webhook picker show each org only
+// its own models' entries, even though the entries themselves are globally
+// registered. Pure function-ref registration (no DB here) ; the DB query runs
+// per admin catalog read.
+export function registerDataModelVisibilityResolvers(): void {
+  registerOrgScopedPermissionVisibility(async (organizationId) => {
+    const models = await listLiveDataModelsForOrg(organizationId);
+    return models.flatMap((m) => RECORD_VERBS.map((verb) => perModelPermissionDotted(m.key, verb)));
+  });
+  registerOrgScopedEventTypeVisibility(async (organizationId) => {
+    const models = await listLiveDataModelsForOrg(organizationId);
+    return models.flatMap((m) => [
+      perModelEventType(m.key, "created"),
+      perModelEventType(m.key, "updated"),
+      perModelEventType(m.key, "deleted"),
+    ]);
   });
 }
 

@@ -150,6 +150,20 @@ export async function listAllDataModelsForRegistration(): Promise<DataModelRow[]
   return db.dataModel.findMany({ where: { deletedAt: null } });
 }
 
+// Every live Data Model for ONE org. Backs the org-scoped visibility
+// resolvers (per-model permission / event-type display filtering in the RBAC
+// catalog + webhook picker). Intentionally unbounded : an org's model count is
+// small + operator-bounded, and this runs only on admin catalog reads.
+export async function listLiveDataModelsForOrg(
+  organizationId: string,
+): Promise<Array<{ key: string; name: string }>> {
+  const db = getDb();
+  return db.dataModel.findMany({
+    where: { organizationId, deletedAt: null },
+    select: { key: true, name: true },
+  });
+}
+
 export async function findDataModelByKey(
   organizationId: string,
   key: string,

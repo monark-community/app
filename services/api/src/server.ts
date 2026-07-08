@@ -38,6 +38,7 @@ import {
   hydrateDataModelRegistrations,
   registerDataModelsEventTypes,
   registerDataModelsPermissions,
+  registerDataModelVisibilityResolvers,
 } from "@monark/data-models/server";
 import { registerRbacEventTypes, registerRbacPermissions } from "@monark/rbac/server";
 import { registerUsersEventTypes, registerUsersPermissions } from "@monark/users/server";
@@ -90,6 +91,12 @@ registerNotificationsEventTypes();
 registerOrganizationsEventTypes();
 registerRbacEventTypes();
 registerUsersEventTypes();
+
+// Org-scoped visibility resolvers for per-Data-Model permissions + event
+// types : the RBAC catalog + webhook picker show each org only its own
+// models' entries even though the entries are globally registered. Pure
+// function-ref registration (the DB query runs per admin catalog read).
+registerDataModelVisibilityResolvers();
 
 // Notification kinds + templates need to be registered before any
 // subscriber can call `notify()` ; subscriber registration follows

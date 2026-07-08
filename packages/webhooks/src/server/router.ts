@@ -1,5 +1,11 @@
 import { z } from "zod";
-import { emit, listEventTypesByModule, NotFoundError, ValidationError } from "@monark/common";
+import {
+  emit,
+  listEventTypesByModule,
+  NotFoundError,
+  orgVisibleEventTypes,
+  ValidationError,
+} from "@monark/common";
 import { publicProcedure, router } from "@monark/common/trpc";
 import { requirePermission } from "@monark/rbac/server";
 import type {
@@ -102,14 +108,23 @@ export const webhooksRouter = router({
         }>,
       };
     }
+    // Org-scoped event types (e.g. per-Data-Model record events) are globally
+    // registered for their metadata but only shown to an org the registered
+    // visibility resolvers report them visible for ; non-org-scoped types
+    // always show. Keeps one org's model keys out of another's picker.
+    const visible = await orgVisibleEventTypes(ctx.activeOrganizationId);
     return {
-      groups: listEventTypesByModule().map((g) => ({
-        module: g.module,
-        events: g.events.map((e) => ({
-          type: e.type,
-          description: e.description,
-        })),
-      })),
+      groups: listEventTypesByModule()
+        .map((g) => ({
+          module: g.module,
+          events: g.events
+            .filter((e) => (e.orgScoped ? visible.has(e.type) : true))
+            .map((e) => ({
+              type: e.type,
+              description: e.description,
+            })),
+        }))
+        .filter((g) => g.events.length > 0),
     };
   }),
 
