@@ -1,18 +1,18 @@
 # @monark/data-models
 
-Admin-configurable, polymorphic "Data Model" engine (Notion-Databases style). Sysadmins define their own record types (name + fields + types + limits) at runtime, with no app code change or deploy. `Project` and `Industry` are planned to migrate onto this engine as its first two models ; that cutover is a later phase (see the spec).
+Admin-configurable, polymorphic "Data Model" engine (Notion-Databases style). Admins define their own record types (name + fields + types + limits) at runtime, with no app code change or deploy. The legacy bespoke `Project` / `Industry` modules have been dropped and now live as Data Models on this engine (their data was migrated over).
 
 Spec: [docs/features-planning/phase-2/polymorphic-db.md](../../docs/features-planning/phase-2/polymorphic-db.md).
 
-**Status: schema + record CRUD + module integrations + per-field indexing, no UI yet.** This phase ships `DataModel` + `DataField` + `DataRecord` CRUD, RBAC, the `registerModelIntegration` registry (consumed by `@monark/calendar`'s materialization subscriber), and opt-in per-field expression indexing. The admin/record UI and the Project/Industry cutover are later phases — see the spec's rollout order.
+**Status: shipped end-to-end.** `DataModel` + `DataField` + `DataRecord` CRUD, two-layer RBAC (per-model permissions + per-record role access), the `registerModelIntegration` registry (consumed by `@monark/calendar`'s materialization subscriber), opt-in per-field expression indexing, per-model webhook event types, and the admin schema-builder + generic record UI (below). Remaining gaps are in "Deferred".
 
 ## What's here
 
 - `/contracts` — `DATA_FIELD_TYPES` / `DataFieldType` (mirrors the Prisma enum), `fieldConfigSchemas` (per-type `DataField.config` shape), `valueSchemaFor` / `valueSchemaForField` / `stripHtmlTags` (the shared record-value zod builder — see "Key concepts"), `registerModelIntegration` / `listModelIntegrations` / `getModelIntegrationDef` (the integration-slot registry — see "Key concepts"), and `DataModelsEvents`.
 - `/server` — Prisma data layer (`data.ts`: models + fields + records + model-integrations CRUD, key/slug derivation and collision helpers, title derivation), `data-models.{manage-schema,read-schema,record-read,record-write,record-delete}` permissions (`permissions.ts`), the `dataModelsRouter` tRPC sub-router (`router.ts`), and event-type registration (`event-types.ts`).
-- `/client` — placeholder ; the admin schema-builder UI and the generic record list/detail UI land in a later phase, built on the existing `services/web/src/components/fields` toolkit.
+- UI (in `services/web`) — the admin schema builder ([admin/data-models/[id]/model-editor.tsx](<../../services/web/src/app/(authed)/admin/data-models/[id]/model-editor.tsx>) + [field-editor-dialog.tsx](<../../services/web/src/app/(authed)/admin/data-models/[id]/field-editor-dialog.tsx>)) and the generic record list/detail UI ([data/models/[modelKey]](<../../services/web/src/app/(authed)/data/models>)), both built on the `services/web/src/components/fields` toolkit.
 
-Prisma models live under `// ── MODULE: data-models ──` in `packages/db/prisma/schema.prisma`: `DataModel`, `DataField`, `DataRecord`, `DataModelIntegration`, `DataFieldIndex`. Migration `20260706000312_add_data_models`.
+Prisma models live under `// ── MODULE: data-models ──` in `packages/db/prisma/schema.prisma`: `DataModel`, `DataField`, `DataRecord`, `DataModelIntegration`, `DataFieldIndex`, `DataRecordRoleAccess`. Migrations: `20260706000312_add_data_models` … `20260708000000_add_data_record_role_access`.
 
 ## Key concepts
 
