@@ -1,4 +1,5 @@
-import type { FieldDef, RelationSource, SelectOption } from "./types";
+import { SELECT_OPTION_TONES } from "./types";
+import type { BadgeTone, FieldDef, RelationSource, SelectOption } from "./types";
 
 /**
  * The server's field-type vocabulary — mirrors `DataFieldType` in
@@ -47,12 +48,36 @@ interface NumberConfig {
   max?: number;
   integer?: boolean;
 }
+/** Raw stored option — `color` is a tone name (see `SELECT_OPTION_TONES`). */
+interface RawSelectOption {
+  value: string;
+  label: string;
+  color?: string;
+}
 interface SelectConfig {
-  options: SelectOption[];
+  options: RawSelectOption[];
 }
 interface MultiSelectConfig extends SelectConfig {
   allowCustomValues?: boolean;
   max?: number;
+}
+
+const KNOWN_TONES = new Set<string>(SELECT_OPTION_TONES);
+
+// Maps stored options onto toolkit `SelectOption`s (`color` → `tone`) and
+// reports whether any carry a non-neutral tone, so the field only flips to
+// colored badges when the admin actually assigned colors.
+function toSelectOptions(options: RawSelectOption[]): { options: SelectOption[]; badges: boolean } {
+  let badges = false;
+  const mapped = options.map((o) => {
+    const tone =
+      o.color && o.color !== "secondary" && KNOWN_TONES.has(o.color)
+        ? (o.color as BadgeTone)
+        : undefined;
+    if (tone) badges = true;
+    return { value: o.value, label: o.label, tone };
+  });
+  return { options: mapped, badges };
 }
 interface RelationConfig {
   relationTarget: string;
@@ -115,14 +140,17 @@ export function dataFieldToFieldDef(
       return { ...base, type: "datetime" };
     case "SELECT": {
       const c = field.config as SelectConfig;
-      return { ...base, type: "singleSelect", options: c.options };
+      const { options, badges } = toSelectOptions(c.options);
+      return { ...base, type: "singleSelect", options, badges };
     }
     case "MULTI_SELECT": {
       const c = field.config as MultiSelectConfig;
+      const { options, badges } = toSelectOptions(c.options);
       return {
         ...base,
         type: "multiSelect",
-        options: c.options,
+        options,
+        badges,
         allowCustom: c.allowCustomValues,
         max: c.max,
       };

@@ -24,8 +24,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { trpc } from "@/lib/trpc";
-import type { DataFieldServerType } from "@/components/fields";
+import { SELECT_OPTION_TONES } from "@/components/fields";
+import type { BadgeTone, DataFieldServerType } from "@/components/fields";
 
 const FIELD_TYPES: DataFieldServerType[] = [
   "TEXT",
@@ -61,6 +63,8 @@ export interface FieldEditorValue {
 interface OptionRow {
   value: string;
   label: string;
+  /** A tone name from `SELECT_OPTION_TONES` ; undefined = neutral. */
+  color?: string;
 }
 
 export function FieldEditorDialog({
@@ -184,7 +188,14 @@ export function FieldEditorDialog({
       case "MULTI_SELECT":
         return { options, allowCustomValues, max: num(maxItems) };
       case "RELATION":
-        return { relationTarget, relationTargetKind, cardinality };
+        // `max` only applies to a MANY relation (a to-one relation holds a
+        // single id) ; omitting it for ONE keeps the persisted config clean.
+        return {
+          relationTarget,
+          relationTargetKind,
+          cardinality,
+          ...(cardinality === "MANY" ? { max: num(maxItems) } : {}),
+        };
       case "RICH_TEXT":
       case "BOOLEAN":
       case "DATE":
@@ -373,32 +384,60 @@ export function FieldEditorDialog({
           {(type === "SELECT" || type === "MULTI_SELECT") && (
             <div className="space-y-2">
               <Label>{t("config.options")}</Label>
-              {options.map((option, index) => (
-                <div key={index} className="flex items-center gap-2">
-                  <Input
-                    aria-label={t("config.optionValue")}
-                    placeholder={t("config.optionValue")}
-                    value={option.value}
-                    onChange={(e) => updateOption(index, { value: e.target.value })}
-                    className="w-1/3"
-                  />
-                  <Input
-                    aria-label={t("config.optionLabel")}
-                    placeholder={t("config.optionLabel")}
-                    value={option.label}
-                    onChange={(e) => updateOption(index, { label: e.target.value })}
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    aria-label={t("config.removeOption")}
-                    onClick={() => removeOption(index)}
-                  >
-                    <X className="h-4 w-4" aria-hidden />
-                  </Button>
-                </div>
-              ))}
+              {options.map((option, index) => {
+                const previewLabel = option.label || option.value || "—";
+                const currentTone = (option.color as BadgeTone | undefined) ?? "secondary";
+                return (
+                  <div key={index} className="flex items-center gap-2">
+                    <Input
+                      aria-label={t("config.optionValue")}
+                      placeholder={t("config.optionValue")}
+                      value={option.value}
+                      onChange={(e) => updateOption(index, { value: e.target.value })}
+                      className="w-1/4"
+                    />
+                    <Input
+                      aria-label={t("config.optionLabel")}
+                      placeholder={t("config.optionLabel")}
+                      value={option.label}
+                      onChange={(e) => updateOption(index, { label: e.target.value })}
+                    />
+                    <Select
+                      value={currentTone}
+                      onValueChange={(v) =>
+                        updateOption(index, { color: v === "secondary" ? undefined : v })
+                      }
+                    >
+                      <SelectTrigger
+                        aria-label={t("config.optionColor")}
+                        className="w-auto shrink-0 gap-1"
+                      >
+                        <Badge variant={currentTone} size="sm">
+                          {previewLabel}
+                        </Badge>
+                      </SelectTrigger>
+                      <SelectContent>
+                        {SELECT_OPTION_TONES.map((tone) => (
+                          <SelectItem key={tone} value={tone} aria-label={tone}>
+                            <Badge variant={tone} size="sm">
+                              {previewLabel}
+                            </Badge>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      aria-label={t("config.removeOption")}
+                      onClick={() => removeOption(index)}
+                    >
+                      <X className="h-4 w-4" aria-hidden />
+                    </Button>
+                  </div>
+                );
+              })}
               <Button type="button" variant="outline" size="sm" onClick={addOption}>
                 <Plus className="mr-1.5 h-4 w-4" aria-hidden />
                 {t("config.addOption")}

@@ -16,6 +16,21 @@ import type { BadgeProps } from "@/components/ui/badge";
 /** Badge tone reused for select / relation cells (mirrors `Badge` variants). */
 export type BadgeTone = NonNullable<BadgeProps["variant"]>;
 
+/**
+ * The tones an admin can assign to a SELECT / MULTI_SELECT option in the
+ * schema builder (the swatch palette). `secondary` leads as the neutral
+ * default — a field with no colored options renders its options as plain
+ * text ; assigning any non-neutral tone flips the field to colored badges.
+ */
+export const SELECT_OPTION_TONES = [
+  "secondary",
+  "primary",
+  "success",
+  "warning",
+  "destructive",
+  "outline",
+] as const satisfies readonly BadgeTone[];
+
 /** One choice in a single/multi-select field. `label` is already translated. */
 export interface SelectOption {
   value: string;

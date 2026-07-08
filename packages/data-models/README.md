@@ -142,9 +142,10 @@ Both carry `dataModelKey` alongside `dataModelId` so a subscriber (e.g. Calendar
 
 None yet. (`@monark/calendar` is the first consumer of `data-models.record-*` — see its README's "Events consumed".)
 
+The admin schema builder ([admin/data-models/[id]/model-editor.tsx](<../../services/web/src/app/(authed)/admin/data-models/[id]/model-editor.tsx>)) is built : model settings + title-field, full field CRUD with drag-reorder, per-type config for all 12 field types ([field-editor-dialog.tsx](<../../services/web/src/app/(authed)/admin/data-models/[id]/field-editor-dialog.tsx>)), the "indexed" badge + `fields.requestIndex` affordance, and the `DataModelIntegration` slot-mapping section. The generic record list/detail UI ([data/models/[modelKey]](<../../services/web/src/app/(authed)/data/models>)) is built on `services/web/src/components/fields`.
+
 ## Deferred
 
-- **`DataModelIntegration` admin UI** — the registry, server CRUD, and validation exist ; there's no schema-builder tab to configure a mapping yet.
-- **Admin schema-builder UI** (including an "indexed" badge / index-request affordance for `fields.requestIndex`) and the **generic record list/detail UI** (built on `services/web/src/components/fields`).
+- **`SELECT` / `MULTI_SELECT` option colors.** The config schema accepts a `color` per option, but the field editor doesn't offer a color picker yet ; options render without a swatch.
 - **Per-row (record-level) authorization** (`DataModelRoleAccess`, mirroring `CalendarRoleAccess`) — record access is model-wide in v1.
 - **Registry hygiene on hard delete.** A hard-deleted model's global registry entries linger until the next boot re-hydrates only live models. It's already hidden from every org's picker the moment the model is gone (the visibility resolver drops it), so this is cosmetic — the entry just isn't garbage-collected until restart.

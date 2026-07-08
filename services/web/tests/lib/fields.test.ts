@@ -1,7 +1,14 @@
 import { describe, expect, it } from "vitest";
+import { dataFieldToFieldDef } from "@/components/fields/data-field-adapter";
 import { fieldColumn } from "@/components/fields/field-column";
 import { schemaFor, schemaForFields } from "@/components/fields/schema";
-import { defaultValueFor, type FieldDef, type FieldMessages } from "@/components/fields/types";
+import {
+  defaultValueFor,
+  type FieldDef,
+  type FieldMessages,
+  type MultiSelectFieldDef,
+  type SingleSelectFieldDef,
+} from "@/components/fields/types";
 
 const messages: FieldMessages = {
   required: "required",
@@ -203,5 +210,56 @@ describe("fieldColumn — sort accessor", () => {
       { accessor: (r) => r.tags, labels },
     );
     expect(col.sortAccessor?.(row)).toBe(2);
+  });
+});
+
+describe("dataFieldToFieldDef — SELECT/MULTI_SELECT option colors", () => {
+  const base = { id: "f1", key: "status", label: "Status", description: null, required: false };
+
+  it("maps a stored option `color` onto `tone` and flips `badges` on", () => {
+    const def = dataFieldToFieldDef({
+      ...base,
+      type: "SELECT",
+      config: {
+        options: [
+          { value: "open", label: "Open", color: "success" },
+          { value: "closed", label: "Closed" },
+        ],
+      },
+    }) as SingleSelectFieldDef;
+    expect(def.badges).toBe(true);
+    expect(def.options[0]).toMatchObject({ value: "open", label: "Open", tone: "success" });
+    // Uncolored option carries no tone (renders neutral).
+    expect(def.options[1]?.tone).toBeUndefined();
+  });
+
+  it("leaves `badges` off when no option is colored (stays plain text)", () => {
+    const def = dataFieldToFieldDef({
+      ...base,
+      type: "MULTI_SELECT",
+      config: {
+        options: [
+          { value: "a", label: "A" },
+          { value: "b", label: "B" },
+        ],
+      },
+    }) as MultiSelectFieldDef;
+    expect(def.badges).toBe(false);
+    expect(def.options.every((o) => o.tone === undefined)).toBe(true);
+  });
+
+  it("treats the neutral `secondary` tone as no color, and drops unknown tones", () => {
+    const def = dataFieldToFieldDef({
+      ...base,
+      type: "SELECT",
+      config: {
+        options: [
+          { value: "a", label: "A", color: "secondary" },
+          { value: "b", label: "B", color: "not-a-tone" },
+        ],
+      },
+    }) as SingleSelectFieldDef;
+    expect(def.badges).toBe(false);
+    expect(def.options.every((o) => o.tone === undefined)).toBe(true);
   });
 });

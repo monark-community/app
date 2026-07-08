@@ -1090,6 +1090,7 @@
             "options": "Options",
             "optionValue": "Valeur",
             "optionLabel": "Libellé",
+            "optionColor": "Couleur",
             "addOption": "Ajouter une option",
             "removeOption": "Retirer l'option",
             "allowCustomValues": "Autoriser la saisie de nouvelles options",

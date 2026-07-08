@@ -43,4 +43,4 @@ export type {
   TextFieldDef,
   UrlFieldDef,
 } from "./types";
-export { defaultValueFor } from "./types";
+export { defaultValueFor, SELECT_OPTION_TONES } from "./types";

@@ -1090,6 +1090,7 @@
             "options": "Options",
             "optionValue": "Value",
             "optionLabel": "Label",
+            "optionColor": "Color",
             "addOption": "Add option",
             "removeOption": "Remove option",
             "allowCustomValues": "Allow typing new options",
