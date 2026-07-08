@@ -3,9 +3,12 @@ import { useEffect, useRef, useState } from "react";
 import { ColorInput } from "@/components/ui/color-input";
 import {
   AutoForm,
+  dataFieldToFieldDef,
+  FieldCell,
   fieldColumn,
   RichTextEditor,
   useFieldStrings,
+  type DataFieldForAdapter,
   type FieldDef,
   type RelationOption,
 } from "@/components/fields";
@@ -397,7 +400,14 @@ const FilterMenuClearStory: FC = () => {
       onValueChange: setStatus,
       options: SECTORS,
     },
-    { id: "tags", type: "multiSelect", label: "Tags", value: tags, onValueChange: setTags, options: TAGS },
+    {
+      id: "tags",
+      type: "multiSelect",
+      label: "Tags",
+      value: tags,
+      onValueChange: setTags,
+      options: TAGS,
+    },
   ];
   return (
     <div ref={rootRef} className="flex justify-end p-6">
@@ -513,6 +523,106 @@ const FieldsGalleryStory: FC = () => (
   </div>
 );
 
+// ── Option colors ──────────────────────────────────────────────────────────
+// Drives the CHANGED code path : SELECT / MULTI_SELECT `DataField` configs
+// carrying a per-option `color`, run through the real `dataFieldToFieldDef`
+// adapter (color → tone, `badges` flip), then rendered as both form inputs and
+// table cells. A colored badge here means the adapter mapped `color` → `tone`
+// and turned `badges` on ; the "Plain select" (no colors) must stay plain text.
+
+const COLORED_FIELDS: DataFieldForAdapter[] = [
+  {
+    id: "s1",
+    key: "status",
+    label: "Status (colored)",
+    description: null,
+    required: false,
+    type: "SELECT",
+    config: {
+      options: [
+        { value: "idea", label: "Idea" }, // neutral → no color
+        { value: "active", label: "Active", color: "success" },
+        { value: "blocked", label: "Blocked", color: "warning" },
+        { value: "done", label: "Done", color: "primary" },
+        { value: "dropped", label: "Dropped", color: "destructive" },
+      ],
+    },
+  },
+  {
+    id: "t1",
+    key: "tags",
+    label: "Tags (colored)",
+    description: null,
+    required: false,
+    type: "MULTI_SELECT",
+    config: {
+      options: [
+        { value: "web3", label: "Web3", color: "primary" },
+        { value: "defi", label: "DeFi", color: "success" },
+        { value: "dao", label: "DAO", color: "warning" },
+        { value: "nft", label: "NFT", color: "outline" },
+      ],
+    },
+  },
+  {
+    id: "p1",
+    key: "plain",
+    label: "Plain select (no colors)",
+    description: null,
+    required: false,
+    type: "SELECT",
+    config: {
+      options: [
+        { value: "a", label: "Alpha" },
+        { value: "b", label: "Beta" },
+      ],
+    },
+  },
+];
+
+const COLORED_VALUES: Record<string, unknown> = {
+  status: "active",
+  tags: ["web3", "defi", "dao"],
+  plain: "a",
+};
+
+const OptionColorsStory: FC = () => {
+  const { labels } = useFieldStrings();
+  const defs = COLORED_FIELDS.map((f) => dataFieldToFieldDef(f));
+  return (
+    <div className="mx-auto max-w-2xl space-y-8 p-6">
+      <div>
+        <h1 className="text-xl font-semibold tracking-tight">Select option colors</h1>
+        <p className="text-sm text-muted-foreground">
+          Configs with a per-option <code>color</code>, through the real adapter.
+        </p>
+      </div>
+      <section className="space-y-3">
+        <h2 className="text-sm font-semibold text-muted-foreground">Record form (inputs)</h2>
+        <AutoForm
+          fields={defs}
+          defaultValues={COLORED_VALUES}
+          onSubmit={() => {}}
+          onCancel={() => {}}
+          submitLabel="Save"
+          cancelLabel="Cancel"
+        />
+      </section>
+      <section className="space-y-3">
+        <h2 className="text-sm font-semibold text-muted-foreground">Table cells</h2>
+        <div className="space-y-3 rounded-md border border-border p-4">
+          {defs.map((def) => (
+            <div key={def.name} className="flex items-center gap-3">
+              <span className="w-44 shrink-0 text-xs text-muted-foreground">{def.label}</span>
+              <FieldCell def={def} value={COLORED_VALUES[def.name]} labels={labels} />
+            </div>
+          ))}
+        </div>
+      </section>
+    </div>
+  );
+};
+
 // ── Calendar mobile/responsive stories ─────────────────────────────────────
 // Validate the responsive calendar work: full-screen modal chrome (left title,
 // top-left content, FormActionsFooter banner, close X), the mobile calendar-chip
@@ -581,9 +691,36 @@ const CalendarChipsStory: FC = () => (
         Desktop sidebar (stacked, full width)
       </p>
       <div className="flex flex-col gap-1.5">
-        <CalendarChip cal={SAMPLE_CALS[0]!} visible onToggle={noop} onEdit={noop} onArchive={noop} canDelete labels={CHIP_LABELS} fullWidth />
-        <CalendarChip cal={SAMPLE_CALS[1]!} visible onToggle={noop} onEdit={noop} onArchive={noop} canDelete labels={CHIP_LABELS} fullWidth />
-        <CalendarChip cal={SAMPLE_CALS[2]!} visible={false} onToggle={noop} onEdit={noop} onArchive={noop} canDelete labels={CHIP_LABELS} fullWidth />
+        <CalendarChip
+          cal={SAMPLE_CALS[0]!}
+          visible
+          onToggle={noop}
+          onEdit={noop}
+          onArchive={noop}
+          canDelete
+          labels={CHIP_LABELS}
+          fullWidth
+        />
+        <CalendarChip
+          cal={SAMPLE_CALS[1]!}
+          visible
+          onToggle={noop}
+          onEdit={noop}
+          onArchive={noop}
+          canDelete
+          labels={CHIP_LABELS}
+          fullWidth
+        />
+        <CalendarChip
+          cal={SAMPLE_CALS[2]!}
+          visible={false}
+          onToggle={noop}
+          onEdit={noop}
+          onArchive={noop}
+          canDelete
+          labels={CHIP_LABELS}
+          fullWidth
+        />
         <button
           type="button"
           className="flex w-full items-center gap-1 whitespace-nowrap rounded-full border border-dashed border-border px-3 py-1.5 text-sm text-muted-foreground hover:bg-accent hover:text-accent-foreground"
@@ -602,9 +739,33 @@ const CalendarChipsStory: FC = () => (
         Mobile strip (inline)
       </p>
       <div className="flex flex-row items-center gap-1.5 overflow-x-auto">
-        <CalendarChip cal={SAMPLE_CALS[0]!} visible onToggle={noop} onEdit={noop} onArchive={noop} canDelete labels={CHIP_LABELS} />
-        <CalendarChip cal={SAMPLE_CALS[1]!} visible onToggle={noop} onEdit={noop} onArchive={noop} canDelete labels={CHIP_LABELS} />
-        <CalendarChip cal={SAMPLE_CALS[2]!} visible={false} onToggle={noop} onEdit={noop} onArchive={noop} canDelete labels={CHIP_LABELS} />
+        <CalendarChip
+          cal={SAMPLE_CALS[0]!}
+          visible
+          onToggle={noop}
+          onEdit={noop}
+          onArchive={noop}
+          canDelete
+          labels={CHIP_LABELS}
+        />
+        <CalendarChip
+          cal={SAMPLE_CALS[1]!}
+          visible
+          onToggle={noop}
+          onEdit={noop}
+          onArchive={noop}
+          canDelete
+          labels={CHIP_LABELS}
+        />
+        <CalendarChip
+          cal={SAMPLE_CALS[2]!}
+          visible={false}
+          onToggle={noop}
+          onEdit={noop}
+          onArchive={noop}
+          canDelete
+          labels={CHIP_LABELS}
+        />
       </div>
     </div>
   </div>
@@ -727,7 +888,9 @@ const ToggleAndAvatarChipsStory: FC = () => {
                 onClick={() => setType(t)}
                 className={cn(
                   "flex flex-1 items-center justify-center border-l border-input px-2 text-xs font-medium first:rounded-l-md first:border-l-0 last:rounded-r-md",
-                  type === t ? "bg-primary text-primary-foreground" : "text-foreground hover:bg-muted",
+                  type === t
+                    ? "bg-primary text-primary-foreground"
+                    : "text-foreground hover:bg-muted",
                 )}
               >
                 {t === "STANDARD" ? "Standard" : t === "PUNCTUAL" ? "Punctual" : "Full day"}
@@ -855,10 +1018,22 @@ const DragHandleStory: FC = () => (
       <p className="text-sm font-medium">Horizontal (calendar event bottom edge)</p>
       <div className="flex items-end gap-6">
         <div className="relative h-16 w-40 rounded-sm border-l-2 border-primary bg-primary/15">
-          <DragHandle orientation="horizontal" active className="absolute inset-x-0 bottom-0 h-4 items-end pb-0.5" />
+          <DragHandle
+            orientation="horizontal"
+            active
+            className="absolute inset-x-0 bottom-0 h-4 items-end pb-0.5"
+          />
         </div>
-        <div className="relative h-16 w-40 rounded-sm border-l-2" style={{ borderLeftColor: "#f43f5e", backgroundColor: "#f43f5e4D" }}>
-          <DragHandle orientation="horizontal" color="#f43f5e" active className="absolute inset-x-0 bottom-0 h-4 items-end pb-0.5" />
+        <div
+          className="relative h-16 w-40 rounded-sm border-l-2"
+          style={{ borderLeftColor: "#f43f5e", backgroundColor: "#f43f5e4D" }}
+        >
+          <DragHandle
+            orientation="horizontal"
+            color="#f43f5e"
+            active
+            className="absolute inset-x-0 bottom-0 h-4 items-end pb-0.5"
+          />
         </div>
       </div>
     </div>
@@ -866,15 +1041,27 @@ const DragHandleStory: FC = () => (
       <p className="text-sm font-medium">Vertical (panel / column resize edge)</p>
       <div className="flex gap-6">
         <div className="relative h-24 w-56 rounded-lg border border-border">
-          <DragHandle orientation="vertical" active className="absolute right-0 top-0 h-full w-1.5" />
+          <DragHandle
+            orientation="vertical"
+            active
+            className="absolute right-0 top-0 h-full w-1.5"
+          />
         </div>
         <div className="relative h-24 w-56 overflow-hidden rounded-lg border border-border">
           {/* `highlight`: tints the full-height rail (as when hovering the panel edge). */}
-          <DragHandle orientation="vertical" active highlight className="absolute left-0 top-0 h-full w-1.5" />
+          <DragHandle
+            orientation="vertical"
+            active
+            highlight
+            className="absolute left-0 top-0 h-full w-1.5"
+          />
         </div>
         <div className="relative h-24 w-56 rounded-lg border border-border">
           {/* Resting state: grip hidden until hover — hit area outlined so it's locatable. */}
-          <DragHandle orientation="vertical" className="absolute left-0 top-0 h-full w-1.5 bg-muted/40" />
+          <DragHandle
+            orientation="vertical"
+            className="absolute left-0 top-0 h-full w-1.5 bg-muted/40"
+          />
         </div>
       </div>
     </div>
@@ -889,6 +1076,7 @@ export const STORIES: Record<string, FC> = {
   "fields-form": FieldsFormStory,
   "fields-table": FieldsTableStory,
   "fields-gallery": FieldsGalleryStory,
+  "option-colors": OptionColorsStory,
   "calendar-manage-dialog": CalendarManageDialogStory,
   "calendar-sidebar": CalendarSidebarStory,
   "calendar-chips": CalendarChipsStory,
