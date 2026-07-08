@@ -59,7 +59,7 @@ export function keyifyField(raw: string): string {
 // matches the two partial-unique indexes added in the
 // 20260706000312_add_data_models migration.
 export async function findFreeDataModelKey(
-  organizationId: string | null,
+  organizationId: string,
   desired: string,
   ignoreId?: string,
 ): Promise<string> {
@@ -102,8 +102,8 @@ export async function findFreeDataFieldKey(
 // ── Data Models ──────────────────────────────────────────
 
 export type ListDataModelsInput = PaginationArgs & {
-  /** The caller's org — results include this org's models *and* every
-   * platform-wide model (organizationId null), never another org's. */
+  /** The caller's org — every Data Model is org-scoped, so this returns
+   * exactly this org's models and never another org's. */
   organizationId: string;
   includeDeleted?: boolean;
   search?: string;
@@ -112,20 +112,13 @@ export type ListDataModelsInput = PaginationArgs & {
 export async function listDataModels(input: ListDataModelsInput): Promise<Paginated<DataModelRow>> {
   const db = getDb();
   const where: Prisma.DataModelWhereInput = {
-    OR: [{ organizationId: input.organizationId }, { organizationId: null }],
+    organizationId: input.organizationId,
     ...(input.includeDeleted ? {} : { deletedAt: null }),
     ...(input.search && input.search.trim().length > 0
       ? {
-          AND: [
-            {
-              OR: [{ organizationId: input.organizationId }, { organizationId: null }],
-            },
-            {
-              OR: [
-                { name: { contains: input.search, mode: "insensitive" } },
-                { key: { contains: input.search, mode: "insensitive" } },
-              ],
-            },
+          OR: [
+            { name: { contains: input.search, mode: "insensitive" } },
+            { key: { contains: input.search, mode: "insensitive" } },
           ],
         }
       : {}),
@@ -148,7 +141,7 @@ export async function findDataModelById(id: string): Promise<DataModelRow | null
 }
 
 export async function findDataModelByKey(
-  organizationId: string | null,
+  organizationId: string,
   key: string,
 ): Promise<DataModelRow | null> {
   const db = getDb();
@@ -156,7 +149,7 @@ export async function findDataModelByKey(
 }
 
 export type CreateDataModelInput = {
-  organizationId: string | null;
+  organizationId: string;
   key: string;
   name: string;
   description?: string | null;

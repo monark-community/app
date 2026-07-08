@@ -42,14 +42,10 @@ export function RecordFullPage({ model, recordId }: { model: ModelInfo; recordId
   const activeFields = rawFields.filter((f) => !f.archivedAt);
 
   async function resolveTargetModelId(targetKey: string): Promise<string | null> {
-    const orgScoped = await utils.dataModels.models.getByKey
-      .fetch({ key: targetKey, platform: false })
+    const model = await utils.dataModels.models.getByKey
+      .fetch({ key: targetKey })
       .catch(() => null);
-    if (orgScoped) return orgScoped.id;
-    const platform = await utils.dataModels.models.getByKey
-      .fetch({ key: targetKey, platform: true })
-      .catch(() => null);
-    return platform?.id ?? null;
+    return model?.id ?? null;
   }
 
   function makeRelationSource(config: {

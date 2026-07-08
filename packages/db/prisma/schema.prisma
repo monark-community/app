@@ -708,8 +708,10 @@ enum DataFieldType {
 // and its admin UI never special-case "which flavor of model is this."
 model DataModel {
   id             String        @id @default(cuid())
-  organizationId String?
-  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  // Every Data Model is org-scoped ; platform-wide (null-org) models are
+  // disallowed. Always set to the creating admin's active org.
+  organizationId String
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   // Stable, URL-safe machine name. Immutable after create (used in
   // route segments and event payloads) ; renaming is a "label" edit
@@ -732,10 +734,8 @@ model DataModel {
   fields       DataField[]
   records      DataRecord[]
   integrations DataModelIntegration[]
-  // NULL-aware partial-unique indexes on (organizationId?, key) are
-  // added by hand-written migration SQL — Prisma's `@@unique` can't
-  // express the `WHERE organizationId IS NULL` / `IS NOT NULL` split.
 
+  @@unique([organizationId, key])
   @@index([organizationId])
   @@index([deletedAt])
 }
@@ -783,8 +783,8 @@ model DataRecord {
   dataModel      DataModel     @relation(fields: [dataModelId], references: [id], onDelete: Cascade)
   // Denormalized from DataModel.organizationId at write time so a
   // record-level query never has to join DataModel to scope by org.
-  organizationId String?
-  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId String
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   // Optional URL-safe identifier, same slugify() + collision-suffix
   // convention as today's Project/Industry. Nullable — not every Data

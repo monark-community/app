@@ -89,17 +89,13 @@ export function RecordsList({ model }: { model: ModelInfo }) {
   const rawFields: RawField[] = fieldsQuery.data ?? [];
   const activeFields = rawFields.filter((f) => !f.archivedAt);
 
-  // Resolves a RELATION field's target Data Model by key, trying the
-  // caller's own org first (mirrors resolve-model.ts's server-side twin).
+  // Resolves a RELATION field's target Data Model by key, in the caller's
+  // active org (mirrors resolve-model.ts's server-side twin).
   async function resolveTargetModelId(targetKey: string): Promise<string | null> {
-    const orgScoped = await utils.dataModels.models.getByKey
-      .fetch({ key: targetKey, platform: false })
+    const model = await utils.dataModels.models.getByKey
+      .fetch({ key: targetKey })
       .catch(() => null);
-    if (orgScoped) return orgScoped.id;
-    const platform = await utils.dataModels.models.getByKey
-      .fetch({ key: targetKey, platform: true })
-      .catch(() => null);
-    return platform?.id ?? null;
+    return model?.id ?? null;
   }
 
   function makeRelationSource(config: {

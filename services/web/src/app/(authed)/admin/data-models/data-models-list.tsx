@@ -155,16 +155,6 @@ export function DataModelsList() {
 
   const columns: DataColumnDef<ModelRow>[] = [
     {
-      id: "scope",
-      header: t("columns.scope"),
-      cell: (m) => (
-        <Badge variant={m.organizationId ? "secondary" : "primary"}>
-          {m.organizationId ? t("scope.organization") : t("scope.platform")}
-        </Badge>
-      ),
-      align: "left",
-    },
-    {
       id: "updated",
       header: t("columns.updated"),
       cell: (m) => (
@@ -198,16 +188,6 @@ export function DataModelsList() {
       name: "description",
       label: tCreate("descriptionLabel"),
       placeholder: tCreate("descriptionPlaceholder"),
-    },
-    {
-      type: "singleSelect",
-      name: "scope",
-      label: tCreate("scopeLabel"),
-      required: true,
-      options: [
-        { value: "organization", label: tCreate("scopeOrganization") },
-        { value: "platform", label: tCreate("scopePlatform") },
-      ],
     },
   ];
 
@@ -254,7 +234,6 @@ export function DataModelsList() {
                   fields={createFields}
                   onSubmit={async (values) => {
                     await createMutation.mutateAsync({
-                      scope: values.scope as "organization" | "platform",
                       key: (values.key as string) || undefined,
                       name: values.name as string,
                       description: (values.description as string) || undefined,

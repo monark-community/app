@@ -18,16 +18,13 @@ Prisma models live under `// ── MODULE: data-models ──` in `packages/db/
 
 **Hybrid storage.** Fixed, indexed Postgres columns for the system envelope (`id`, `organizationId`, `key`/`slug`, `title`, timestamps) + a single JSONB `data` column on `DataRecord` for admin-defined field values, namespaced by `DataField.key`. Avoids both a full EAV join-per-field design and a bespoke-columns-per-model design. See the spec's "Data model" and "Edge cases & risks" sections for the tradeoffs this accepts (relation fields have no real FK ; fast filtering on a hot field is opt-in via `DataFieldIndex`, not automatic for every field).
 
-**Platform-wide vs org-scoped is a column, not a type split.** `DataModel.organizationId: string | null` — `null` means platform-wide (mirrors `Industry`'s taxonomy semantics today), non-null means org-scoped (mirrors `Project`'s semantics today). Two partial-unique indexes enforce key uniqueness within the right scope, since Prisma's `@@unique` can't express a NULL-aware `WHERE`:
+**Every Data Model is org-scoped.** `DataModel.organizationId: string` (non-null) — platform-wide (null-org) models are disallowed. Key uniqueness within an org is a plain `@@unique([organizationId, key])`, so no NULL-aware partial index is needed:
 
-```sql
-CREATE UNIQUE INDEX "DataModel_key_platform_unique" ON "DataModel" ("key")
-  WHERE "organizationId" IS NULL AND "deletedAt" IS NULL;
-CREATE UNIQUE INDEX "DataModel_org_key_unique" ON "DataModel" ("organizationId", "key")
-  WHERE "organizationId" IS NOT NULL AND "deletedAt" IS NULL;
+```prisma
+@@unique([organizationId, key])
 ```
 
-A platform-wide model create/access check runs `requirePermission(ctx, "data-models.manage-schema")` with no explicit `orgId` — the same convention `industries.write` already uses today, which falls back to `ctx.activeOrganizationId` (so any org's `ADMIN` can manage the shared platform-wide layer, not only `SYSADMIN` ; that's existing behavior for `Industry`, not a new rule invented here).
+Every model create/access check resolves the caller's active org (`requireOrg`) and gates on `requirePermission(ctx, "data-models.manage-schema", org.id)`. There is no platform namespace and no `scope` input — `models.create` always writes `organizationId = org.id`, and `models.getByKey` / `resolveDataModelByKey` resolve a key within the caller's org alone. (Historically `organizationId` was nullable, with `null` meaning platform-wide to mirror `Industry`; the [20260707050000_data_models_org_required](../db/prisma/migrations/20260707050000_data_models_org_required/migration.sql) migration re-parented any null-org models + records to the singleton org and made the column NOT NULL.)
 
 **One validation implementation, shared client/server.** `valueSchemaFor` (in `/contracts/field-types.ts`) builds the zod fragment that validates one field's _value_, given a structural `DataFieldValueShape` (type + the config properties that affect validation) and optional message overrides. `services/web/src/components/fields/schema.ts`'s `schemaFor` is a thin adapter from the client's `FieldDef` onto this same function — the server (no i18n, messages omitted) and the client (localized `FieldMessages` passed in) share one implementation instead of two hand-synced ones. `valueSchemaForField(type, config, required)` is the server-facing entry point that also validates the field's persisted `config` against `fieldConfigSchemas[type]` first.
 
@@ -51,10 +48,10 @@ All procedures are under `trpc.dataModels.*`.
 
 | Procedure                    | Permission                  | Notes                                                                        |
 | ---------------------------- | --------------------------- | ---------------------------------------------------------------------------- |
-| `models.list`                | `data-models.read-schema`   | Caller's org models + every platform-wide model, cursor-paginated            |
+| `models.list`                | `data-models.read-schema`   | Caller's org models, cursor-paginated                                        |
 | `models.getById`             | `data-models.read-schema`   |                                                                              |
-| `models.getByKey`            | `data-models.read-schema`   | `platform: true` looks up the platform-wide namespace                        |
-| `models.create`              | `data-models.manage-schema` | `scope: "organization" \| "platform"`                                        |
+| `models.getByKey`            | `data-models.read-schema`   | Resolves `key` within the caller's active org                                |
+| `models.create`              | `data-models.manage-schema` | Always org-scoped to the caller's active org                                 |
 | `models.update`              | `data-models.manage-schema` | name / description / icon / `titleFieldId`                                   |
 | `models.delete`              | `data-models.manage-schema` | soft by default ; `hard: true` permanently removes                           |
 | `models.restore`             | `data-models.manage-schema` |                                                                              |
@@ -144,5 +141,4 @@ None yet. (`@monark/calendar` is the first consumer of `data-models.record-*` �
 
 - **`DataModelIntegration` admin UI** — the registry, server CRUD, and validation exist ; there's no schema-builder tab to configure a mapping yet.
 - **Admin schema-builder UI** (including an "indexed" badge / index-request affordance for `fields.requestIndex`) and the **generic record list/detail UI** (built on `services/web/src/components/fields`).
-- **Project/Industry migration** onto this engine (backfill script + compatibility shim).
-- **Per-row (record-level) authorization** (`DataModelRoleAccess`, mirroring `CalendarRoleAccess`) — record access is model-wide in v1, matching Project/Industry's current lack of row-level RBAC.
+- **Per-row (record-level) authorization** (`DataModelRoleAccess`, mirroring `CalendarRoleAccess`) — record access is model-wide in v1.

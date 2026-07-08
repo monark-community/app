@@ -963,12 +963,7 @@
         "searchAria": "Rechercher des modèles de données",
         "columns": {
           "name": "Nom",
-          "scope": "Portée",
           "updated": "Mis à jour"
-        },
-        "scope": {
-          "organization": "Organisation",
-          "platform": "Plateforme entière"
         },
         "empty": "Aucun modèle de données pour le moment.",
         "emptySearch": "Aucun modèle de données ne correspond à « {query} ».",
@@ -1001,9 +996,6 @@
         "keyHint": "Nom technique compatible URL. Dérivé automatiquement du nom si laissé vide ; immuable après création.",
         "descriptionLabel": "Description",
         "descriptionPlaceholder": "Optionnel",
-        "scopeLabel": "Portée",
-        "scopeOrganization": "Cette organisation",
-        "scopePlatform": "Plateforme entière, partagée entre toutes les organisations",
         "submit": "Créer",
         "cancel": "Annuler",
         "success": "Modèle de données créé.",

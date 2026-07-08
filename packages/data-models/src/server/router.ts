@@ -111,22 +111,13 @@ type DataModelsPermission =
   | "data-models.record-write"
   | "data-models.record-delete";
 
-// Resolves the permission-check shape for an existing model : platform-wide
-// models (organizationId null) gate on the permission with no explicit
-// orgId — same convention as today's industries.write, which falls back to
-// `ctx.activeOrganizationId` (so any org's ADMIN can manage the shared
-// platform-wide taxonomy, not only SYSADMIN ; that's the existing behavior
-// for Industry, not a stricter rule invented here). Org-scoped models gate
-// on the caller's own org and 404 rather than leak cross-org existence.
+// Every Data Model is org-scoped : gate on the caller's own org, and 404
+// rather than leak the existence of another org's model.
 async function requireModelAccess(
   ctx: RbacContext,
   model: DataModelRow,
   permission: DataModelsPermission,
 ): Promise<void> {
-  if (model.organizationId === null) {
-    await requirePermission(ctx, permission);
-    return;
-  }
   // Callers only reach here after their own `if (!ctx.userId) throw ...`
   // guard, so this cast is safe — RbacContext types userId nullable because
   // the anonymous case is valid for other callers of requirePermission.
@@ -148,8 +139,7 @@ async function requireModelById(id: string): Promise<DataModelRow> {
 
 export const dataModelsRouter = router({
   models: router({
-    // Every model visible to the caller's active org : that org's own
-    // models plus every platform-wide model.
+    // Every Data Model in the caller's active org.
     list: publicProcedure
       .input(
         z
@@ -185,11 +175,9 @@ export const dataModelsRouter = router({
         return model;
       }),
 
-    // Platform-wide models are looked up by key alone ; an org-scoped model
-    // needs the caller's active org to disambiguate two orgs reusing the
-    // same key.
+    // Looked up by key within the caller's active org (keys are unique per org).
     getByKey: publicProcedure
-      .input(z.object({ key: modelKeySchema, platform: z.boolean().optional() }))
+      .input(z.object({ key: modelKeySchema }))
       .query(async ({ ctx, input }) => {
         if (!ctx.userId) throw new UnauthorizedError();
         const org = await requireOrg({
@@ -197,21 +185,17 @@ export const dataModelsRouter = router({
           activeOrganizationId: ctx.activeOrganizationId,
         });
         await requirePermission(ctx, "data-models.read-schema", org.id);
-        const model = await findDataModelByKey(input.platform ? null : org.id, input.key);
+        const model = await findDataModelByKey(org.id, input.key);
         if (!model) throw new NotFoundError("DataModel", input.key);
         return model;
       }),
 
-    // `scope: "platform"` checks the permission with no explicit orgId,
-    // same convention as today's industries.write (falls back to the
-    // caller's active org, so any org's ADMIN can create a platform-wide
-    // model, not only SYSADMIN). `scope: "organization"` always targets the
-    // caller's own active org — never a client-supplied organizationId, so
-    // an org admin can't mint a model under another org.
+    // A Data Model is always created under the caller's own active org —
+    // never a client-supplied organizationId, and never platform-wide (those
+    // are disallowed) — so an org admin can't mint a model under another org.
     create: publicProcedure
       .input(
         z.object({
-          scope: z.enum(["organization", "platform"]),
           key: modelKeySchema.optional(),
           name: z.string().trim().min(1).max(80),
           description: z.string().max(2000).nullable().optional(),
@@ -220,16 +204,12 @@ export const dataModelsRouter = router({
       )
       .mutation(async ({ ctx, input }) => {
         if (!ctx.userId) throw new UnauthorizedError();
-        const organizationId =
-          input.scope === "platform"
-            ? null
-            : (
-                await requireOrg({
-                  userId: ctx.userId,
-                  activeOrganizationId: ctx.activeOrganizationId,
-                })
-              ).id;
-        await requirePermission(ctx, "data-models.manage-schema", organizationId ?? undefined);
+        const org = await requireOrg({
+          userId: ctx.userId,
+          activeOrganizationId: ctx.activeOrganizationId,
+        });
+        const organizationId = org.id;
+        await requirePermission(ctx, "data-models.manage-schema", organizationId);
 
         if (input.key) {
           const collision = await findDataModelByKey(organizationId, input.key);

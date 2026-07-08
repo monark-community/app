@@ -963,12 +963,7 @@
         "searchAria": "Search Data Models",
         "columns": {
           "name": "Name",
-          "scope": "Scope",
           "updated": "Updated"
-        },
-        "scope": {
-          "organization": "Organization",
-          "platform": "Platform-wide"
         },
         "empty": "No Data Models yet.",
         "emptySearch": "No Data Model matches “{query}”.",
@@ -1001,9 +996,6 @@
         "keyHint": "URL-safe machine name. Auto-derived from the name if left blank ; immutable after creation.",
         "descriptionLabel": "Description",
         "descriptionPlaceholder": "Optional",
-        "scopeLabel": "Scope",
-        "scopeOrganization": "This organization",
-        "scopePlatform": "Platform-wide, shared across all organizations",
         "submit": "Create",
         "cancel": "Cancel",
         "success": "Data Model created.",
