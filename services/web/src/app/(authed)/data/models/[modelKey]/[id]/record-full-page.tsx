@@ -14,11 +14,13 @@ import {
   type RelationSource,
 } from "@/components/fields";
 import { trpc } from "@/lib/trpc";
+import { RecordAccessSection } from "../record-access-section";
 
 interface ModelInfo {
   id: string;
   key: string;
   name: string;
+  organizationId: string | null;
 }
 
 interface RawField {
@@ -139,6 +141,9 @@ export function RecordFullPage({ model, recordId }: { model: ModelInfo; recordId
         cancelLabel={t("cancel")}
         isBusy={updateMutation.isPending}
       />
+      {model.organizationId && (
+        <RecordAccessSection recordId={recordId} organizationId={model.organizationId} />
+      )}
     </div>
   );
 }

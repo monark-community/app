@@ -436,7 +436,17 @@
       "backToList": "Back to {model}",
       "archivedFilterLabel": "Status",
       "activeOnly": "Active only",
-      "includeArchived": "Include deleted"
+      "includeArchived": "Include deleted",
+      "access": {
+        "title": "Access",
+        "openHint": "Visible to everyone who can access this model.",
+        "restrictedHint": "Restricted to the selected roles (admins always have access).",
+        "noRoles": "No roles to assign yet.",
+        "save": "Save access",
+        "saving": "Saving…",
+        "success": "Record access updated.",
+        "error": "Could not update record access."
+      }
     },
     "empty": "No data models yet."
   },

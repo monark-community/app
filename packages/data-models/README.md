@@ -148,6 +148,4 @@ The admin schema builder ([admin/data-models/[id]/model-editor.tsx](<../../servi
 
 ## Deferred
 
-- **`SELECT` / `MULTI_SELECT` option colors.** The config schema accepts a `color` per option, but the field editor doesn't offer a color picker yet ; options render without a swatch.
-- **Per-record access UI.** Row-level authorization (`DataRecordRoleAccess`) is enforced server-side and managed via `records.getAccess` / `records.setAccess`, but there's no admin UI yet to pick which roles can see a record — the record detail panel needs an "Access" control (mirroring the calendar role picker).
 - **Registry hygiene on hard delete.** A hard-deleted model's global registry entries linger until the next boot re-hydrates only live models. It's already hidden from every org's picker the moment the model is gone (the visibility resolver drops it), so this is cosmetic — the entry just isn't garbage-collected until restart.

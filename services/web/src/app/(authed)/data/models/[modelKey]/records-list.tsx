@@ -38,6 +38,7 @@ import {
 } from "@/components/fields";
 import { trpc } from "@/lib/trpc";
 import { usePaginationLabels } from "@/lib/use-pagination-labels";
+import { RecordAccessSection } from "./record-access-section";
 
 interface ModelInfo {
   id: string;
@@ -357,27 +358,35 @@ export function RecordsList({ model }: { model: ModelInfo }) {
                 <p className="text-sm text-muted-foreground">{t("notFound")}</p>
               )}
               {!isCreateMode && recordParam && recordQuery.data && (
-                <AutoForm
-                  key={recordParam}
-                  fields={fieldDefs}
-                  defaultValues={recordInitial}
-                  onSubmit={async (values) => {
-                    await updateMutation.mutateAsync({ id: recordParam, data: values });
-                  }}
-                  onCancel={panel.close}
-                  submitLabel={t("submit")}
-                  cancelLabel={t("cancel")}
-                  isBusy={updateMutation.isPending}
-                  deleteConfig={{
-                    deleteLabel: t("actions.delete"),
-                    title: t("delete.title"),
-                    description: t("delete.description"),
-                    cancelLabel: t("delete.cancel"),
-                    confirmLabel: t("delete.confirm"),
-                    isPending: deleteMutation.isPending,
-                    onDelete: () => setConfirmMode({ type: "delete", id: recordParam }),
-                  }}
-                />
+                <>
+                  <AutoForm
+                    key={recordParam}
+                    fields={fieldDefs}
+                    defaultValues={recordInitial}
+                    onSubmit={async (values) => {
+                      await updateMutation.mutateAsync({ id: recordParam, data: values });
+                    }}
+                    onCancel={panel.close}
+                    submitLabel={t("submit")}
+                    cancelLabel={t("cancel")}
+                    isBusy={updateMutation.isPending}
+                    deleteConfig={{
+                      deleteLabel: t("actions.delete"),
+                      title: t("delete.title"),
+                      description: t("delete.description"),
+                      cancelLabel: t("delete.cancel"),
+                      confirmLabel: t("delete.confirm"),
+                      isPending: deleteMutation.isPending,
+                      onDelete: () => setConfirmMode({ type: "delete", id: recordParam }),
+                    }}
+                  />
+                  {model.organizationId && (
+                    <RecordAccessSection
+                      recordId={recordParam}
+                      organizationId={model.organizationId}
+                    />
+                  )}
+                </>
               )}
             </div>
           </>

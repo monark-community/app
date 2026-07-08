@@ -436,7 +436,17 @@
       "backToList": "Retour à {model}",
       "archivedFilterLabel": "Statut",
       "activeOnly": "Actifs uniquement",
-      "includeArchived": "Inclure les supprimés"
+      "includeArchived": "Inclure les supprimés",
+      "access": {
+        "title": "Accès",
+        "openHint": "Visible par toute personne pouvant accéder à ce modèle.",
+        "restrictedHint": "Restreint aux rôles sélectionnés (les administrateurs ont toujours accès).",
+        "noRoles": "Aucun rôle à attribuer pour l'instant.",
+        "save": "Enregistrer l'accès",
+        "saving": "Enregistrement…",
+        "success": "Accès à l'enregistrement mis à jour.",
+        "error": "Impossible de mettre à jour l'accès à l'enregistrement."
+      }
     },
     "empty": "Aucun modèle de données pour le moment."
   },
