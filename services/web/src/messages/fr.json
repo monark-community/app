@@ -1091,6 +1091,14 @@
             "optionValue": "Valeur",
             "optionLabel": "Libellé",
             "optionColor": "Couleur",
+            "tones": {
+              "neutral": "Neutre",
+              "accent": "Accent",
+              "green": "Vert",
+              "amber": "Ambre",
+              "red": "Rouge",
+              "outline": "Contour"
+            },
             "addOption": "Ajouter une option",
             "removeOption": "Retirer l'option",
             "allowCustomValues": "Autoriser la saisie de nouvelles options",

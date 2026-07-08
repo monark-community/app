@@ -1091,6 +1091,14 @@
             "optionValue": "Value",
             "optionLabel": "Label",
             "optionColor": "Color",
+            "tones": {
+              "neutral": "Neutral",
+              "accent": "Accent",
+              "green": "Green",
+              "amber": "Amber",
+              "red": "Red",
+              "outline": "Outline"
+            },
             "addOption": "Add option",
             "removeOption": "Remove option",
             "allowCustomValues": "Allow typing new options",

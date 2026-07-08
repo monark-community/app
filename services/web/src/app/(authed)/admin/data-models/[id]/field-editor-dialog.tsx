@@ -44,6 +44,19 @@ const FIELD_TYPES: DataFieldServerType[] = [
   "EMAIL",
 ];
 
+// Maps each option tone (a Badge variant) to its i18n label key. Used to give
+// the tone swatches a distinguishable accessible name — the visible preview
+// Badge is decorative (aria-hidden), so without this every swatch would read
+// as the option's own label to a screen reader.
+const TONE_LABEL_KEY: Record<string, string> = {
+  secondary: "neutral",
+  primary: "accent",
+  success: "green",
+  warning: "amber",
+  destructive: "red",
+  outline: "outline",
+};
+
 // System models a RELATION field can target beyond another Data Model.
 // v1 supports "Calendar" (the calendar integration's own slot already
 // targets it) ; more can be added here as other modules expose a
@@ -387,6 +400,8 @@ export function FieldEditorDialog({
               {options.map((option, index) => {
                 const previewLabel = option.label || option.value || "—";
                 const currentTone = (option.color as BadgeTone | undefined) ?? "secondary";
+                const toneLabel = (tone: string) =>
+                  t(`config.tones.${TONE_LABEL_KEY[tone] ?? "neutral"}`);
                 return (
                   <div key={index} className="flex items-center gap-2">
                     <Input
@@ -409,19 +424,22 @@ export function FieldEditorDialog({
                       }
                     >
                       <SelectTrigger
-                        aria-label={t("config.optionColor")}
+                        aria-label={`${t("config.optionColor")} — ${toneLabel(currentTone)}`}
                         className="w-auto shrink-0 gap-1"
                       >
-                        <Badge variant={currentTone} size="sm">
+                        <Badge variant={currentTone} size="sm" aria-hidden>
                           {previewLabel}
                         </Badge>
                       </SelectTrigger>
                       <SelectContent>
                         {SELECT_OPTION_TONES.map((tone) => (
-                          <SelectItem key={tone} value={tone} aria-label={tone}>
-                            <Badge variant={tone} size="sm">
+                          <SelectItem key={tone} value={tone} textValue={toneLabel(tone)}>
+                            {/* The colored preview is decorative ; the
+                                sr-only label names the tone for AT + typeahead. */}
+                            <Badge variant={tone} size="sm" aria-hidden>
                               {previewLabel}
                             </Badge>
+                            <span className="sr-only">{toneLabel(tone)}</span>
                           </SelectItem>
                         ))}
                       </SelectContent>
