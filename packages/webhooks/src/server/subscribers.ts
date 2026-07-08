@@ -53,7 +53,17 @@ export function registerWebhookSubscribers(): void {
       // they want this — they just have to opt in.)
       if (event.type.startsWith("webhook.")) return;
 
-      const endpoints = await findMatchingEndpoints(event.type);
+      // Match on the event's own type plus any `subscriptionAliases` it
+      // exposes — an emitter can offer finer-grained subscribable types
+      // (e.g. per-Data-Model record events) without a new union member.
+      const aliases = Array.isArray(
+        (event as { subscriptionAliases?: unknown }).subscriptionAliases,
+      )
+        ? (event as { subscriptionAliases: string[] }).subscriptionAliases
+        : [];
+      const candidateTypes = [event.type, ...aliases];
+
+      const endpoints = await findMatchingEndpoints(candidateTypes);
       if (endpoints.length === 0) return;
 
       // Type-narrow the event payload by duck-typing — the union of

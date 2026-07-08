@@ -54,10 +54,10 @@ export function keyifyField(raw: string): string {
   return /^[a-z]/.test(base) ? base : `f_${base}`;
 }
 
-// Find a free DataModel.key. Platform-wide models (organizationId null)
-// share one global key namespace ; org-scoped models are keyed per-org —
-// matches the two partial-unique indexes added in the
-// 20260706000312_add_data_models migration.
+// Find a free DataModel.key. Every Data Model is org-scoped, so keys are
+// unique per org (the `@@unique([organizationId, key])` added in the
+// 20260707050000_data_models_org_required migration) — two orgs can each
+// have a "project" model without collision.
 export async function findFreeDataModelKey(
   organizationId: string,
   desired: string,
@@ -138,6 +138,16 @@ export async function listDataModels(input: ListDataModelsInput): Promise<Pagina
 export async function findDataModelById(id: string): Promise<DataModelRow | null> {
   const db = getDb();
   return db.dataModel.findUnique({ where: { id } });
+}
+
+// Every live Data Model across every org. Intentionally unbounded (no
+// pagination) : the only caller is boot-time registry hydration
+// (`hydrateDataModelRegistrations`), which must walk the full set once to
+// re-register per-model permissions + event types into the in-memory
+// registries. Not exposed over tRPC.
+export async function listAllDataModelsForRegistration(): Promise<DataModelRow[]> {
+  const db = getDb();
+  return db.dataModel.findMany({ where: { deletedAt: null } });
 }
 
 export async function findDataModelByKey(

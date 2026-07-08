@@ -701,11 +701,10 @@ enum DataFieldType {
   EMAIL
 }
 
-// A model definition. organizationId == null means platform-wide
-// (mirrors Industry's taxonomy semantics today) ; non-null means
-// org-scoped (mirrors Project's semantics today). Both live in the same
-// table — scope is a column, not a type split, so the generic engine
-// and its admin UI never special-case "which flavor of model is this."
+// A model definition. Every Data Model is org-scoped ; platform-wide
+// (null-org) models are disallowed. Key uniqueness is per-org and scoped
+// to LIVE rows only — a soft-deleted model frees its key for reuse (see
+// the partial index note at the bottom of the model).
 model DataModel {
   id             String        @id @default(cuid())
   // Every Data Model is org-scoped ; platform-wide (null-org) models are
@@ -735,7 +734,13 @@ model DataModel {
   records      DataRecord[]
   integrations DataModelIntegration[]
 
-  @@unique([organizationId, key])
+  // Per-org key uniqueness among LIVE models is enforced by the hand-
+  // written partial index `DataModel_org_key_active_unique`
+  // (`WHERE deletedAt IS NULL`) in the 20260707060000 migration. Prisma's
+  // `@@unique` can't express the NULL-aware WHERE, and a plain unique
+  // would reserve a soft-deleted model's key forever — but the data layer
+  // (findDataModelByKey / findFreeDataModelKey) filters `deletedAt IS
+  // NULL` and expects a soft-deleted key to free up.
   @@index([organizationId])
   @@index([deletedAt])
 }

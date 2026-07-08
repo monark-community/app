@@ -35,6 +35,7 @@ import {
   listCalendarMembers,
 } from "@monark/calendar/server";
 import {
+  hydrateDataModelRegistrations,
   registerDataModelsEventTypes,
   registerDataModelsPermissions,
 } from "@monark/data-models/server";
@@ -201,6 +202,16 @@ function startBackgroundWork(): void {
   // Fire-and-forget : a DB hiccup here doesn't block the api process.
   void syncFlagsToDatabase().catch((err) =>
     logger.error({ err }, "syncFlagsToDatabase failed at boot"),
+  );
+
+  // Re-hydrate per-model Data Model registrations (RBAC permissions +
+  // webhook-subscribable event types) from the DB — the in-memory
+  // registries are wiped on restart, and the static `register*` calls
+  // above only cover the generic `data-models.*` keys. Fire-and-forget :
+  // until this lands, the generic record permissions + admin short-circuit
+  // keep record access working. See @monark/data-models registrations.
+  void hydrateDataModelRegistrations().catch((err) =>
+    logger.error({ err }, "hydrateDataModelRegistrations failed at boot"),
   );
 }
 

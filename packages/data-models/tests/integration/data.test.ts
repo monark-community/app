@@ -16,10 +16,11 @@ import {
 } from "../../src/server/data";
 
 // Integration tests for the DataModel/DataField data layer against a real
-// Postgres testcontainer. These lock in the two hand-written partial-unique
-// indexes added in the 20260706000312_add_data_models migration (Prisma's
-// `@@unique` can't express a NULL-aware WHERE) : a platform-wide key
-// namespace independent of any org's own key namespace.
+// Postgres testcontainer. These lock in the hand-written partial-unique
+// index `DataModel_org_key_active_unique` (20260707060000 migration ;
+// Prisma's `@@unique` can't express the NULL-aware WHERE) : per-org key
+// uniqueness among LIVE models, with a soft-deleted key freed for reuse.
+// Every Data Model is org-scoped — platform-wide (null-org) is disallowed.
 
 const ORG_A = "dm-org-a";
 const ORG_B = "dm-org-b";
@@ -57,24 +58,7 @@ afterAll(async () => {
   await db.user.deleteMany({ where: { id: ACTOR } });
 });
 
-describe("DataModel key uniqueness — partial indexes", () => {
-  it("rejects a second platform-wide model with the same key", async () => {
-    await createDataModel({
-      organizationId: null,
-      key: "industry",
-      name: "Industry",
-      createdBy: ACTOR,
-    });
-    await expect(
-      createDataModel({
-        organizationId: null,
-        key: "industry",
-        name: "Industry Again",
-        createdBy: ACTOR,
-      }),
-    ).rejects.toThrow();
-  });
-
+describe("DataModel key uniqueness — partial index", () => {
   it("allows two different orgs to reuse the same model key", async () => {
     await createDataModel({
       organizationId: ORG_A,
@@ -116,38 +100,39 @@ describe("DataModel key uniqueness — partial indexes", () => {
 });
 
 describe("DataModel soft delete / restore", () => {
-  it("a soft-deleted model no longer collides on key, and restore re-blocks it", async () => {
+  it("a soft-deleted model frees its key, and restore re-reserves it", async () => {
     const model = await createDataModel({
       organizationId: ORG_A,
       key: "archive-me",
       name: "Archive Me",
       createdBy: ACTOR,
     });
+    // A live model reserves the key.
+    expect(await findFreeDataModelKey(ORG_A, "archive-me")).toBe("archive-me-2");
+
     await softDeleteDataModel(model.id);
-    // Free again once soft-deleted (partial index filters deletedAt IS NULL).
-    await expect(
-      createDataModel({
-        organizationId: ORG_A,
-        key: "archive-me",
-        name: "Reborn",
-        createdBy: ACTOR,
-      }),
-    ).resolves.toBeTruthy();
+    // Freed once soft-deleted (partial index filters `deletedAt IS NULL`),
+    // matching the data layer's `deletedAt: null` collision checks.
+    expect(await findFreeDataModelKey(ORG_A, "archive-me")).toBe("archive-me");
+
+    await restoreDataModel(model.id);
+    // Restoring brings the model back to life, re-reserving its key.
+    expect(await findFreeDataModelKey(ORG_A, "archive-me")).toBe("archive-me-2");
   });
 });
 
-describe("listDataModels — org-scoped + platform-wide union", () => {
-  it("returns the caller's org models plus every platform-wide model, never another org's", async () => {
-    await createDataModel({
-      organizationId: null,
-      key: "industry",
-      name: "Industry",
-      createdBy: ACTOR,
-    });
+describe("listDataModels — org-scoped", () => {
+  it("returns only the caller's org models, never another org's", async () => {
     await createDataModel({
       organizationId: ORG_A,
       key: "project",
       name: "Project",
+      createdBy: ACTOR,
+    });
+    await createDataModel({
+      organizationId: ORG_A,
+      key: "note",
+      name: "Note",
       createdBy: ACTOR,
     });
     await createDataModel({
@@ -159,7 +144,7 @@ describe("listDataModels — org-scoped + platform-wide union", () => {
 
     const page = await listDataModels({ organizationId: ORG_A });
     const keys = page.items.map((m) => m.key).sort();
-    expect(keys).toEqual(["industry", "project"]);
+    expect(keys).toEqual(["note", "project"]);
   });
 });
 

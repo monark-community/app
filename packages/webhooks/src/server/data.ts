@@ -141,26 +141,29 @@ export async function deleteEndpoint(id: string): Promise<void> {
 }
 
 /**
- * Queries every active endpoint whose subscription set matches the
- * given event type. Exact subscriptions match `eventType =
- * <type>` ; prefix subscriptions match when the type starts with the
- * subscription string. Org-scoping is applied downstream in the
- * subscriber (see [subscribers.ts](./subscribers.ts) for the full
- * routing rules) ; this function returns every candidate so the
- * subscriber can pick.
+ * Queries every active endpoint whose subscription set matches any of
+ * the given candidate event types. The candidate set is the emitted
+ * event's own `type` plus its `subscriptionAliases` (see
+ * [subscribers.ts](./subscribers.ts)) — so a generic emit can route to
+ * a finer-grained per-alias subscription. Exact subscriptions match
+ * `eventType IN <candidates>` ; prefix subscriptions match when any
+ * candidate starts with the subscription string. Org-scoping is applied
+ * downstream in the subscriber ; this function returns every candidate
+ * endpoint so the subscriber can pick.
  */
-export async function findMatchingEndpoints(eventType: string): Promise<EndpointRow[]> {
+export async function findMatchingEndpoints(eventTypes: string[]): Promise<EndpointRow[]> {
   const db = getDb();
-  // Exact-match path : a single index hit on (eventType).
+  // Exact-match path : a single index hit on (eventType), widened to the
+  // small candidate set with an `IN`.
   const exact = db.webhookSubscription.findMany({
-    where: { eventType, isPrefix: false },
+    where: { eventType: { in: eventTypes }, isPrefix: false },
     select: {
       endpoint: true,
     },
   });
   // Prefix-match path : Postgres can't index this side, but the prefix
   // set is small (one row per `<module>.` style filter). We pull every
-  // prefix sub and filter in memory.
+  // prefix sub and filter in memory against every candidate.
   const prefixes = db.webhookSubscription.findMany({
     where: { isPrefix: true },
     select: {
@@ -174,7 +177,10 @@ export async function findMatchingEndpoints(eventType: string): Promise<Endpoint
     if (row.endpoint.status === "active") map.set(row.endpoint.id, row.endpoint);
   }
   for (const row of prefixRows) {
-    if (eventType.startsWith(row.eventType) && row.endpoint.status === "active") {
+    if (
+      row.endpoint.status === "active" &&
+      eventTypes.some((candidate) => candidate.startsWith(row.eventType))
+    ) {
       map.set(row.endpoint.id, row.endpoint);
     }
   }

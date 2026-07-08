@@ -1,9 +1,21 @@
 import { z } from "zod";
 import { router, publicProcedure } from "@monark/common/trpc";
-import { emit, NotFoundError, UnauthorizedError, ValidationError } from "@monark/common";
+import {
+  emit,
+  ForbiddenError,
+  NotFoundError,
+  UnauthorizedError,
+  ValidationError,
+} from "@monark/common";
 import { MAX_PAGE_SIZE } from "@monark/common/pagination";
 import { requireOrg } from "@monark/organizations/server";
-import { requirePermission, type RbacContext } from "@monark/rbac/server";
+import { hasPermission, requirePermission, type RbacContext } from "@monark/rbac/server";
+import {
+  perModelEventType,
+  perModelPermissionDotted,
+  recordPermissionVerb,
+  registerDataModelRegistrations,
+} from "./registrations";
 import { DATA_FIELD_TYPES } from "../contracts/field-types";
 import { listModelIntegrations } from "../contracts/integrations";
 import { getFieldIndexStatus, requestFieldIndex } from "./indexing";
@@ -113,6 +125,12 @@ type DataModelsPermission =
 
 // Every Data Model is org-scoped : gate on the caller's own org, and 404
 // rather than leak the existence of another org's model.
+//
+// Record permissions (record-read/write/delete) are satisfied by EITHER the
+// per-model key (`data-models.<key>-record-<verb>`) OR the generic key — so a
+// role granted just one model's records passes, and the blanket grant keeps
+// working. ADMIN/SYSADMIN short-circuit both. Schema permissions
+// (read-schema / manage-schema) have no per-model variant and gate directly.
 async function requireModelAccess(
   ctx: RbacContext,
   model: DataModelRow,
@@ -121,13 +139,28 @@ async function requireModelAccess(
   // Callers only reach here after their own `if (!ctx.userId) throw ...`
   // guard, so this cast is safe — RbacContext types userId nullable because
   // the anonymous case is valid for other callers of requirePermission.
+  const userId = ctx.userId as string;
   const org = await requireOrg({
-    userId: ctx.userId as string,
+    userId,
     activeOrganizationId: ctx.activeOrganizationId,
   });
   if (model.organizationId !== org.id) {
     throw new NotFoundError("DataModel", model.id);
   }
+
+  const verb = recordPermissionVerb(permission);
+  if (verb) {
+    const perModel = perModelPermissionDotted(model.key, verb);
+    const [okPerModel, okGeneric] = await Promise.all([
+      hasPermission(userId, perModel, org.id),
+      hasPermission(userId, permission, org.id),
+    ]);
+    if (!okPerModel && !okGeneric) {
+      throw new ForbiddenError(`Missing required permission: ${perModel}`);
+    }
+    return;
+  }
+
   await requirePermission(ctx, permission, org.id);
 }
 
@@ -228,6 +261,11 @@ export const dataModelsRouter = router({
           createdBy: ctx.userId,
         });
 
+        // Auto-register this model's per-model permissions + event types so
+        // its records are individually grantable (RBAC) and subscribable
+        // (webhooks) the moment it exists. See ./registrations.
+        registerDataModelRegistrations({ key: model.key, name: model.name });
+
         const event: DataModelSchemaChangedEvent = {
           type: "data-models.schema-changed",
           dataModelId: model.id,
@@ -268,6 +306,11 @@ export const dataModelsRouter = router({
           icon: input.icon,
           titleFieldId: input.titleFieldId,
         });
+
+        // Refresh the per-model permission / event-type labels — the model
+        // key is immutable so the keys are stable, but a rename should update
+        // the human descriptions in the RBAC catalog + webhook picker.
+        registerDataModelRegistrations({ key: updated.key, name: updated.name });
 
         const event: DataModelSchemaChangedEvent = {
           type: "data-models.schema-changed",
@@ -631,6 +674,7 @@ export const dataModelsRouter = router({
           organizationId: model.organizationId,
           actorId: ctx.userId,
           occurredAt: new Date(),
+          subscriptionAliases: [perModelEventType(model.key, "created")],
         };
         await emit(event).catch(() => {});
 
@@ -672,6 +716,7 @@ export const dataModelsRouter = router({
             actorId: ctx.userId,
             changed,
             occurredAt: new Date(),
+            subscriptionAliases: [perModelEventType(model.key, "updated")],
           };
           await emit(event).catch(() => {});
         }
@@ -704,6 +749,7 @@ export const dataModelsRouter = router({
           actorId: ctx.userId,
           hard,
           occurredAt: new Date(),
+          subscriptionAliases: [perModelEventType(model.key, "deleted")],
         };
         await emit(event).catch(() => {});
       }),

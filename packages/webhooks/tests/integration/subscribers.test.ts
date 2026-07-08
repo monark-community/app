@@ -263,6 +263,66 @@ describe("webhooks/subscribers — Rule 3 (user-tied membership match)", () => {
   });
 });
 
+describe("webhooks/subscribers — per-model subscription aliases", () => {
+  // The Data Models engine emits ONE generic `data-models.record-created`
+  // but carries per-model `subscriptionAliases` so an operator can subscribe
+  // a webhook to a single model's records. The matcher treats
+  // `[type, ...aliases]` as the candidate set.
+  it("routes a generic record event to a per-model alias subscription", async () => {
+    const epId = await seedEndpoint({
+      organizationId: ORG_A,
+      eventType: "data-models.project-record-created",
+    });
+    await emit({
+      type: "data-models.record-created",
+      dataModelId: "dm-project",
+      dataModelKey: "project",
+      recordId: "rec-1",
+      organizationId: ORG_A,
+      actorId: USER_A,
+      occurredAt: new Date(),
+      subscriptionAliases: ["data-models.project-record-created"],
+    });
+    expect(await deliveriesForEndpoint(epId)).toBe(1);
+  });
+
+  it("does NOT route to a different model's alias subscription", async () => {
+    const epId = await seedEndpoint({
+      organizationId: ORG_A,
+      eventType: "data-models.invoice-record-created",
+    });
+    await emit({
+      type: "data-models.record-created",
+      dataModelId: "dm-project",
+      dataModelKey: "project",
+      recordId: "rec-1",
+      organizationId: ORG_A,
+      actorId: USER_A,
+      occurredAt: new Date(),
+      subscriptionAliases: ["data-models.project-record-created"],
+    });
+    expect(await deliveriesForEndpoint(epId)).toBe(0);
+  });
+
+  it("still matches a generic exact subscription to the base type", async () => {
+    const epId = await seedEndpoint({
+      organizationId: ORG_A,
+      eventType: "data-models.record-created",
+    });
+    await emit({
+      type: "data-models.record-created",
+      dataModelId: "dm-project",
+      dataModelKey: "project",
+      recordId: "rec-1",
+      organizationId: ORG_A,
+      actorId: USER_A,
+      occurredAt: new Date(),
+      subscriptionAliases: ["data-models.project-record-created"],
+    });
+    expect(await deliveriesForEndpoint(epId)).toBe(1);
+  });
+});
+
 describe("webhooks/subscribers — singleton-org fallback", () => {
   // `findOnlySingletonOrgId` returns the single non-deleted org id
   // when there's exactly one. The shared testcontainer hosts orgs
