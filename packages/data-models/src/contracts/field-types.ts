@@ -18,6 +18,7 @@ export const DATA_FIELD_TYPES = [
   "RELATION",
   "URL",
   "EMAIL",
+  "FORMULA",
 ] as const;
 export type DataFieldType = (typeof DATA_FIELD_TYPES)[number];
 
@@ -80,6 +81,14 @@ export const fieldConfigSchemas = {
   }),
   URL: z.object({ maxLength: z.number().int().max(2000).optional() }),
   EMAIL: z.object({ maxLength: z.number().int().max(320).optional() }),
+  // A computed, read-only field. `expression` is validated for *syntax* here ;
+  // reference resolution + cycle detection (which need the model's other
+  // fields) happen server-side in `server/data.ts`. The value is never taken
+  // from client input — it's computed on write from the record's own data.
+  FORMULA: z.object({
+    expression: z.string().trim().min(1).max(2000),
+    resultType: z.enum(["TEXT", "NUMBER", "BOOLEAN", "DATE"]),
+  }),
 } as const satisfies Record<DataFieldType, z.ZodTypeAny>;
 
 export type FieldConfig<T extends DataFieldType> = z.infer<(typeof fieldConfigSchemas)[T]>;
@@ -252,6 +261,12 @@ export function valueSchemaFor(
         ? z.string({ invalid_type_error: m.required }).min(1, m.required)
         : z.string().nullable();
     }
+
+    case "FORMULA":
+      // Computed server-side, never accepted from client input (the record
+      // write schema drops FORMULA keys and recomputes them). Any stored
+      // value is tolerated on the way back out.
+      return z.unknown();
   }
 }
 

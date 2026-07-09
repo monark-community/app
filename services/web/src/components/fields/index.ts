@@ -26,6 +26,8 @@ export type {
   EmailFieldDef,
   FieldDef,
   FieldInputProps,
+  FormulaFieldDef,
+  FormulaResultType,
   FieldLabels,
   FieldMessages,
   FieldStrings,

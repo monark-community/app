@@ -1094,7 +1094,8 @@
             "MULTI_SELECT": "Sélection multiple",
             "RELATION": "Relation",
             "URL": "URL",
-            "EMAIL": "Courriel"
+            "EMAIL": "Courriel",
+            "FORMULA": "Formule"
           },
           "config": {
             "minLength": "Longueur min.",
@@ -1122,7 +1123,26 @@
             "cardinality": "Autoriser",
             "cardinalityOne": "Un seul",
             "cardinalityMany": "Plusieurs",
-            "maxItems": "Sélections max."
+            "maxItems": "Sélections max.",
+            "formula": {
+              "resultType": "Type de résultat",
+              "resultTypes": {
+                "NUMBER": "Nombre",
+                "TEXT": "Texte",
+                "BOOLEAN": "Oui / non",
+                "DATE": "Date"
+              },
+              "expression": "Formule",
+              "addFormula": "Ajouter une formule",
+              "expressionPlaceholder": "ex. round(price * quantity, 2)",
+              "insertColumn": "Insérer un champ",
+              "noColumns": "Aucun autre champ à référencer",
+              "valid": "Valide",
+              "invalid": "Formule invalide",
+              "unknownField": "Champ inconnu : {field}",
+              "functions": "Fonctions",
+              "help": "Référencez d'autres champs par leur clé. Utilisez & pour joindre du texte, et des fonctions comme if(), round() et concat()."
+            }
           },
           "submit": "Enregistrer",
           "cancel": "Annuler",

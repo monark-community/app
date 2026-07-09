@@ -56,6 +56,11 @@ function toValueShape(def: FieldDef): DataFieldValueShape {
         multiple: def.multiple,
         maxItems: def.multiple ? def.max : undefined,
       };
+    case "formula":
+      // Computed + read-only : never required, value not user-supplied. The
+      // shared builder returns a permissive schema for FORMULA (the server
+      // strips + recomputes it anyway).
+      return { type: "FORMULA", required: false };
   }
 }
 

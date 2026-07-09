@@ -28,6 +28,7 @@ import { Badge } from "@/components/ui/badge";
 import { trpc } from "@/lib/trpc";
 import { SELECT_OPTION_TONES } from "@/components/fields";
 import type { BadgeTone, DataFieldServerType } from "@/components/fields";
+import { FormulaConfigEditor, type FormulaResultTypeValue } from "./formula-config";
 
 const FIELD_TYPES: DataFieldServerType[] = [
   "TEXT",
@@ -42,6 +43,7 @@ const FIELD_TYPES: DataFieldServerType[] = [
   "RELATION",
   "URL",
   "EMAIL",
+  "FORMULA",
 ];
 
 // Maps each option tone (a Badge variant) to its i18n label key. Used to give
@@ -127,6 +129,10 @@ export function FieldEditorDialog({
   const [cardinality, setCardinality] = useState<"ONE" | "MANY">(
     (initialConfig.cardinality as "ONE" | "MANY") ?? "ONE",
   );
+  const [expression, setExpression] = useState<string>((initialConfig.expression as string) ?? "");
+  const [formulaResultType, setFormulaResultType] = useState<FormulaResultTypeValue>(
+    (initialConfig.resultType as FormulaResultTypeValue) ?? "NUMBER",
+  );
 
   // Reset local state whenever a different field (or "new") is opened.
   useEffect(() => {
@@ -150,6 +156,8 @@ export function FieldEditorDialog({
       (cfg.relationTargetKind as "DATA_MODEL" | "SYSTEM_MODEL") ?? "DATA_MODEL",
     );
     setCardinality((cfg.cardinality as "ONE" | "MANY") ?? "ONE");
+    setExpression((cfg.expression as string) ?? "");
+    setFormulaResultType((cfg.resultType as FormulaResultTypeValue) ?? "NUMBER");
     // Deliberately keyed on `open` + `field?.id` only : this resets the form
     // to match whichever field (or "new") was just opened, not on every
     // re-render `field` happens to produce a new object reference.
@@ -164,6 +172,22 @@ export function FieldEditorDialog({
   const otherModelItems: Array<{ id: string; key: string; name: string }> =
     otherModelsQuery.data?.items ?? [];
   const otherModels = otherModelItems.filter((m) => m.id !== dataModelId);
+
+  // Sibling fields a FORMULA expression can reference (by key). Excludes the
+  // field being edited (a formula can't reference itself) and archived fields.
+  const siblingFieldsQuery = trpc.dataModels.fields.list.useQuery(
+    { dataModelId },
+    { enabled: open && type === "FORMULA", refetchOnWindowFocus: false },
+  );
+  const siblingFieldItems: Array<{
+    id: string;
+    key: string;
+    label: string;
+    archivedAt: string | null;
+  }> = siblingFieldsQuery.data ?? [];
+  const formulaColumns = siblingFieldItems
+    .filter((f) => f.id !== field?.id && f.archivedAt === null)
+    .map((f) => ({ key: f.key, label: f.label }));
 
   const utils = trpc.useUtils();
   const createMutation = trpc.dataModels.fields.create.useMutation({
@@ -209,6 +233,8 @@ export function FieldEditorDialog({
           cardinality,
           ...(cardinality === "MANY" ? { max: num(maxItems) } : {}),
         };
+      case "FORMULA":
+        return { expression, resultType: formulaResultType };
       case "RICH_TEXT":
       case "BOOLEAN":
       case "DATE":
@@ -229,6 +255,8 @@ export function FieldEditorDialog({
     relationTarget,
     relationTargetKind,
     cardinality,
+    expression,
+    formulaResultType,
   ]);
 
   function handleSubmit() {
@@ -325,10 +353,13 @@ export function FieldEditorDialog({
             )}
           </div>
 
-          <div className="flex items-center justify-between">
-            <Label htmlFor="field-required">{t("requiredLabel")}</Label>
-            <Switch id="field-required" checked={required} onCheckedChange={setRequired} />
-          </div>
+          {/* A FORMULA field is computed + read-only, so "required" is moot. */}
+          {type !== "FORMULA" && (
+            <div className="flex items-center justify-between">
+              <Label htmlFor="field-required">{t("requiredLabel")}</Label>
+              <Switch id="field-required" checked={required} onCheckedChange={setRequired} />
+            </div>
+          )}
 
           {(type === "TEXT" || type === "LONG_TEXT") && (
             <div className="grid grid-cols-2 gap-3">
@@ -540,6 +571,16 @@ export function FieldEditorDialog({
                 </div>
               )}
             </div>
+          )}
+
+          {type === "FORMULA" && (
+            <FormulaConfigEditor
+              expression={expression}
+              onExpressionChange={setExpression}
+              resultType={formulaResultType}
+              onResultTypeChange={setFormulaResultType}
+              columns={formulaColumns}
+            />
           )}
         </div>
 

@@ -14,6 +14,13 @@ import {
   valueSchemaForField,
   type DataFieldType,
 } from "../contracts/field-types";
+import {
+  coerceFormulaResult,
+  evaluateFormula,
+  extractFieldRefs,
+  FormulaError,
+  type FormulaResultType,
+} from "../contracts/formula";
 import { getModelIntegrationDef } from "../contracts/integrations";
 
 export { DATA_FIELD_TYPES } from "../contracts/field-types";
@@ -266,9 +273,85 @@ export type CreateDataFieldInput = {
   position?: number;
 };
 
+/** The parsed `{ expression, resultType }` of a FORMULA field's config. */
+function formulaConfigOf(field: Pick<DataFieldRow, "config">): {
+  expression: string;
+  resultType: FormulaResultType;
+} {
+  return fieldConfigSchemas.FORMULA.parse(field.config);
+}
+
+// Validates a FORMULA field's expression against the model it belongs to:
+// every referenced identifier must be another field's key (never the field
+// itself), and the formula dependency graph must stay acyclic (formula A ->
+// formula B -> formula A is rejected). Syntax was already checked by the
+// config zod ; this is the model-aware layer, so it lives in the data layer
+// where the sibling fields are loadable. `selfKey` is the key of the field
+// being created/updated ; `selfId` excludes its own current row on update.
+async function assertFormulaFieldValid(
+  dataModelId: string,
+  selfKey: string,
+  expression: string,
+  selfId?: string,
+): Promise<void> {
+  let refs: string[];
+  try {
+    refs = extractFieldRefs(expression);
+  } catch (err) {
+    throw new ValidationError(err instanceof FormulaError ? err.message : "Invalid formula");
+  }
+
+  const fields = await listDataFields(dataModelId);
+  const validKeys = new Set(fields.map((f) => f.key));
+  validKeys.add(selfKey); // the field being created isn't in the list yet
+  for (const ref of refs) {
+    if (ref === selfKey) throw new ValidationError(`A formula cannot reference itself ("${ref}")`);
+    if (!validKeys.has(ref)) throw new ValidationError(`Formula references unknown field "${ref}"`);
+  }
+
+  // Build the formula-only dependency graph with the pending change applied,
+  // then check the edited field can't reach itself.
+  const exprByKey = new Map<string, string>();
+  for (const f of fields) {
+    if (f.id === selfId) continue; // superseded by the incoming expression
+    if ((f.type as DataFieldType) !== "FORMULA") continue;
+    try {
+      exprByKey.set(f.key, formulaConfigOf(f).expression);
+    } catch {
+      // A malformed persisted config shouldn't block an unrelated edit.
+    }
+  }
+  exprByKey.set(selfKey, expression);
+
+  const formulaRefsOf = (key: string): string[] => {
+    const expr = exprByKey.get(key);
+    if (!expr) return [];
+    try {
+      return extractFieldRefs(expr).filter((r) => exprByKey.has(r));
+    } catch {
+      return [];
+    }
+  };
+  const seen = new Set<string>();
+  const stack = [...formulaRefsOf(selfKey)];
+  while (stack.length > 0) {
+    const key = stack.pop() as string;
+    if (key === selfKey) {
+      throw new ValidationError("Formula fields form a reference cycle");
+    }
+    if (seen.has(key)) continue;
+    seen.add(key);
+    stack.push(...formulaRefsOf(key));
+  }
+}
+
 export async function createDataField(input: CreateDataFieldInput): Promise<DataFieldRow> {
   const db = getDb();
   const config = fieldConfigSchemas[input.type].parse(input.config ?? {});
+  if (input.type === "FORMULA") {
+    const { expression } = formulaConfigOf({ config });
+    await assertFormulaFieldValid(input.dataModelId, input.key, expression);
+  }
   const position =
     input.position ??
     ((await db.dataField.count({ where: { dataModelId: input.dataModelId } })) + 1) * 10;
@@ -305,6 +388,10 @@ export async function updateDataField(
     patch.config !== undefined
       ? fieldConfigSchemas[existing.type as DataFieldType].parse(patch.config)
       : undefined;
+  if (config !== undefined && (existing.type as DataFieldType) === "FORMULA") {
+    const { expression } = formulaConfigOf({ config });
+    await assertFormulaFieldValid(existing.dataModelId, existing.key, expression, existing.id);
+  }
   return db.dataField.update({
     where: { id },
     data: {
@@ -348,15 +435,72 @@ export async function unarchiveDataField(id: string): Promise<void> {
 // client's dynamic form — see the module README). Unknown keys in the
 // payload are stripped (default z.object() behavior), not silently
 // accepted, so a stale client can't write orphan JSON keys.
+//
+// FORMULA fields are omitted entirely : they're computed, read-only, and
+// recomputed from the record's own data on every write (see
+// `applyComputedFields`), so any client-supplied value for one is dropped
+// here rather than trusted.
 function recordDataSchema(fields: DataFieldRow[]): z.ZodObject<Record<string, z.ZodTypeAny>> {
   return z.object(
     Object.fromEntries(
-      fields.map((f) => [
-        f.key,
-        valueSchemaForField(f.type as DataFieldType, f.config, f.required),
-      ]),
+      fields
+        .filter((f) => (f.type as DataFieldType) !== "FORMULA")
+        .map((f) => [f.key, valueSchemaForField(f.type as DataFieldType, f.config, f.required)]),
     ),
   );
+}
+
+// Compute-on-write for FORMULA fields : evaluate each formula from the
+// record's own field values and write the (coerced) result back into `data`,
+// so formula columns are stored like any other value and stay filterable /
+// sortable. Formulas that reference other formulas evaluate in dependency
+// order, so a chained formula sees its upstream's fresh result. A formula
+// that fails to evaluate degrades to `null` (the engine is total — see
+// contracts/formula.ts). Returns a new object ; never mutates the input.
+function applyComputedFields(
+  fields: DataFieldRow[],
+  data: Record<string, unknown>,
+): Record<string, unknown> {
+  const formulaFields = fields.filter((f) => (f.type as DataFieldType) === "FORMULA");
+  if (formulaFields.length === 0) return data;
+
+  const byKey = new Map(formulaFields.map((f) => [f.key, f]));
+  // Topological order over formula-to-formula references (a DFS post-order),
+  // falling back to declaration order for any residual cycle (validation
+  // rejects cycles at field-save time, so this is belt-and-suspenders).
+  const ordered: DataFieldRow[] = [];
+  const visited = new Set<string>();
+  const visiting = new Set<string>();
+  const visit = (field: DataFieldRow): void => {
+    if (visited.has(field.key) || visiting.has(field.key)) return;
+    visiting.add(field.key);
+    let expression = "";
+    try {
+      expression = formulaConfigOf(field).expression;
+      for (const ref of extractFieldRefs(expression)) {
+        const dep = byKey.get(ref);
+        if (dep) visit(dep);
+      }
+    } catch {
+      // Malformed config / parse error — order it as-is ; eval will null it.
+    }
+    visiting.delete(field.key);
+    visited.add(field.key);
+    ordered.push(field);
+  };
+  for (const f of formulaFields) visit(f);
+
+  const out = { ...data };
+  for (const field of ordered) {
+    try {
+      const { expression, resultType } = formulaConfigOf(field);
+      const value = evaluateFormula(expression, out);
+      out[field.key] = coerceFormulaResult(value, resultType);
+    } catch {
+      out[field.key] = null;
+    }
+  }
+  return out;
 }
 
 // Plain-text label for the denormalized `DataRecord.title` column, derived
@@ -554,7 +698,7 @@ export async function createDataRecord(input: CreateDataRecordInput): Promise<Da
   const db = getDb();
   const model = await db.dataModel.findUniqueOrThrow({ where: { id: input.dataModelId } });
   const fields = await listDataFields(input.dataModelId);
-  const parsed = recordDataSchema(fields).parse(input.data);
+  const parsed = applyComputedFields(fields, recordDataSchema(fields).parse(input.data));
   const title = await computeTitle(db, model.id, model.titleFieldId, parsed);
   return db.dataRecord.create({
     data: {
@@ -562,7 +706,7 @@ export async function createDataRecord(input: CreateDataRecordInput): Promise<Da
       organizationId: model.organizationId,
       slug: input.slug ?? null,
       title,
-      data: parsed,
+      data: parsed as Prisma.InputJsonValue,
       createdBy: input.createdBy,
     },
   });
@@ -584,14 +728,14 @@ export async function updateDataRecord(
   const existing = await db.dataRecord.findUniqueOrThrow({ where: { id } });
   const fields = await listDataFields(existing.dataModelId);
   const merged = { ...(existing.data as Record<string, unknown>), ...(patch.data ?? {}) };
-  const parsed = recordDataSchema(fields).parse(merged);
+  const parsed = applyComputedFields(fields, recordDataSchema(fields).parse(merged));
   const model = await db.dataModel.findUniqueOrThrow({ where: { id: existing.dataModelId } });
   const title = await computeTitle(db, model.id, model.titleFieldId, parsed);
   return db.dataRecord.update({
     where: { id },
     data: {
       ...(patch.slug !== undefined ? { slug: patch.slug } : {}),
-      data: parsed,
+      data: parsed as Prisma.InputJsonValue,
       title,
     },
   });

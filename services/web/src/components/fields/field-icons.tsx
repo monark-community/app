@@ -5,6 +5,7 @@ import {
   Calendar,
   CalendarClock,
   CircleDot,
+  FunctionSquare,
   Hash,
   Link,
   Pilcrow,
@@ -38,4 +39,5 @@ export const FIELD_TYPE_ICON: Record<FieldType, FieldIcon> = {
   relation: Waypoints, // reference to other records
   url: Link,
   email: AtSign,
+  formula: FunctionSquare, // computed expression
 };

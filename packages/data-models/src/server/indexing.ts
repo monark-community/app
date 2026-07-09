@@ -53,6 +53,9 @@ function indexExpression(type: DataFieldType, key: string): string {
     case "SELECT":
     case "URL":
     case "EMAIL":
+    // A FORMULA stores its computed scalar as text/number/bool/date in JSONB ;
+    // a plain text extraction is a safe generic B-tree for equality/sort.
+    case "FORMULA":
       return `(data->>'${key}')`;
   }
 }

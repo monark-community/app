@@ -702,6 +702,10 @@ enum DataFieldType {
   RELATION
   URL
   EMAIL
+  // Computed, read-only field ; its value is derived from other fields on the
+  // same record by a formula expression (see packages/data-models formula.ts),
+  // recomputed on every write. Config holds { expression, resultType }.
+  FORMULA
 }
 
 // A model definition. Every Data Model is org-scoped ; platform-wide

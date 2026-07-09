@@ -2,6 +2,7 @@
 
 import { BooleanField } from "./inputs/boolean-field";
 import { DateField, DatetimeField } from "./inputs/date-field";
+import { FormulaField } from "./inputs/formula-field";
 import { MultiSelectField } from "./inputs/multi-select-field";
 import { NumberField } from "./inputs/number-field";
 import { RelationField } from "./inputs/relation-field";
@@ -43,6 +44,8 @@ export function FieldInput({ def, labels }: { def: FieldDef; labels: FieldLabels
       return <UrlField def={def} labels={labels} />;
     case "email":
       return <EmailField def={def} labels={labels} />;
+    case "formula":
+      return <FormulaField def={def} labels={labels} />;
   }
 }
 
@@ -65,4 +68,5 @@ export const FIELD_TYPE_META: Record<FieldType, FieldTypeMeta> = {
   relation: { align: "left" },
   url: { align: "left" },
   email: { align: "left" },
+  formula: { align: "left" },
 };

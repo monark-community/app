@@ -23,7 +23,8 @@ export type DataFieldServerType =
   | "MULTI_SELECT"
   | "RELATION"
   | "URL"
-  | "EMAIL";
+  | "EMAIL"
+  | "FORMULA";
 
 /** The subset of a `DataField` row this adapter needs. */
 export interface DataFieldForAdapter {
@@ -85,6 +86,16 @@ interface RelationConfig {
   cardinality: "ONE" | "MANY";
   max?: number;
 }
+interface FormulaConfig {
+  expression: string;
+  resultType: "TEXT" | "NUMBER" | "BOOLEAN" | "DATE";
+}
+const FORMULA_RESULT_TYPE_MAP = {
+  TEXT: "text",
+  NUMBER: "number",
+  BOOLEAN: "boolean",
+  DATE: "date",
+} as const;
 
 /** Resolves a RELATION field's async options source. The adapter never
  * fetches anything itself (same rule as `RelationSource` generally) — the
@@ -167,6 +178,15 @@ export function dataFieldToFieldDef(
     case "EMAIL": {
       const c = field.config as TextConfig;
       return { ...base, type: "email", maxLength: c.maxLength };
+    }
+    case "FORMULA": {
+      const c = field.config as FormulaConfig;
+      return {
+        ...base,
+        type: "formula",
+        expression: c.expression,
+        resultType: FORMULA_RESULT_TYPE_MAP[c.resultType] ?? "text",
+      };
     }
   }
 }

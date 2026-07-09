@@ -215,6 +215,44 @@ export function renderFieldValue(def: FieldDef, value: unknown, labels: CellLabe
         />
       );
     }
+
+    case "formula": {
+      // A computed value renders by its declared result type. DATE round-trips
+      // through JSONB as an ISO string, so accept either a Date or a string.
+      if (value == null || value === "") return <Empty labels={labels} />;
+      switch (def.resultType) {
+        case "number": {
+          const n = typeof value === "number" ? value : Number(value);
+          return Number.isFinite(n) ? (
+            <span className="tabular-nums">{n.toLocaleString()}</span>
+          ) : (
+            <Empty labels={labels} />
+          );
+        }
+        case "boolean":
+          return Boolean(value) ? (
+            <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
+              <Check className="h-4 w-4" aria-hidden />
+              <span className="sr-only">{labels.yes}</span>
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1 text-muted-foreground">
+              <Minus className="h-4 w-4" aria-hidden />
+              <span className="sr-only">{labels.no}</span>
+            </span>
+          );
+        case "date": {
+          const date = value instanceof Date ? value : new Date(value as string);
+          return Number.isNaN(date.getTime()) ? (
+            <Empty labels={labels} />
+          ) : (
+            <span className="text-xs text-muted-foreground">{formatDate(date, false)}</span>
+          );
+        }
+        default:
+          return <span className="block truncate">{String(value)}</span>;
+      }
+    }
   }
 }
 

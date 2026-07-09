@@ -157,6 +157,17 @@ export interface RelationFieldDef extends BaseFieldDef {
   avatars?: boolean;
 }
 
+/** The scalar type a formula computes to — drives cell + read-view formatting. */
+export type FormulaResultType = "text" | "number" | "boolean" | "date";
+
+export interface FormulaFieldDef extends BaseFieldDef {
+  type: "formula";
+  /** The formula expression (see `@monark/data-models/contracts` formula.ts). */
+  expression: string;
+  /** How the computed value renders (number is right-aligned + tabular, etc.). */
+  resultType: FormulaResultType;
+}
+
 export interface UrlFieldDef extends BaseFieldDef {
   type: "url";
   maxLength?: number;
@@ -179,7 +190,8 @@ export type FieldDef =
   | MultiSelectFieldDef
   | RelationFieldDef
   | UrlFieldDef
-  | EmailFieldDef;
+  | EmailFieldDef
+  | FormulaFieldDef;
 
 export type FieldType = FieldDef["type"];
 
@@ -212,6 +224,10 @@ export function defaultValueFor(def: FieldDef): FieldValue {
       return [];
     case "relation":
       return def.multiple ? [] : null;
+    case "formula":
+      // Computed + read-only ; server recomputes on write. Seeded null so the
+      // key exists in form state (the live preview reads sibling values).
+      return null;
   }
 }
 

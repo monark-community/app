@@ -33,6 +33,20 @@ function deriveSortAccessor<TData>(
         return Array.isArray(value)
           ? (value as RelationOption[]).length
           : ((value as RelationOption | null)?.label ?? null);
+      case "formula":
+        // Sort a computed column by its declared result type, not blindly as
+        // text (so a numeric formula orders numerically).
+        return def.resultType === "number"
+          ? (value as number)
+          : def.resultType === "date"
+            ? value instanceof Date
+              ? value
+              : new Date(value as string)
+            : def.resultType === "boolean"
+              ? value
+                ? 1
+                : 0
+              : String(value);
       default:
         return String(value);
     }

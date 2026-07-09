@@ -1094,7 +1094,8 @@
             "MULTI_SELECT": "Multi select",
             "RELATION": "Relation",
             "URL": "URL",
-            "EMAIL": "Email"
+            "EMAIL": "Email",
+            "FORMULA": "Formula"
           },
           "config": {
             "minLength": "Min length",
@@ -1122,7 +1123,26 @@
             "cardinality": "Allow",
             "cardinalityOne": "One",
             "cardinalityMany": "Multiple",
-            "maxItems": "Max selections"
+            "maxItems": "Max selections",
+            "formula": {
+              "resultType": "Result type",
+              "resultTypes": {
+                "NUMBER": "Number",
+                "TEXT": "Text",
+                "BOOLEAN": "Yes / no",
+                "DATE": "Date"
+              },
+              "expression": "Formula",
+              "addFormula": "Add a formula",
+              "expressionPlaceholder": "e.g. round(price * quantity, 2)",
+              "insertColumn": "Insert column",
+              "noColumns": "No other fields to reference",
+              "valid": "Valid",
+              "invalid": "Invalid formula",
+              "unknownField": "Unknown field: {field}",
+              "functions": "Functions",
+              "help": "Reference other fields by their key. Use & to join text, and functions like if(), round(), and concat()."
+            }
           },
           "submit": "Save",
           "cancel": "Cancel",
