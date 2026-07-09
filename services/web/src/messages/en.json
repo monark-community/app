@@ -446,6 +446,11 @@
         "saving": "Saving…",
         "success": "Record access updated.",
         "error": "Could not update record access."
+      },
+      "watch": {
+        "follow": "Follow",
+        "following": "Following",
+        "error": "Could not update watch."
       }
     },
     "empty": "No data models yet."

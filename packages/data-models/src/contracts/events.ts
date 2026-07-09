@@ -38,6 +38,10 @@ export type DataModelRecordDeletedEvent = DomainEventBase & {
   dataModelId: string;
   dataModelKey: string;
   recordId: string;
+  // Carried on the event because a `hard: true` delete removes the row before
+  // subscribers run, so the title can't be looked up afterward (the watcher
+  // notification needs it).
+  recordTitle: string;
   organizationId: string | null;
   actorId: string;
   hard: boolean;

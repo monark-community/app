@@ -6,6 +6,8 @@ export {
   registerDataModelRegistrations,
   registerDataModelVisibilityResolvers,
 } from "./registrations";
+export { registerDataModelsNotificationKinds } from "./notification-kinds";
+export { registerDataModelRecordWatchSubscriber } from "./record-watch-subscriber";
 export { requestFieldIndex, getFieldIndexStatus, type DataFieldIndexStatus } from "./indexing";
 export {
   registerModelIntegration,

@@ -446,6 +446,11 @@
         "saving": "Enregistrement…",
         "success": "Accès à l'enregistrement mis à jour.",
         "error": "Impossible de mettre à jour l'accès à l'enregistrement."
+      },
+      "watch": {
+        "follow": "Suivre",
+        "following": "Suivi",
+        "error": "Impossible de mettre à jour le suivi."
       }
     },
     "empty": "Aucun modèle de données pour le moment."

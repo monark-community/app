@@ -15,6 +15,7 @@ import {
 } from "@/components/fields";
 import { trpc } from "@/lib/trpc";
 import { RecordAccessSection } from "../record-access-section";
+import { RecordWatchButton } from "../watch-buttons";
 
 interface ModelInfo {
   id: string;
@@ -129,6 +130,9 @@ export function RecordFullPage({ model, recordId }: { model: ModelInfo; recordId
         backHref={backHref}
         backLabel={t("backToList", { model: model.name })}
       />
+      <div className="flex justify-end">
+        <RecordWatchButton recordId={recordId} />
+      </div>
       <AutoForm
         key={recordId}
         fields={fieldDefs}

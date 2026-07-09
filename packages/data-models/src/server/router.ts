@@ -21,6 +21,7 @@ import {
   recordPermissionVerb,
   registerDataModelRegistrations,
 } from "./registrations";
+import { isWatchingModel, isWatchingRecord, setModelWatch, setRecordWatch } from "./watchers";
 import { DATA_FIELD_TYPES } from "../contracts/field-types";
 import { listModelIntegrations } from "../contracts/integrations";
 import { getFieldIndexStatus, requestFieldIndex } from "./indexing";
@@ -381,6 +382,27 @@ export const dataModelsRouter = router({
           throw new ValidationError("Data Model is not deleted.");
         }
         await restoreDataModel(input.id);
+      }),
+
+    // Watch a whole model : get notified when any of its records changes.
+    // Gated on record-read — you can watch a model whose records you can see.
+    isWatching: publicProcedure
+      .input(z.object({ id: z.string().min(1) }))
+      .query(async ({ ctx, input }) => {
+        if (!ctx.userId) throw new UnauthorizedError();
+        const model = await requireModelById(input.id);
+        await requireModelAccess(ctx, model, "data-models.record-read");
+        return { watching: await isWatchingModel(model.id, ctx.userId) };
+      }),
+
+    setWatch: publicProcedure
+      .input(z.object({ id: z.string().min(1), watching: z.boolean() }))
+      .mutation(async ({ ctx, input }) => {
+        if (!ctx.userId) throw new UnauthorizedError();
+        const model = await requireModelById(input.id);
+        await requireModelAccess(ctx, model, "data-models.record-read");
+        await setModelWatch(model.id, ctx.userId, input.watching);
+        return { watching: input.watching };
       }),
   }),
 
@@ -788,6 +810,7 @@ export const dataModelsRouter = router({
           dataModelId: model.id,
           dataModelKey: model.key,
           recordId: input.id,
+          recordTitle: existing.title,
           organizationId: model.organizationId,
           actorId: ctx.userId,
           hard,
@@ -845,6 +868,40 @@ export const dataModelsRouter = router({
         await requireModelAccess(ctx, model, "data-models.manage-schema");
         await setDataRecordRoleAccess(record.id, input.roleIds);
         return { roleIds: input.roleIds };
+      }),
+
+    // ── Watch (per-record) ──
+    // Follow a record : get notified when it changes / is deleted. Gated on
+    // record-read + row-level access — you can only watch a record you can see.
+    isWatching: publicProcedure
+      .input(z.object({ id: z.string().min(1) }))
+      .query(async ({ ctx, input }) => {
+        if (!ctx.userId) throw new UnauthorizedError();
+        const record = await findDataRecordById(input.id);
+        if (!record) throw new NotFoundError("DataRecord", input.id);
+        const model = await requireModelById(record.dataModelId);
+        const orgId = await requireModelAccess(ctx, model, "data-models.record-read");
+        const access = await recordAccessContext(ctx.userId, orgId);
+        if (!(await isDataRecordRoleAccessible(record.id, access))) {
+          throw new NotFoundError("DataRecord", input.id);
+        }
+        return { watching: await isWatchingRecord(record.id, ctx.userId) };
+      }),
+
+    setWatch: publicProcedure
+      .input(z.object({ id: z.string().min(1), watching: z.boolean() }))
+      .mutation(async ({ ctx, input }) => {
+        if (!ctx.userId) throw new UnauthorizedError();
+        const record = await findDataRecordById(input.id);
+        if (!record) throw new NotFoundError("DataRecord", input.id);
+        const model = await requireModelById(record.dataModelId);
+        const orgId = await requireModelAccess(ctx, model, "data-models.record-read");
+        const access = await recordAccessContext(ctx.userId, orgId);
+        if (!(await isDataRecordRoleAccessible(record.id, access))) {
+          throw new NotFoundError("DataRecord", input.id);
+        }
+        await setRecordWatch(record.id, ctx.userId, input.watching);
+        return { watching: input.watching };
       }),
   }),
 });

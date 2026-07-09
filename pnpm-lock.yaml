@@ -226,6 +226,9 @@ importers:
       '@monark/db':
         specifier: workspace:*
         version: link:../db
+      '@monark/notifications':
+        specifier: workspace:*
+        version: link:../notifications
       '@monark/organizations':
         specifier: workspace:*
         version: link:../organizations

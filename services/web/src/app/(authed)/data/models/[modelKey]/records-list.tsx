@@ -39,6 +39,7 @@ import {
 import { trpc } from "@/lib/trpc";
 import { usePaginationLabels } from "@/lib/use-pagination-labels";
 import { RecordAccessSection } from "./record-access-section";
+import { ModelWatchButton, RecordWatchButton } from "./watch-buttons";
 
 interface ModelInfo {
   id: string;
@@ -305,10 +306,13 @@ export function RecordsList({ model }: { model: ModelInfo }) {
           />
         }
         actions={
-          <Button onClick={panel.openCreate}>
-            <Plus className="mr-1.5 h-4 w-4" aria-hidden />
-            {t("createCta", { model: model.name })}
-          </Button>
+          <div className="flex items-center gap-2">
+            <ModelWatchButton modelId={model.id} />
+            <Button onClick={panel.openCreate}>
+              <Plus className="mr-1.5 h-4 w-4" aria-hidden />
+              {t("createCta", { model: model.name })}
+            </Button>
+          </div>
         }
       />
 
@@ -359,6 +363,9 @@ export function RecordsList({ model }: { model: ModelInfo }) {
               )}
               {!isCreateMode && recordParam && recordQuery.data && (
                 <>
+                  <div className="mb-4 flex justify-end">
+                    <RecordWatchButton recordId={recordParam} />
+                  </div>
                   <AutoForm
                     key={recordParam}
                     fields={fieldDefs}

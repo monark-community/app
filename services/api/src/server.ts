@@ -36,7 +36,9 @@ import {
 } from "@monark/calendar/server";
 import {
   hydrateDataModelRegistrations,
+  registerDataModelRecordWatchSubscriber,
   registerDataModelsEventTypes,
+  registerDataModelsNotificationKinds,
   registerDataModelsPermissions,
   registerDataModelVisibilityResolvers,
 } from "@monark/data-models/server";
@@ -103,6 +105,7 @@ registerDataModelVisibilityResolvers();
 // kind registration.
 registerCoreNotificationKinds();
 registerCalendarNotificationKinds();
+registerDataModelsNotificationKinds();
 
 // Model-integration registrations declare a module's "slots" to the
 // polymorphic Data Models engine (@monark/data-models's
@@ -119,6 +122,7 @@ registerCalendarModelIntegration();
 // its outbox writer sees a stable event-bus configuration.
 registerOrganizationsSubscribers();
 registerCalendarDataModelSubscriber();
+registerDataModelRecordWatchSubscriber();
 registerNotificationSubscribers();
 registerWebhookSubscribers();
 

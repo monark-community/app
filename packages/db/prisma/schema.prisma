@@ -54,6 +54,8 @@ model User {
   notifications       Notification[]
   notifPreferences    NotificationPreference[]
   metadata            UserMetadata[]
+  dataRecordWatches   DataRecordWatcher[]
+  dataModelWatches    DataModelWatcher[]
 }
 
 // Generic key/value sidecar for non-core modules to attach data to a
@@ -734,6 +736,7 @@ model DataModel {
   fields       DataField[]
   records      DataRecord[]
   integrations DataModelIntegration[]
+  watchers     DataModelWatcher[]
 
   // Per-org key uniqueness among LIVE models is enforced by the hand-
   // written partial index `DataModel_org_key_active_unique`
@@ -813,6 +816,7 @@ model DataRecord {
   // by hand-written migration SQL, same reason as DataModel above.
 
   roleAccess DataRecordRoleAccess[]
+  watchers   DataRecordWatcher[]
 
   @@index([dataModelId, deletedAt])
   @@index([organizationId, dataModelId])
@@ -835,6 +839,32 @@ model DataRecordRoleAccess {
 
   @@id([dataRecordId, roleId])
   @@index([roleId])
+}
+
+// A user watching a single record : notified when that record changes /
+// is deleted (row-level access still applies — a watcher who loses access
+// stops being notified). "Watch this page", Notion-style.
+model DataRecordWatcher {
+  dataRecordId String
+  dataRecord   DataRecord @relation(fields: [dataRecordId], references: [id], onDelete: Cascade)
+  userId       String
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([dataRecordId, userId])
+  @@index([userId])
+}
+
+// A user watching a whole model : notified when ANY record in it is
+// created / changed / deleted (subject to row-level access). "Subscribe
+// to the database" ; the only place a record-created notification fires.
+model DataModelWatcher {
+  dataModelId String
+  dataModel   DataModel @relation(fields: [dataModelId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([dataModelId, userId])
+  @@index([userId])
 }
 
 // Which DataField(s) on a DataModel satisfy a given business-integration
