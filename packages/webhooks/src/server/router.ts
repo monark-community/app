@@ -1,12 +1,7 @@
 import { z } from "zod";
-import {
-  emit,
-  listEventTypesByModule,
-  NotFoundError,
-  orgVisibleEventTypes,
-  ValidationError,
-} from "@monark/common";
+import { emit, listEventTypesByModule, NotFoundError, orgVisibleEventTypes } from "@monark/common";
 import { publicProcedure, router } from "@monark/common/trpc";
+import { assertOutboundUrlSafe } from "@monark/common/http";
 import { requirePermission } from "@monark/rbac/server";
 import type {
   WebhookEndpointCreatedEvent,
@@ -30,13 +25,6 @@ import { mintSecret } from "./secrets";
 import { forgetSecret, rememberSecret } from "./secret-store";
 import { deliverOne } from "./worker";
 
-// Same private-host shape the api's CORS layer accepts in dev so
-// loopback + RFC 1918 ranges (10/8, 172.16/12, 192.168/16) get the
-// same treatment for webhook URLs as for cross-origin browser calls
-// during local development.
-const PRIVATE_HOST_RE =
-  /^(localhost|127\.0\.0\.1|\[::1\]|10(?:\.\d{1,3}){3}|192\.168(?:\.\d{1,3}){2}|172\.(?:1[6-9]|2\d|3[01])(?:\.\d{1,3}){2})$/;
-
 const subscriptionInputSchema = z.object({
   eventType: z
     .string()
@@ -47,48 +35,9 @@ const subscriptionInputSchema = z.object({
   isPrefix: z.boolean().optional().default(false),
 });
 
-/**
- * Validates the webhook target URL :
- *
- *   - `https://` is always accepted (production-safe).
- *   - `http://` is accepted **only** in non-production AND only when
- *     the host is loopback or RFC 1918 private. Lets local dev
- *     register endpoints against the mock receiver
- *     (`http://127.0.0.1:4123/hook`) or a sibling docker service
- *     without standing up a TLS proxy. The same restriction the
- *     api's CORS layer uses for dev origins so the rules don't
- *     diverge.
- *   - Anything else (file://, ws://, plain http to a public host,
- *     missing scheme, malformed URL) is rejected.
- *
- * `NODE_ENV` is read directly from `process.env` so this single
- * helper doesn't drag a zod-validated env wrapper into a downstream
- * package. Production deploys MUST set `NODE_ENV=production` (every
- * existing CORS / cookie / log path already assumes this).
- */
-function assertSafeUrl(url: string): void {
-  let parsed: URL;
-  try {
-    parsed = new URL(url);
-  } catch {
-    throw new ValidationError(
-      "Webhook URL must be an absolute https:// URL (http:// is allowed only for private/loopback hosts in development).",
-    );
-  }
-  if (parsed.protocol === "https:") return;
-  if (parsed.protocol === "http:") {
-    if (process.env.NODE_ENV === "production") {
-      throw new ValidationError("Webhook URL must be https:// in production.");
-    }
-    if (PRIVATE_HOST_RE.test(parsed.hostname)) return;
-    throw new ValidationError(
-      "Webhook URL over http:// is allowed in development only for loopback or private (RFC 1918) hosts. Use https:// for public targets.",
-    );
-  }
-  throw new ValidationError(
-    `Webhook URL scheme "${parsed.protocol}" is not supported ; use https:// (or http:// for a private host in development).`,
-  );
-}
+// The webhook target URL is validated with the shared `assertOutboundUrlSafe`
+// (@monark/common/http) so its scheme / host rules stay identical to the
+// automation webhook node and any future integration node.
 
 export const webhooksRouter = router({
   // Returns every domain event type the platform emits, grouped by
@@ -168,7 +117,7 @@ export const webhooksRouter = router({
         "webhooks.write",
         input.organizationId ?? undefined,
       );
-      assertSafeUrl(input.url);
+      assertOutboundUrlSafe(input.url);
       const { plaintext, hash } = mintSecret();
       const endpoint = await createEndpoint({
         organizationId: input.organizationId,
@@ -217,7 +166,7 @@ export const webhooksRouter = router({
         "webhooks.write",
         existing.organizationId ?? undefined,
       );
-      if (input.url !== undefined) assertSafeUrl(input.url);
+      if (input.url !== undefined) assertOutboundUrlSafe(input.url);
       const updated = await updateEndpointPatch({
         id: input.id,
         name: input.name,

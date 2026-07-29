@@ -18,11 +18,19 @@ export default defineConfig({
     alias: {
       "@": url("../../src"),
       "next/link": url("./stubs/next-link.tsx"),
+      "next/image": url("./stubs/next-image.tsx"),
       "next/navigation": url("./stubs/next-navigation.ts"),
       "server-only": url("./stubs/empty.ts"),
     },
   },
   // Reuse the web package's postcss.config.mjs (Tailwind v4).
+  // App code / deps occasionally read `process.env.*` (e.g. NODE_ENV) which
+  // doesn't exist in the browser ; shim it so components render in isolation.
+  define: {
+    "process.env.NODE_ENV": JSON.stringify("development"),
+    "process.env": "({})",
+    process: "({ env: {} })",
+  },
   css: { postcss: url("../../") },
   server: { port: 5199, strictPort: true },
 });

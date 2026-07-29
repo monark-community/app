@@ -1,3 +1,16 @@
+// ═══════════════════════════════════════════════════════════════
+// GENERATED FILE — DO NOT EDIT.
+// Assembled by `pnpm gen:schema` from packages/db/prisma/base.prisma plus each
+// module's packages/<module>/prisma/*.prisma fragment. Edit those sources, then
+// run `pnpm gen` (or `pnpm gen:schema`). CI fails on drift, like every other
+// generated artifact.
+// ═══════════════════════════════════════════════════════════════
+
+// Core schema (base fragment) — datasource, generator, and every core
+// module's models. Extended modules add packages/<module>/prisma/*.prisma.
+// `pnpm gen:schema` concatenates base + fragments into the generated
+// schema.prisma ; do NOT put extended-module models here.
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -242,6 +255,7 @@ model Role {
   flagOverrides     FeatureFlagOverride[]
   calendarAccess    CalendarRoleAccess[]
   dataRecordAccess  DataRecordRoleAccess[]
+  kanbanBoardAccess KanbanBoardRoleAccess[]
 
   // Each org can have its own list of role keys ; the built-in ADMIN
   // row's `(ADMIN, null)` slot is enforced uniquely too. PostgreSQL's
@@ -327,6 +341,13 @@ model Organization {
   calendarEventReminders CalendarEventReminder[]
   dataModels             DataModel[]
   dataRecords            DataRecord[]
+  kanbanBoards           KanbanBoard[]
+  kanbanColumns          KanbanColumn[]
+  kanbanCards            KanbanCard[]
+  automations            Automation[]
+  automationRuns         AutomationRun[]
+  storedFiles            StoredFile[]
+  secrets                Secret[]
 }
 
 // Same shape as UserMetadata, scoped to an organization. Powers
@@ -704,8 +725,15 @@ enum DataFieldType {
   EMAIL
   // Computed, read-only field ; its value is derived from other fields on the
   // same record by a formula expression (see packages/data-models formula.ts),
-  // recomputed on every write. Config holds { expression, resultType }.
+  // recomputed on every write. Config holds { expression } ; the result type is
+  // inferred from the expression (inferResultType), not stored.
   FORMULA
+  // A single uploaded file ; value is a `StoredFile.id` soft reference (like a
+  // RELATION ONE). Config holds { allowedFormats?, maxSizeBytes? }.
+  FILE
+  // A bucket of many uploaded files ; value is `StoredFile.id[]` (like a
+  // RELATION MANY). Config holds { allowedFormats?, maxSizeBytes?, max? }.
+  ATTACHMENTS
 }
 
 // A model definition. Every Data Model is org-scoped ; platform-wide
@@ -727,10 +755,10 @@ model DataModel {
   description String?
   icon        String?
 
-  // Points at a DataField.id whose value backs the pinned primary
-  // column + record title. Nullable until the admin sets one (a
-  // freshly-created model with zero fields has no title field yet).
-  titleFieldId String?
+  // The record title is a reserved convention, not an admin choice: every
+  // model owns a TEXT field with key `title` (auto-created on model create,
+  // protected from archive/delete/retype) whose value backs `DataRecord.title`
+  // and the pinned primary column. There is no title-field pointer to store.
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
@@ -901,6 +929,231 @@ model DataFieldIndex {
   updatedAt   DateTime @updatedAt
 }
 
+
+// ── MODULE: automation ────────────────────────────────────
+// Event-triggered automation flows. Each Automation is a node graph
+// (React Flow nodes + edges, stored as a single JSON blob) whose entry is a
+// trigger node bound to a domain event type. When a matching event fires, the
+// wildcard event-bus subscriber enqueues one AutomationRun — the durable
+// outbox row — per enabled matching automation ; a background worker claims
+// PENDING runs, executes the graph node-by-node, and records an
+// AutomationRunStep per node for observability + retryable failure handling.
+// Core tier : the trigger engine subscribes to the platform-wide event bus
+// and must be depend-able by extended modules that contribute node types via
+// registerAutomationNodes(). See docs/technical-documentation/automation.md.
+
+enum AutomationRunStatus {
+  PENDING
+  RUNNING
+  SUCCEEDED
+  FAILED
+  CANCELED
+}
+
+enum AutomationRunStepStatus {
+  RUNNING
+  SUCCEEDED
+  FAILED
+  SKIPPED
+}
+
+model Automation {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  name        String
+  description String?
+  // New automations start disabled ; an admin enables one once its graph is
+  // wired. The subscriber only enqueues runs for enabled, live automations.
+  enabled     Boolean @default(false)
+
+  // The domain event type this automation triggers on (e.g.
+  // "data-models.record-created"), matched against event.type by the wildcard
+  // subscriber. Indexed with organizationId for fast per-event matching.
+  triggerEventType String
+
+  // The full node graph as React Flow sees it : { nodes: [...], edges: [...] }.
+  // Validated against the AutomationGraph zod schema (contracts/graph.ts) on
+  // save ; the worker re-parses it before execution.
+  graph Json @default("{}")
+
+  // For a scheduled (cron-like) trigger : the next UTC instant this automation
+  // is due to fire, else null (not a schedule trigger, or disabled). The
+  // scheduler claims due rows (`enabled AND scheduleNextRunAt <= now`), enqueues
+  // a run, and advances this to the following occurrence. Kept in sync on every
+  // save/enable from the trigger node's schedule config.
+  scheduleNextRunAt DateTime?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+  createdBy String
+
+  runs AutomationRun[]
+
+  @@index([organizationId])
+  @@index([deletedAt])
+  @@index([organizationId, triggerEventType])
+  // The scheduler's claim query : enabled rows whose next fire is due.
+  @@index([scheduleNextRunAt])
+}
+
+model AutomationRun {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  automationId   String
+  automation     Automation   @relation(fields: [automationId], references: [id], onDelete: Cascade)
+
+  status AutomationRunStatus @default(PENDING)
+
+  // The domain event that triggered this run (or a synthetic payload for a
+  // manual "run now"), stored so the worker executes without the original
+  // event and the UI can show what fired it.
+  triggerEventType String
+  triggerPayload   Json    @default("{}")
+  // Whether this run was enqueued by the event subscriber or a manual test.
+  manual           Boolean @default(false)
+
+  // Outbox bookkeeping : the worker polls PENDING rows whose nextAttemptAt has
+  // passed, claims them atomically, and on a retryable failure bumps attempts
+  // + nextAttemptAt (backoff) rather than failing outright.
+  attempts      Int       @default(0)
+  nextAttemptAt DateTime  @default(now())
+  startedAt     DateTime?
+  finishedAt    DateTime?
+  error         String?
+  output        Json?
+
+  createdAt DateTime @default(now())
+  // The owner identity the run executes as (Automation.createdBy at enqueue
+  // time). Nullable so a run survives its owner being removed.
+  createdBy String?
+
+  steps AutomationRunStep[]
+
+  @@index([automationId])
+  @@index([organizationId])
+  // The worker's claim query : PENDING rows due for execution, oldest first.
+  @@index([status, nextAttemptAt])
+}
+
+model AutomationRunStep {
+  id    String        @id @default(cuid())
+  runId String
+  run   AutomationRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+
+  // The graph node this step executed (NodeInstance.id) + its registered type.
+  nodeId   String
+  nodeType String
+  // Execution order within the run (topological index), 0-based.
+  sequence Int
+
+  status AutomationRunStepStatus @default(RUNNING)
+  input  Json?
+  output Json?
+  error  String?
+  // Structured log lines the node emitted during this step (`ctx.log(...)`),
+  // an array of { ts, level, message }. Surfaced per-node in the editor.
+  logs   Json?
+  // Output handles this node activated (branching). Persisted so a run
+  // suspended by a Delay resumes without re-activating pruned branches — on
+  // resume the engine re-activates exactly these. Empty for skipped / failed.
+  activeHandles String[] @default([])
+
+  startedAt  DateTime  @default(now())
+  finishedAt DateTime?
+
+  @@index([runId])
+}
+
+// ── MODULE: files ─────────────────────────────────────────
+// Generic file-upload service (see @monark/files). A `FileBucket` is
+// project-level infra (mirrors a Supabase Storage bucket) ; a `StoredFile` is
+// an org-scoped object living inside a bucket, partitioned by key prefix
+// (`{organizationId}/{fileId}-{name}`). Uploads use a signed-URL flow : a row
+// is created PENDING, the browser uploads the bytes directly, then the API
+// confirms and flips it READY.
+
+enum StoredFileStatus {
+  PENDING
+  READY
+}
+
+model FileBucket {
+  id   String @id @default(cuid())
+  // The Supabase Storage bucket name (globally unique within the project).
+  name String @unique
+  // Public buckets serve objects via a public URL ; private ones require a
+  // signed download URL (the default).
+  isPublic Boolean @default(false)
+  // Optional policy, enforced by the API on upload and by Supabase at the
+  // storage layer. `fileSizeLimit` is bytes ; empty `allowedMimeTypes` = any.
+  fileSizeLimit    Int?
+  allowedMimeTypes String[] @default([])
+  // The user who created the bucket (an org-member userId, not an FK).
+  createdBy String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model StoredFile {
+  id             String           @id @default(cuid())
+  organizationId String
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  // The bucket name and the object key within it. The key is unique across the
+  // whole store (it embeds the org + a cuid).
+  bucket String
+  key    String @unique
+  // The original filename + resolved content type + byte size.
+  name        String
+  contentType String
+  size        Int
+  status      StoredFileStatus @default(PENDING)
+  // The uploader (an org-member userId, not an FK).
+  uploadedBy String
+  createdAt  DateTime  @default(now())
+  deletedAt  DateTime?
+
+  @@index([organizationId])
+  @@index([bucket])
+  @@index([status])
+}
+
+// ── MODULE: secrets ───────────────────────────────────────
+// Per-org encrypted key→value store ("environment variables") for external
+// platform access tokens, consumed by automation nodes via `ctx.getSecret` and
+// by any module's server code (`getSecretValue`). The value is AES-256-GCM
+// encrypted at rest (`@monark/common/crypto`, keyed by `SECRETS_ENCRYPTION_KEY`) ;
+// the plaintext is never returned over tRPC — the admin surface is write-only.
+model Secret {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  // Env-var-style name, unique per org (e.g. "GITHUB_TOKEN").
+  key            String
+  // AES-256-GCM ciphertext + iv + auth tag of the secret value.
+  valueCipher    Bytes
+  valueIv        Bytes
+  valueTag       Bytes
+  description    String?
+  // The user id that last set the value (no FK — matches the house convention).
+  createdBy      String
+  // Stamped each time a consumer decrypts the value, for a "last used" hint.
+  lastUsedAt     DateTime?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@unique([organizationId, key])
+  @@index([organizationId])
+}
+
+// @monark/calendar — Prisma schema fragment (extended module).
+// Assembled into packages/db/prisma/schema.prisma by `pnpm gen:schema`.
+// Edit HERE, never the generated schema.prisma. Relations to core models
+// (Organization, Role) resolve at assembly time.
+
 // ── MODULE: calendar ──────────────────────────────────────
 model Calendar {
   id             String       @id @default(cuid())
@@ -988,3 +1241,108 @@ model CalendarEventReminder {
   @@index([calendarEventId])
   @@index([organizationId])
 }
+
+
+// @monark/kanban — Prisma schema fragment (extended module).
+// Assembled into packages/db/prisma/schema.prisma by `pnpm gen:schema`.
+// Edit HERE, never the generated schema.prisma. Relations to core models
+// (Organization, Role) resolve at assembly time.
+
+// ── MODULE: kanban ────────────────────────────────────────
+// A configurable Kanban board view (sibling to the calendar). A board owns an
+// ordered list of columns ; each column owns an ordered list of cards. Column
+// and card ordering both use an integer `position` in gaps of 10 (the house
+// pattern from data-models' reorderDataFields) so a single move renumbers only
+// its target list, not the whole board.
+model KanbanBoard {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String
+  description    String?
+  color          String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  deletedAt      DateTime?
+
+  columns    KanbanColumn[]
+  cards      KanbanCard[]
+  roleAccess KanbanBoardRoleAccess[]
+
+  @@index([organizationId])
+}
+
+// Per-board RBAC: a role whose id appears here can see this board. Users with
+// `kanban.manage` bypass this table and see all org boards. Mirrors
+// CalendarRoleAccess exactly.
+model KanbanBoardRoleAccess {
+  boardId String
+  board   KanbanBoard @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  roleId  String
+  role    Role        @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([boardId, roleId])
+  @@index([roleId])
+}
+
+model KanbanColumn {
+  id             String       @id @default(cuid())
+  boardId        String
+  board          KanbanBoard  @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String
+  color          String?
+  // Ordering within the board. Assigned in steps of 10.
+  position       Int
+  // Optional soft cap on cards, surfaced (not enforced) in the UI.
+  wipLimit       Int?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  cards KanbanCard[]
+
+  @@index([boardId])
+  @@index([organizationId])
+}
+
+enum KanbanCardPriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+model KanbanCard {
+  id             String              @id @default(cuid())
+  boardId        String
+  board          KanbanBoard         @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  columnId       String
+  column         KanbanColumn        @relation(fields: [columnId], references: [id], onDelete: Cascade)
+  organizationId String
+  organization   Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  title          String
+  description    String?
+  // Org member userIds. Not FKs, to keep the module decoupled from the users
+  // table shape ; resolved for display by the web layer. A card can have many
+  // assignees and many reviewers (each stored as an order-preserving text array).
+  assigneeIds    String[]            @default([])
+  reviewerIds    String[]            @default([])
+  dueAt          DateTime?
+  priority       KanbanCardPriority?
+  // Effort estimate (story points / hours — caller's convention). Non-negative.
+  estimate       Int?
+  // Ordered checklist items, stored inline as JSON (edited with the card, not
+  // individually) : Array<{ id, title, done }>. Validated at the tRPC boundary.
+  subtasks       Json                @default("[]")
+  // Ordering within the column. Assigned in steps of 10.
+  position       Int
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  deletedAt      DateTime?
+
+  @@index([columnId])
+  @@index([boardId])
+  @@index([organizationId])
+}
+

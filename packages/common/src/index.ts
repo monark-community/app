@@ -5,12 +5,16 @@ export { emit, on, WILDCARD_EVENT_TYPE } from "./events";
 export {
   registerEventTypes,
   getEventTypeDescriptor,
+  eventFieldsFor,
   listEventTypes,
   listEventTypesByModule,
   registerOrgScopedEventTypeVisibility,
   orgVisibleEventTypes,
+  COMMON_EVENT_FIELDS,
   _resetEventRegistryForTesting,
   type EventTypeDescriptor,
+  type EventFieldDescriptor,
+  type EventFieldType,
   type OrgScopedEventTypeResolver,
 } from "./event-registry";
 export type { DomainEvent, DomainEventBase } from "./contracts/events";

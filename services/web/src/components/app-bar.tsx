@@ -1,13 +1,11 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { AppBarBreadcrumb } from "@/components/app-bar-breadcrumb";
-import { AppLauncher } from "@/components/app-launcher";
 import { BrandedAppLogoView, type BrandedAppLogoData } from "@/components/branded-app-logo-view";
 import { GlobalSearchIconButton } from "@/components/global-search";
 import { NotificationsBell } from "@/components/notifications-bell";
 import { PrimaryNavMenu } from "@/components/primary-nav-menu";
 import { UserMenu } from "@/components/user-menu";
-import { createServerTrpcClient } from "@/lib/trpc-server";
 
 /**
  * Global application bar shown across all *authenticated* surfaces
@@ -25,27 +23,13 @@ import { createServerTrpcClient } from "@/lib/trpc-server";
  * bar ; the appbar implies "you're inside the app."
  *
  * Server component on purpose : the only client islands are the
- * bell, launcher, breadcrumb, drawer, and user menu. The drawer
- * (`PrimaryNavMenu`) gets the resolved logo data passed in as a prop
- * so its drawer header renders the same brand mark without a second
- * round-trip.
+ * bell, breadcrumb, drawer, and user menu. The brand mark
+ * (`brandedLogoData`) is resolved once by the shared `(authed)/layout`
+ * (which also feeds the NavRail) and passed in, so mounting the bar
+ * never costs a second brand round-trip.
  */
-export async function AppBar() {
+export async function AppBar({ brandedLogoData }: { brandedLogoData: BrandedAppLogoData }) {
   const t = await getTranslations("appBar");
-
-  // Single source of truth for the brand mark : `bootstrapStatus`.
-  // Public procedure, no auth roundtrip needed even though we're in
-  // an authenticated tree. Best-effort — falls through to the
-  // starter-template brand on api failure.
-  const status = await createServerTrpcClient()
-    .organizations.bootstrapStatus.query()
-    .catch(() => null);
-
-  const brandedLogoData: BrandedAppLogoData = {
-    singletonLogoUrl: status?.singletonLogoUrl ?? null,
-    singletonDisplayName: status?.singletonDisplayName ?? null,
-    isSingleTenantBootstrapped: status?.mode === "single" && Boolean(status?.bootstrapped),
-  };
 
   return (
     <header className="sticky top-0 z-30 border-b border-border bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/70">
@@ -60,16 +44,15 @@ export async function AppBar() {
         <div className="flex min-w-0 items-center gap-2">
           <PrimaryNavMenu brandedLogoData={brandedLogoData} />
           {/*
-            Only the logo links to `/`. The breadcrumb sits beside it as
-            a series of links + a final non-interactive span, so the
-            user can step back up the tree without hitting "/" by
-            accident. The primary nav drawer (hamburger) is the
-            canonical "go somewhere else" affordance.
+            The logo + breadcrumb give a "you are here" trail. On desktop
+            the left NavRail owns the brand mark + primary nav, so the
+            hamburger (in PrimaryNavMenu) and this logo are `md:hidden` ;
+            on mobile they carry the brand + drawer trigger as before.
           */}
           <Link
             href="/"
             aria-label={brandedLogoData.singletonDisplayName ?? t("home")}
-            className="flex items-center rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+            className="flex items-center rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background md:hidden"
           >
             <BrandedAppLogoView data={brandedLogoData} size={28} />
           </Link>
@@ -78,15 +61,15 @@ export async function AppBar() {
         <div className="flex items-center gap-4">
           {/*
             Right side order (left→right): global search + notifications
-            (tight cluster), then the user menu, then the "Monark Apps"
-            launcher as the right-most element of the whole appbar.
+            (tight cluster), then the user menu. The "Monark Apps" launcher
+            is hidden for now (single product) — re-add `<AppLauncher />`
+            here when a second product ships.
           */}
           <div className="flex items-center gap-1">
             <GlobalSearchIconButton />
             <NotificationsBell />
           </div>
           <UserMenu />
-          <AppLauncher />
         </div>
       </div>
     </header>

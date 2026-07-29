@@ -79,7 +79,13 @@ export function AutoForm({
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className={cn("space-y-6", className)}>
         {header}
-        <div className="space-y-5">
+        {/*
+          `@container` scopes the fields' responsive label-left flip (see
+          FieldShell) to the form's own width, so it flips inside a wide detail
+          panel or a full page but stacks in a narrow / mobile panel — matching
+          the hand-rolled FieldRow forms.
+        */}
+        <div className="@container space-y-5">
           {fields.map((def) => (
             <FieldInput key={def.name} def={def} labels={labels} />
           ))}

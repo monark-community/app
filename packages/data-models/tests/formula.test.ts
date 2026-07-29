@@ -4,6 +4,7 @@ import {
   evaluateFormula,
   extractFieldRefs,
   FormulaError,
+  inferResultType,
   parseFormula,
   tryEvaluateFormula,
 } from "../src/contracts/formula";
@@ -141,6 +142,54 @@ describe("field references", () => {
   });
 });
 
+describe("cast functions", () => {
+  it("coerce their argument (case-insensitive naming)", () => {
+    expect(evalWith("tostring(42)")).toBe("42");
+    expect(evalWith("toString(1 + 1)")).toBe("2");
+    expect(evalWith('tonumber("5")')).toBe(5);
+    expect(evalWith('toNumber("abc")')).toBeNull();
+    expect(evalWith("tobool(0)")).toBe(false);
+    expect(evalWith("toBool(1)")).toBe(true);
+    expect(evalWith('todate("2026-01-15")')).toBeInstanceOf(Date);
+    expect(evalWith("tostring(missing)", {})).toBeNull(); // null stays null
+  });
+});
+
+describe("inferResultType", () => {
+  it("infers from the outermost operation", () => {
+    expect(inferResultType("price * quantity")).toBe("NUMBER");
+    expect(inferResultType("-x")).toBe("NUMBER");
+    expect(inferResultType('"a" & "b"')).toBe("TEXT");
+    expect(inferResultType("qty > 0")).toBe("BOOLEAN");
+    expect(inferResultType("true && false")).toBe("BOOLEAN");
+    expect(inferResultType("!flag")).toBe("BOOLEAN");
+    expect(inferResultType("round(x, 2)")).toBe("NUMBER");
+    expect(inferResultType("upper(name)")).toBe("TEXT");
+    expect(inferResultType("len(name)")).toBe("NUMBER");
+    expect(inferResultType("contains(a, b)")).toBe("BOOLEAN");
+    expect(inferResultType("today()")).toBe("DATE");
+    expect(inferResultType('dateadd(d, 1, "days")')).toBe("DATE");
+    expect(inferResultType('datediff(a, b, "days")')).toBe("NUMBER");
+    expect(inferResultType("42")).toBe("NUMBER");
+    expect(inferResultType('"hello"')).toBe("TEXT");
+  });
+
+  it("falls back to TEXT for untyped refs and disagreeing branches", () => {
+    expect(inferResultType("price")).toBe("TEXT"); // reference is untyped here
+    expect(inferResultType('if(x, "yes", 5)')).toBe("TEXT"); // branches disagree
+    expect(inferResultType("if(x, 1, 2)")).toBe("NUMBER"); // branches agree
+    expect(inferResultType("coalesce(a, b)")).toBe("TEXT"); // untyped refs
+    expect(inferResultType("coalesce(1, 2)")).toBe("NUMBER");
+  });
+
+  it("a cast pins the type, overriding what the body infers", () => {
+    expect(inferResultType("price * qty")).toBe("NUMBER");
+    expect(inferResultType("tostring(price * qty)")).toBe("TEXT");
+    expect(inferResultType("tonumber(a & b)")).toBe("NUMBER");
+    expect(inferResultType("todate(created)")).toBe("DATE");
+  });
+});
+
 describe("result-type coercion", () => {
   it("coerces to the declared field type", () => {
     expect(coerceFormulaResult(3.2, "NUMBER")).toBe(3.2);
@@ -168,5 +217,29 @@ describe("errors", () => {
     expect(bad.ok).toBe(false);
     const good = tryEvaluateFormula("1 + 1", {});
     expect(good).toEqual({ ok: true, value: 2 });
+  });
+});
+
+describe("resource limits + safety", () => {
+  it("rejects an over-length expression", () => {
+    const long = `${"1+".repeat(6000)}1`; // > 10k chars
+    expect(() => parseFormula(long)).toThrow(/too long/i);
+    expect(tryEvaluateFormula(long, {}).ok).toBe(false);
+  });
+
+  it("rejects a pathologically deep expression instead of overflowing the stack", () => {
+    const deepParens = `${"(".repeat(500)}1${")".repeat(500)}`;
+    expect(() => parseFormula(deepParens)).toThrow(/deeply nested/i);
+    const deepUnary = `${"-".repeat(500)}1`;
+    expect(() => parseFormula(deepUnary)).toThrow(/deeply nested/i);
+    // A normal, modestly-nested expression still parses fine.
+    expect(evalWith("((1 + 2) * (3 + 4))")).toBe(21);
+  });
+
+  it("does not treat inherited Object props as known functions", () => {
+    // Names that aren't real functions but ARE inherited Object.prototype props.
+    for (const name of ["constructor", "hasOwnProperty", "valueOf", "isPrototypeOf"]) {
+      expect(() => parseFormula(`${name}(1)`), name).toThrow(/Unknown function/);
+    }
   });
 });

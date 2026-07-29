@@ -19,6 +19,7 @@
   "dependencies": {
     "@monark/common": "workspace:*",
     "@monark/db": "workspace:*",
+    "@monark/files": "workspace:*",
     "@monark/notifications": "workspace:*",
     "@monark/organizations": "workspace:*",
     "@monark/rbac": "workspace:*",

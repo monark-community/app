@@ -129,6 +129,11 @@ import { registerEventTypes } from "@monark/common";
 const POSTS_EVENT_TYPES = {
   "posts.published": {
     description: "A draft was published to readers.",
+    // Optional: the event's payload fields (beyond the common base fields).
+    fields: [
+      { key: "postId", type: "string", description: "The post that was published." },
+      { key: "authorId", type: "string", description: "The user who published it." },
+    ],
   },
   "posts.unpublished": {
     description: "An admin un-published a previously-live post (moderation).",
@@ -142,13 +147,15 @@ export function registerPostsEventTypes(): void {
 
 Wire `registerPostsEventTypes()` into [services/api/src/server.ts](../../services/api/src/server.ts) alongside the other `register*EventTypes` calls. Operators creating webhooks then see `posts` as a collapsible group with both events listed by name + description, and can tick the group's tri-state header to subscribe to all of the module's events at once.
 
+Each entry may also declare a `fields` list (`{ key, type, description }`) naming the event's payload fields — the specific "who / what" beyond the common base fields (`occurredAt`, `type`, exposed via `COMMON_EVENT_FIELDS`). This is metadata only (it does **not** validate the emitted payload), but it's what lets the **Automation** module's Event Trigger node advertise a flow's available `{{ trigger.* }}` outputs to authors. Declare `fields` for every event whose payload carries anything an automation would want ; `eventFieldsFor(type)` returns a type's declared fields merged with the common base. Keep field descriptions short and author-facing.
+
 Modules that emit events but skip this registration still route through webhooks fine — but operators have to know the type strings to type them in. Always ship event-type registrations.
 
 ## What core does NOT guarantee
 
 These are the boundaries an extended module must not cross. Crossing them means the module is doing something that should ship as a core change instead.
 
-- **Extended modules MUST NOT modify the Prisma schema**, [packages/db/prisma/schema.prisma](../../packages/db/prisma/schema.prisma). The schema is a single core file owned by `@monark/db`. Extensions either use the metadata sidecar (option 4 above) or wait for the per-module-fragment story to land.
+- **Extended modules MUST NOT reshape core or other modules' tables** in [packages/db/prisma/schema.prisma](../../packages/db/prisma/schema.prisma). The schema is a single file owned by `@monark/db`. A module that genuinely needs relational / indexed / FK-bearing storage MAY add **its own** models under its `// ── MODULE: <name> ──` banner (as `@monark/calendar` and `@monark/kanban` do) and own the migration — but it must never rename, restructure, or repurpose any model outside that banner, and schema changes go through `@monark/db` review. The end-state is per-module fragments (see Phase-2 below) ; until that lands, banner-scoped models are the accepted approach. For per-user / per-org data that needs no indexing, relations, or FKs, use the metadata sidecar (option 4 above) instead of a table.
 - **Extended modules MUST NOT depend on another extended module.** Use core packages, the event bus, or the metadata sidecar to compose features.
 - **Extended modules MUST NOT mutate core registries directly** — only call the `register*` APIs. Reaching into `@monark/feature-flags/contracts` to mutate the in-memory map directly would crash boot ordering and bypass validation.
 - **Extended modules MUST NOT rename or repurpose core domain events.** Add new event types under your module's prefix ; never reshape `auth.password-changed` for a different meaning.

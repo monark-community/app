@@ -75,20 +75,20 @@ Mounted at `notifications.*` by the auto-generated [services/api/src/trpc/app-ro
 
 Wired in `registerNotificationSubscribers()` :
 
-| Event                         | Notification kind            |
-| ----------------------------- | ---------------------------- |
-| `trusted-device.added`             | `auth.new-device`                 |
-| `user.signed-in`                   | `auth.signed-in`                  |
-| `user.password-changed`            | `auth.password-changed`           |
-| `totp.enabled`                     | `auth.totp-enabled`               |
-| `totp.disabled`                    | `auth.totp-disabled`              |
-| `totp.recovery-code-used`          | `auth.recovery-code-used`         |
-| `totp.recovery-codes-regenerated`  | `auth.recovery-codes-regenerated` |
-| `trusted-device.revoked`           | `auth.device-revoked` (skips bulk-sweep rows) |
-| `trusted-devices.all-revoked`      | `auth.all-devices-revoked`        |
-| `user.email-changed`               | `account.email-changed`           |
-| `user.deletion-requested`          | `account.deletion-scheduled`      |
-| `user.deletion-canceled`           | `account.deletion-canceled`       |
+| Event                             | Notification kind                             |
+| --------------------------------- | --------------------------------------------- |
+| `trusted-device.added`            | `auth.new-device`                             |
+| `user.signed-in`                  | `auth.signed-in`                              |
+| `user.password-changed`           | `auth.password-changed`                       |
+| `totp.enabled`                    | `auth.totp-enabled`                           |
+| `totp.disabled`                   | `auth.totp-disabled`                          |
+| `totp.recovery-code-used`         | `auth.recovery-code-used`                     |
+| `totp.recovery-codes-regenerated` | `auth.recovery-codes-regenerated`             |
+| `trusted-device.revoked`          | `auth.device-revoked` (skips bulk-sweep rows) |
+| `trusted-devices.all-revoked`     | `auth.all-devices-revoked`                    |
+| `user.email-changed`              | `account.email-changed`                       |
+| `user.deletion-requested`         | `account.deletion-scheduled`                  |
+| `user.deletion-canceled`          | `account.deletion-canceled`                   |
 
 ## Out of scope (deferred)
 

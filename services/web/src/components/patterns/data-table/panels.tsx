@@ -199,9 +199,7 @@ export function ColumnsPanel({
                 label={field.header}
                 visible={visibility[id] !== false}
                 canHide={field.canHide}
-                onToggle={(visible) =>
-                  setColumnVisibility((prev) => ({ ...prev, [id]: visible }))
-                }
+                onToggle={(visible) => setColumnVisibility((prev) => ({ ...prev, [id]: visible }))}
               />
             );
           })}
@@ -359,10 +357,7 @@ function ColumnPropertyRow({
     <div
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition }}
-      className={cn(
-        "flex items-center gap-1 rounded-sm",
-        isDragging && "z-10 bg-accent shadow-sm",
-      )}
+      className={cn("flex items-center gap-1 rounded-sm", isDragging && "z-10 bg-accent shadow-sm")}
     >
       <button
         type="button"

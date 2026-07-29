@@ -116,3 +116,13 @@ export async function setDeletedAt(id: string, deletedAt: Date | null): Promise<
   const db = getDb();
   return db.user.update({ where: { id }, data: { deletedAt } });
 }
+
+/**
+ * Admin-initiated account disable (lockout). `disabledAt` is separate from the
+ * user-initiated `deletedAt` grace-delete: it's indefinite and reversible (pass
+ * `null` to re-enable). Gate with the `users.disable` permission at the call site.
+ */
+export async function setDisabledAt(id: string, disabledAt: Date | null): Promise<UserRow> {
+  const db = getDb();
+  return db.user.update({ where: { id }, data: { disabledAt } });
+}

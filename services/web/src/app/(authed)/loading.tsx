@@ -1,4 +1,3 @@
-import { AppBar } from "@/components/app-bar";
 import { Skeleton } from "@/components/ui/skeleton";
 
 /**
@@ -11,7 +10,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 export default function AuthedLoading() {
   return (
     <>
-      <AppBar />
       <main className="mx-auto w-full max-w-2xl px-4 pb-20 pt-8 sm:px-6">
         <div className="space-y-4">
           <Skeleton className="h-7 w-48" />

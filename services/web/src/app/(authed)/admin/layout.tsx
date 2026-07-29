@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
-import { AppBar } from "@/components/app-bar";
 import { PageLayout } from "@/components/page-layout";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createServerTrpcClient } from "@/lib/trpc-server";
@@ -43,7 +42,6 @@ export default async function AdminLayout({ children }: { children: ReactNode })
 
   return (
     <>
-      <AppBar />
       <AdminTabsBar />
       <main className="w-full px-4 pb-20 pt-8 sm:px-6">
         <PageLayout sidebar={<AdminSidebar />}>{children}</PageLayout>

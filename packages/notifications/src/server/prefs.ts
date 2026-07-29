@@ -1,6 +1,6 @@
 import type { NotificationChannel } from "@monark/db";
 import { getDb } from "@monark/db";
-import { getNotificationKindDef, type NotificationKind } from "../contracts/registry";
+import { getNotificationKindDef, type NotificationKind } from "../contracts";
 
 export type PrefRow = {
   /** The notification kind this override targets (e.g. "auth.new-device"). */

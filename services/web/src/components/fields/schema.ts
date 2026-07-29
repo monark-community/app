@@ -56,6 +56,15 @@ function toValueShape(def: FieldDef): DataFieldValueShape {
         multiple: def.multiple,
         maxItems: def.multiple ? def.max : undefined,
       };
+    case "file":
+      // A single FILE (id) or multi ATTACHMENTS (id[]) ; same value shape as
+      // RELATION ONE / MANY. Format + size are validated server-side.
+      return {
+        type: def.multiple ? "ATTACHMENTS" : "FILE",
+        required: def.required,
+        multiple: def.multiple,
+        maxItems: def.multiple ? def.max : undefined,
+      };
     case "formula":
       // Computed + read-only : never required, value not user-supplied. The
       // shared builder returns a permissive schema for FORMULA (the server

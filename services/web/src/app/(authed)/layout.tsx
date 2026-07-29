@@ -1,7 +1,10 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
+import { AppBar } from "@/components/app-bar";
+import type { BrandedAppLogoData } from "@/components/branded-app-logo-view";
 import { GlobalSearchProvider } from "@/components/global-search";
+import { NavRail } from "@/components/nav-rail";
 import { RecoveryCodeReminder } from "@/components/recovery-code-reminder";
 import { isSystemBootstrapped } from "@/lib/bootstrap-gate";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -123,11 +126,35 @@ export default async function AuthedLayout({ children }: { children: ReactNode }
     if (!onAccount) redirect("/account/danger");
   }
 
+  // Brand mark for the persistent desktop NavRail. Public query (no auth
+  // roundtrip), best-effort — falls through to the starter brand on failure.
+  const brandStatus = await createServerTrpcClient()
+    .organizations.bootstrapStatus.query()
+    .catch(() => null);
+  const brandedLogoData: BrandedAppLogoData = {
+    singletonLogoUrl: brandStatus?.singletonLogoUrl ?? null,
+    singletonDisplayName: brandStatus?.singletonDisplayName ?? null,
+    isSingleTenantBootstrapped:
+      brandStatus?.mode === "single" && Boolean(brandStatus?.bootstrapped),
+  };
+
   return (
     // GlobalSearchProvider wraps the whole authed tree so the ⌘K palette
     // works on every route and the sidebar trigger can open it via context.
     <GlobalSearchProvider>
-      {children}
+      {/* App shell, mounted once here : the persistent primary-nav rail on
+          md+ (left), and the AppBar + page body offset past the rail width.
+          Below md the rail is hidden and the AppBar's hamburger drawer takes
+          over. Full-height sections (calendar / kanban / data-at-xl) size
+          themselves to `100dvh - 57px` (the bar's 56px row + 1px hairline ;
+          `dvh` tracks the mobile URL-bar so bottom-anchored chrome stays in
+          view) since the bar now sits above them rather than inside their
+          shell. */}
+      <NavRail brandedLogoData={brandedLogoData} />
+      <div className="md:pl-14">
+        <AppBar brandedLogoData={brandedLogoData} />
+        {children}
+      </div>
       {/* Global post-sign-in modal that nudges (or forces) the user to
           handle a recently-spent recovery code or a low remaining
           count. State lives server-side so closing the tab without

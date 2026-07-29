@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
+import { SidebarRail } from "@/components/sidebar-rail";
 
 type PageLayoutProps = {
   /**
@@ -57,27 +58,13 @@ type PageLayoutProps = {
 export function PageLayout({ sidebar, rightRail, children }: PageLayoutProps) {
   return (
     <>
-      {sidebar && (
-        <aside
-          aria-label="Page sidebar"
-          className="fixed left-0 top-14 z-20 hidden h-[calc(100vh-3.5rem)] w-72 overflow-y-auto border-r border-border bg-background p-4 xl:block"
-        >
-          {sidebar}
-        </aside>
-      )}
+      {sidebar && <SidebarRail>{sidebar}</SidebarRail>}
 
       <div className={cn(sidebar && "xl:pl-72", rightRail && "xl:pr-72")}>
         <div className="mx-auto w-full max-w-2xl space-y-6">{children}</div>
       </div>
 
-      {rightRail && (
-        <aside
-          aria-label="Page right rail"
-          className="fixed right-0 top-14 z-20 hidden h-[calc(100vh-3.5rem)] w-72 overflow-y-auto border-l border-border bg-background p-4 xl:block"
-        >
-          {rightRail}
-        </aside>
-      )}
+      {rightRail && <SidebarRail side="right">{rightRail}</SidebarRail>}
     </>
   );
 }

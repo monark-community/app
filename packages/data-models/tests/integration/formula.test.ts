@@ -5,9 +5,9 @@ import {
   createDataField,
   createDataModel,
   createDataRecord,
+  findDataRecordById,
   listDataFields,
   reorderDataFields,
-  updateDataModel,
   updateDataRecord,
 } from "../../src/server/data";
 
@@ -81,12 +81,12 @@ describe("FORMULA compute-on-write", () => {
       key: "subtotal",
       label: "Subtotal",
       type: "FORMULA",
-      config: { expression: "price * quantity", resultType: "NUMBER" },
+      config: { expression: "price * quantity" },
     });
 
     const record = await createDataRecord({
       dataModelId: model.id,
-      data: { price: 10, quantity: 3, subtotal: 999 /* client-supplied, ignored */ },
+      data: { title: "row", price: 10, quantity: 3, subtotal: 999 /* client-supplied, ignored */ },
       createdBy: ACTOR,
     });
     const data = record.data as Record<string, unknown>;
@@ -101,14 +101,14 @@ describe("FORMULA compute-on-write", () => {
       key: "subtotal",
       label: "Subtotal",
       type: "FORMULA",
-      config: { expression: "price * quantity", resultType: "NUMBER" },
+      config: { expression: "price * quantity" },
     });
     const total = await createDataField({
       dataModelId: model.id,
       key: "total",
       label: "Total",
       type: "FORMULA",
-      config: { expression: "round(subtotal * 1.15, 2)", resultType: "NUMBER" },
+      config: { expression: "round(subtotal * 1.15, 2)" },
     });
     // ...then position `total` BEFORE `subtotal`, so compute must topologically
     // sort by dependency rather than trust position order.
@@ -119,12 +119,56 @@ describe("FORMULA compute-on-write", () => {
 
     const record = await createDataRecord({
       dataModelId: model.id,
-      data: { price: 10, quantity: 2 },
+      data: { title: "row", price: 10, quantity: 2 },
       createdBy: ACTOR,
     });
     const data = record.data as Record<string, unknown>;
     expect(data.subtotal).toBe(20);
     expect(data.total).toBe(23);
+  });
+
+  it("backfills existing records when a formula field is added after them", async () => {
+    const model = await seedInvoiceModel();
+    // A record created BEFORE any formula field exists.
+    const record = await createDataRecord({
+      dataModelId: model.id,
+      data: { title: "row", price: 10, quantity: 4 },
+      createdBy: ACTOR,
+    });
+    expect((record.data as Record<string, unknown>).subtotal).toBeUndefined();
+
+    // Adding the formula field must backfill the existing record's value.
+    await createDataField({
+      dataModelId: model.id,
+      key: "subtotal",
+      label: "Subtotal",
+      type: "FORMULA",
+      config: { expression: "price * quantity" },
+    });
+    const reloaded = await findDataRecordById(record.id);
+    expect((reloaded?.data as Record<string, unknown>).subtotal).toBe(40);
+  });
+
+  it("re-backfills every record when a formula's expression changes", async () => {
+    const model = await seedInvoiceModel();
+    const field = await createDataField({
+      dataModelId: model.id,
+      key: "subtotal",
+      label: "Subtotal",
+      type: "FORMULA",
+      config: { expression: "price * quantity" },
+    });
+    const record = await createDataRecord({
+      dataModelId: model.id,
+      data: { title: "row", price: 10, quantity: 4 },
+      createdBy: ACTOR,
+    });
+    expect((record.data as Record<string, unknown>).subtotal).toBe(40);
+
+    const { updateDataField } = await import("../../src/server/data");
+    await updateDataField(field.id, { config: { expression: "price * quantity * 2" } });
+    const reloaded = await findDataRecordById(record.id);
+    expect((reloaded?.data as Record<string, unknown>).subtotal).toBe(80);
   });
 
   it("recomputes on update when a referenced field changes", async () => {
@@ -134,18 +178,18 @@ describe("FORMULA compute-on-write", () => {
       key: "subtotal",
       label: "Subtotal",
       type: "FORMULA",
-      config: { expression: "price * quantity", resultType: "NUMBER" },
+      config: { expression: "price * quantity" },
     });
     const record = await createDataRecord({
       dataModelId: model.id,
-      data: { price: 10, quantity: 3 },
+      data: { title: "row", price: 10, quantity: 3 },
       createdBy: ACTOR,
     });
     const updated = await updateDataRecord(record.id, { data: { quantity: 5 } });
     expect((updated.data as Record<string, unknown>).subtotal).toBe(50);
   });
 
-  it("supports a text formula as the model's title field", async () => {
+  it("computes a text (string-concat) formula on write", async () => {
     const model = await createDataModel({
       organizationId: ORG,
       key: "people",
@@ -166,22 +210,20 @@ describe("FORMULA compute-on-write", () => {
       type: "TEXT",
       config: {},
     });
-    const fullName = await createDataField({
+    await createDataField({
       dataModelId: model.id,
       key: "full_name",
       label: "Full name",
       type: "FORMULA",
-      config: { expression: 'first & " " & last', resultType: "TEXT" },
+      config: { expression: 'first & " " & last' },
     });
-    await updateDataModel(model.id, { titleFieldId: fullName.id });
 
     const record = await createDataRecord({
       dataModelId: model.id,
-      data: { first: "Ada", last: "Lovelace" },
+      data: { title: "Ada L.", first: "Ada", last: "Lovelace" },
       createdBy: ACTOR,
     });
     expect((record.data as Record<string, unknown>).full_name).toBe("Ada Lovelace");
-    expect(record.title).toBe("Ada Lovelace");
   });
 });
 
@@ -194,7 +236,7 @@ describe("FORMULA field validation", () => {
         key: "bad",
         label: "Bad",
         type: "FORMULA",
-        config: { expression: "price * nonexistent", resultType: "NUMBER" },
+        config: { expression: "price * nonexistent" },
       }),
     ).rejects.toThrow(/unknown field/i);
   });
@@ -207,7 +249,7 @@ describe("FORMULA field validation", () => {
         key: "loop",
         label: "Loop",
         type: "FORMULA",
-        config: { expression: "loop + 1", resultType: "NUMBER" },
+        config: { expression: "loop + 1" },
       }),
     ).rejects.toThrow(/itself/i);
   });
@@ -220,18 +262,18 @@ describe("FORMULA field validation", () => {
       key: "a",
       label: "A",
       type: "FORMULA",
-      config: { expression: "price + 1", resultType: "NUMBER" },
+      config: { expression: "price + 1" },
     });
     await createDataField({
       dataModelId: model.id,
       key: "b",
       label: "B",
       type: "FORMULA",
-      config: { expression: "a + 1", resultType: "NUMBER" },
+      config: { expression: "a + 1" },
     });
     const { updateDataField } = await import("../../src/server/data");
-    await expect(
-      updateDataField(a.id, { config: { expression: "b + 1", resultType: "NUMBER" } }),
-    ).rejects.toThrow(/cycle/i);
+    await expect(updateDataField(a.id, { config: { expression: "b + 1" } })).rejects.toThrow(
+      /cycle/i,
+    );
   });
 });

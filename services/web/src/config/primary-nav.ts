@@ -1,4 +1,4 @@
-import { CalendarDays, Database } from "lucide-react";
+import { CalendarDays, Database, SquareKanban, Workflow } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 /**
@@ -25,6 +25,13 @@ export type PrimaryNavEntry = {
    * the same `id` as the title. Falls back to `href` when omitted.
    */
   sectionPrefix?: string;
+  /**
+   * Optional feature-flag key (dotted, e.g. `"kanban.board"`). When set and
+   * the flag resolves `false` for the session, the entry is hidden from the
+   * drawer. Visibility is a UX affordance ; the route's own server-side flag
+   * gate is the real boundary.
+   */
+  flag?: string;
 };
 
 /**
@@ -52,6 +59,8 @@ export type PrimaryNavEntry = {
  */
 export const PRIMARY_NAV: PrimaryNavEntry[] = [
   { id: "calendar", href: "/calendar", icon: CalendarDays },
+  { id: "kanban", href: "/kanban", icon: SquareKanban, flag: "kanban.board" },
+  { id: "automation", href: "/automation", icon: Workflow, flag: "automation.enabled" },
   // Custom data models (projects, industries, …) are grouped under the
   // Data section ; its own secondary nav (DataSidebar) lists the models.
   // `/data` server-redirects to the first model.

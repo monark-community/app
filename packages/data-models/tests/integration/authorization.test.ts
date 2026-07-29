@@ -91,7 +91,11 @@ beforeAll(async () => {
       type: "TEXT",
       config: {},
     });
-    await createDataRecord({ dataModelId: m.id, data: { name: "seed" }, createdBy: U_SCOPED });
+    await createDataRecord({
+      dataModelId: m.id,
+      data: { title: "seed", name: "seed" },
+      createdBy: U_SCOPED,
+    });
     // Register per-model perms so `createRole`'s registry validation accepts
     // `data-models.<key>-record-*`.
     registerDataModelRegistrations({ key: m.key, name: m.name });
@@ -159,7 +163,7 @@ beforeAll(async () => {
   // A record in alpha restricted to the secret role only.
   const restricted = await createDataRecord({
     dataModelId: alphaId,
-    data: { name: "restricted" },
+    data: { title: "restricted", name: "restricted" },
     createdBy: U_ADMIN,
   });
   restrictedId = restricted.id;
@@ -195,7 +199,10 @@ describe("data-models authorization — per-model record access boundary", () =>
 
   it("DENIES write when the user holds only read on that model", async () => {
     await expect(
-      callerFor(U_SCOPED, ORG_A).records.create({ dataModelId: alphaId, data: { name: "x" } }),
+      callerFor(U_SCOPED, ORG_A).records.create({
+        dataModelId: alphaId,
+        data: { title: "x", name: "x" },
+      }),
     ).rejects.toThrow();
   });
 
@@ -260,5 +267,94 @@ describe("data-models authorization — per-record (row-level) access", () => {
     // Now the previously-denied scoped user can see it (empty list = open).
     const page = await callerFor(U_SCOPED, ORG_A).records.list({ dataModelId: alphaId });
     expect(ids(page)).toContain(restrictedId);
+  });
+});
+
+// Bulk edit is gated by `record-bulk-write` *separately from* (and additional
+// to) single-record `record-write`. These specs prove: write-without-bulk is
+// denied, write+bulk applies to every id, and a cross-model batch is rejected.
+describe("data-models authorization — bulk edit (record-bulk-write)", () => {
+  const U_WRITE = "dm-authz-bulk-write"; // per-model write, NO bulk capability
+  const U_BULK = "dm-authz-bulk-ok"; // per-model write + record-bulk-write
+  let r1 = "";
+  let r2 = "";
+
+  beforeAll(async () => {
+    const db = getDb();
+    for (const id of [U_WRITE, U_BULK]) {
+      await db.user.create({ data: { id, email: `${id}@test.local` } });
+      await db.organizationMembership.create({ data: { userId: id, organizationId: ORG_A } });
+    }
+    const writeRole = await createRole({
+      organizationId: ORG_A,
+      key: "authz-bulk-write",
+      name: "Bulk Write Only",
+      permissions: ["data-models.alpha-record-write"],
+      createdById: U_ADMIN,
+    });
+    await assignRole({
+      userId: U_WRITE,
+      roleId: writeRole.id,
+      organizationId: ORG_A,
+      grantedById: null,
+    });
+    const bulkRole = await createRole({
+      organizationId: ORG_A,
+      key: "authz-bulk-ok",
+      name: "Bulk Capable",
+      permissions: ["data-models.alpha-record-write", "data-models.record-bulk-write"],
+      createdById: U_ADMIN,
+    });
+    await assignRole({
+      userId: U_BULK,
+      roleId: bulkRole.id,
+      organizationId: ORG_A,
+      grantedById: null,
+    });
+    const a = await createDataRecord({
+      dataModelId: alphaId,
+      data: { title: "one", name: "one" },
+      createdBy: U_ADMIN,
+    });
+    const b = await createDataRecord({
+      dataModelId: alphaId,
+      data: { title: "two", name: "two" },
+      createdBy: U_ADMIN,
+    });
+    r1 = a.id;
+    r2 = b.id;
+  });
+
+  afterAll(async () => {
+    await getDb().user.deleteMany({ where: { id: { in: [U_WRITE, U_BULK] } } });
+  });
+
+  it("DENIES bulkUpdate to a user with record-write but not record-bulk-write", async () => {
+    await expect(
+      callerFor(U_WRITE, ORG_A).records.bulkUpdate({ ids: [r1, r2], data: { name: "z" } }),
+    ).rejects.toThrow();
+  });
+
+  it("APPLIES the same value to every id for a bulk-capable user", async () => {
+    const res = await callerFor(U_BULK, ORG_A).records.bulkUpdate({
+      ids: [r1, r2],
+      data: { name: "bulked" },
+    });
+    expect(res.count).toBe(2);
+    // Verify through the admin caller — U_BULK holds write + bulk but not
+    // record-read, so it can't getById (which is correct : bulk edit doesn't
+    // require read).
+    const one = await callerFor(U_ADMIN, ORG_A).records.getById({ id: r1 });
+    const two = await callerFor(U_ADMIN, ORG_A).records.getById({ id: r2 });
+    expect(one.data.name).toBe("bulked");
+    expect(two.data.name).toBe("bulked");
+  });
+
+  it("REJECTS a batch whose ids span multiple models", async () => {
+    const betaPage = await callerFor(U_ADMIN, ORG_A).records.list({ dataModelId: betaId });
+    const betaRecordId = betaPage.items[0]!.id;
+    await expect(
+      callerFor(U_BULK, ORG_A).records.bulkUpdate({ ids: [r1, betaRecordId], data: { name: "z" } }),
+    ).rejects.toThrow();
   });
 });

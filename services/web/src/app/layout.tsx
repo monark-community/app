@@ -99,7 +99,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
       style={brandStyle(orgPrimaryColor)}
       suppressHydrationWarning
     >
-      <body className="font-sans antialiased">
+      <body className="font-sans antialiased overflow-y-hidden">
         <NextIntlClientProvider locale={locale} messages={messages}>
           <ThemeProvider>
             <TrpcProvider>

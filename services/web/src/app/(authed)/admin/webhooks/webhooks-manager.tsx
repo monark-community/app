@@ -12,7 +12,11 @@ import {
   FilterBarSearch,
   PanelHeader,
   TableDetailLayout,
+  TableEmptyState,
   TableTools,
+  activeFilterCount,
+  clearAllFilters,
+  tableEmptyReason,
   useDataTableLayout,
   useDetailPanelRoute,
   type DataColumnDef,
@@ -29,6 +33,7 @@ import {
 } from "@/components/ui/select";
 import { SheetTitle } from "@/components/ui/sheet";
 import { trpc } from "@/lib/trpc";
+import { useTableEmptyLabels } from "@/lib/use-table-empty-labels";
 import { WebhookEditor } from "./webhook-editor";
 
 const PLATFORM_VALUE = "__platform__";
@@ -118,6 +123,8 @@ export function WebhooksManager() {
       : (orgsQuery.data?.items.find((o) => o.id === selectedOrgValue)?.displayName ?? "");
 
   type EndpointRow = (typeof allEndpoints)[number];
+
+  const emptyLabels = useTableEmptyLabels({ query: search.trim(), noData: t("empty") });
 
   const layout = useDataTableLayout("admin-webhooks-table");
 
@@ -240,18 +247,23 @@ export function WebhooksManager() {
             columns={endpointColumns}
             filters={filterConfigs}
             labels={toolsLabels}
+            include={["filters", "sorting"]}
           />
         }
         actions={
-          <Button
-            type="button"
-            size="sm"
-            onClick={panel.openCreate}
-            disabled={selectedOrgValue === ""}
-          >
-            <Plus className="h-4 w-4" aria-hidden />
-            {t("createCta")}
-          </Button>
+          <div className="flex items-center gap-2">
+            <TableTools
+              layout={layout}
+              primaryColumn={primaryColumn}
+              columns={endpointColumns}
+              labels={toolsLabels}
+              include={["columns"]}
+            />
+            <Button type="button" onClick={panel.openCreate} disabled={selectedOrgValue === ""}>
+              <Plus className="h-4 w-4" aria-hidden />
+              {t("createCta")}
+            </Button>
+          </div>
         }
       />
 
@@ -315,7 +327,16 @@ export function WebhooksManager() {
             isError={endpointsQuery.isError}
             onRetry={() => endpointsQuery.refetch()}
             emptyState={
-              trimmedSearch !== "" ? t("emptySearch", { query: search.trim() }) : t("empty")
+              <TableEmptyState
+                reason={tableEmptyReason({
+                  hasSearch: trimmedSearch !== "",
+                  hasFilters: activeFilterCount(filterConfigs) > 0,
+                })}
+                labels={emptyLabels}
+                onClearSearch={() => setSearch("")}
+                onClearFilters={() => clearAllFilters(filterConfigs)}
+                createAction={{ label: t("createCta"), onClick: panel.openCreate }}
+              />
             }
             primaryColumn={primaryColumn}
             columns={endpointColumns}

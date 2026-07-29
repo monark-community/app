@@ -14,10 +14,24 @@ declare module "@tanstack/react-table" {
   }
 }
 
+/** Column id of the leading row-selection checkbox column (bulk edit). */
+export const SELECT_COLUMN_ID = "__select";
 /** Column id of the mandatory pinned primary column. */
 export const PRIMARY_COLUMN_ID = "__primary";
 /** Column id of the trailing row-actions column. */
 export const ACTIONS_COLUMN_ID = "__actions";
+
+/**
+ * Opt-in multi-row selection. When passed to {@link DataTable} a leading
+ * checkbox column appears (per-row + a header select-all over the current
+ * rows) and selection is reported back as a set of `getRowId` values. The
+ * caller owns the set (it's transient — never persisted with the layout) and
+ * typically feeds it to a bulk-edit bar.
+ */
+export interface DataTableSelection {
+  selectedIds: Set<string>;
+  onSelectedIdsChange: (ids: Set<string>) => void;
+}
 
 /** Value a column sorts by. Dates are compared chronologically. */
 export type SortAccessor<TData> = (row: TData) => string | number | Date | null | undefined;
@@ -99,6 +113,10 @@ export interface DataTableSortLabels {
 export interface DataTableLabels {
   /** aria-label for a row's `…` actions button. */
   rowActions: string;
+  /** aria-label for a row's selection checkbox (only used with `selection`). */
+  selectRow?: string;
+  /** aria-label for the header select-all checkbox (only used with `selection`). */
+  selectAll?: string;
   /** Shown in place of the empty state when the list query errored. Optional
    *  so screens can opt in ; provide alongside `isError` on the table. */
   errorTitle?: string;
@@ -156,6 +174,9 @@ export interface DataTableProps<TData> {
    */
   layout?: DataTableLayout;
   labels: DataTableLabels;
+  /** Opt-in multi-row selection (adds a leading checkbox column). Pair with a
+   *  bulk-edit bar. Transient — don't persist it with the layout. */
+  selection?: DataTableSelection;
   /** Highlights the row with this id (detail-panel selection). */
   selectedRowId?: string | null;
   isLoading?: boolean;
@@ -170,5 +191,17 @@ export interface DataTableProps<TData> {
   /** When provided, a pagination footer renders below the table. Build with
    *  {@link DataTablePaginationProps} via `usePaginatedList().getFooterProps`. */
   pagination?: DataTablePaginationProps;
+  /**
+   * Fill the parent's height instead of self-measuring against the viewport.
+   *
+   * Default (`false`): the table caps itself to the space between its top and
+   * the viewport bottom via a JS measurement — for pages that scroll at the
+   * window level. When `true`: the table takes `h-full` of its container and
+   * scrolls internally, with NO measurement. Use this when an ancestor already
+   * establishes a bounded height (a viewport-height flex shell), so the layout
+   * is fully deterministic — the table's parent must have a definite height
+   * (e.g. a `flex-1 min-h-0` cell in a flex column).
+   */
+  fillParent?: boolean;
   className?: string;
 }

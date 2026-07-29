@@ -6,7 +6,7 @@ import {
   getNotificationTemplate,
   type NotificationDataMap,
   type NotificationKind,
-} from "../contracts/registry";
+} from "../contracts";
 import type {
   NotificationCreatedEvent,
   NotificationDeliveryFailedEvent,

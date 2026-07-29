@@ -52,13 +52,11 @@ export function OrganizationDetail({
   // query result rotates so a save (or another admin's change) doesn't
   // leave the form pointing at stale values.
   const [displayName, setDisplayName] = useState("");
-  const [slug, setSlug] = useState("");
   const [primaryColor, setPrimaryColor] = useState("");
 
   useEffect(() => {
     if (!query.data) return;
     setDisplayName(query.data.displayName);
-    setSlug(query.data.slug);
     setPrimaryColor(query.data.primaryColor ?? "");
   }, [query.data]);
 
@@ -68,41 +66,28 @@ export function OrganizationDetail({
     if (!query.data) return null;
     return {
       displayName: query.data.displayName,
-      slug: query.data.slug,
       primaryColor: query.data.primaryColor ?? "",
     };
   }, [query.data]);
 
   const dirty = Boolean(
     baseline &&
-    (displayName.trim() !== baseline.displayName ||
-      slug.trim().toLowerCase() !== baseline.slug ||
-      primaryColor.trim() !== baseline.primaryColor),
+    (displayName.trim() !== baseline.displayName || primaryColor.trim() !== baseline.primaryColor),
   );
 
   function onCancel() {
     if (!baseline) return;
     setDisplayName(baseline.displayName);
-    setSlug(baseline.slug);
     setPrimaryColor(baseline.primaryColor);
   }
 
   function onSave() {
     if (!baseline) return;
     const nextDisplayName = displayName.trim();
-    const nextSlug = slug.trim().toLowerCase();
     const nextColor = primaryColor.trim();
 
     if (nextDisplayName.length < 1 || nextDisplayName.length > 120) {
       toast.error(t("saveError"));
-      return;
-    }
-    if (
-      !/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/.test(nextSlug) ||
-      nextSlug.length < 2 ||
-      nextSlug.length > 60
-    ) {
-      toast.error(t("invalidSlug"));
       return;
     }
     if (nextColor !== "" && !/^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(nextColor)) {
@@ -115,14 +100,10 @@ export function OrganizationDetail({
     const payload: {
       id: string;
       displayName?: string;
-      slug?: string;
       primaryColor?: string | null;
     } = { id: orgId };
     if (nextDisplayName !== baseline.displayName) {
       payload.displayName = nextDisplayName;
-    }
-    if (nextSlug !== baseline.slug) {
-      payload.slug = nextSlug;
     }
     if (nextColor !== baseline.primaryColor) {
       payload.primaryColor = nextColor === "" ? null : nextColor;
@@ -210,18 +191,6 @@ export function OrganizationDetail({
               placeholder={t("placeholders.displayName")}
               maxLength={120}
             />
-          </FieldRow>
-
-          <FieldRow label={t("labels.slug")} htmlFor="org-slug">
-            <Input
-              id="org-slug"
-              value={slug}
-              onChange={(event) => setSlug(event.target.value.toLowerCase())}
-              placeholder={t("placeholders.slug")}
-              className="font-mono"
-              maxLength={60}
-            />
-            <p className="text-xs text-muted-foreground">{t("slugHint")}</p>
           </FieldRow>
 
           <FieldRow label={t("labels.primaryColor")} htmlFor="org-primary-color">

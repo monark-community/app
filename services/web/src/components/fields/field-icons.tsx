@@ -8,6 +8,7 @@ import {
   FunctionSquare,
   Hash,
   Link,
+  Paperclip,
   Pilcrow,
   Tags,
   ToggleLeft,
@@ -37,6 +38,7 @@ export const FIELD_TYPE_ICON: Record<FieldType, FieldIcon> = {
   singleSelect: CircleDot, // one-of (radio-like)
   multiSelect: Tags, // many-of (chips)
   relation: Waypoints, // reference to other records
+  file: Paperclip, // uploaded file(s)
   url: Link,
   email: AtSign,
   formula: FunctionSquare, // computed expression

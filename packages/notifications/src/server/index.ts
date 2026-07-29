@@ -20,9 +20,6 @@ export {
   listNotificationKinds,
   listNotificationKindDescriptors,
 } from "../contracts/registry";
-export type {
-  NotificationKind,
-  NotificationKindDef,
-  NotificationDataMap,
-  NotificationDataRegistry,
-} from "../contracts/registry";
+export type { NotificationKindDef, CoreNotificationKinds } from "../contracts/registry";
+// The augmentable registry + kind union live at the contracts entry now.
+export type { NotificationKind, NotificationDataMap, NotificationDataRegistry } from "../contracts";

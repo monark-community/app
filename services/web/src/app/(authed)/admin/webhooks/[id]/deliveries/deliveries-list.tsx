@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   DataTable,
   FilterBar,
+  TableEmptyState,
   TableTools,
   useDataTableLayout,
   type DataColumnDef,
@@ -13,6 +14,7 @@ import {
 } from "@/components/patterns";
 import { PageHeader } from "@/components/page-header";
 import { trpc } from "@/lib/trpc";
+import { useTableEmptyLabels } from "@/lib/use-table-empty-labels";
 import { WebhookTabsNav } from "../../webhook-tabs-nav";
 
 type DeliveryStatus = "pending" | "delivered" | "failed";
@@ -41,6 +43,7 @@ export function DeliveriesList({ endpointId }: { endpointId: string }) {
   const tStatus = useTranslations("admin.webhooks.deliveries.status");
   const tTable = useTranslations("table");
   const tFilters = useTranslations("filters");
+  const emptyLabels = useTableEmptyLabels({ query: "", noData: t("empty") });
   const endpoint = trpc.webhooks.get.useQuery({ id: endpointId }, { refetchOnWindowFocus: false });
   const deliveries = trpc.webhooks.listDeliveries.useQuery(
     { endpointId, limit: 50 },
@@ -159,7 +162,7 @@ export function DeliveriesList({ endpointId }: { endpointId: string }) {
             isLoading={deliveries.isLoading}
             isError={deliveries.isError}
             onRetry={() => deliveries.refetch()}
-            emptyState={t("empty")}
+            emptyState={<TableEmptyState reason="no-data" labels={emptyLabels} />}
             primaryColumn={primaryColumn}
             columns={deliveryColumns}
           />

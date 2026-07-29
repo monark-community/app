@@ -11,6 +11,7 @@ import {
 import {
   fieldConfigSchemas,
   stripHtmlTags,
+  TITLE_FIELD_KEY,
   valueSchemaForField,
   type DataFieldType,
 } from "../contracts/field-types";
@@ -19,9 +20,11 @@ import {
   evaluateFormula,
   extractFieldRefs,
   FormulaError,
-  type FormulaResultType,
+  inferResultType,
 } from "../contracts/formula";
 import { getModelIntegrationDef } from "../contracts/integrations";
+import { DATA_MODEL_FILES_BUCKET } from "../contracts/field-types";
+import { ensureBucket, getReadyFilesByIds } from "@monark/files/server";
 
 export { DATA_FIELD_TYPES } from "../contracts/field-types";
 export type { DataFieldType } from "../contracts/field-types";
@@ -190,15 +193,33 @@ export type CreateDataModelInput = {
 
 export async function createDataModel(input: CreateDataModelInput): Promise<DataModelRow> {
   const db = getDb();
-  return db.dataModel.create({
-    data: {
-      organizationId: input.organizationId,
-      key: input.key,
-      name: input.name,
-      description: input.description ?? null,
-      icon: input.icon ?? null,
-      createdBy: input.createdBy,
-    },
+  return db.$transaction(async (tx) => {
+    const model = await tx.dataModel.create({
+      data: {
+        organizationId: input.organizationId,
+        key: input.key,
+        name: input.name,
+        description: input.description ?? null,
+        icon: input.icon ?? null,
+        createdBy: input.createdBy,
+      },
+    });
+    // Every model owns a reserved TEXT "title" field whose value backs the
+    // record title + pinned primary column. It's a fixed convention (not an
+    // admin choice) : created here, first in order, and protected from
+    // archive / delete / retype by the router. See `computeTitle`.
+    await tx.dataField.create({
+      data: {
+        dataModelId: model.id,
+        key: TITLE_FIELD_KEY,
+        label: "Title",
+        type: "TEXT",
+        config: {},
+        required: true,
+        position: 0,
+      },
+    });
+    return model;
   });
 }
 
@@ -206,7 +227,6 @@ export type UpdateDataModelPatch = {
   name?: string;
   description?: string | null;
   icon?: string | null;
-  titleFieldId?: string | null;
 };
 
 export async function updateDataModel(
@@ -220,7 +240,6 @@ export async function updateDataModel(
       ...(patch.name !== undefined ? { name: patch.name } : {}),
       ...(patch.description !== undefined ? { description: patch.description } : {}),
       ...(patch.icon !== undefined ? { icon: patch.icon } : {}),
-      ...(patch.titleFieldId !== undefined ? { titleFieldId: patch.titleFieldId } : {}),
     },
   });
 }
@@ -273,11 +292,9 @@ export type CreateDataFieldInput = {
   position?: number;
 };
 
-/** The parsed `{ expression, resultType }` of a FORMULA field's config. */
-function formulaConfigOf(field: Pick<DataFieldRow, "config">): {
-  expression: string;
-  resultType: FormulaResultType;
-} {
+/** The parsed `{ expression }` of a FORMULA field's config. The result type
+ *  isn't stored — it's derived from the expression via `inferResultType`. */
+function formulaConfigOf(field: Pick<DataFieldRow, "config">): { expression: string } {
   return fieldConfigSchemas.FORMULA.parse(field.config);
 }
 
@@ -355,7 +372,7 @@ export async function createDataField(input: CreateDataFieldInput): Promise<Data
   const position =
     input.position ??
     ((await db.dataField.count({ where: { dataModelId: input.dataModelId } })) + 1) * 10;
-  return db.dataField.create({
+  const created = await db.dataField.create({
     data: {
       dataModelId: input.dataModelId,
       key: input.key,
@@ -367,6 +384,11 @@ export async function createDataField(input: CreateDataFieldInput): Promise<Data
       position,
     },
   });
+  // A new FORMULA field has no stored value on any existing record (compute
+  // happens on record write), so backfill them now — otherwise the column
+  // renders empty for every record that predates the field.
+  if (input.type === "FORMULA") await recomputeModelRecords(input.dataModelId);
+  return created;
 }
 
 export type UpdateDataFieldPatch = {
@@ -388,11 +410,12 @@ export async function updateDataField(
     patch.config !== undefined
       ? fieldConfigSchemas[existing.type as DataFieldType].parse(patch.config)
       : undefined;
-  if (config !== undefined && (existing.type as DataFieldType) === "FORMULA") {
+  const formulaChanged = config !== undefined && (existing.type as DataFieldType) === "FORMULA";
+  if (formulaChanged) {
     const { expression } = formulaConfigOf({ config });
     await assertFormulaFieldValid(existing.dataModelId, existing.key, expression, existing.id);
   }
-  return db.dataField.update({
+  const updated = await db.dataField.update({
     where: { id },
     data: {
       ...(patch.label !== undefined ? { label: patch.label } : {}),
@@ -401,6 +424,11 @@ export async function updateDataField(
       ...(patch.required !== undefined ? { required: patch.required } : {}),
     },
   });
+  // A changed formula expression makes every record's stored value stale ;
+  // recompute them so the new formula is reflected everywhere, not just on
+  // the next time each record happens to be edited.
+  if (formulaChanged) await recomputeModelRecords(existing.dataModelId);
+  return updated;
 }
 
 // Full-reorder : `orderedIds` is every non-archived field id for the model,
@@ -493,9 +521,9 @@ function applyComputedFields(
   const out = { ...data };
   for (const field of ordered) {
     try {
-      const { expression, resultType } = formulaConfigOf(field);
+      const { expression } = formulaConfigOf(field);
       const value = evaluateFormula(expression, out);
-      out[field.key] = coerceFormulaResult(value, resultType);
+      out[field.key] = coerceFormulaResult(value, inferResultType(expression));
     } catch {
       out[field.key] = null;
     }
@@ -524,16 +552,11 @@ function deriveTitle(value: unknown, type: DataFieldType | undefined): string {
   return raw.trim().slice(0, 200);
 }
 
-async function computeTitle(
-  db: ReturnType<typeof getDb>,
-  dataModelId: string,
-  titleFieldId: string | null,
-  data: Record<string, unknown>,
-): Promise<string> {
-  if (!titleFieldId) return "Untitled";
-  const titleField = await db.dataField.findUnique({ where: { id: titleFieldId } });
-  if (!titleField || titleField.dataModelId !== dataModelId) return "Untitled";
-  const derived = deriveTitle(data[titleField.key], titleField.type as DataFieldType);
+// The record title is the value of the model's reserved `title` field (a
+// required TEXT field every model owns). No DB lookup or title-field pointer
+// is needed ; a blank value still falls back to "Untitled" for display safety.
+function computeTitle(data: Record<string, unknown>): string {
+  const derived = deriveTitle(data[TITLE_FIELD_KEY], "TEXT");
   return derived.length > 0 ? derived : "Untitled";
 }
 
@@ -583,10 +606,67 @@ function recordRoleAccessWhere(opts: {
   };
 }
 
+/** A single field-value predicate from the records list filter menu. `value`
+ *  is the raw filter-control value : a string for text/number/boolean/date/
+ *  select, or a `string[]` for `selectAny` / multi-select. */
+export type RecordFieldFilter = {
+  /** The `DataField.key` to filter on (the JSONB `data` object's key). */
+  key: string;
+  type: "text" | "number" | "boolean" | "date" | "select" | "selectAny" | "multiSelect";
+  value: string | string[];
+};
+
+/** Translate one field filter into a Prisma `where` fragment against the JSONB
+ *  `data` column (keyed by field key). Returns `null` for a neutral / empty
+ *  value so it composes out of the `AND`. Text/date use substring match ;
+ *  select/number/boolean use equality ; `selectAny` matches a scalar single-
+ *  select against any of the chosen values ; multi-select matches records whose
+ *  stored array contains any of the chosen values.
+ *
+ *  NOTE: JSON `string_contains` is case-sensitive (Postgres JSON paths take no
+ *  `mode`). The baseline GIN index on `data` keeps these correct ; a fast plan
+ *  on a hot field at scale is opt-in via `fields.requestIndex` (see indexing.ts). */
+function fieldFilterWhere(f: RecordFieldFilter): Prisma.DataRecordWhereInput | null {
+  const path = [f.key];
+  const asString = typeof f.value === "string" ? f.value.trim() : "";
+  switch (f.type) {
+    case "text":
+    case "date":
+      return asString ? { data: { path, string_contains: asString } } : null;
+    case "select":
+      return asString ? { data: { path, equals: asString } } : null;
+    case "selectAny": {
+      // A single-select field stores a scalar string, so "match any of these
+      // values" is an OR of equalities (not `array_contains`, which is for the
+      // multi-select `string[]` encoding).
+      const vals = (Array.isArray(f.value) ? f.value : [f.value]).filter((v) => v !== "");
+      if (vals.length === 0) return null;
+      return { OR: vals.map((v) => ({ data: { path, equals: v } })) };
+    }
+    case "number": {
+      if (asString === "") return null;
+      const n = Number(asString);
+      return Number.isFinite(n) ? { data: { path, equals: n } } : null;
+    }
+    case "boolean":
+      if (asString !== "true" && asString !== "false") return null;
+      return { data: { path, equals: asString === "true" } };
+    case "multiSelect": {
+      const vals = (Array.isArray(f.value) ? f.value : [f.value]).filter((v) => v !== "");
+      if (vals.length === 0) return null;
+      // OR = "matches any selected value" ; `array_contains: [v]` is Postgres
+      // `@>` containment against the stored `string[]`.
+      return { OR: vals.map((v) => ({ data: { path, array_contains: [v] } })) };
+    }
+  }
+}
+
 export type ListDataRecordsInput = PaginationArgs & {
   dataModelId: string;
   includeDeleted?: boolean;
   search?: string;
+  /** Per-field value predicates from the list filter menu (ANDed together). */
+  fieldFilters?: RecordFieldFilter[];
   /** Caller's role ids ; records are filtered to those the roles may access. */
   roleIds?: string[];
   /** When true (a data admin), the role-access filter is skipped. */
@@ -598,6 +678,9 @@ export async function listDataRecords(
 ): Promise<Paginated<DataRecordRow>> {
   const db = getDb();
   const search = input.search?.trim();
+  const fieldWheres = (input.fieldFilters ?? [])
+    .map(fieldFilterWhere)
+    .filter((w): w is Prisma.DataRecordWhereInput => w !== null);
   const where: Prisma.DataRecordWhereInput = {
     dataModelId: input.dataModelId,
     ...(input.includeDeleted ? {} : { deletedAt: null }),
@@ -612,6 +695,7 @@ export async function listDataRecords(
             },
           ]
         : []),
+      ...fieldWheres,
       recordRoleAccessWhere({
         roleIds: input.roleIds ?? [],
         bypass: input.bypassRoleAccess ?? false,
@@ -694,12 +778,92 @@ export type CreateDataRecordInput = {
   createdBy: string;
 };
 
+/** Ensure the shared private bucket every FILE / ATTACHMENTS field uploads into
+ *  exists. Best-effort + idempotent ; call once at api boot. */
+export async function ensureDataModelFilesBucket(): Promise<void> {
+  await ensureBucket({ name: DATA_MODEL_FILES_BUCKET, isPublic: false, createdBy: "system" });
+}
+
+/** True when `contentType` satisfies the field's MIME allow-list. An entry may
+ *  be an exact type ("application/pdf") or a wildcard prefix ("image/*") ; an
+ *  empty / absent list accepts anything. */
+function mimeAllowed(contentType: string, allowedFormats: string[] | undefined): boolean {
+  if (!allowedFormats || allowedFormats.length === 0) return true;
+  const ct = contentType.toLowerCase();
+  return allowedFormats.some((fmt) => {
+    const f = fmt.toLowerCase();
+    return f.endsWith("/*") ? ct.startsWith(f.slice(0, -1)) : ct === f;
+  });
+}
+
+/**
+ * Validate a record's FILE / ATTACHMENTS references against the *resolved*
+ * `StoredFile`s : each id must be a READY file in the same org, of an allowed
+ * MIME type, within the size cap, and (attachments) within the count cap. The
+ * value schema only checked the id *shape* ; this closes the hole where a
+ * client could stash an arbitrary, cross-org, or oversized/wrong-type id.
+ */
+async function validateFileReferences(
+  fields: DataFieldRow[],
+  data: Record<string, unknown>,
+  organizationId: string,
+): Promise<void> {
+  const fileFields = fields.filter((f) => f.type === "FILE" || f.type === "ATTACHMENTS");
+  if (fileFields.length === 0) return;
+
+  const idsByField = new Map<string, string[]>();
+  const allIds = new Set<string>();
+  for (const f of fileFields) {
+    const raw = data[f.key];
+    const ids =
+      f.type === "FILE"
+        ? typeof raw === "string" && raw.length > 0
+          ? [raw]
+          : []
+        : Array.isArray(raw)
+          ? raw.filter((v): v is string => typeof v === "string" && v.length > 0)
+          : [];
+    idsByField.set(f.key, ids);
+    for (const id of ids) allIds.add(id);
+  }
+  if (allIds.size === 0) return;
+
+  const rows = await getReadyFilesByIds(organizationId, [...allIds]);
+  const byId = new Map(rows.map((r) => [r.id, r]));
+
+  for (const f of fileFields) {
+    const ids = idsByField.get(f.key) ?? [];
+    if (ids.length === 0) continue;
+    const config = fieldConfigSchemas[f.type as DataFieldType].parse(f.config) as {
+      allowedFormats?: string[];
+      maxSizeBytes?: number;
+      max?: number;
+    };
+    if (f.type === "ATTACHMENTS" && config.max != null && ids.length > config.max) {
+      throw new ValidationError(`Field "${f.key}" accepts at most ${config.max} file(s).`);
+    }
+    for (const id of ids) {
+      const file = byId.get(id);
+      if (!file) {
+        throw new ValidationError(`Field "${f.key}" references a file that isn't available.`);
+      }
+      if (!mimeAllowed(file.contentType, config.allowedFormats)) {
+        throw new ValidationError(`Field "${f.key}" doesn't accept "${file.contentType}" files.`);
+      }
+      if (config.maxSizeBytes != null && file.size > config.maxSizeBytes) {
+        throw new ValidationError(`Field "${f.key}" file exceeds the size limit.`);
+      }
+    }
+  }
+}
+
 export async function createDataRecord(input: CreateDataRecordInput): Promise<DataRecordRow> {
   const db = getDb();
   const model = await db.dataModel.findUniqueOrThrow({ where: { id: input.dataModelId } });
   const fields = await listDataFields(input.dataModelId);
   const parsed = applyComputedFields(fields, recordDataSchema(fields).parse(input.data));
-  const title = await computeTitle(db, model.id, model.titleFieldId, parsed);
+  await validateFileReferences(fields, parsed, model.organizationId);
+  const title = computeTitle(parsed);
   return db.dataRecord.create({
     data: {
       dataModelId: model.id,
@@ -729,8 +893,8 @@ export async function updateDataRecord(
   const fields = await listDataFields(existing.dataModelId);
   const merged = { ...(existing.data as Record<string, unknown>), ...(patch.data ?? {}) };
   const parsed = applyComputedFields(fields, recordDataSchema(fields).parse(merged));
-  const model = await db.dataModel.findUniqueOrThrow({ where: { id: existing.dataModelId } });
-  const title = await computeTitle(db, model.id, model.titleFieldId, parsed);
+  await validateFileReferences(fields, parsed, existing.organizationId);
+  const title = computeTitle(parsed);
   return db.dataRecord.update({
     where: { id },
     data: {
@@ -739,6 +903,38 @@ export async function updateDataRecord(
       title,
     },
   });
+}
+
+// Recompute every record's FORMULA values for a model, in place. Called after
+// a formula field is created or its expression changes, so stored values
+// reflect the current formulas without waiting for each record to be edited
+// again. No-op when the model has no formula fields. The denormalized title
+// comes from the reserved TEXT `title` field, which no formula can change, so
+// it's never touched here.
+//
+// Intentionally unbounded : this is an admin schema-time action (infrequent,
+// bounded by the model's own record count), not a per-request read. Records
+// whose computed values don't actually change are skipped, so re-saving a
+// formula that yields the same output writes nothing.
+export async function recomputeModelRecords(dataModelId: string): Promise<number> {
+  const db = getDb();
+  const fields = await listDataFields(dataModelId);
+  if (!fields.some((f) => (f.type as DataFieldType) === "FORMULA")) return 0;
+
+  const records = await db.dataRecord.findMany({ where: { dataModelId, deletedAt: null } });
+
+  let changed = 0;
+  for (const rec of records) {
+    const before = (rec.data as Record<string, unknown>) ?? {};
+    const after = applyComputedFields(fields, before);
+    if (JSON.stringify(after) === JSON.stringify(before)) continue; // nothing to write
+    await db.dataRecord.update({
+      where: { id: rec.id },
+      data: { data: after as Prisma.InputJsonValue },
+    });
+    changed += 1;
+  }
+  return changed;
 }
 
 export async function softDeleteDataRecord(id: string): Promise<void> {

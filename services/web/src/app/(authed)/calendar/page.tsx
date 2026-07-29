@@ -1,6 +1,5 @@
 import { getTranslations } from "next-intl/server";
 import type { CalendarDef } from "@monark/calendar/contracts";
-import { AppBar } from "@/components/app-bar";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createServerTrpcClient } from "@/lib/trpc-server";
 import { CalendarShell } from "./calendar-shell";
@@ -35,8 +34,7 @@ export default async function CalendarPage() {
   const canDelete = perms.includes("calendar.delete") || canManage;
 
   return (
-    <div className="flex h-screen flex-col overflow-hidden">
-      <AppBar />
+    <div className="flex h-[calc(100dvh-57px)] flex-col overflow-hidden">
       <main className="flex min-h-0 flex-1 flex-col overflow-hidden" aria-label={t("title")}>
         <CalendarShell
           initialDate={new Date()}

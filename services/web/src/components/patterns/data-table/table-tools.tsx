@@ -66,6 +66,7 @@ export function TableTools<TData>({
   filters,
   labels,
   className,
+  include,
 }: {
   layout: DataTableLayout;
   primaryColumn: PrimaryColumnDef<TData>;
@@ -73,6 +74,10 @@ export function TableTools<TData>({
   filters?: FilterConfig[];
   labels: TableToolsLabels;
   className?: string;
+  /** Which controls this instance renders (default all). Lets a screen split
+   *  the cluster — e.g. filters + sorting next to the search, and a separate
+   *  `include={["columns"]}` instance over with the right-hand actions. */
+  include?: ToolId[];
 }) {
   const isMobile = useIsMobile();
   const budget = useFilterBarToolsBudget();
@@ -101,15 +106,19 @@ export function TableTools<TData>({
   // click on a column with no sort UI still shouldn't badge the trigger.
   const sortCount = layout.sorting.length;
 
+  const includeSet = include ?? ["filters", "sorting", "columns"];
   const tools: ToolId[] = [
-    ...(hasFilters ? (["filters"] as const) : []),
-    ...(sortFields.length > 0 ? (["sorting"] as const) : []),
-    "columns",
+    ...(hasFilters && includeSet.includes("filters") ? (["filters"] as const) : []),
+    ...(sortFields.length > 0 && includeSet.includes("sorting") ? (["sorting"] as const) : []),
+    ...(includeSet.includes("columns") ? (["columns"] as const) : []),
   ];
 
   if (tools.length === 0) return null;
 
-  if (isMobile) {
+  // A single-control instance (e.g. a `include={["columns"]}` split rendered
+  // over with the actions) renders its one control inline everywhere — the
+  // full-screen mobile dialog is only worth it when several controls collapse.
+  if (isMobile && tools.length > 1) {
     return (
       <MobileToolsDialog
         filters={hasFilters ? filters : undefined}
@@ -159,7 +168,7 @@ export function TableTools<TData>({
         <Popover>
           <PopoverTrigger asChild>
             <ToolTriggerButton
-              icon={<SlidersHorizontal className="h-4 w-4" aria-hidden />}
+              icon={<Columns3 className="h-4 w-4" aria-hidden />}
               label={labels.columns}
             />
           </PopoverTrigger>
@@ -208,7 +217,13 @@ function ToolTriggerButton({
   badgeCount?: number;
 } & ComponentPropsWithoutRef<typeof Button>) {
   return (
-    <Button variant="outline" size="icon" aria-label={label} className="relative shrink-0" {...props}>
+    <Button
+      variant="outline"
+      size="icon"
+      aria-label={label}
+      className="relative shrink-0"
+      {...props}
+    >
       {icon}
       {badgeCount > 0 && (
         <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-medium leading-none text-primary-foreground">
@@ -338,7 +353,11 @@ function CollapsedToolsPopover({
               />
             )}
             {tools.includes("columns") && (
-              <MenuNavRow icon={Columns3} label={labels.columns} onClick={() => setView("columns")} />
+              <MenuNavRow
+                icon={Columns3}
+                label={labels.columns}
+                onClick={() => setView("columns")}
+              />
             )}
           </div>
         )}

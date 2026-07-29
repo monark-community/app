@@ -5,6 +5,10 @@ const USERS_PERMISSIONS = {
     description: "Disable user accounts (admin lockout).",
     category: "users",
   },
+  "manage-profile": {
+    description: "Edit other users' profile fields (display name, bio, avatar, locale).",
+    category: "users",
+  },
 } as const;
 
 export function registerUsersPermissions(): void {

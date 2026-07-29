@@ -16,7 +16,7 @@ import type {
 } from "../types";
 
 /** Single-line text input. */
-export function TextField({ def, labels }: FieldInputProps<TextFieldDef>) {
+export function TextField({ def }: FieldInputProps<TextFieldDef>) {
   const { control } = useFormContext();
   return (
     <FormField
@@ -25,10 +25,7 @@ export function TextField({ def, labels }: FieldInputProps<TextFieldDef>) {
       render={({ field }) => {
         const value = (field.value as string | undefined) ?? "";
         return (
-          <FieldShell
-            def={def}
-            counter={def.maxLength ? labels.charCount(value.length, def.maxLength) : undefined}
-          >
+          <FieldShell def={def}>
             <FormControl>
               <Input
                 {...field}
@@ -46,7 +43,7 @@ export function TextField({ def, labels }: FieldInputProps<TextFieldDef>) {
 }
 
 /** Multi-line text input with an auto-growing textarea. */
-export function LongTextField({ def, labels }: FieldInputProps<LongTextFieldDef>) {
+export function LongTextField({ def }: FieldInputProps<LongTextFieldDef>) {
   const { control } = useFormContext();
   return (
     <FormField
@@ -55,10 +52,7 @@ export function LongTextField({ def, labels }: FieldInputProps<LongTextFieldDef>
       render={({ field }) => {
         const value = (field.value as string | undefined) ?? "";
         return (
-          <FieldShell
-            def={def}
-            counter={def.maxLength ? labels.charCount(value.length, def.maxLength) : undefined}
-          >
+          <FieldShell def={def}>
             <FormControl>
               <Textarea
                 {...field}

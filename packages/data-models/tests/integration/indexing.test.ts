@@ -132,14 +132,7 @@ describe("requestFieldIndex — provisioning", () => {
 
   it("the resulting index expression actually filters correctly (NUMBER cast)", async () => {
     const { modelId, field } = await seedModelWithField("NUMBER");
-    await createDataField({
-      dataModelId: modelId,
-      key: "title",
-      label: "Title",
-      type: "TEXT",
-      config: {},
-      required: true,
-    });
+    // The reserved `title` field is auto-created with the model.
     await createDataRecord({
       dataModelId: modelId,
       data: { title: "Low", value: 3 },
@@ -154,9 +147,8 @@ describe("requestFieldIndex — provisioning", () => {
     await requestFieldIndex(field);
     await waitForStatus(field.id, "ready");
 
-    // Query `data->>'title'` directly rather than the denormalized `title`
-    // column — this test doesn't configure a titleFieldId, so the column
-    // would just read "Untitled" for both rows.
+    // Query `data->>'title'` directly ; this asserts the JSONB value the
+    // expression index reads, independent of the denormalized `title` column.
     const matches = await getDb().$queryRawUnsafe<Array<{ title: string }>>(
       `SELECT data->>'title' AS title FROM "DataRecord" WHERE "dataModelId" = '${modelId}' AND ((data->>'value')::numeric) > 50`,
     );

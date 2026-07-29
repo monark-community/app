@@ -27,6 +27,7 @@ import { DirtyFormBar } from "@/components/dirty-form-bar";
 import { PageHeader } from "@/components/page-header";
 import { PageSection } from "@/components/page-section";
 import { trpc } from "@/lib/trpc";
+import { useIsSingleTenant } from "@/lib/use-is-single-tenant";
 import { SubscriptionPicker, type SubscriptionDraft } from "./subscription-picker";
 import { WebhookTabsNav } from "./webhook-tabs-nav";
 
@@ -86,12 +87,14 @@ export function WebhookEditor(
   // sysadmins who can land on either platform-tier or org-scoped
   // endpoints, but for an org-admin it never holds anything other than
   // "Organization-scoped" — they can't pick anything else, so hiding
-  // the field removes a useless row.
+  // the field removes a useless row. Also hidden on a single-tenant deploy,
+  // where org-vs-platform scope is a distinction the operator never acts on.
   const isSysadminQuery = trpc.rbac.isSysadmin.useQuery(undefined, {
     refetchOnWindowFocus: false,
     staleTime: Infinity,
   });
-  const showScope = isSysadminQuery.data === true;
+  const isSingleTenant = useIsSingleTenant();
+  const showScope = isSysadminQuery.data === true && !isSingleTenant;
 
   const isEdit = props.mode === "edit";
   const endpointQuery = trpc.webhooks.get.useQuery(

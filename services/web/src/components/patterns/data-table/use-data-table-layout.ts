@@ -1,11 +1,7 @@
 "use client";
 
 import { type Dispatch, type SetStateAction, useEffect, useState } from "react";
-import type {
-  ColumnSizingState,
-  SortingState,
-  VisibilityState,
-} from "@tanstack/react-table";
+import type { ColumnSizingState, SortingState, VisibilityState } from "@tanstack/react-table";
 
 /**
  * The persisted, user-adjustable layout of a {@link DataTable} : data-column

@@ -62,6 +62,27 @@ export interface RelationSource {
   loadByIds: (ids: string[]) => Promise<RelationOption[]>;
 }
 
+/** Metadata for one uploaded file, resolved from a stored `StoredFile.id`. */
+export interface FileMeta {
+  id: string;
+  /** Original filename. */
+  name: string;
+  size: number;
+  contentType: string;
+}
+
+/**
+ * Transport-agnostic data source for a file field — the caller wires these to
+ * `trpc.files.*` (the field never knows the transport). Uploading itself is
+ * done by the widget via the `useFileUpload` hook against `FileFieldDef.bucket`.
+ */
+export interface FileSource {
+  /** Resolve stored ids → metadata (to label the chips). */
+  loadByIds: (ids: string[]) => Promise<FileMeta[]>;
+  /** A short-lived (or public) download URL for a stored file id. */
+  getDownloadUrl: (id: string) => Promise<string>;
+}
+
 interface BaseFieldDef {
   /** Form key ; also the record field name. */
   name: string;
@@ -168,6 +189,23 @@ export interface FormulaFieldDef extends BaseFieldDef {
   resultType: FormulaResultType;
 }
 
+export interface FileFieldDef extends BaseFieldDef {
+  type: "file";
+  source: FileSource;
+  /** The `@monark/files` bucket to upload into. */
+  bucket: string;
+  /** When true the value is an array of ids (an ATTACHMENTS field) ; otherwise
+   *  a single id (a FILE field). */
+  multiple?: boolean;
+  /** Max file count (only when `multiple`). */
+  max?: number;
+  /** Allowed MIME types (exact "application/pdf" or wildcard "image/*") ; empty
+   *  = any. Enforced client-side before upload + server-side on write. */
+  allowedFormats?: string[];
+  /** Per-file size cap in bytes. */
+  maxSizeBytes?: number;
+}
+
 export interface UrlFieldDef extends BaseFieldDef {
   type: "url";
   maxLength?: number;
@@ -189,6 +227,7 @@ export type FieldDef =
   | SingleSelectFieldDef
   | MultiSelectFieldDef
   | RelationFieldDef
+  | FileFieldDef
   | UrlFieldDef
   | EmailFieldDef
   | FormulaFieldDef;
@@ -224,6 +263,8 @@ export function defaultValueFor(def: FieldDef): FieldValue {
       return [];
     case "relation":
       return def.multiple ? [] : null;
+    case "file":
+      return def.multiple ? [] : null;
     case "formula":
       // Computed + read-only ; server recomputes on write. Seeded null so the
       // key exists in form state (the live preview reads sibling values).
@@ -245,8 +286,6 @@ export interface FieldLabels {
   clear: string;
   /** Date / datetime trigger label when empty. */
   pickDate: string;
-  /** Character counter ; receives current length + max. */
-  charCount: (count: number, max: number) => string;
   /** multiSelect / relation trigger when nothing is selected. */
   selectPlaceholder: string;
   /** Add-value button (multiSelect / relation chips). */
@@ -262,6 +301,16 @@ export interface FieldLabels {
   empty: string;
   /** Overflow chip in multi-value cells ; receives the hidden count. */
   more: (count: number) => string;
+  /** File field : upload trigger label. */
+  uploadFile: string;
+  /** File field : in-progress label while a file uploads. */
+  uploading: string;
+  /** File field : download-chip aria-label ; receives the filename. */
+  downloadFile: (name: string) => string;
+  /** File field : the picked file's type isn't in the allow-list. */
+  badFileFormat: string;
+  /** File field : the picked file exceeds the size cap. */
+  fileTooLarge: string;
   /** Rich-text editor toolbar button labels. */
   richText: RichTextToolbarLabels;
 }

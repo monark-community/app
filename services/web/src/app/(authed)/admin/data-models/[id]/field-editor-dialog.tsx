@@ -28,7 +28,7 @@ import { Badge } from "@/components/ui/badge";
 import { trpc } from "@/lib/trpc";
 import { SELECT_OPTION_TONES } from "@/components/fields";
 import type { BadgeTone, DataFieldServerType } from "@/components/fields";
-import { FormulaConfigEditor, type FormulaResultTypeValue } from "./formula-config";
+import { FormulaConfigEditor } from "./formula-config";
 
 const FIELD_TYPES: DataFieldServerType[] = [
   "TEXT",
@@ -44,6 +44,8 @@ const FIELD_TYPES: DataFieldServerType[] = [
   "URL",
   "EMAIL",
   "FORMULA",
+  "FILE",
+  "ATTACHMENTS",
 ];
 
 // Maps each option tone (a Badge variant) to its i18n label key. Used to give
@@ -100,7 +102,6 @@ export function FieldEditorDialog({
   const isEdit = !!field;
 
   const [label, setLabel] = useState(field?.label ?? "");
-  const [key, setKey] = useState(field?.key ?? "");
   const [description, setDescription] = useState(field?.description ?? "");
   const [type, setType] = useState<DataFieldServerType>(field?.type ?? "TEXT");
   const [required, setRequired] = useState(field?.required ?? false);
@@ -130,8 +131,17 @@ export function FieldEditorDialog({
     (initialConfig.cardinality as "ONE" | "MANY") ?? "ONE",
   );
   const [expression, setExpression] = useState<string>((initialConfig.expression as string) ?? "");
-  const [formulaResultType, setFormulaResultType] = useState<FormulaResultTypeValue>(
-    (initialConfig.resultType as FormulaResultTypeValue) ?? "NUMBER",
+  // FILE / ATTACHMENTS : allowed MIME types (comma-separated) + a size cap in MB
+  // (converted to/from the stored `maxSizeBytes`). Count uses `maxItems` above.
+  const [allowedFormats, setAllowedFormats] = useState<string>(
+    Array.isArray(initialConfig.allowedFormats)
+      ? (initialConfig.allowedFormats as string[]).join(", ")
+      : "",
+  );
+  const [maxSizeMb, setMaxSizeMb] = useState<string>(
+    typeof initialConfig.maxSizeBytes === "number"
+      ? String(Math.round(initialConfig.maxSizeBytes / (1024 * 1024)))
+      : "",
   );
 
   // Reset local state whenever a different field (or "new") is opened.
@@ -139,7 +149,6 @@ export function FieldEditorDialog({
     if (!open) return;
     const cfg = (field?.config as Record<string, unknown> | undefined) ?? {};
     setLabel(field?.label ?? "");
-    setKey(field?.key ?? "");
     setDescription(field?.description ?? "");
     setType(field?.type ?? "TEXT");
     setRequired(field?.required ?? false);
@@ -157,7 +166,14 @@ export function FieldEditorDialog({
     );
     setCardinality((cfg.cardinality as "ONE" | "MANY") ?? "ONE");
     setExpression((cfg.expression as string) ?? "");
-    setFormulaResultType((cfg.resultType as FormulaResultTypeValue) ?? "NUMBER");
+    setAllowedFormats(
+      Array.isArray(cfg.allowedFormats) ? (cfg.allowedFormats as string[]).join(", ") : "",
+    );
+    setMaxSizeMb(
+      typeof cfg.maxSizeBytes === "number"
+        ? String(Math.round(cfg.maxSizeBytes / (1024 * 1024)))
+        : "",
+    );
     // Deliberately keyed on `open` + `field?.id` only : this resets the form
     // to match whichever field (or "new") was just opened, not on every
     // re-render `field` happens to produce a new object reference.
@@ -234,7 +250,24 @@ export function FieldEditorDialog({
           ...(cardinality === "MANY" ? { max: num(maxItems) } : {}),
         };
       case "FORMULA":
-        return { expression, resultType: formulaResultType };
+        return { expression };
+      case "FILE":
+      case "ATTACHMENTS": {
+        const formats = allowedFormats
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean);
+        const maxBytes =
+          maxSizeMb.trim() === "" ? undefined : Math.round(Number(maxSizeMb) * 1024 * 1024);
+        return {
+          ...(formats.length > 0 ? { allowedFormats: formats } : {}),
+          ...(maxBytes != null && Number.isFinite(maxBytes) && maxBytes > 0
+            ? { maxSizeBytes: maxBytes }
+            : {}),
+          // Count cap applies only to the multi-file ATTACHMENTS variant.
+          ...(type === "ATTACHMENTS" ? { max: num(maxItems) } : {}),
+        };
+      }
       case "RICH_TEXT":
       case "BOOLEAN":
       case "DATE":
@@ -256,7 +289,8 @@ export function FieldEditorDialog({
     relationTargetKind,
     cardinality,
     expression,
-    formulaResultType,
+    allowedFormats,
+    maxSizeMb,
   ]);
 
   function handleSubmit() {
@@ -272,7 +306,6 @@ export function FieldEditorDialog({
     }
     createMutation.mutate({
       dataModelId,
-      key: key || undefined,
       label,
       description: description || null,
       type,
@@ -312,14 +345,6 @@ export function FieldEditorDialog({
               maxLength={80}
             />
           </div>
-
-          {!isEdit && (
-            <div className="space-y-1.5">
-              <Label htmlFor="field-key">{t("keyLabel")}</Label>
-              <Input id="field-key" value={key} onChange={(e) => setKey(e.target.value)} />
-              <p className="text-xs text-muted-foreground">{t("keyHint")}</p>
-            </div>
-          )}
 
           <div className="space-y-1.5">
             <Label htmlFor="field-description">{t("descriptionLabel")}</Label>
@@ -577,10 +602,45 @@ export function FieldEditorDialog({
             <FormulaConfigEditor
               expression={expression}
               onExpressionChange={setExpression}
-              resultType={formulaResultType}
-              onResultTypeChange={setFormulaResultType}
               columns={formulaColumns}
             />
+          )}
+
+          {(type === "FILE" || type === "ATTACHMENTS") && (
+            <div className="space-y-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="field-allowedFormats">{t("config.allowedFormats")}</Label>
+                <Input
+                  id="field-allowedFormats"
+                  value={allowedFormats}
+                  onChange={(e) => setAllowedFormats(e.target.value)}
+                  placeholder={t("config.allowedFormatsPlaceholder")}
+                />
+                <p className="text-xs text-muted-foreground">{t("config.allowedFormatsHint")}</p>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="field-maxSizeMb">{t("config.maxSizeMb")}</Label>
+                <Input
+                  id="field-maxSizeMb"
+                  type="number"
+                  min={0}
+                  value={maxSizeMb}
+                  onChange={(e) => setMaxSizeMb(e.target.value)}
+                />
+              </div>
+              {type === "ATTACHMENTS" && (
+                <div className="space-y-1.5">
+                  <Label htmlFor="field-maxItems">{t("config.maxItems")}</Label>
+                  <Input
+                    id="field-maxItems"
+                    type="number"
+                    min={1}
+                    value={maxItems}
+                    onChange={(e) => setMaxItems(e.target.value)}
+                  />
+                </div>
+              )}
+            </div>
           )}
         </div>
 

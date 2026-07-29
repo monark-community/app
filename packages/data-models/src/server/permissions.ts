@@ -23,6 +23,11 @@ const DATA_MODELS_PERMISSIONS = {
     description: "Create or edit Data Records.",
     category: "data-models",
   },
+  "record-bulk-write": {
+    description:
+      "Edit many Data Records at once (bulk edit). Separate from single-record editing, and additional to it — a bulk edit still requires record-write on the model.",
+    category: "data-models",
+  },
   "record-delete": {
     description: "Soft-delete or hard-delete Data Records.",
     category: "data-models",

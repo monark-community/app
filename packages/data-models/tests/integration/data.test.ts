@@ -202,6 +202,9 @@ describe("DataField CRUD", () => {
       name: "Tasks",
       createdBy: ACTOR,
     });
+    // The reserved TEXT `title` field is auto-created first with the model.
+    const titleField = (await listDataFields(model.id)).find((f) => f.key === "title");
+    if (!titleField) throw new Error("reserved title field was not auto-created");
     const a = await createDataField({
       dataModelId: model.id,
       key: "a_field",
@@ -217,16 +220,16 @@ describe("DataField CRUD", () => {
       config: {},
     });
 
-    await reorderDataFields(model.id, [b.id, a.id]);
+    await reorderDataFields(model.id, [titleField.id, b.id, a.id]);
     const reordered = await listDataFields(model.id);
-    expect(reordered.map((f) => f.id)).toEqual([b.id, a.id]);
+    expect(reordered.map((f) => f.id)).toEqual([titleField.id, b.id, a.id]);
 
     await archiveDataField(a.id);
     const activeOnly = await listDataFields(model.id);
-    expect(activeOnly.map((f) => f.id)).toEqual([b.id]);
+    expect(activeOnly.map((f) => f.id)).toEqual([titleField.id, b.id]);
 
     await unarchiveDataField(a.id);
     const restored = await listDataFields(model.id);
-    expect(restored.map((f) => f.id).sort()).toEqual([a.id, b.id].sort());
+    expect(restored.map((f) => f.id).sort()).toEqual([titleField.id, a.id, b.id].sort());
   });
 });

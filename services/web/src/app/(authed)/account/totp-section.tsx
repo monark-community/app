@@ -328,12 +328,7 @@ function TotpDisableDialog({
         <div className="grid gap-2 py-2">
           <Label htmlFor="disableCode">{t("disablePrompt")}</Label>
           <div className="flex justify-center">
-            <OtpCodeInput
-              id="disableCode"
-              value={code}
-              onChange={setCode}
-              onComplete={onSubmit}
-            />
+            <OtpCodeInput id="disableCode" value={code} onChange={setCode} onComplete={onSubmit} />
           </div>
         </div>
         <DialogFooter>
@@ -411,12 +406,7 @@ function TotpRegenerateDialog({
           <div className="grid gap-2 py-2">
             <Label htmlFor="regenCode">{t("regeneratePrompt")}</Label>
             <div className="flex justify-center">
-              <OtpCodeInput
-                id="regenCode"
-                value={code}
-                onChange={setCode}
-                onComplete={onSubmit}
-              />
+              <OtpCodeInput id="regenCode" value={code} onChange={setCode} onComplete={onSubmit} />
             </div>
           </div>
         )}

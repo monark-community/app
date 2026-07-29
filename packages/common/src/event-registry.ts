@@ -18,6 +18,35 @@
  * boot-time addition with no schema or core changes.
  */
 
+/** Value-type hint for an event payload field, for editor display. */
+export type EventFieldType = "string" | "number" | "boolean" | "date" | "object";
+
+/**
+ * One field an event carries in its payload. Declared per event type so tools
+ * that consume events (notably the automation editor's Event Trigger node) can
+ * show authors *what* information the event exposes — the triggering user, when
+ * it happened, etc. — instead of leaving them to guess at `{{ trigger.* }}`
+ * paths. Metadata only ; it doesn't validate the emitted payload.
+ */
+export type EventFieldDescriptor = {
+  /** Payload key, referenced downstream as `{{ trigger.<key> }}`. */
+  key: string;
+  /** Value-type hint for display. */
+  type: EventFieldType;
+  /** Author-facing description of what the field carries. */
+  description: string;
+};
+
+/**
+ * Fields present on EVERY domain event (from `DomainEventBase`), surfaced to
+ * consumers alongside each event's own payload fields so an author always has
+ * the "when" (and the concrete type string) to work with.
+ */
+export const COMMON_EVENT_FIELDS: readonly EventFieldDescriptor[] = [
+  { key: "occurredAt", type: "date", description: "When the event occurred." },
+  { key: "type", type: "string", description: "The event type string that fired the automation." },
+];
+
 export type EventTypeDescriptor = {
   /** Wire-level event type, e.g. `"rbac.role-assigned"`. */
   type: string;
@@ -25,6 +54,13 @@ export type EventTypeDescriptor = {
   module: string;
   /** Operator-facing description. Surfaces in the webhook picker. */
   description: string;
+  /**
+   * The event's own payload fields (beyond the common base fields). Optional —
+   * an event with none declared still resolves the common fields. Consumed by
+   * the automation editor to list a trigger's available outputs. `readonly` so
+   * modules can declare them with `as const`.
+   */
+  fields?: readonly EventFieldDescriptor[];
   /**
    * When true, this event type is org-scoped content (e.g. a per-Data-Model
    * record event). It's globally registered so the picker has its metadata,
@@ -40,14 +76,33 @@ const TYPE_RE = /^[a-z0-9]+(?:[._-][a-z0-9]+)*$/;
 
 export function registerEventTypes(
   module: string,
-  types: Record<string, { description: string; orgScoped?: boolean }>,
+  types: Record<
+    string,
+    { description: string; fields?: readonly EventFieldDescriptor[]; orgScoped?: boolean }
+  >,
 ): void {
   for (const [type, def] of Object.entries(types)) {
     if (!TYPE_RE.test(type)) {
       throw new Error(`Invalid event type : "${type}"`);
     }
-    registry.set(type, { type, module, description: def.description, orgScoped: def.orgScoped });
+    registry.set(type, {
+      type,
+      module,
+      description: def.description,
+      ...(def.fields ? { fields: def.fields } : {}),
+      orgScoped: def.orgScoped,
+    });
   }
+}
+
+/**
+ * The full field list an event exposes to consumers: its declared payload
+ * fields first (the specific "who / what"), then the common base fields (the
+ * "when" + type). An unregistered type yields just the common fields.
+ */
+export function eventFieldsFor(type: string): EventFieldDescriptor[] {
+  const desc = registry.get(type);
+  return [...(desc?.fields ?? []), ...COMMON_EVENT_FIELDS];
 }
 
 // ── Org-scoped event-type visibility ─────────────────────────────────

@@ -1,7 +1,16 @@
-import { Building2, Database, KeyRound, Users, Webhook, type LucideIcon } from "lucide-react";
+import {
+  Building2,
+  Database,
+  HardDrive,
+  KeyRound,
+  Lock,
+  Users,
+  Webhook,
+  type LucideIcon,
+} from "lucide-react";
 
 export type AdminTab = {
-  id: "organizations" | "users" | "rbac" | "webhooks" | "dataModels";
+  id: "organizations" | "users" | "rbac" | "webhooks" | "dataModels" | "files" | "secrets";
   href: `/admin/${string}`;
   icon: LucideIcon;
 };
@@ -26,4 +35,6 @@ export const ADMIN_TABS: ReadonlyArray<AdminTab> = [
   { id: "rbac", href: "/admin/rbac", icon: KeyRound },
   { id: "webhooks", href: "/admin/webhooks", icon: Webhook },
   { id: "dataModels", href: "/admin/data-models", icon: Database },
+  { id: "files", href: "/admin/files", icon: HardDrive },
+  { id: "secrets", href: "/admin/secrets", icon: Lock },
 ];

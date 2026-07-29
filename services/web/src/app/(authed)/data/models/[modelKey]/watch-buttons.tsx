@@ -21,17 +21,21 @@ function WatchButton({
   onToggle: () => void;
 }) {
   const t = useTranslations("data.records.watch");
+  // Icon-only, sized like the other toolbar icon buttons (filters / sort).
+  // The label lives in the tooltip + aria-label instead of on the face.
+  const label = watching ? t("following") : t("follow");
   return (
     <Button
       type="button"
       variant={watching ? "secondary" : "outline"}
-      size="sm"
+      size="icon"
       disabled={disabled}
       onClick={onToggle}
       aria-pressed={watching}
+      aria-label={label}
+      title={label}
     >
-      <Bell className={cn("mr-1.5 h-4 w-4", watching && "fill-current")} aria-hidden />
-      {watching ? t("following") : t("follow")}
+      <Bell className={cn("h-4 w-4", watching && "fill-current")} aria-hidden />
     </Button>
   );
 }

@@ -13,7 +13,11 @@ import {
   FilterBarSearch,
   PanelHeader,
   TableDetailLayout,
+  TableEmptyState,
   TableTools,
+  activeFilterCount,
+  clearAllFilters,
+  tableEmptyReason,
   useDataTableLayout,
   useDetailPanelRoute,
   type DataColumnDef,
@@ -24,6 +28,7 @@ import {
 import { SheetTitle } from "@/components/ui/sheet";
 import { rewriteForCurrentHost } from "@/lib/dev-host-rewrite";
 import { trpc } from "@/lib/trpc";
+import { useTableEmptyLabels } from "@/lib/use-table-empty-labels";
 import { InviteUserDialog } from "./invite-user-dialog";
 import { UserDetail } from "./[id]/user-detail";
 
@@ -100,6 +105,9 @@ export function UsersList() {
     staleTime: Infinity,
   });
   const singletonOrgId = bootstrapStatus.data?.singletonOrganizationId ?? null;
+  // Single-tenant: don't append the org name to an invite row — there's only
+  // one org, so the scope is implied.
+  const isSingleTenant = bootstrapStatus.data?.mode !== "multi";
   const rolesQuery = trpc.rbac.adminListRoles.useQuery(
     { organizationId: singletonOrgId ?? "" },
     {
@@ -211,6 +219,8 @@ export function UsersList() {
 
   type UserRow = (typeof rows)[number];
 
+  const emptyLabels = useTableEmptyLabels({ query: search, noData: t("empty") });
+
   const layout = useDataTableLayout("admin-users-table");
 
   const filterConfigs: FilterConfig[] = [
@@ -293,7 +303,9 @@ export function UsersList() {
       row.kind === "invite" ? row.invite.email : (row.user.displayName ?? row.user.email),
     subtext: (row) =>
       row.kind === "invite"
-        ? `${row.invite.role.name} · ${row.invite.organization.displayName}`
+        ? isSingleTenant
+          ? row.invite.role.name
+          : `${row.invite.role.name} · ${row.invite.organization.displayName}`
         : row.user.displayName
           ? row.user.email
           : undefined,
@@ -373,13 +385,23 @@ export function UsersList() {
             columns={userColumns}
             filters={filterConfigs}
             labels={toolsLabels}
+            include={["filters", "sorting"]}
           />
         }
         actions={
-          <Button type="button" onClick={() => setInviteOpen(true)}>
-            <Plus className="h-4 w-4" aria-hidden />
-            {t("invite.cta")}
-          </Button>
+          <div className="flex items-center gap-2">
+            <TableTools
+              layout={layout}
+              primaryColumn={primaryColumn}
+              columns={userColumns}
+              labels={toolsLabels}
+              include={["columns"]}
+            />
+            <Button type="button" onClick={() => setInviteOpen(true)}>
+              <Plus className="h-4 w-4" aria-hidden />
+              {t("invite.cta")}
+            </Button>
+          </div>
         }
       />
 
@@ -429,7 +451,18 @@ export function UsersList() {
               void invitesQuery.refetch();
             }}
             skeletonRows={4}
-            emptyState={search ? t("emptySearch", { query: search }) : t("empty")}
+            emptyState={
+              <TableEmptyState
+                reason={tableEmptyReason({
+                  hasSearch: search.length > 0,
+                  hasFilters: activeFilterCount(filterConfigs) > 0,
+                })}
+                labels={emptyLabels}
+                onClearSearch={() => setRawSearch("")}
+                onClearFilters={() => clearAllFilters(filterConfigs)}
+                createAction={{ label: t("invite.cta"), onClick: () => setInviteOpen(true) }}
+              />
+            }
             primaryColumn={primaryColumn}
             columns={userColumns}
             rowActions={(row) =>

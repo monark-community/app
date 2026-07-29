@@ -104,7 +104,7 @@ export function RecordFullPage({ model, recordId }: { model: ModelInfo; recordId
 
   if (fieldsQuery.isLoading || recordQuery.isLoading) {
     return (
-      <div className="mx-auto max-w-2xl space-y-4 px-4 py-8">
+      <div className="space-y-4">
         <Skeleton className="h-8 w-1/2" />
         <Skeleton className="h-10 w-full" />
         <Skeleton className="h-10 w-full" />
@@ -114,17 +114,17 @@ export function RecordFullPage({ model, recordId }: { model: ModelInfo; recordId
   }
 
   if (!recordQuery.data) {
-    return (
-      <div className="mx-auto max-w-2xl px-4 py-8">
-        <p className="text-sm text-muted-foreground">{t("notFound")}</p>
-      </div>
-    );
+    return <p className="text-sm text-muted-foreground">{t("notFound")}</p>;
   }
 
   const defaultValues = recordDataToDefaultValues(activeFields, recordQuery.data.data);
 
+  // Full-width, relying on the Data section `<main>`'s own padding (`px` +
+  // `pt-8`) rather than re-centering in a `max-w-2xl` column or adding a second
+  // `py-8` — so this record page matches its full-width records-list sibling
+  // (the data section renders wide, unlike the centered admin PageLayout).
   return (
-    <div className="mx-auto max-w-2xl space-y-6 px-4 py-8">
+    <div className="space-y-6">
       <PageHeader
         title={recordQuery.data.title}
         backHref={backHref}

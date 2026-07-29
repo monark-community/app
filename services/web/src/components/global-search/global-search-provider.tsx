@@ -1,13 +1,6 @@
 "use client";
 
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-  type ReactNode,
-} from "react";
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { GlobalSearchDialog } from "./global-search-dialog";
 
 type GlobalSearchContextValue = {
@@ -51,10 +44,7 @@ export function GlobalSearchProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
 
-  const value = useMemo<GlobalSearchContextValue>(
-    () => ({ open: () => setIsOpen(true) }),
-    [],
-  );
+  const value = useMemo<GlobalSearchContextValue>(() => ({ open: () => setIsOpen(true) }), []);
 
   return (
     <GlobalSearchContext.Provider value={value}>

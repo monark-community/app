@@ -29,11 +29,7 @@ const APP_ROOT = resolve(__dirname, "..");
 // Format: "<module-name>:<check>", where <check> is one of "events" or
 // "integration-tests". Each entry is debt we've chosen to carry ; remove it
 // the moment the underlying gap is fixed (the gate will tell you to).
-const ACKNOWLEDGED_GAPS = new Set<string>([
-  // Calendar shipped without a domain-event contract ; its mutations should
-  // emit events so webhooks can subscribe. Tracked in docs/todo/backlog.md.
-  "@monark/calendar:events",
-]);
+const ACKNOWLEDGED_GAPS = new Set<string>([]);
 
 type Severity = "error" | "notice";
 type Finding = { module: string; check: string; message: string; severity: Severity };

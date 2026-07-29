@@ -22,7 +22,7 @@ import {
   registerDataModelRegistrations,
 } from "./registrations";
 import { isWatchingModel, isWatchingRecord, setModelWatch, setRecordWatch } from "./watchers";
-import { DATA_FIELD_TYPES } from "../contracts/field-types";
+import { DATA_FIELD_TYPES, TITLE_FIELD_KEY } from "../contracts/field-types";
 import { listModelIntegrations } from "../contracts/integrations";
 import { getFieldIndexStatus, requestFieldIndex } from "./indexing";
 import type {
@@ -130,7 +130,12 @@ type DataModelsPermission =
   | "data-models.read-schema"
   | "data-models.record-read"
   | "data-models.record-write"
+  | "data-models.record-bulk-write"
   | "data-models.record-delete";
+
+// Cap on how many records one bulk edit touches, so a runaway selection can't
+// fan out into thousands of sequential row updates + events in one request.
+const BULK_UPDATE_MAX = 500;
 
 // Every Data Model is org-scoped : gate on the caller's own org, and 404
 // rather than leak the existence of another org's model.
@@ -309,7 +314,6 @@ export const dataModelsRouter = router({
           name: z.string().trim().min(1).max(80).optional(),
           description: z.string().max(2000).nullable().optional(),
           icon: z.string().max(60).nullable().optional(),
-          titleFieldId: z.string().min(1).nullable().optional(),
         }),
       )
       .mutation(async ({ ctx, input }) => {
@@ -317,18 +321,10 @@ export const dataModelsRouter = router({
         const existing = await requireModelById(input.id);
         await requireModelAccess(ctx, existing, "data-models.manage-schema");
 
-        if (input.titleFieldId) {
-          const field = await findDataFieldById(input.titleFieldId);
-          if (!field || field.dataModelId !== existing.id) {
-            throw new ValidationError("titleFieldId must reference a field on this Data Model.");
-          }
-        }
-
         const updated = await updateDataModel(input.id, {
           name: input.name,
           description: input.description,
           icon: input.icon,
-          titleFieldId: input.titleFieldId,
         });
 
         // Refresh the per-model permission / event-type labels — the model
@@ -476,6 +472,12 @@ export const dataModelsRouter = router({
         const model = await requireModelById(field.dataModelId);
         await requireModelAccess(ctx, model, "data-models.manage-schema");
 
+        // The reserved title field is always required ; its label stays
+        // editable (e.g. rename to "Name") but it can't be made optional.
+        if (field.key === TITLE_FIELD_KEY && input.required === false) {
+          throw new ValidationError("The Title field is always required.");
+        }
+
         const updated = await updateDataField(input.id, {
           label: input.label,
           description: input.description,
@@ -534,11 +536,13 @@ export const dataModelsRouter = router({
         const model = await requireModelById(field.dataModelId);
         await requireModelAccess(ctx, model, "data-models.manage-schema");
 
-        await archiveDataField(input.id);
-        if (model.titleFieldId === input.id) {
-          // The archived field can no longer back the record title.
-          await updateDataModel(model.id, { titleFieldId: null });
+        // The reserved title field backs every record's title ; it can't be
+        // archived (nor deleted or retyped — type is immutable after create).
+        if (field.key === TITLE_FIELD_KEY) {
+          throw new ValidationError("The Title field can't be archived.");
         }
+
+        await archiveDataField(input.id);
 
         const event: DataModelSchemaChangedEvent = {
           type: "data-models.schema-changed",
@@ -663,6 +667,27 @@ export const dataModelsRouter = router({
           dataModelId: z.string().min(1),
           includeDeleted: z.boolean().optional(),
           search: z.string().trim().max(120).optional(),
+          // Per-field value predicates from the list filter menu. `value` is
+          // the raw control value : a string (text / number / boolean "true" /
+          // date / select) or a string[] (multi-select). ANDed on the server.
+          fieldFilters: z
+            .array(
+              z.object({
+                key: z.string().min(1),
+                type: z.enum([
+                  "text",
+                  "number",
+                  "boolean",
+                  "date",
+                  "select",
+                  "selectAny",
+                  "multiSelect",
+                ]),
+                value: z.union([z.string(), z.array(z.string())]),
+              }),
+            )
+            .max(50)
+            .optional(),
           ...paginationInput,
         }),
       )
@@ -675,6 +700,7 @@ export const dataModelsRouter = router({
           dataModelId: input.dataModelId,
           includeDeleted: input.includeDeleted ?? false,
           search: input.search,
+          fieldFilters: input.fieldFilters,
           limit: input.limit,
           cursor: input.cursor,
           roleIds: access.roleIds,
@@ -782,6 +808,72 @@ export const dataModelsRouter = router({
         }
 
         return serializeRecord(updated);
+      }),
+
+    // Bulk edit : apply the same partial `data` overlay to many records at
+    // once. Gated by the separate `record-bulk-write` capability *in addition
+    // to* per-model `record-write`, so bulk can be granted / revoked apart from
+    // single-record editing. The client sends one field's value ; the same
+    // overlay is written to every id.
+    bulkUpdate: publicProcedure
+      .input(
+        z.object({
+          ids: z.array(z.string().min(1)).min(1).max(BULK_UPDATE_MAX),
+          data: z.record(z.string(), z.unknown()),
+        }),
+      )
+      .mutation(async ({ ctx, input }) => {
+        if (!ctx.userId) throw new UnauthorizedError();
+        if (Object.keys(input.data).length === 0) return { count: 0 };
+
+        // Every target must exist and belong to the same model — a bulk edit
+        // is scoped to one Data Model's field set.
+        const loaded = await Promise.all(input.ids.map((id) => findDataRecordById(id)));
+        const missingIdx = loaded.findIndex((r) => !r);
+        if (missingIdx !== -1) throw new NotFoundError("DataRecord", input.ids[missingIdx]!);
+        const records = loaded as NonNullable<(typeof loaded)[number]>[];
+        if (new Set(records.map((r) => r.dataModelId)).size !== 1) {
+          throw new ValidationError(
+            "All records in a bulk edit must belong to the same Data Model.",
+          );
+        }
+        const model = await requireModelById(records[0]!.dataModelId);
+
+        // Must be able to write this model's records AND hold the separate
+        // bulk-edit capability.
+        const orgId = await requireModelAccess(ctx, model, "data-models.record-write");
+        await requirePermission(ctx, "data-models.record-bulk-write", orgId);
+
+        // Row-level : can't touch a record your roles can't see.
+        const access = await recordAccessContext(ctx.userId, orgId);
+        for (const rec of records) {
+          if (!(await isDataRecordRoleAccessible(rec.id, access))) {
+            throw new NotFoundError("DataRecord", rec.id);
+          }
+        }
+
+        // Not one transaction — updateDataRecord merges + re-validates +
+        // recomputes per row through its own db handle. The value is validated
+        // before each row's write, so a type-invalid value fails on the first
+        // row with nothing persisted.
+        const changed = Object.keys(input.data);
+        for (const rec of records) {
+          const updated = await updateDataRecord(rec.id, { data: input.data });
+          const event: DataModelRecordUpdatedEvent = {
+            type: "data-models.record-updated",
+            dataModelId: model.id,
+            dataModelKey: model.key,
+            recordId: updated.id,
+            organizationId: model.organizationId,
+            actorId: ctx.userId,
+            changed,
+            occurredAt: new Date(),
+            subscriptionAliases: [perModelEventType(model.key, "updated")],
+          };
+          await emit(event).catch(() => {});
+        }
+
+        return { count: records.length };
       }),
 
     delete: publicProcedure

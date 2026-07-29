@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { cn } from "@/lib/utils";
 import { FormDescription, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { FIELD_TYPE_ICON } from "./field-icons";
 import type { FieldDef } from "./types";
@@ -13,24 +14,42 @@ import type { FieldDef } from "./types";
  * nested `FormLabel` / `FormControl` / `FormMessage` wire up automatically.
  *
  * Pass the control (usually wrapped in `<FormControl>`) as `children`.
- * `counter` renders a right-aligned hint on the message row (char count).
+ *
+ * Like the hand-rolled {@link FieldRow}, the label sits **above** the control
+ * when space is tight and flips to a left 10rem column once the form's
+ * surrounding `@container` (added by {@link AutoForm}) is wide enough (`@md`,
+ * ≈448px — the same threshold as `FieldRow`, so AutoForm and hand-rolled forms
+ * read identically). `richText` (WYSIWYG) and `longText` (textarea) opt out and
+ * always stack : they need the full row width for a usable editing area. The
+ * control + help + error stack together in the right column, so a wrapping
+ * error aligns under the control, not the label. A `maxLength` limit shows up
+ * only as an error (`FormMessage`) when exceeded — no persistent char counter,
+ * so a correct form stays uncluttered.
  */
 export function FieldShell({
   def,
   children,
-  counter,
   className,
 }: {
   def: Pick<FieldDef, "type" | "label" | "description" | "required">;
   children: ReactNode;
-  counter?: ReactNode;
   className?: string;
 }) {
   const TypeIcon = FIELD_TYPE_ICON[def.type];
+  // Wide, tall controls read better full-width, so they never flip. A field
+  // without a label can't have a left label column either.
+  const stackOnly = def.type === "richText" || def.type === "longText";
+  const flip = !stackOnly && !!def.label;
   return (
-    <FormItem className={className}>
+    <FormItem
+      className={cn(
+        flip &&
+          "@md:grid @md:grid-cols-[10rem_minmax(0,1fr)] @md:items-start @md:gap-x-4 @md:space-y-0",
+        className,
+      )}
+    >
       {def.label ? (
-        <FormLabel className="flex items-center gap-1.5">
+        <FormLabel className={cn("flex items-center gap-1.5", flip && "@md:pt-2")}>
           <TypeIcon className="h-3.5 w-3.5 shrink-0 text-muted-foreground/70" aria-hidden />
           <span>
             {def.label}
@@ -42,18 +61,11 @@ export function FieldShell({
           </span>
         </FormLabel>
       ) : null}
-      {children}
-      {def.description ? <FormDescription>{def.description}</FormDescription> : null}
-      {counter ? (
-        <div className="flex items-start justify-between gap-2">
-          <FormMessage />
-          <span className="shrink-0 pt-px text-xs tabular-nums text-muted-foreground">
-            {counter}
-          </span>
-        </div>
-      ) : (
+      <div className="min-w-0 space-y-2">
+        {children}
+        {def.description ? <FormDescription>{def.description}</FormDescription> : null}
         <FormMessage />
-      )}
+      </div>
     </FormItem>
   );
 }

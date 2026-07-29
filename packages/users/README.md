@@ -36,15 +36,17 @@ const { data } = trpc.users.me.useQuery();
 
 ## Public API
 
-| Import path               | Export                                   | Kind                                       |
-| ------------------------- | ---------------------------------------- | ------------------------------------------ |
-| `@monark/users/server`    | `usersRouter`                            | tRPC router (mounted at `users.*`)         |
-| `@monark/users/server`    | `getById(id)`                            | `(id: string) => Promise<User \| null>`    |
-| `@monark/users/server`    | `getByIdOrThrow(id)`                     | throws `NotFoundError` if absent           |
-| `@monark/users/server`    | `getByEmail(email)`                      | `(email: string) => Promise<User \| null>` |
-| `@monark/users/server`    | `getCurrent(ctx)`                        | `({ userId }) => Promise<User \| null>`    |
-| `@monark/users/server`    | `User`                                   | type from Prisma client                    |
-| `@monark/users/contracts` | `UserProfileUpdatedEvent`, `UsersEvents` | event types                                |
+| Import path               | Export                                   | Kind                                                                    |
+| ------------------------- | ---------------------------------------- | ----------------------------------------------------------------------- |
+| `@monark/users/server`    | `usersRouter`                            | tRPC router (mounted at `users.*`)                                      |
+| `@monark/users/server`    | `getById(id)`                            | `(id: string) => Promise<User \| null>`                                 |
+| `@monark/users/server`    | `getByIdOrThrow(id)`                     | throws `NotFoundError` if absent                                        |
+| `@monark/users/server`    | `getByEmail(email)`                      | `(email: string) => Promise<User \| null>`                              |
+| `@monark/users/server`    | `getCurrent(ctx)`                        | `({ userId }) => Promise<User \| null>`                                 |
+| `@monark/users/server`    | `updateProfileData(id, patch)`           | profile writer (server-to-server; gate with `users.manage-profile`)     |
+| `@monark/users/server`    | `setDisabledAt(id, date\|null)`          | admin disable / re-enable (server-to-server; gate with `users.disable`) |
+| `@monark/users/server`    | `User`                                   | type from Prisma client                                                 |
+| `@monark/users/contracts` | `UserProfileUpdatedEvent`, `UsersEvents` | event types                                                             |
 
 tRPC procedures exposed under `users.*` (from the app router):
 

@@ -4,8 +4,8 @@ import {
   getNotificationTemplate,
   listNotificationKinds,
   type NotificationDataMap,
-  type NotificationKind,
-} from "../src/contracts/registry";
+  type CoreNotificationKinds,
+} from "../src/contracts";
 import { registerCoreNotificationKinds } from "../src/server/register-core-kinds";
 import { enrichVars } from "../src/server/enrich";
 import { renderString } from "../src/server/template";
@@ -30,11 +30,14 @@ registerCoreNotificationKinds();
 // realistic shape to enrich ; we build a representative one below.
 // New kinds added to the registry will fail the type check here until
 // they're given a payload in the switch.
-function payloadFor<K extends NotificationKind>(kind: K): NotificationDataMap[K] {
+function payloadFor<K extends keyof CoreNotificationKinds>(kind: K): NotificationDataMap[K] {
   const occurredAt = new Date("2026-05-01T14:30:00Z");
   // Type-narrowing per kind. Casts are fine inside the switch — the
-  // return type tracks `kind`.
-  switch (kind) {
+  // return type tracks `kind`. Switch on a concrete-typed alias (not the
+  // generic `K`, which control-flow can't narrow to `never`) so the default
+  // exhaustiveness check works.
+  const k: keyof CoreNotificationKinds = kind;
+  switch (k) {
     case "auth.new-device":
       return {
         deviceLabel: "Pixel 7",
@@ -92,7 +95,7 @@ function payloadFor<K extends NotificationKind>(kind: K): NotificationDataMap[K]
     default: {
       // Exhaustiveness check : adding a kind to NotificationDataMap
       // without updating this switch turns into a compile error.
-      const exhaustive: never = kind;
+      const exhaustive: never = k;
       throw new Error(`Missing payload for kind ${exhaustive}`);
     }
   }
@@ -101,7 +104,7 @@ function payloadFor<K extends NotificationKind>(kind: K): NotificationDataMap[K]
 // Renders one kind's email body + the surrounding shell for a given
 // locale. Mirrors what `dispatch.notify()` does for the EMAIL channel,
 // minus the SMTP send + DB write.
-function renderEmail<K extends NotificationKind>(
+function renderEmail<K extends keyof CoreNotificationKinds>(
   kind: K,
   locale: "en" | "fr",
   overrides?: { logoUrl?: string | null; primaryColor?: string | null },
@@ -128,7 +131,11 @@ describe("notifications/email-shell snapshot guard", () => {
   // One test per registered kind × each locale we ship. Adding a new
   // kind extends this matrix automatically because we iterate the
   // registry's keys.
-  const kinds = listNotificationKinds();
+  // This fixture registers only core kinds ; other modules' kinds are part of
+  // the `NotificationKind` type (their augmentation is pulled in transitively
+  // via the DomainEvent union) but never registered here, so the runtime list
+  // is core-only. Narrow the type to match what the fixture actually renders.
+  const kinds = listNotificationKinds() as (keyof CoreNotificationKinds)[];
   const locales = ["en", "fr"] as const;
 
   for (const kind of kinds) {

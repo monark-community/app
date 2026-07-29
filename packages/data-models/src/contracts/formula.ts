@@ -94,7 +94,16 @@ function isDigit(ch: string): boolean {
   return ch >= "0" && ch <= "9";
 }
 
+// Backstop caps against pathological input (a very long or deeply-nested
+// expression drives CPU / parser recursion). Legit formulas are far smaller;
+// callers may impose tighter per-field limits on top of these.
+const MAX_FORMULA_LENGTH = 10_000;
+const MAX_PARSE_DEPTH = 64;
+
 function tokenize(input: string): Token[] {
+  if (input.length > MAX_FORMULA_LENGTH) {
+    throw new FormulaError(`Formula is too long (max ${MAX_FORMULA_LENGTH} characters).`);
+  }
   const tokens: Token[] = [];
   let i = 0;
   const n = input.length;
@@ -222,8 +231,24 @@ class Parser {
     return left;
   }
 
+  // Recursion-depth guard: `parseOr` is re-entered on every `(` group and
+  // function argument, and `parseUnary` on every unary chain, so counting here
+  // bounds nesting and stops a `((((…))))` / `----…x` input from overflowing the
+  // stack. Legit formulas nest only a handful deep.
+  private depth = 0;
+  private enterDepth(): void {
+    if (++this.depth > MAX_PARSE_DEPTH) {
+      throw new FormulaError("Formula is too deeply nested.");
+    }
+  }
+
   private parseOr(): FormulaNode {
-    return this.parseBinaryLevel(["||"], () => this.parseAnd());
+    this.enterDepth();
+    try {
+      return this.parseBinaryLevel(["||"], () => this.parseAnd());
+    } finally {
+      this.depth -= 1;
+    }
   }
   private parseAnd(): FormulaNode {
     return this.parseBinaryLevel(["&&"], () => this.parseCmp());
@@ -242,11 +267,16 @@ class Parser {
   }
 
   private parseUnary(): FormulaNode {
-    if (this.isOp("!") || this.isOp("-")) {
-      const op = this.next().value as "!" | "-";
-      return { kind: "unary", op, operand: this.parseUnary() };
+    this.enterDepth();
+    try {
+      if (this.isOp("!") || this.isOp("-")) {
+        const op = this.next().value as "!" | "-";
+        return { kind: "unary", op, operand: this.parseUnary() };
+      }
+      return this.parsePrimary();
+    } finally {
+      this.depth -= 1;
     }
-    return this.parsePrimary();
   }
 
   private parsePrimary(): FormulaNode {
@@ -273,7 +303,9 @@ class Parser {
 
   private parseCall(name: string): FormulaNode {
     const lower = name.toLowerCase();
-    const def = FUNCTIONS[lower];
+    // `Object.hasOwn` so inherited Object props ("constructor", "toString", …)
+    // aren't mistaken for known functions.
+    const def = Object.hasOwn(FUNCTIONS, lower) ? FUNCTIONS[lower] : undefined;
     if (!def) throw new FormulaError(`Unknown function "${name}"`);
     this.eatOp("(");
     const args: FormulaNode[] = [];
@@ -410,6 +442,10 @@ function diffDates(a: Date, b: Date, unit: string): number | null {
 interface FunctionDef {
   minArgs: number;
   maxArgs: number;
+  /** The static result type this function yields — the anchor for
+   *  {@link inferResultType}. `if` / `coalesce` are inferred from their
+   *  branch arguments instead, so their value here is only a fallback. */
+  result: FormulaResultType;
   fn: (args: FormulaValue[]) => FormulaValue;
 }
 
@@ -422,14 +458,21 @@ const FUNCTIONS: Record<string, FunctionDef> = {
   if: {
     minArgs: 3,
     maxArgs: 3,
+    result: "TEXT", // inferred from the two branches, see inferResultType
     fn: (a) => (toBoolean(a[0] ?? null) ? (a[1] ?? null) : (a[2] ?? null)),
   },
-  and: { minArgs: 1, maxArgs: Infinity, fn: (a) => a.every((x) => toBoolean(x)) },
-  or: { minArgs: 1, maxArgs: Infinity, fn: (a) => a.some((x) => toBoolean(x)) },
-  not: { minArgs: 1, maxArgs: 1, fn: (a) => !toBoolean(a[0] ?? null) },
+  and: {
+    minArgs: 1,
+    maxArgs: Infinity,
+    result: "BOOLEAN",
+    fn: (a) => a.every((x) => toBoolean(x)),
+  },
+  or: { minArgs: 1, maxArgs: Infinity, result: "BOOLEAN", fn: (a) => a.some((x) => toBoolean(x)) },
+  not: { minArgs: 1, maxArgs: 1, result: "BOOLEAN", fn: (a) => !toBoolean(a[0] ?? null) },
   isempty: {
     minArgs: 1,
     maxArgs: 1,
+    result: "BOOLEAN",
     fn: (a) => {
       const v = a[0] ?? null;
       return v === null || (typeof v === "string" && v.trim() === "");
@@ -438,6 +481,7 @@ const FUNCTIONS: Record<string, FunctionDef> = {
   coalesce: {
     minArgs: 1,
     maxArgs: Infinity,
+    result: "TEXT", // inferred from its arguments, see inferResultType
     fn: (a) => a.find((v) => v !== null && !(typeof v === "string" && v === "")) ?? null,
   },
 
@@ -445,6 +489,7 @@ const FUNCTIONS: Record<string, FunctionDef> = {
   round: {
     minArgs: 1,
     maxArgs: 2,
+    result: "NUMBER",
     fn: (a) => {
       const x = toNumber(a[0] ?? null);
       if (x === null) return null;
@@ -453,13 +498,14 @@ const FUNCTIONS: Record<string, FunctionDef> = {
       return Math.round(x * f) / f;
     },
   },
-  floor: { minArgs: 1, maxArgs: 1, fn: (a) => nOrNull(a[0] ?? null, Math.floor) },
-  ceil: { minArgs: 1, maxArgs: 1, fn: (a) => nOrNull(a[0] ?? null, Math.ceil) },
-  abs: { minArgs: 1, maxArgs: 1, fn: (a) => nOrNull(a[0] ?? null, Math.abs) },
-  sqrt: { minArgs: 1, maxArgs: 1, fn: (a) => nOrNull(a[0] ?? null, Math.sqrt) },
+  floor: { minArgs: 1, maxArgs: 1, result: "NUMBER", fn: (a) => nOrNull(a[0] ?? null, Math.floor) },
+  ceil: { minArgs: 1, maxArgs: 1, result: "NUMBER", fn: (a) => nOrNull(a[0] ?? null, Math.ceil) },
+  abs: { minArgs: 1, maxArgs: 1, result: "NUMBER", fn: (a) => nOrNull(a[0] ?? null, Math.abs) },
+  sqrt: { minArgs: 1, maxArgs: 1, result: "NUMBER", fn: (a) => nOrNull(a[0] ?? null, Math.sqrt) },
   min: {
     minArgs: 1,
     maxArgs: Infinity,
+    result: "NUMBER",
     fn: (a) => {
       const ns = numArgs(a).filter((x) => Number.isFinite(x));
       return ns.length ? Math.min(...ns) : null;
@@ -468,6 +514,7 @@ const FUNCTIONS: Record<string, FunctionDef> = {
   max: {
     minArgs: 1,
     maxArgs: Infinity,
+    result: "NUMBER",
     fn: (a) => {
       const ns = numArgs(a).filter((x) => Number.isFinite(x));
       return ns.length ? Math.max(...ns) : null;
@@ -476,6 +523,7 @@ const FUNCTIONS: Record<string, FunctionDef> = {
   sum: {
     minArgs: 1,
     maxArgs: Infinity,
+    result: "NUMBER",
     fn: (a) =>
       numArgs(a)
         .filter(Number.isFinite)
@@ -484,6 +532,7 @@ const FUNCTIONS: Record<string, FunctionDef> = {
   avg: {
     minArgs: 1,
     maxArgs: Infinity,
+    result: "NUMBER",
     fn: (a) => {
       const ns = numArgs(a).filter((x) => Number.isFinite(x));
       return ns.length ? ns.reduce((s, x) => s + x, 0) / ns.length : null;
@@ -492,6 +541,7 @@ const FUNCTIONS: Record<string, FunctionDef> = {
   mod: {
     minArgs: 2,
     maxArgs: 2,
+    result: "NUMBER",
     fn: (a) => {
       const x = toNumber(a[0] ?? null);
       const y = toNumber(a[1] ?? null);
@@ -502,6 +552,7 @@ const FUNCTIONS: Record<string, FunctionDef> = {
   pow: {
     minArgs: 2,
     maxArgs: 2,
+    result: "NUMBER",
     fn: (a) => {
       const x = toNumber(a[0] ?? null);
       const y = toNumber(a[1] ?? null);
@@ -512,19 +563,36 @@ const FUNCTIONS: Record<string, FunctionDef> = {
   },
 
   // String
-  concat: { minArgs: 1, maxArgs: Infinity, fn: (a) => a.map(toStringValue).join("") },
-  upper: { minArgs: 1, maxArgs: 1, fn: (a) => toStringValue(a[0] ?? null).toUpperCase() },
-  lower: { minArgs: 1, maxArgs: 1, fn: (a) => toStringValue(a[0] ?? null).toLowerCase() },
-  trim: { minArgs: 1, maxArgs: 1, fn: (a) => toStringValue(a[0] ?? null).trim() },
-  len: { minArgs: 1, maxArgs: 1, fn: (a) => toStringValue(a[0] ?? null).length },
+  concat: {
+    minArgs: 1,
+    maxArgs: Infinity,
+    result: "TEXT",
+    fn: (a) => a.map(toStringValue).join(""),
+  },
+  upper: {
+    minArgs: 1,
+    maxArgs: 1,
+    result: "TEXT",
+    fn: (a) => toStringValue(a[0] ?? null).toUpperCase(),
+  },
+  lower: {
+    minArgs: 1,
+    maxArgs: 1,
+    result: "TEXT",
+    fn: (a) => toStringValue(a[0] ?? null).toLowerCase(),
+  },
+  trim: { minArgs: 1, maxArgs: 1, result: "TEXT", fn: (a) => toStringValue(a[0] ?? null).trim() },
+  len: { minArgs: 1, maxArgs: 1, result: "NUMBER", fn: (a) => toStringValue(a[0] ?? null).length },
   contains: {
     minArgs: 2,
     maxArgs: 2,
+    result: "BOOLEAN",
     fn: (a) => toStringValue(a[0] ?? null).includes(toStringValue(a[1] ?? null)),
   },
   replace: {
     minArgs: 3,
     maxArgs: 3,
+    result: "TEXT",
     fn: (a) =>
       toStringValue(a[0] ?? null)
         .split(toStringValue(a[1] ?? null))
@@ -533,6 +601,7 @@ const FUNCTIONS: Record<string, FunctionDef> = {
   substring: {
     minArgs: 2,
     maxArgs: 3,
+    result: "TEXT",
     fn: (a) => {
       const s = toStringValue(a[0] ?? null);
       const start = toNumber(a[1] ?? null) ?? 0;
@@ -546,11 +615,13 @@ const FUNCTIONS: Record<string, FunctionDef> = {
   left: {
     minArgs: 2,
     maxArgs: 2,
+    result: "TEXT",
     fn: (a) => toStringValue(a[0] ?? null).substring(0, Math.max(0, toNumber(a[1] ?? null) ?? 0)),
   },
   right: {
     minArgs: 2,
     maxArgs: 2,
+    result: "TEXT",
     fn: (a) => {
       const s = toStringValue(a[0] ?? null);
       const n = Math.max(0, toNumber(a[1] ?? null) ?? 0);
@@ -559,10 +630,11 @@ const FUNCTIONS: Record<string, FunctionDef> = {
   },
 
   // Date
-  now: { minArgs: 0, maxArgs: 0, fn: () => new Date() },
+  now: { minArgs: 0, maxArgs: 0, result: "DATE", fn: () => new Date() },
   today: {
     minArgs: 0,
     maxArgs: 0,
+    result: "DATE",
     fn: () => {
       const d = new Date();
       d.setUTCHours(0, 0, 0, 0);
@@ -572,6 +644,7 @@ const FUNCTIONS: Record<string, FunctionDef> = {
   dateadd: {
     minArgs: 3,
     maxArgs: 3,
+    result: "DATE",
     fn: (a) => {
       const d = toDateValue(a[0] ?? null);
       const amt = toNumber(a[1] ?? null);
@@ -583,6 +656,7 @@ const FUNCTIONS: Record<string, FunctionDef> = {
   datediff: {
     minArgs: 3,
     maxArgs: 3,
+    result: "NUMBER",
     fn: (a) => {
       const x = toDateValue(a[0] ?? null);
       const y = toDateValue(a[1] ?? null);
@@ -590,17 +664,51 @@ const FUNCTIONS: Record<string, FunctionDef> = {
       return diffDates(x, y, toStringValue(a[2] ?? null));
     },
   },
-  year: { minArgs: 1, maxArgs: 1, fn: (a) => dateField(a[0] ?? null, (d) => d.getUTCFullYear()) },
-  month: { minArgs: 1, maxArgs: 1, fn: (a) => dateField(a[0] ?? null, (d) => d.getUTCMonth() + 1) },
-  day: { minArgs: 1, maxArgs: 1, fn: (a) => dateField(a[0] ?? null, (d) => d.getUTCDate()) },
+  year: {
+    minArgs: 1,
+    maxArgs: 1,
+    result: "NUMBER",
+    fn: (a) => dateField(a[0] ?? null, (d) => d.getUTCFullYear()),
+  },
+  month: {
+    minArgs: 1,
+    maxArgs: 1,
+    result: "NUMBER",
+    fn: (a) => dateField(a[0] ?? null, (d) => d.getUTCMonth() + 1),
+  },
+  day: {
+    minArgs: 1,
+    maxArgs: 1,
+    result: "NUMBER",
+    fn: (a) => dateField(a[0] ?? null, (d) => d.getUTCDate()),
+  },
   formatdate: {
     minArgs: 1,
     maxArgs: 1,
+    result: "TEXT",
     fn: (a) => {
       const d = toDateValue(a[0] ?? null);
       return d === null ? null : d.toISOString().slice(0, 10);
     },
   },
+
+  // Casts — explicit type coercion + the escape hatch for inferResultType.
+  // Wrapping an expression in one of these both coerces the runtime value and
+  // pins the field's result type (e.g. `tostring(price)` makes a numeric field
+  // render as text). Naming is case-insensitive, so `toNumber` / `tonumber`
+  // both resolve here.
+  tostring: {
+    minArgs: 1,
+    maxArgs: 1,
+    result: "TEXT",
+    fn: (a) => {
+      const v = a[0] ?? null;
+      return v === null ? null : toStringValue(v);
+    },
+  },
+  tonumber: { minArgs: 1, maxArgs: 1, result: "NUMBER", fn: (a) => toNumber(a[0] ?? null) },
+  tobool: { minArgs: 1, maxArgs: 1, result: "BOOLEAN", fn: (a) => toBoolean(a[0] ?? null) },
+  todate: { minArgs: 1, maxArgs: 1, result: "DATE", fn: (a) => toDateValue(a[0] ?? null) },
 };
 
 function nOrNull(v: FormulaValue, op: (x: number) => number): FormulaValue {
@@ -690,7 +798,7 @@ function evalNode(node: FormulaNode, scope: FormulaScope): FormulaValue {
       return n === null ? null : -n;
     }
     case "call": {
-      const def = FUNCTIONS[node.name];
+      const def = Object.hasOwn(FUNCTIONS, node.name) ? FUNCTIONS[node.name] : undefined;
       if (!def) return null; // guarded at parse time
       return def.fn(node.args.map((arg) => evalNode(arg, scope)));
     }
@@ -769,6 +877,78 @@ export function coerceFormulaResult(
     case "DATE":
       return toDateValue(value);
   }
+}
+
+/**
+ * Statically infer a formula's result type from its outermost operation — no
+ * scope needed, so a field's stored type is *derived* from its expression
+ * rather than configured. The mapping follows what each operator / function
+ * yields: comparisons + logic → BOOLEAN, arithmetic → NUMBER, `&` + text
+ * functions → TEXT, date functions → DATE. Two cases can't be pinned by shape
+ * alone and fall back to TEXT (the universal display type, since every value
+ * coerces to text): a bare field reference (references are untyped in this
+ * pure engine) and an `if` / `coalesce` whose branches disagree. The escape
+ * hatch is an explicit cast — `toNumber(...)`, `toDate(...)`, etc. — whose
+ * outermost position pins the type deterministically. Throws
+ * {@link FormulaError} if the expression doesn't parse.
+ */
+export function inferResultType(expression: string | FormulaNode): FormulaResultType {
+  const node = typeof expression === "string" ? parseFormula(expression) : expression;
+  return inferNode(node);
+}
+
+function inferNode(node: FormulaNode): FormulaResultType {
+  switch (node.kind) {
+    case "num":
+      return "NUMBER";
+    case "str":
+      return "TEXT";
+    case "bool":
+      return "BOOLEAN";
+    case "null":
+      return "TEXT";
+    case "ref":
+      return "TEXT"; // references are untyped here; text is the safe scalar view
+    case "unary":
+      return node.op === "!" ? "BOOLEAN" : "NUMBER";
+    case "binary":
+      switch (node.op) {
+        case "&":
+          return "TEXT";
+        case "==":
+        case "!=":
+        case "<":
+        case "<=":
+        case ">":
+        case ">=":
+        case "&&":
+        case "||":
+          return "BOOLEAN";
+        default:
+          return "NUMBER"; // + - * / %
+      }
+    case "call": {
+      // `if` / `coalesce` reflect their branches: if the candidate values all
+      // infer to the same type, use it; otherwise fall back to TEXT.
+      if (node.name === "if") {
+        const branches = [node.args[1], node.args[2]].filter(Boolean) as FormulaNode[];
+        return unifyTypes(branches.map(inferNode));
+      }
+      if (node.name === "coalesce") {
+        return unifyTypes(node.args.map(inferNode));
+      }
+      return (
+        (Object.hasOwn(FUNCTIONS, node.name) ? FUNCTIONS[node.name] : undefined)?.result ?? "TEXT"
+      );
+    }
+  }
+}
+
+/** The single type a set of branch types agree on, or TEXT if they don't. */
+function unifyTypes(types: FormulaResultType[]): FormulaResultType {
+  const first = types[0];
+  if (first === undefined) return "TEXT";
+  return types.every((t) => t === first) ? first : "TEXT";
 }
 
 /**

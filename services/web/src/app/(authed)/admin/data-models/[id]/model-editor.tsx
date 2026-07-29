@@ -47,6 +47,7 @@ import { PageHeader } from "@/components/page-header";
 import { PageSection } from "@/components/page-section";
 import { Separator } from "@/components/ui/separator";
 import { trpc } from "@/lib/trpc";
+import { TITLE_FIELD_KEY } from "@monark/data-models/contracts";
 import { FieldEditorDialog, type FieldEditorValue } from "./field-editor-dialog";
 
 interface DataModelInitial {
@@ -55,7 +56,6 @@ interface DataModelInitial {
   key: string;
   description: string | null;
   icon: string | null;
-  titleFieldId: string | null;
   organizationId: string | null;
 }
 
@@ -69,13 +69,11 @@ export function ModelEditor({ initial }: { initial: DataModelInitial }) {
   const [name, setName] = useState(initial.name);
   const [description, setDescription] = useState(initial.description ?? "");
   const [icon, setIcon] = useState(initial.icon ?? "");
-  const [titleFieldId, setTitleFieldId] = useState(initial.titleFieldId ?? "");
 
   const dirty =
     name !== initial.name ||
     description !== (initial.description ?? "") ||
-    icon !== (initial.icon ?? "") ||
-    titleFieldId !== (initial.titleFieldId ?? "");
+    icon !== (initial.icon ?? "");
 
   const updateModelMutation = trpc.dataModels.models.update.useMutation({
     onSuccess: () => {
@@ -90,7 +88,6 @@ export function ModelEditor({ initial }: { initial: DataModelInitial }) {
     setName(initial.name);
     setDescription(initial.description ?? "");
     setIcon(initial.icon ?? "");
-    setTitleFieldId(initial.titleFieldId ?? "");
   }
 
   function saveSettings() {
@@ -99,7 +96,6 @@ export function ModelEditor({ initial }: { initial: DataModelInitial }) {
       name,
       description: description || null,
       icon: icon || null,
-      titleFieldId: titleFieldId || null,
     });
   }
 
@@ -170,16 +166,9 @@ export function ModelEditor({ initial }: { initial: DataModelInitial }) {
     reorderMutation.mutate({ dataModelId: initial.id, orderedIds: next.map((f) => f.id) });
   }
 
-  const titleFieldOptions = fields.filter((f) => !f.archivedAt);
-
   return (
     <div className="space-y-6">
-      <PageHeader
-        title={initial.name}
-        subtitle={initial.key}
-        backHref="/admin/data-models"
-        backLabel={t("back")}
-      />
+      <PageHeader title={initial.name} backHref="/admin/data-models" backLabel={t("back")} />
 
       <PageSection title={tSettings("title")} subtitle={tSettings("subtitle")}>
         <div className="@container space-y-4">
@@ -211,26 +200,6 @@ export function ModelEditor({ initial }: { initial: DataModelInitial }) {
               onChange={(e) => setDescription(e.target.value)}
               rows={2}
             />
-          </div>
-          <div className="space-y-1.5">
-            <Label>{tSettings("titleFieldLabel")}</Label>
-            <Select
-              value={titleFieldId || "__none"}
-              onValueChange={(v) => setTitleFieldId(v === "__none" ? "" : v)}
-            >
-              <SelectTrigger className="max-w-sm">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__none">{tSettings("titleFieldNone")}</SelectItem>
-                {titleFieldOptions.map((f) => (
-                  <SelectItem key={f.id} value={f.id}>
-                    {f.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <p className="text-xs text-muted-foreground">{tSettings("titleFieldHint")}</p>
           </div>
         </div>
       </PageSection>
@@ -281,9 +250,9 @@ export function ModelEditor({ initial }: { initial: DataModelInitial }) {
                         <Badge variant="outline" size="sm">
                           {field.type}
                         </Badge>
-                        {field.id === titleFieldId && (
+                        {field.key === TITLE_FIELD_KEY && (
                           <Badge variant="secondary" size="sm">
-                            {tSettings("titleFieldLabel")}
+                            {tFields("titleBadge")}
                           </Badge>
                         )}
                         {field.required && (
@@ -302,7 +271,6 @@ export function ModelEditor({ initial }: { initial: DataModelInitial }) {
                           </Badge>
                         )}
                       </div>
-                      <p className="truncate text-xs text-muted-foreground">{field.key}</p>
                     </div>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -332,11 +300,6 @@ export function ModelEditor({ initial }: { initial: DataModelInitial }) {
                         >
                           {tFields("actions.edit")}
                         </DropdownMenuItem>
-                        {!field.archivedAt && field.id !== titleFieldId && (
-                          <DropdownMenuItem onSelect={() => setTitleFieldId(field.id)}>
-                            {tFields("actions.makeTitleField")}
-                          </DropdownMenuItem>
-                        )}
                         {!field.archivedAt && !field.indexed && (
                           <DropdownMenuItem
                             onSelect={() => requestIndexMutation.mutate({ id: field.id })}
@@ -350,7 +313,8 @@ export function ModelEditor({ initial }: { initial: DataModelInitial }) {
                           >
                             {tFields("actions.unarchive")}
                           </DropdownMenuItem>
-                        ) : (
+                        ) : field.key !== TITLE_FIELD_KEY ? (
+                          // The reserved title field can't be archived.
                           <DropdownMenuItem
                             className="text-destructive focus:text-destructive"
                             onSelect={() =>
@@ -367,7 +331,7 @@ export function ModelEditor({ initial }: { initial: DataModelInitial }) {
                           >
                             {tFields("actions.archive")}
                           </DropdownMenuItem>
-                        )}
+                        ) : null}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </SortableFieldRow>

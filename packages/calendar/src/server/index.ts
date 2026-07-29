@@ -4,9 +4,17 @@
 import "../contracts/types";
 import { z } from "zod";
 import { router, publicProcedure } from "@monark/common/trpc";
-import { NotFoundError, UnauthorizedError, ValidationError } from "@monark/common";
+import { emit, NotFoundError, UnauthorizedError, ValidationError } from "@monark/common";
 import { requireOrg } from "@monark/organizations/server";
 import { getUserRoles, hasPermission } from "@monark/rbac/server";
+import type {
+  CalendarCreatedEvent,
+  CalendarDeletedEvent,
+  CalendarEventCreatedEvent,
+  CalendarEventDeletedEvent,
+  CalendarEventUpdatedEvent,
+  CalendarUpdatedEvent,
+} from "../contracts/events";
 import {
   createCalendar,
   createCalendarEvent,
@@ -107,6 +115,14 @@ export const calendarRouter = router({
         if (input.roleIds && input.roleIds.length > 0) {
           await setCalendarRoleAccess(calendar.id, input.roleIds);
         }
+        await emit<CalendarCreatedEvent>({
+          type: "calendar.created",
+          calendarId: calendar.id,
+          organizationId: org.id,
+          name: calendar.name,
+          actorId: ctx.userId,
+          occurredAt: new Date(),
+        }).catch(() => {});
         return findCalendarById(calendar.id);
       }),
 
@@ -141,9 +157,22 @@ export const calendarRouter = router({
           description: input.description,
           color: input.color,
         });
+        const changed: CalendarUpdatedEvent["changed"] = [];
+        if (input.name !== undefined) changed.push("name");
+        if (input.description !== undefined) changed.push("description");
+        if (input.color !== undefined) changed.push("color");
         if (input.roleIds !== undefined && canManage) {
           await setCalendarRoleAccess(input.id, input.roleIds);
+          changed.push("roleAccess");
         }
+        await emit<CalendarUpdatedEvent>({
+          type: "calendar.updated",
+          calendarId: input.id,
+          organizationId: org.id,
+          changed,
+          actorId: ctx.userId,
+          occurredAt: new Date(),
+        }).catch(() => {});
         return updated;
       }),
 
@@ -168,6 +197,13 @@ export const calendarRouter = router({
           throw new ValidationError("The personal calendar cannot be deleted.");
         }
         await softDeleteCalendar(input.id);
+        await emit<CalendarDeletedEvent>({
+          type: "calendar.deleted",
+          calendarId: input.id,
+          organizationId: org.id,
+          actorId: ctx.userId,
+          occurredAt: new Date(),
+        }).catch(() => {});
       }),
 
     restore: publicProcedure
@@ -259,7 +295,7 @@ export const calendarRouter = router({
         if (input.eventType !== "PUNCTUAL" && endAt < startAt) {
           throw new ValidationError("End time cannot be before start time");
         }
-        return createCalendarEvent({
+        const event = await createCalendarEvent({
           calendarId: input.calendarId,
           organizationId: org.id,
           title: input.title,
@@ -271,6 +307,18 @@ export const calendarRouter = router({
           eventType: input.eventType,
           reminderMinutes: input.reminders,
         });
+        await emit<CalendarEventCreatedEvent>({
+          type: "calendar.event-created",
+          eventId: event.id,
+          calendarId: input.calendarId,
+          organizationId: org.id,
+          title: input.title,
+          startAt: startAt.toISOString(),
+          endAt: endAt.toISOString(),
+          actorId: ctx.userId,
+          occurredAt: new Date(),
+        }).catch(() => {});
+        return event;
       }),
 
     update: publicProcedure
@@ -315,7 +363,7 @@ export const calendarRouter = router({
         const endAt = input.endAt ? new Date(input.endAt) : undefined;
         if (startAt && isNaN(startAt.getTime())) throw new ValidationError("Invalid startAt");
         if (endAt && isNaN(endAt.getTime())) throw new ValidationError("Invalid endAt");
-        return updateCalendarEvent(input.id, {
+        const updated = await updateCalendarEvent(input.id, {
           calendarId: input.calendarId,
           eventType: input.eventType,
           title: input.title,
@@ -326,6 +374,28 @@ export const calendarRouter = router({
           endAt,
           reminderMinutes: input.reminders,
         });
+        const changed: CalendarEventUpdatedEvent["changed"] = [];
+        if (input.title !== undefined) changed.push("title");
+        if (input.description !== undefined) changed.push("description");
+        if (input.location !== undefined) changed.push("location");
+        if (input.participants !== undefined) changed.push("participants");
+        if (input.startAt !== undefined) changed.push("startAt");
+        if (input.endAt !== undefined) changed.push("endAt");
+        if (input.reminders !== undefined) changed.push("reminders");
+        if (input.eventType !== undefined) changed.push("eventType");
+        if (input.calendarId !== undefined && input.calendarId !== existing.calendarId) {
+          changed.push("calendar");
+        }
+        await emit<CalendarEventUpdatedEvent>({
+          type: "calendar.event-updated",
+          eventId: input.id,
+          calendarId: input.calendarId ?? existing.calendarId,
+          organizationId: org.id,
+          changed,
+          actorId: ctx.userId,
+          occurredAt: new Date(),
+        }).catch(() => {});
+        return updated;
       }),
 
     delete: publicProcedure
@@ -349,6 +419,14 @@ export const calendarRouter = router({
           throw new NotFoundError("CalendarEvent", input.id);
         }
         await softDeleteCalendarEvent(input.id);
+        await emit<CalendarEventDeletedEvent>({
+          type: "calendar.event-deleted",
+          eventId: input.id,
+          calendarId: existing.calendarId,
+          organizationId: org.id,
+          actorId: ctx.userId,
+          occurredAt: new Date(),
+        }).catch(() => {});
       }),
 
     search: publicProcedure
@@ -367,6 +445,7 @@ export const calendarRouter = router({
 });
 
 export { registerCalendarPermissions } from "./permissions";
+export { registerCalendarEventTypes } from "./event-types";
 export { registerCalendarNotificationKinds } from "./notification-kinds";
 export { registerCalendarModelIntegration } from "./model-integration";
 export {

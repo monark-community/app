@@ -45,12 +45,7 @@ export function TotpForm() {
               <Label htmlFor="code" className="self-start">
                 {t("labels.code")}
               </Label>
-              <OtpCodeInput
-                id="code"
-                value={code}
-                onChange={setCode}
-                onComplete={runVerify}
-              />
+              <OtpCodeInput id="code" value={code} onChange={setCode} onComplete={runVerify} />
             </div>
           ) : (
             <div className="grid gap-2">

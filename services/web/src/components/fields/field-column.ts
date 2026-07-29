@@ -33,6 +33,10 @@ function deriveSortAccessor<TData>(
         return Array.isArray(value)
           ? (value as RelationOption[]).length
           : ((value as RelationOption | null)?.label ?? null);
+      case "file":
+        // Value is a raw id (single) or id[] (attachments) — sort by count when
+        // multiple, else by the id string.
+        return Array.isArray(value) ? value.length : ((value as string | null) ?? null);
       case "formula":
         // Sort a computed column by its declared result type, not blindly as
         // text (so a numeric formula orders numerically).

@@ -7,7 +7,7 @@ import {
   getNotificationKindDef,
   listNotificationKindDescriptors,
   type NotificationKind,
-} from "../contracts/registry";
+} from "../contracts";
 import type { NotificationPreferenceChangedEvent } from "../contracts/events";
 import { notify } from "./dispatch";
 import { listPreferences, resetPreferences, resolveChannelEnabled, setPreference } from "./prefs";

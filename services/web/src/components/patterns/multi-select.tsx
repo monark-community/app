@@ -35,9 +35,7 @@ export interface MultiSelectLabels {
   create?: (value: string) => string;
 }
 
-type Item =
-  | { kind: "option"; option: MultiSelectOption }
-  | { kind: "create"; value: string };
+type Item = { kind: "option"; option: MultiSelectOption } | { kind: "create"; value: string };
 
 /**
  * Controlled multi-value input : a box of removable {@link Chip}s plus an
@@ -81,10 +79,7 @@ export function MultiSelect({
   const [activeIndex, setActiveIndex] = useState(0);
 
   const hasOptions = !!options;
-  const optionByValue = useMemo(
-    () => new Map((options ?? []).map((o) => [o.value, o])),
-    [options],
-  );
+  const optionByValue = useMemo(() => new Map((options ?? []).map((o) => [o.value, o])), [options]);
   const labelFor = (v: string): ReactNode => optionByValue.get(v)?.label ?? v;
   const strLabelFor = (v: string): string => {
     const o = optionByValue.get(v);
@@ -106,9 +101,7 @@ export function MultiSelect({
     return options.filter((o) => {
       if (value.includes(o.value)) return false;
       if (q === "") return true;
-      const hay = (
-        o.searchText ?? (typeof o.label === "string" ? o.label : o.value)
-      ).toLowerCase();
+      const hay = (o.searchText ?? (typeof o.label === "string" ? o.label : o.value)).toLowerCase();
       return hay.includes(q);
     });
   }, [options, value, query]);

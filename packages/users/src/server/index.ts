@@ -440,6 +440,10 @@ export const usersRouter = router({
 });
 
 export { getById, getByIdOrThrow, getByEmail, getCurrent, type User } from "./read";
+// Profile + account-state writers, exposed for server-to-server callers (e.g.
+// the automation module's user nodes). Gated by the `users.manage-profile` /
+// `users.disable` permissions at the call site.
+export { updateProfileData, setDisabledAt } from "./data";
 export { registerUsersPermissions } from "./permissions";
 export { registerUsersEventTypes } from "./event-types";
 export {

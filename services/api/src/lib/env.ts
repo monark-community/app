@@ -24,6 +24,13 @@ const schema = z.object({
   // 32 bytes, hex-encoded (64 chars). Validated lazily by the TOTP module
   // so environments without TOTP configured (e.g. CI) don't need to set it.
   TOTP_ENCRYPTION_KEY: z.string().optional(),
+  // 32 bytes, hex-encoded (64 chars) — key for the org-secrets store
+  // (`@monark/secrets`, encrypted external access tokens). Separate from
+  // TOTP's key so their blast radius stays independent. Validated lazily
+  // (fail-closed) when a secret is written/read, so deploys not using
+  // secrets (e.g. CI) don't need it. Generate with
+  // `node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"`.
+  SECRETS_ENCRYPTION_KEY: z.string().optional(),
   // HMAC secret for one-click email action tokens (currently only the
   // new-device "revoke this device" link). Generate per environment with
   // `node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"`.

@@ -27,6 +27,7 @@ import {
 } from "@monark/organizations/server";
 import {
   registerCalendarPermissions,
+  registerCalendarEventTypes,
   registerCalendarNotificationKinds,
   registerCalendarModelIntegration,
   registerCalendarDataModelSubscriber,
@@ -35,6 +36,7 @@ import {
   listCalendarMembers,
 } from "@monark/calendar/server";
 import {
+  ensureDataModelFilesBucket,
   hydrateDataModelRegistrations,
   registerDataModelRecordWatchSubscriber,
   registerDataModelsEventTypes,
@@ -42,7 +44,31 @@ import {
   registerDataModelsPermissions,
   registerDataModelVisibilityResolvers,
 } from "@monark/data-models/server";
+import {
+  registerAutomationEventTypes,
+  registerAutomationFeatureFlags,
+  handleHttpTrigger,
+  registerAutomationNotificationKinds,
+  registerAutomationPermissions,
+  registerAutomationSubscribers,
+  registerBuiltinAutomationNodes,
+  runDueSchedules,
+  startAutomationWorker,
+} from "@monark/automation/server";
+import {
+  registerKanbanEventTypes,
+  registerKanbanFeatureFlags,
+  registerKanbanNotificationKinds,
+  registerKanbanNotificationSubscriber,
+  registerKanbanPermissions,
+} from "@monark/kanban/server";
+import {
+  registerFilesEventTypes,
+  registerFilesFeatureFlags,
+  registerFilesPermissions,
+} from "@monark/files/server";
 import { registerRbacEventTypes, registerRbacPermissions } from "@monark/rbac/server";
+import { registerSecretsEventTypes, registerSecretsPermissions } from "@monark/secrets/server";
 import { registerUsersEventTypes, registerUsersPermissions } from "@monark/users/server";
 import {
   makeEnvVarSecretResolver,
@@ -70,13 +96,20 @@ import { createContext } from "./trpc/context";
 // `registerFromManifest()`-style codegen lands in a later phase ; for
 // now the manifest is hand-maintained.
 registerAuthFeatureFlags();
+registerAutomationFeatureFlags();
+registerFilesFeatureFlags();
+registerKanbanFeatureFlags();
 registerOrganizationsFeatureFlags();
 
+registerAutomationPermissions();
 registerCalendarPermissions();
 registerDataModelsPermissions();
 registerFeatureFlagsPermissions();
+registerFilesPermissions();
+registerKanbanPermissions();
 registerOrganizationsPermissions();
 registerRbacPermissions();
+registerSecretsPermissions();
 registerUsersPermissions();
 registerWebhooksPermissions();
 
@@ -87,11 +120,16 @@ registerWebhooksPermissions();
 // subscriber filter skips them to avoid recursion, so showing them
 // in the picker would be misleading.
 registerAuthEventTypes();
+registerAutomationEventTypes();
+registerCalendarEventTypes();
 registerDataModelsEventTypes();
 registerFeatureFlagsEventTypes();
+registerFilesEventTypes();
+registerKanbanEventTypes();
 registerNotificationsEventTypes();
 registerOrganizationsEventTypes();
 registerRbacEventTypes();
+registerSecretsEventTypes();
 registerUsersEventTypes();
 
 // Org-scoped visibility resolvers for per-Data-Model permissions + event
@@ -104,8 +142,16 @@ registerDataModelVisibilityResolvers();
 // subscriber can call `notify()` ; subscriber registration follows
 // kind registration.
 registerCoreNotificationKinds();
+registerAutomationNotificationKinds();
 registerCalendarNotificationKinds();
 registerDataModelsNotificationKinds();
+registerKanbanNotificationKinds();
+
+// Register the built-in automation node types (event-trigger + action nodes)
+// into the node registry so the engine can resolve a graph's node types and
+// the editor palette can enumerate them. Extended modules add their own nodes
+// via registerAutomationNodes() alongside this.
+registerBuiltinAutomationNodes();
 
 // Model-integration registrations declare a module's "slots" to the
 // polymorphic Data Models engine (@monark/data-models's
@@ -123,7 +169,12 @@ registerCalendarModelIntegration();
 registerOrganizationsSubscribers();
 registerCalendarDataModelSubscriber();
 registerDataModelRecordWatchSubscriber();
+registerKanbanNotificationSubscriber();
 registerNotificationSubscribers();
+// The automation trigger engine's wildcard subscriber: matches events against
+// enabled automations and enqueues runs. Registered before the webhook
+// subscriber (which must stay last) ; it ignores `automation.*` events itself.
+registerAutomationSubscribers();
 registerWebhookSubscribers();
 
 async function sweepCalendarReminders(): Promise<void> {
@@ -194,6 +245,19 @@ function startBackgroundWork(): void {
   // fallback (Vercel Cron, GitHub Actions, k8s CronJob) so a single
   // api crash doesn't strand the outbox.
   startWebhookDeliveryWorker();
+
+  // Automation run worker drains the AutomationRun outbox on a setInterval,
+  // executing each enabled automation's graph with retries. Same durable
+  // outbox + worker shape as the webhook worker above.
+  startAutomationWorker();
+
+  // Provision the shared private bucket that Data Model FILE / ATTACHMENTS
+  // fields upload into. Best-effort : a deploy without file storage configured
+  // (no SUPABASE_* env) just logs — the bucket is only needed once someone uses
+  // a file field, and `files.createUpload` surfaces a clear error until then.
+  ensureDataModelFilesBucket().catch((err) =>
+    logger.warn({ err }, "data-model files bucket ensure skipped (storage not configured?)"),
+  );
 
   // Calendar reminder sweep. Runs every 60 s internally; the
   // `/cron/send-calendar-reminders` endpoint is kept as an external
@@ -403,6 +467,48 @@ app.post("/cron/send-calendar-reminders", async (req, res) => {
     res.json({ ok: true });
   } catch (error) {
     logger.error({ err: error }, "calendar reminder sweep failed");
+    res.status(500).json({ ok: false, error: "internal" });
+  }
+});
+
+// Enqueues runs for due scheduled (cron-like) automation triggers. The
+// in-process worker loop already covers normal operation; this endpoint is an
+// external fallback (Vercel Cron, etc.). Run every minute.
+//   curl -H "Authorization: Bearer $CRON_SECRET" \
+//        http://localhost:4000/cron/run-automation-schedules
+app.post("/cron/run-automation-schedules", async (req, res) => {
+  if (!checkCronSecret(req, res)) return;
+  try {
+    const result = await runDueSchedules();
+    res.json({ ok: true, ...result });
+  } catch (error) {
+    logger.error({ err: error }, "automation schedule run failed");
+    res.status(500).json({ ok: false, error: "internal" });
+  }
+});
+
+// Inbound HTTP-trigger endpoint. An external system POSTs JSON here to fire an
+// automation whose HTTP Trigger secret matches the Bearer token. Unlike the
+// cron endpoints (a single global CRON_SECRET), auth is a per-automation secret
+// stored on the trigger node ; the handler verifies it in constant time.
+//   curl -X POST -H "Authorization: Bearer $SECRET" -H "Content-Type: application/json" \
+//        -d '{"hello":"world"}' http://localhost:4000/hooks/automation/<id>
+app.post("/hooks/automation/:id", async (req, res) => {
+  const header = req.header("authorization") ?? "";
+  const secret = /^bearer /i.test(header) ? header.slice(7).trim() : null;
+  try {
+    const result = await handleHttpTrigger({
+      automationId: req.params.id,
+      secret,
+      body: req.body ?? null,
+    });
+    if (result.status === 202) {
+      res.status(202).json({ ok: true, runId: result.runId });
+    } else {
+      res.status(result.status).json({ ok: false, error: result.error });
+    }
+  } catch (error) {
+    logger.error({ err: error }, "http-trigger handling failed");
     res.status(500).json({ ok: false, error: "internal" });
   }
 });

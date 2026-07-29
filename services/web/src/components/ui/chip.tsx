@@ -118,13 +118,7 @@ export function AddChip({
  * Bordered, wrapping container that holds a row of {@link Chip}s plus an add
  * affordance — the box shell shared by the multi-select / token inputs.
  */
-export function ChipList({
-  children,
-  className,
-}: {
-  children: ReactNode;
-  className?: string;
-}) {
+export function ChipList({ children, className }: { children: ReactNode; className?: string }) {
   return (
     <div
       className={cn(

@@ -66,7 +66,7 @@ beforeAll(async () => {
   modelId = model.id;
   const open = await createDataRecord({
     dataModelId: modelId,
-    data: {},
+    data: { title: "open note" },
     createdBy: U_ACTOR,
   });
   openRecordId = open.id;
@@ -74,7 +74,7 @@ beforeAll(async () => {
   // A record restricted to a role nobody in the test holds.
   const restricted = await createDataRecord({
     dataModelId: modelId,
-    data: {},
+    data: { title: "restricted note" },
     createdBy: U_ACTOR,
   });
   restrictedRecordId = restricted.id;

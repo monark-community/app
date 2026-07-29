@@ -1,109 +1,104 @@
 import type { NotificationCategory, NotificationChannel } from "@monark/db";
 import type { KindMessages } from "../templates/types";
+import type { NotificationKind } from "./index";
 
 /**
- * Per-kind data shape that callers must pass to `notify()`. Modules
- * extend this map via TypeScript declaration merging :
+ * The notification kinds this package ships. Declared as a plain interface (not
+ * a `declare module` self-augmentation) ; the augmentable public registry
+ * {@link NotificationDataRegistry} — declared in `./index`, the module the
+ * `@monark/notifications/contracts` specifier resolves to — `extends` this.
+ *
+ * Extended modules add their own kinds by augmenting that public entry :
  *
  * ```ts
  * declare module "@monark/notifications/contracts" {
  *   interface NotificationDataRegistry {
- *     "posts.published": { postId: string; authorId: string }
+ *     "posts.published": { postId: string; authorId: string };
  *   }
  * }
  * ```
  *
- * Adding an entry here at the type level pairs with a runtime
- * `registerNotificationKind()` call that ships the definition + the
- * template messages. The dispatch path renders the template by
- * interpolating these data values into `{{ var }}` placeholders.
- *
- * Core modules pre-augment this registry below so the existing kinds
- * stay typed without callers doing anything.
+ * The augmentation MUST target the entry that *declares* the interface (index),
+ * which is exactly what `@monark/notifications/contracts` resolves to — an
+ * augmentation aimed at a file that only *re-exports* the interface silently
+ * fails to merge. Each type-level entry pairs with a runtime
+ * `registerNotificationKind()` call that ships the def + template messages.
  */
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface NotificationDataRegistry {}
-
-declare module "./registry" {
-  interface NotificationDataRegistry {
-    "auth.new-device": {
-      deviceLabel: string;
-      deviceCountry: string | null;
-      deviceIp: string | null;
-      seenAt: Date;
-      // Per-device one-click revoke URL minted by the subscriber from
-      // an HMAC-signed token (see `@monark/auth/server`
-      // `mintEmailActionToken`). Overrides the generic
-      // `${appUrl}/account/security` `revokeLink` injected by
-      // `globalVars()` so the new-device email lands directly on a
-      // confirmation page that revokes the device with a single click
-      // ; clicking from a different device works because the token
-      // carries the userId + deviceId itself.
-      revokeLink: string;
-    };
-    "auth.password-changed": {
-      occurredAt: Date;
-    };
-    "auth.totp-enabled": {
-      occurredAt: Date;
-    };
-    "auth.totp-disabled": {
-      occurredAt: Date;
-    };
-    "auth.all-devices-revoked": {
-      count: number;
-      occurredAt: Date;
-    };
-    "auth.signed-in": {
-      // Best-effort device label ; null when the sign-in wasn't tied to a
-      // recognised trusted device (enrich falls it back to a locale string).
-      deviceLabel: string | null;
-      occurredAt: Date;
-    };
-    "auth.device-revoked": {
-      deviceLabel: string | null;
-      occurredAt: Date;
-    };
-    "auth.recovery-code-used": {
-      remainingCodes: number;
-      occurredAt: Date;
-    };
-    "auth.recovery-codes-regenerated": {
-      count: number;
-      occurredAt: Date;
-    };
-    "account.email-changed": {
-      previousEmail: string;
-      newEmail: string;
-      occurredAt: Date;
-    };
-    "account.deletion-scheduled": {
-      completesAt: Date;
-    };
-    "account.deletion-canceled": {
-      occurredAt: Date;
-    };
-    "webhooks.delivery-permanently-failed": {
-      endpointId: string;
-      endpointUrl: string;
-      eventType: string;
-      attempts: number;
-      reason: string;
-      scope: "org" | "platform";
-      occurredAt: Date;
-    };
-    "webhooks.endpoint-auto-disabled": {
-      endpointId: string;
-      endpointUrl: string;
-      consecutiveFailures: number;
-      scope: "org" | "platform";
-      occurredAt: Date;
-    };
-  }
+export interface CoreNotificationKinds {
+  "auth.new-device": {
+    deviceLabel: string;
+    deviceCountry: string | null;
+    deviceIp: string | null;
+    seenAt: Date;
+    // Per-device one-click revoke URL minted by the subscriber from
+    // an HMAC-signed token (see `@monark/auth/server`
+    // `mintEmailActionToken`). Overrides the generic
+    // `${appUrl}/account/security` `revokeLink` injected by
+    // `globalVars()` so the new-device email lands directly on a
+    // confirmation page that revokes the device with a single click
+    // ; clicking from a different device works because the token
+    // carries the userId + deviceId itself.
+    revokeLink: string;
+  };
+  "auth.password-changed": {
+    occurredAt: Date;
+  };
+  "auth.totp-enabled": {
+    occurredAt: Date;
+  };
+  "auth.totp-disabled": {
+    occurredAt: Date;
+  };
+  "auth.all-devices-revoked": {
+    count: number;
+    occurredAt: Date;
+  };
+  "auth.signed-in": {
+    // Best-effort device label ; null when the sign-in wasn't tied to a
+    // recognised trusted device (enrich falls it back to a locale string).
+    deviceLabel: string | null;
+    occurredAt: Date;
+  };
+  "auth.device-revoked": {
+    deviceLabel: string | null;
+    occurredAt: Date;
+  };
+  "auth.recovery-code-used": {
+    remainingCodes: number;
+    occurredAt: Date;
+  };
+  "auth.recovery-codes-regenerated": {
+    count: number;
+    occurredAt: Date;
+  };
+  "account.email-changed": {
+    previousEmail: string;
+    newEmail: string;
+    occurredAt: Date;
+  };
+  "account.deletion-scheduled": {
+    completesAt: Date;
+  };
+  "account.deletion-canceled": {
+    occurredAt: Date;
+  };
+  "webhooks.delivery-permanently-failed": {
+    endpointId: string;
+    endpointUrl: string;
+    eventType: string;
+    attempts: number;
+    reason: string;
+    scope: "org" | "platform";
+    occurredAt: Date;
+  };
+  "webhooks.endpoint-auto-disabled": {
+    endpointId: string;
+    endpointUrl: string;
+    consecutiveFailures: number;
+    scope: "org" | "platform";
+    occurredAt: Date;
+  };
 }
-
-export type NotificationDataMap = NotificationDataRegistry;
-export type NotificationKind = keyof NotificationDataMap & string;
 
 export type NotificationKindDef = {
   category: NotificationCategory;

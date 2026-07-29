@@ -318,6 +318,7 @@ export {
 export {
   findRoleById,
   findBuiltInAdminRole,
+  hasSysadminAssignment,
   listRolesForOrg,
   listOrgAdminUserIds,
   listSysadminUserIds,

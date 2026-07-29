@@ -1,0 +1,86 @@
+/* Theme the React Flow chrome to the app's tokens (auto light/dark via the
+   CSS variables). Scoped under `.automation-canvas` so nothing leaks. */
+
+.automation-canvas .react-flow__controls {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px oklch(0 0 0 / 0.12);
+}
+
+.automation-canvas .react-flow__controls-button {
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+  color: var(--foreground);
+  width: 28px;
+  height: 28px;
+}
+.automation-canvas .react-flow__controls-button:last-child {
+  border-bottom: none;
+}
+.automation-canvas .react-flow__controls-button:hover {
+  background: var(--accent);
+}
+.automation-canvas .react-flow__controls-button svg {
+  fill: var(--foreground);
+}
+
+.automation-canvas .react-flow__minimap {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.automation-canvas .react-flow__minimap-mask {
+  fill: var(--muted);
+  fill-opacity: 0.55;
+}
+.automation-canvas .react-flow__minimap-node {
+  fill: var(--muted-foreground);
+  stroke: none;
+}
+
+.automation-canvas .react-flow__handle {
+  width: 9px;
+  height: 9px;
+  background: var(--muted-foreground);
+  border: 1.5px solid var(--card);
+}
+.automation-canvas .react-flow__handle-connecting {
+  background: var(--primary);
+}
+
+.automation-canvas .react-flow__edge-path {
+  stroke: var(--muted-foreground);
+  stroke-width: 1.5;
+}
+.automation-canvas .react-flow__edge.selected .react-flow__edge-path,
+.automation-canvas .react-flow__edge:focus .react-flow__edge-path {
+  stroke: var(--primary);
+}
+
+/* Live run states: a marching dash for the "pending" / "pulling" edges (the
+   solid transmitted / error states carry no dash). Applied by AutomationEdge
+   via the `automation-edge-flow` class on the edge path ; the per-state stroke
+   colour rides on the inline style. */
+@keyframes automation-edge-dash {
+  to {
+    stroke-dashoffset: -20;
+  }
+}
+.automation-canvas .react-flow__edge-path.automation-edge-flow {
+  stroke-dasharray: 6 4;
+  animation: automation-edge-dash 0.6s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .automation-canvas .react-flow__edge-path.automation-edge-flow {
+    animation: none;
+  }
+}
+.automation-canvas .react-flow__connection-path {
+  stroke: var(--primary);
+}
+
+/* Background dots. */
+.automation-canvas .react-flow__background {
+  color: var(--border);
+}

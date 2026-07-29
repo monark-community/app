@@ -40,6 +40,7 @@ export {
   listDataRecords,
   findDataRecordById,
   findDataRecordBySlug,
+  isDataRecordRoleAccessible,
   createDataRecord,
   updateDataRecord,
   softDeleteDataRecord,
@@ -48,6 +49,7 @@ export {
   findModelIntegration,
   listModelIntegrationsForModel,
   upsertModelIntegration,
+  ensureDataModelFilesBucket,
 } from "./data";
 export type {
   DataModelRow,

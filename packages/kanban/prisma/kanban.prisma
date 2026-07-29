@@ -1,0 +1,103 @@
+// @monark/kanban — Prisma schema fragment (extended module).
+// Assembled into packages/db/prisma/schema.prisma by `pnpm gen:schema`.
+// Edit HERE, never the generated schema.prisma. Relations to core models
+// (Organization, Role) resolve at assembly time.
+
+// ── MODULE: kanban ────────────────────────────────────────
+// A configurable Kanban board view (sibling to the calendar). A board owns an
+// ordered list of columns ; each column owns an ordered list of cards. Column
+// and card ordering both use an integer `position` in gaps of 10 (the house
+// pattern from data-models' reorderDataFields) so a single move renumbers only
+// its target list, not the whole board.
+model KanbanBoard {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String
+  description    String?
+  color          String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  deletedAt      DateTime?
+
+  columns    KanbanColumn[]
+  cards      KanbanCard[]
+  roleAccess KanbanBoardRoleAccess[]
+
+  @@index([organizationId])
+}
+
+// Per-board RBAC: a role whose id appears here can see this board. Users with
+// `kanban.manage` bypass this table and see all org boards. Mirrors
+// CalendarRoleAccess exactly.
+model KanbanBoardRoleAccess {
+  boardId String
+  board   KanbanBoard @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  roleId  String
+  role    Role        @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([boardId, roleId])
+  @@index([roleId])
+}
+
+model KanbanColumn {
+  id             String       @id @default(cuid())
+  boardId        String
+  board          KanbanBoard  @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String
+  color          String?
+  // Ordering within the board. Assigned in steps of 10.
+  position       Int
+  // Optional soft cap on cards, surfaced (not enforced) in the UI.
+  wipLimit       Int?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  cards KanbanCard[]
+
+  @@index([boardId])
+  @@index([organizationId])
+}
+
+enum KanbanCardPriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+model KanbanCard {
+  id             String              @id @default(cuid())
+  boardId        String
+  board          KanbanBoard         @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  columnId       String
+  column         KanbanColumn        @relation(fields: [columnId], references: [id], onDelete: Cascade)
+  organizationId String
+  organization   Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  title          String
+  description    String?
+  // Org member userIds. Not FKs, to keep the module decoupled from the users
+  // table shape ; resolved for display by the web layer. A card can have many
+  // assignees and many reviewers (each stored as an order-preserving text array).
+  assigneeIds    String[]            @default([])
+  reviewerIds    String[]            @default([])
+  dueAt          DateTime?
+  priority       KanbanCardPriority?
+  // Effort estimate (story points / hours — caller's convention). Non-negative.
+  estimate       Int?
+  // Ordered checklist items, stored inline as JSON (edited with the card, not
+  // individually) : Array<{ id, title, done }>. Validated at the tRPC boundary.
+  subtasks       Json                @default("[]")
+  // Ordering within the column. Assigned in steps of 10.
+  position       Int
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  deletedAt      DateTime?
+
+  @@index([columnId])
+  @@index([boardId])
+  @@index([organizationId])
+}
+

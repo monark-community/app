@@ -226,7 +226,9 @@ function AssignRoleDialog({
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>{t("dialogTitle")}</DialogTitle>
-          <DialogDescription>{t("dialogSubtitle")}</DialogDescription>
+          <DialogDescription>
+            {isSingleTenant ? t("dialogSubtitleSingle") : t("dialogSubtitle")}
+          </DialogDescription>
         </DialogHeader>
 
         <div className="grid gap-3 py-2">

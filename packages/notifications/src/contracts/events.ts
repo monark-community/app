@@ -1,6 +1,6 @@
 import type { DomainEventBase } from "@monark/common/contracts/events";
 import type { NotificationCategory, NotificationChannel } from "@monark/db";
-import type { NotificationKind } from "./registry";
+import type { NotificationKind } from "./index";
 
 // Fired by `dispatch.notify()` once the row is persisted (and, for email,
 // after the transport accepts the message). Consumers that build live UI

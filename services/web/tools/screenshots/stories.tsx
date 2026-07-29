@@ -12,10 +12,23 @@ import {
   type FieldDef,
   type RelationOption,
 } from "@/components/fields";
-import { Check, Download, Share2, Star, Trash2 } from "lucide-react";
+import {
+  CalendarDays,
+  Check,
+  Database,
+  Download,
+  GripVertical,
+  MoreHorizontal,
+  Share2,
+  SquareKanban,
+  Star,
+  Trash2,
+} from "lucide-react";
 import { DataTable } from "@/components/patterns/data-table/data-table";
+import { NavRailView } from "@/components/nav-rail";
 import {
   DiscussionSection,
+  FieldRow,
   FilterBar,
   FilterBarSearch,
   FilterMenu,
@@ -23,21 +36,42 @@ import {
   MultiSelect,
   PageSection,
   PanelHeader,
+  TableEmptyState,
   TableTools,
   useDataTableLayout,
   type FilterConfig,
   type MultiSelectOption,
   type PrimaryColumnDef,
+  type TableEmptyReason,
+  type TableEmptyStateLabels,
   type TableToolsLabels,
 } from "@/components/patterns";
 import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { DatePicker } from "@/components/ui/date-picker";
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { DirtyFormBar } from "@/components/dirty-form-bar";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { usePanelIsMobile, useScreenWidth } from "@/hooks/use-panel-is-mobile";
+import { Plus, X } from "lucide-react";
 import type { CalendarDef } from "@monark/calendar/contracts";
 import { CalendarManageDialog } from "@/app/(authed)/calendar/calendar-manage-dialog";
 import { CalendarSidebar, CalendarChip } from "@/app/(authed)/calendar/calendar-sidebar";
 import { UserBanner, type UserBannerEditConfig } from "@/components/user-banner";
 import { DragHandle } from "@monark/components/ui/drag-handle";
+import { BoardArea, BoardColumn, COLUMN_WIDTH_PX, KanbanCard } from "@monark/kanban/client";
+import { Skeleton } from "@/components/ui/skeleton";
 
 /**
  * Stories for the screenshot harness. Each is a plain React component
@@ -257,6 +291,137 @@ function Table() {
   );
 }
 
+/** Regression: a narrow selection table (few columns) — the 64px checkbox
+ *  column must stay 64px instead of scaling up as the table stretches to fill.
+ *  The primary "Title" column absorbs the slack. */
+function SelectWidthTable() {
+  const layout = useDataTableLayout("screenshot-select-width");
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set(["1"]));
+  return (
+    <DataTable<Row>
+      data={ROWS}
+      getRowId={(r) => r.id}
+      storageKey="screenshot-select-width"
+      layout={layout}
+      selection={{ selectedIds, onSelectedIdsChange: setSelectedIds }}
+      primaryColumn={DEMO_PRIMARY}
+      columns={[
+        {
+          id: "budget",
+          header: "Budget",
+          align: "right",
+          size: 140,
+          cell: (r) => (r.budget == null ? "—" : `$${r.budget.toLocaleString()}`),
+        },
+      ]}
+      labels={{ rowActions: "Row actions", selectRow: "Select row", selectAll: "Select all rows" }}
+    />
+  );
+}
+const SelectColumnWidthStory: FC = () => (
+  <div className="p-6">
+    <div className="rounded-lg border border-border">
+      <SelectWidthTable />
+    </div>
+  </div>
+);
+
+/** Regression: an empty table whose columns overflow its container. The
+ *  empty-state message must stay centered on the visible area, not drift with
+ *  the (wider-than-viewport) table. Constrained to 720px so the 8 demo columns
+ *  overflow and force horizontal scroll. */
+function EmptyTable() {
+  const columns = useDemoColumns();
+  return (
+    <DataTable<Row>
+      data={[]}
+      getRowId={(r) => r.id}
+      storageKey="screenshot-empty"
+      primaryColumn={DEMO_PRIMARY}
+      columns={columns}
+      labels={{ rowActions: "Row actions" }}
+      emptyState="No records match your filters yet."
+    />
+  );
+}
+const EmptyStateStory: FC = () => (
+  <div className="p-6">
+    <div className="w-[720px] rounded-lg border border-border">
+      <EmptyTable />
+    </div>
+  </div>
+);
+
+/** Regression: the row-actions `…` column must stay pinned flush with the
+ *  container's right edge and visible even when the 8 demo columns overflow the
+ *  720px container (horizontal scroll). The slack absorber sits to its left so
+ *  it's also flush when the table is narrower than its container. */
+function PinnedActionsTable() {
+  const columns = useDemoColumns();
+  return (
+    <DataTable<Row>
+      data={ROWS}
+      getRowId={(r) => r.id}
+      storageKey="screenshot-pinned-actions"
+      primaryColumn={DEMO_PRIMARY}
+      columns={columns}
+      rowActions={(r) => [
+        { label: "Edit", icon: Star, onSelect: () => void r },
+        { label: "Share", icon: Share2, onSelect: () => void r },
+        {
+          label: "Delete",
+          icon: Trash2,
+          destructive: true,
+          separatorBefore: true,
+          onSelect: () => void r,
+        },
+      ]}
+      labels={{ rowActions: "Row actions" }}
+    />
+  );
+}
+const PinnedActionsStory: FC = () => (
+  <div className="p-6">
+    <div className="w-[720px] rounded-lg border border-border">
+      <PinnedActionsTable />
+    </div>
+  </div>
+);
+
+/** Same pinned-actions table but narrower than its container, so nothing
+ *  overflows — the `…` must still be flush-right (slack absorbed to its left,
+ *  no empty gutter after it). */
+function PinnedActionsNarrowTable() {
+  return (
+    <DataTable<Row>
+      data={ROWS}
+      getRowId={(r) => r.id}
+      storageKey="screenshot-pinned-actions-narrow"
+      primaryColumn={DEMO_PRIMARY}
+      columns={[
+        {
+          id: "budget",
+          header: "Budget",
+          align: "right",
+          size: 140,
+          cell: (r) => (r.budget == null ? "—" : `$${r.budget.toLocaleString()}`),
+        },
+      ]}
+      rowActions={(r) => [
+        { label: "Delete", icon: Trash2, destructive: true, onSelect: () => void r },
+      ]}
+      labels={{ rowActions: "Row actions" }}
+    />
+  );
+}
+const PinnedActionsNarrowStory: FC = () => (
+  <div className="p-6">
+    <div className="w-[720px] rounded-lg border border-border">
+      <PinnedActionsNarrowTable />
+    </div>
+  </div>
+);
+
 /** The full list surface: FilterBar (search + tools cluster + CTA) over the
  *  table, both wired to one shared useDataTableLayout. */
 function TableWithToolbar({ width }: { width?: number }) {
@@ -287,13 +452,23 @@ function TableWithToolbar({ width }: { width?: number }) {
             columns={columns}
             filters={filters}
             labels={TOOLS_LABELS}
+            include={["filters", "sorting"]}
           />
         }
         actions={
-          <Button>
-            <Plus className="mr-1 h-4 w-4" aria-hidden />
-            New item
-          </Button>
+          <div className="flex items-center gap-2">
+            <TableTools
+              layout={layout}
+              primaryColumn={DEMO_PRIMARY}
+              columns={columns}
+              labels={TOOLS_LABELS}
+              include={["columns"]}
+            />
+            <Button>
+              <Plus className="mr-1 h-4 w-4" aria-hidden />
+              New item
+            </Button>
+          </div>
         }
       />
       <div className="rounded-lg border border-border">
@@ -390,6 +565,24 @@ const FilterMenuClearStory: FC = () => {
     setTimeout(tryClick, 60);
   }, []);
   const filters: FilterConfig[] = [
+    {
+      id: "tags",
+      type: "multiSelect",
+      label: "Status",
+      value: tags,
+      onValueChange: setTags,
+      // Colored-badge option labels — mirrors how a status field renders
+      // everywhere else, so its color is a visual reminder in the filter.
+      options: STATUS.map((s) => ({
+        value: s.value,
+        label: (
+          <Badge variant={s.tone} size="sm">
+            {s.label}
+          </Badge>
+        ),
+        searchText: s.label,
+      })),
+    },
     // A long option list so the sticky-bottom "Reset" is visible while the
     // options scroll behind it.
     {
@@ -399,14 +592,6 @@ const FilterMenuClearStory: FC = () => {
       value: status,
       onValueChange: setStatus,
       options: SECTORS,
-    },
-    {
-      id: "tags",
-      type: "multiSelect",
-      label: "Tags",
-      value: tags,
-      onValueChange: setTags,
-      options: TAGS,
     },
   ];
   return (
@@ -1068,13 +1253,473 @@ const DragHandleStory: FC = () => (
   </div>
 );
 
+/** The Kanban board primitives (`BoardArea` / `BoardColumn` / `KanbanCard`) with
+ *  sample columns and cards — a static, backend-free view of the board layout. */
+const KANBAN_COLUMNS = [
+  {
+    name: "Backlog",
+    color: "#6b7280",
+    cards: ["Research competitor pricing", "Draft onboarding email"],
+  },
+  { name: "Todo", color: "#6366f1", cards: ["Wire up the export button", "Fix avatar cropping"] },
+  {
+    name: "In Progress",
+    color: "#f59e0b",
+    wipLimit: 2,
+    cards: ["Kanban board module", "Billing webhook retries", "Search indexing"],
+  },
+  { name: "Review", color: "#0ea5e9", cards: ["Rename slug on save"] },
+  { name: "Done", color: "#10b981", cards: ["Dark-mode audit", "Ship drag handle chip"] },
+];
+
+const KanbanBoardStory: FC = () => (
+  <div className="flex h-[560px] flex-col bg-background">
+    <BoardArea>
+      {KANBAN_COLUMNS.map((col) => (
+        <BoardColumn
+          key={col.name}
+          name={col.name}
+          color={col.color}
+          count={col.cards.length}
+          wipLimit={col.wipLimit}
+          dragHandle={
+            <button
+              type="button"
+              aria-label="Reorder column"
+              className="-ml-1 shrink-0 rounded p-0.5 text-muted-foreground"
+            >
+              <GripVertical className="h-4 w-4" aria-hidden />
+            </button>
+          }
+          headerRight={
+            <button
+              type="button"
+              aria-label="Column actions"
+              className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground"
+            >
+              <MoreHorizontal className="h-4 w-4" aria-hidden />
+            </button>
+          }
+        >
+          {col.cards.map((title, i) => {
+            const levels = ["LOW", "MEDIUM", "HIGH", "CRITICAL"] as const;
+            const labels = { LOW: "Low", MEDIUM: "Medium", HIGH: "High", CRITICAL: "Critical" };
+            const level = levels[i % 4]!;
+            // Vary the assignee count so the overlapping stack + "+N" overflow
+            // are both exercised: 0, 1, 2, then 5 (→ "+2").
+            const roster = [
+              { name: "Ada Lovelace" },
+              { name: "Alan Turing" },
+              { name: "Grace Hopper" },
+              { name: "Katherine Johnson" },
+              { name: "Linus Torvalds" },
+            ];
+            const counts = [0, 2, 5]; // none, a 2-stack, then 5 (→ "+2" overflow)
+            return (
+              <KanbanCard
+                key={title}
+                title={title}
+                priority={{ level, label: labels[level] }}
+                estimate={i % 2 === 0 ? (i + 1) * 2 + 1 : undefined}
+                subtasks={
+                  i === 0 ? { done: 2, total: 5 } : i === 1 ? { done: 3, total: 3 } : undefined
+                }
+                assignees={roster.slice(0, counts[i % counts.length])}
+                dueLabel={i === 0 ? "Jul 28" : undefined}
+                dueOverdue={i === 0}
+              />
+            );
+          })}
+          <button
+            type="button"
+            className="flex w-full shrink-0 items-center gap-1.5 rounded-md border border-dashed border-border px-2.5 py-3 text-left text-sm text-muted-foreground hover:border-foreground/30 hover:text-foreground"
+          >
+            <Plus className="h-4 w-4 shrink-0" aria-hidden />
+            Add card
+          </button>
+        </BoardColumn>
+      ))}
+    </BoardArea>
+  </div>
+);
+
+/** The board's loading skeleton — must mirror the flat, full-height, no-gap
+ *  column layout (divider borders, underlined header with a dot + name) so
+ *  nothing shifts when the real board loads. Kept in sync with `BoardSkeleton`
+ *  in kanban-shell.tsx. */
+const KanbanSkeletonStory: FC = () => (
+  <div className="flex h-[560px] flex-col bg-background">
+    <div className="flex min-h-0 flex-1 overflow-hidden border-t border-border">
+      {Array.from({ length: 4 }).map((_, colIndex) => (
+        <div
+          key={colIndex}
+          style={{ width: COLUMN_WIDTH_PX }}
+          className="flex h-full shrink-0 flex-col border-r border-border"
+        >
+          <div className="flex items-center gap-1.5 border-b border-border px-3 py-2">
+            <Skeleton className="h-2.5 w-2.5 shrink-0 rounded-full" />
+            <Skeleton className="h-4 w-24" />
+          </div>
+          <div className="flex flex-1 flex-col gap-2 overflow-hidden p-2">
+            {Array.from({ length: 3 - (colIndex % 2) }).map((__, cardIndex) => (
+              <Skeleton key={cardIndex} className="h-24 w-full rounded-md" />
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+);
+
+/** The Kanban card editor's panel chrome — a right-side (desktop) / full-screen
+ *  (mobile) Sheet with a `PanelHeader`, a scrollable form body, and a pinned
+ *  footer. Mirrors card-editor.tsx's layout (the real editor needs tRPC, so this
+ *  renders a representative shell). Validates the panel width, header, and the
+ *  footer pinning across the desktop + mobile captures. */
+const KanbanCardPanelStory: FC = () => {
+  const screenWidth = useScreenWidth();
+  const isMobile = usePanelIsMobile(screenWidth);
+  const [assignees, setAssignees] = useState<string[]>(["u1", "u2"]);
+  const members: MultiSelectOption[] = [
+    { value: "u1", label: "Ada Lovelace" },
+    { value: "u2", label: "Alan Turing" },
+    { value: "u3", label: "Grace Hopper" },
+  ];
+  return (
+    <div className="h-[560px] bg-muted/30">
+      <Sheet open modal={isMobile}>
+        <SheetContent
+          side={isMobile ? "full" : "right"}
+          overlay={isMobile}
+          hideClose
+          aria-describedby={undefined}
+          className={cn(
+            "flex flex-col gap-0 overflow-hidden p-0",
+            !isMobile && "w-full sm:max-w-lg",
+          )}
+          style={isMobile && screenWidth != null ? { maxWidth: screenWidth } : undefined}
+        >
+          <SheetTitle className="sr-only">Edit card</SheetTitle>
+          <PanelHeader title="Edit card" onClose={() => {}} />
+          <form className="flex min-h-0 flex-1 flex-col">
+            <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-6 py-5">
+              <div className="space-y-1.5">
+                <Label htmlFor="s-title">Title</Label>
+                <Input id="s-title" defaultValue="Wire up the export button" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="s-status">Status</Label>
+                  <Select defaultValue="todo">
+                    <SelectTrigger id="s-status" className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="todo">
+                        <span className="flex items-center gap-2">
+                          <span
+                            className="h-2.5 w-2.5 rounded-full"
+                            style={{ backgroundColor: "#3b82f6" }}
+                          />
+                          Todo
+                        </span>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="s-estimate">Estimate</Label>
+                  <Input id="s-estimate" type="number" defaultValue={3} />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="s-priority">Priority</Label>
+                  <Select defaultValue="med">
+                    <SelectTrigger id="s-priority" className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="med">
+                        <span
+                          className="inline-flex items-center rounded px-1.5 py-0.5 text-xs font-medium"
+                          style={{ color: "#f59e0b", backgroundColor: "#f59e0b26" }}
+                        >
+                          Medium
+                        </span>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="s-due">Due date</Label>
+                  <DatePicker
+                    id="s-due"
+                    value={null}
+                    onChange={() => {}}
+                    placeholder="Pick a date"
+                  />
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="s-assignees">Assignees</Label>
+                <MultiSelect
+                  id="s-assignees"
+                  value={assignees}
+                  onChange={setAssignees}
+                  options={members}
+                  labels={{
+                    placeholder: "Add assignee…",
+                    add: "Add assignee",
+                    remove: (name) => `Remove ${name}`,
+                    noResults: "No members found",
+                  }}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>
+                  Subtasks
+                  <span className="ml-1.5 text-xs font-normal text-muted-foreground tabular-nums">
+                    1/2
+                  </span>
+                </Label>
+                <div className="space-y-1.5">
+                  {[
+                    { id: "a", title: "Add the API endpoint", done: true },
+                    { id: "b", title: "Wire the button", done: false },
+                  ].map((st) => (
+                    <div key={st.id} className="flex items-center gap-2">
+                      <Checkbox checked={st.done} readOnly aria-label="Mark done" />
+                      <Input
+                        readOnly
+                        value={st.title}
+                        className={cn("h-9", st.done && "text-muted-foreground line-through")}
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-9 w-9 shrink-0 text-muted-foreground"
+                        aria-label="Remove subtask"
+                      >
+                        <X className="h-4 w-4" aria-hidden />
+                      </Button>
+                    </div>
+                  ))}
+                  <Button type="button" variant="outline" size="sm" className="w-full">
+                    <Plus className="mr-1 h-4 w-4" aria-hidden />
+                    Add subtask
+                  </Button>
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 border-t border-border p-4 sm:justify-between">
+              <Button
+                type="button"
+                variant="ghost"
+                className="text-destructive hover:text-destructive"
+              >
+                Delete
+              </Button>
+              <div className="flex gap-2">
+                <Button type="button" variant="outline">
+                  Cancel
+                </Button>
+                <Button type="button">Save</Button>
+              </div>
+            </div>
+          </form>
+        </SheetContent>
+      </Sheet>
+    </div>
+  );
+};
+
+/** The four list empty-state reasons — genuinely empty vs. search / filters /
+ *  both that filtered everything out — each with its own next-step button. */
+const TableEmptyStateStory: FC = () => {
+  const labels: TableEmptyStateLabels = {
+    noData: { title: "No records yet." },
+    noSearch: {
+      title: "No results for “quarterly”",
+      description: "Check your spelling or try a broader term.",
+    },
+    noFilters: {
+      title: "No matching results",
+      description: "Nothing matches the current filters. Try loosening or clearing them.",
+    },
+    noSearchFilters: {
+      title: "No results for “quarterly”",
+      description: "Nothing matches your search within the current filters.",
+    },
+    clearSearch: "Clear search",
+    clearFilters: "Clear filters",
+    clearAll: "Clear search & filters",
+  };
+  const reasons: TableEmptyReason[] = ["no-data", "no-search", "no-filters", "no-search-filters"];
+  const noop = () => {};
+  return (
+    <div className="grid max-w-4xl grid-cols-2 gap-4 p-6">
+      {reasons.map((reason) => (
+        <div key={reason} className="rounded-lg border border-border">
+          <div className="border-b border-border px-4 py-2 font-mono text-xs text-muted-foreground">
+            {reason}
+          </div>
+          <div className="px-4 py-10">
+            <TableEmptyState
+              reason={reason}
+              labels={labels}
+              onClearSearch={noop}
+              onClearFilters={noop}
+              createAction={{ label: "New record", onClick: noop, icon: Plus }}
+            />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+/** The controlled `DatePicker` (used by the kanban card editor) — empty
+ *  placeholder state and a chosen-date state with its clear button. */
+const DatePickerStory: FC = () => {
+  const [empty, setEmpty] = useState<Date | null>(null);
+  const [chosen, setChosen] = useState<Date | null>(new Date(2026, 2, 1));
+  return (
+    <div className="max-w-xs space-y-6 p-6">
+      <div className="space-y-1.5">
+        <div className="text-sm font-medium">Empty</div>
+        <DatePicker
+          value={empty}
+          onChange={setEmpty}
+          placeholder="Pick a date"
+          clearLabel="Clear"
+        />
+      </div>
+      <div className="space-y-1.5">
+        <div className="text-sm font-medium">Chosen</div>
+        <DatePicker
+          value={chosen}
+          onChange={setChosen}
+          placeholder="Pick a date"
+          clearLabel="Clear"
+        />
+      </div>
+    </div>
+  );
+};
+
+/** Desktop app shell: persistent NavRail (left) + offset app bar + content. */
+const NavRailShellStory: FC = () => (
+  <div>
+    <NavRailView
+      brandedLogoData={{
+        singletonLogoUrl: null,
+        singletonDisplayName: "Monark",
+        isSingleTenantBootstrapped: false,
+      }}
+      ariaLabel="Primary navigation"
+      brandHomeAria="Home"
+      items={[
+        { id: "calendar", href: "/calendar", label: "Calendar", icon: CalendarDays, active: false },
+        { id: "kanban", href: "/kanban", label: "Kanban", icon: SquareKanban, active: false },
+        { id: "data", href: "/data", label: "Data", icon: Database, active: true },
+      ]}
+      admin={{ href: "/admin", label: "Admin", active: false }}
+    />
+    <div className="md:pl-14">
+      {/* Mirrors the real AppBar structure: border-b on the outer <header>,
+          the h-14 row inside — so the rail logo's bottom divider must line up
+          with this one (they meet where the rail's right edge touches the bar). */}
+      <header className="sticky top-0 border-b border-border bg-background">
+        <div className="flex h-14 items-center gap-4 px-4">
+          <span className="text-sm text-muted-foreground">Data / Projects</span>
+          <div className="ml-auto flex items-center gap-2">
+            <div className="h-8 w-8 rounded-md bg-muted" />
+            <div className="h-8 w-8 rounded-full bg-muted" />
+          </div>
+        </div>
+      </header>
+      <div className="p-6">
+        <h1 className="text-2xl font-semibold tracking-tight">Content area</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          The rail is pinned left (md+); the app bar + content offset by its width.
+        </p>
+      </div>
+    </div>
+  </div>
+);
+
+// The /admin/secrets create panel: a write-only value field (masked), the
+// env-var-name field, and the dirty save bar pinned to the panel bottom. Mirrors
+// the real SecretForm layout (which is tRPC-coupled, so can't render here).
+const SecretPanelStory: FC = () => {
+  const [value, setValue] = useState("ghp_examplemaskedtokenvalue");
+  return (
+    <div className="h-[560px] bg-muted/30 p-6">
+      <div className="relative mx-auto flex h-full max-w-lg flex-col overflow-hidden rounded-lg border border-border bg-background">
+        <PanelHeader title="New secret" onClose={() => {}} />
+        <div className="flex-1 overflow-y-auto px-6 py-6">
+          <div className="@container space-y-5">
+            <FieldRow label="Name" htmlFor="story-secret-key">
+              <Input id="story-secret-key" defaultValue="GITHUB_TOKEN" className="font-mono" />
+              <p className="text-xs text-muted-foreground">
+                Letters, digits, and underscores; must start with a letter or underscore.
+              </p>
+            </FieldRow>
+            <FieldRow label="Value" htmlFor="story-secret-value">
+              <Input
+                id="story-secret-value"
+                type="password"
+                value={value}
+                onChange={(e) => setValue(e.target.value)}
+                className="font-mono"
+              />
+              <p className="text-xs text-muted-foreground">
+                Stored encrypted; it is never shown again after saving.
+              </p>
+            </FieldRow>
+            <FieldRow label="Description" htmlFor="story-secret-desc">
+              <Textarea
+                id="story-secret-desc"
+                defaultValue="Token for the GitHub issue-creation node."
+                rows={3}
+              />
+            </FieldRow>
+          </div>
+        </div>
+        <DirtyFormBar
+          containment="container"
+          open
+          onSave={() => {}}
+          onCancel={() => {}}
+          saveLabel="Create"
+          cancelLabel="Cancel"
+          message="You have unsaved changes"
+        />
+      </div>
+    </div>
+  );
+};
+
 export const STORIES: Record<string, FC> = {
+  "nav-rail": NavRailShellStory,
+  "admin-secret-panel": SecretPanelStory,
+  "date-picker": DatePickerStory,
+  "table-empty-state": TableEmptyStateStory,
+  "kanban-board": KanbanBoardStory,
+  "kanban-skeleton": KanbanSkeletonStory,
+  "kanban-card-panel": KanbanCardPanelStory,
   "drag-handle": DragHandleStory,
   "profile-banner-layout": ProfileBannerLayoutStory,
   "toggle-avatar-chips": ToggleAndAvatarChipsStory,
   "event-desc-fill": EventDescFillStory,
   "fields-form": FieldsFormStory,
   "fields-table": FieldsTableStory,
+  "select-column-width": SelectColumnWidthStory,
+  "data-table-empty": EmptyStateStory,
+  "pinned-actions": PinnedActionsStory,
+  "pinned-actions-narrow": PinnedActionsNarrowStory,
   "fields-gallery": FieldsGalleryStory,
   "option-colors": OptionColorsStory,
   "calendar-manage-dialog": CalendarManageDialogStory,

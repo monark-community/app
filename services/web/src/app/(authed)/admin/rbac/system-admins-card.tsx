@@ -5,6 +5,7 @@ import { ShieldCheck } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { trpc } from "@/lib/trpc";
+import { useIsSingleTenant } from "@/lib/use-is-single-tenant";
 
 function formatDate(iso: string | Date, locale: string): string {
   const parsed = typeof iso === "string" ? new Date(iso) : iso;
@@ -29,6 +30,7 @@ function formatDate(iso: string | Date, locale: string): string {
 export function SystemAdminsCard() {
   const t = useTranslations("admin.rbac.sysadmins");
   const locale = useLocale();
+  const isSingleTenant = useIsSingleTenant();
   const query = trpc.rbac.adminListSysadmins.useQuery(undefined, {
     refetchOnWindowFocus: false,
     staleTime: 30 * 1000,
@@ -41,7 +43,7 @@ export function SystemAdminsCard() {
           <ShieldCheck className="h-4 w-4 text-amber-500" aria-hidden />
           {t("title")}
         </CardTitle>
-        <CardDescription>{t("subtitle")}</CardDescription>
+        <CardDescription>{isSingleTenant ? t("subtitleSingle") : t("subtitle")}</CardDescription>
       </CardHeader>
       <CardContent>
         {query.isLoading ? (

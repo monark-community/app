@@ -15,7 +15,6 @@ import {
   createDataRecord,
   hardDeleteDataRecord,
   softDeleteDataRecord,
-  updateDataModel,
   updateDataRecord,
   upsertModelIntegration,
   type DataModelRow,
@@ -148,15 +147,6 @@ async function seedMappedEventsModel(calendarId: string) {
     config: { relationTarget: "Calendar", relationTargetKind: "SYSTEM_MODEL", cardinality: "ONE" },
     required: true,
   });
-  const titleField = await createDataField({
-    dataModelId: model.id,
-    key: "title",
-    label: "Title",
-    type: "TEXT",
-    config: {},
-    required: true,
-  });
-  await updateDataModel(model.id, { titleFieldId: titleField.id });
   await upsertModelIntegration({
     dataModelId: model.id,
     module: "calendar",
@@ -244,14 +234,6 @@ describe("Calendar materialization from Data Records", () => {
       key: "unmapped",
       name: "Unmapped",
       createdBy: ACTOR,
-    });
-    await createDataField({
-      dataModelId: model.id,
-      key: "title",
-      label: "Title",
-      type: "TEXT",
-      config: {},
-      required: true,
     });
     const record = await createDataRecord({
       dataModelId: model.id,

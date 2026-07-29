@@ -5,6 +5,7 @@ import { DateField, DatetimeField } from "./inputs/date-field";
 import { FormulaField } from "./inputs/formula-field";
 import { MultiSelectField } from "./inputs/multi-select-field";
 import { NumberField } from "./inputs/number-field";
+import { FileField } from "./inputs/file-field";
 import { RelationField } from "./inputs/relation-field";
 import { RichTextField } from "./inputs/rich-text-field";
 import { SingleSelectField } from "./inputs/single-select-field";
@@ -40,6 +41,8 @@ export function FieldInput({ def, labels }: { def: FieldDef; labels: FieldLabels
       return <MultiSelectField def={def} labels={labels} />;
     case "relation":
       return <RelationField def={def} labels={labels} />;
+    case "file":
+      return <FileField def={def} labels={labels} />;
     case "url":
       return <UrlField def={def} labels={labels} />;
     case "email":
@@ -66,6 +69,7 @@ export const FIELD_TYPE_META: Record<FieldType, FieldTypeMeta> = {
   singleSelect: { align: "left" },
   multiSelect: { align: "left" },
   relation: { align: "left" },
+  file: { align: "left" },
   url: { align: "left" },
   email: { align: "left" },
   formula: { align: "left" },

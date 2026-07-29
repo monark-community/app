@@ -20,14 +20,19 @@ export default async function DataModelRecordsPage({
   if (!model) notFound();
 
   return (
-    <section className="space-y-4">
+    // Desktop (`xl+`) : a full-height flex column — the header keeps its natural
+    // height and the records list (its table wrapper marked `xl:flex-1`) fills
+    // the rest, scrolling internally. Below `xl` : natural flow, the page
+    // scrolls. `h-full` is gated to `xl` so `flex-1` children can't collapse
+    // against the unbounded mobile parent.
+    <section className="flex flex-col gap-4 xl:h-full">
       <header>
         <h1 className="text-2xl font-semibold tracking-tight">{model.name}</h1>
         {model.description && (
           <p className="mt-1 text-sm text-muted-foreground">{model.description}</p>
         )}
       </header>
-      <Suspense fallback={<Skeleton className="h-96 w-full" />}>
+      <Suspense fallback={<Skeleton className="h-96 w-full xl:h-auto xl:min-h-0 xl:flex-1" />}>
         <RecordsList model={model} />
       </Suspense>
     </section>

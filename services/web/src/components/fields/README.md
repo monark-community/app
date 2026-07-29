@@ -37,8 +37,8 @@ Import from the barrel : `import { AutoForm, fieldColumn, … } from "@/componen
 
 | Type           | Form control                | Cell                      | Notes                                                                                             |
 | -------------- | --------------------------- | ------------------------- | ------------------------------------------------------------------------------------------------- |
-| `text`         | `Input`                     | truncated text            | char counter when `maxLength` set                                                                 |
-| `longText`     | `Textarea` (auto-grow)      | muted truncated           | char counter                                                                                      |
+| `text`         | `Input`                     | truncated text            | `maxLength` caps input ; shown as an error only if exceeded (no persistent counter)               |
+| `longText`     | `Textarea` (auto-grow)      | muted truncated           | `maxLength` caps input ; shown as an error only if exceeded (no persistent counter)               |
 | `richText`     | Tiptap WYSIWYG + toolbar    | plain-text preview        | stores sanitized HTML ; render read-only with `RichTextView`                                      |
 | `number`       | affixed `Input`             | right-aligned, formatted  | `min`/`max`/`step`/`integer`/`prefix`/`suffix`                                                    |
 | `boolean`      | `Switch` (or `checkbox`)    | check / dash icon         | settings-style row                                                                                |

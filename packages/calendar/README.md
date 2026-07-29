@@ -147,7 +147,7 @@ Permissions are registered at API boot via `registerCalendarPermissions()`. The 
 
 ## Events emitted / consumed
 
-**Emitted**: none in this phase. Future candidates: `CalendarEventCreated`, `CalendarEventUpdated`, `CalendarEventDeleted` for webhook subscriptions (tracked as an acknowledged gap in `tools/check-modules.ts` — this module has a tRPC router but no `contracts/events.ts` yet).
+**Emitted** (`contracts/events.ts`, registered for the webhooks picker + automation Event Trigger outputs via `registerCalendarEventTypes()`): `calendar.created`, `calendar.updated`, `calendar.deleted`, `calendar.event-created`, `calendar.event-updated`, `calendar.event-deleted`. Each carries the relevant ids + `organizationId` + `actorId` ; the two `*-updated` events include a `changed` array listing which fields the request set. Emitted best-effort (`.catch(() => {})`) after the mutation commits, so a subscriber failure never fails the write.
 
 **Consumed**: `data-models.record-created` / `data-models.record-updated` / `data-models.record-deleted` from `@monark/data-models`, via `registerCalendarDataModelSubscriber()` — see "Key concepts" above.
 

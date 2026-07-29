@@ -2,7 +2,7 @@ import { brandingTemplateVars } from "@monark/branding";
 import { getDb } from "@monark/db";
 import { WEBHOOK_DELIVERY_FAILURE_LIMIT } from "@monark/webhooks/contracts";
 import type { TemplateVars } from "./template";
-import type { NotificationDataMap, NotificationKind } from "../contracts/registry";
+import type { NotificationDataMap, NotificationKind } from "../contracts";
 
 // Long-form locale-aware date formatting reused by every template that
 // shows "this happened at X". Stable across browsers + servers because

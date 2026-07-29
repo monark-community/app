@@ -1,8 +1,8 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
-import { AppBar } from "@/components/app-bar";
 import { PageLayout } from "@/components/page-layout";
+import { SecondaryTabsBar } from "@/components/secondary-tabs-bar";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createServerTrpcClient } from "@/lib/trpc-server";
 import { AccountSidebar } from "./account-sidebar";
@@ -59,7 +59,13 @@ export default async function AccountLayout({ children }: { children: ReactNode 
 
   return (
     <>
-      <AppBar />
+      {/* Mobile / narrow-viewport secondary nav — the shared sticky
+          scroll-hiding strip, same as Admin / Data (was a non-sticky
+          strip inside the content column). Hidden on `xl+` where the
+          PageLayout vertical rail takes over. */}
+      <SecondaryTabsBar>
+        <AccountSidebar orientation="horizontal" />
+      </SecondaryTabsBar>
       {/*
         The page wrapper is full-width with edge padding ; PageLayout
         owns the centering (single column on mobile, 3-column grid on
@@ -68,9 +74,6 @@ export default async function AccountLayout({ children }: { children: ReactNode 
       */}
       <main className="w-full px-4 pb-20 pt-8 sm:px-6">
         <PageLayout sidebar={<AccountSidebar />}>
-          <div className="border-b border-border pb-3 xl:hidden">
-            <AccountSidebar orientation="horizontal" />
-          </div>
           <AdminTotpBanner />
           {children}
         </PageLayout>

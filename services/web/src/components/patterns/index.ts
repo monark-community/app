@@ -1,6 +1,14 @@
 export { FilterBar, FilterBarSearch, useFilterBarToolsBudget } from "./filter-bar";
-export { FilterMenu, FilterFieldControl, activeFilterCount, isFilterActive } from "./filter-menu";
+export {
+  FilterMenu,
+  FilterFieldControl,
+  activeFilterCount,
+  isFilterActive,
+  clearAllFilters,
+} from "./filter-menu";
 export type { FilterConfig, FilterMenuLabels, FilterOption } from "./filter-menu";
+export { TableEmptyState, tableEmptyReason } from "./table-empty-state";
+export type { TableEmptyReason, TableEmptyStateLabels } from "./table-empty-state";
 export { PanelHeader } from "./panel-header";
 export type { PanelHeaderAction, PanelHeaderLeft } from "./panel-header";
 export { FieldRow } from "./field-row";
@@ -17,6 +25,8 @@ export type {
   GroupedMultiSelectLabels,
 } from "./grouped-multi-select";
 export { FormActionsFooter } from "./form-actions-footer";
+export { BulkEditBar } from "./bulk-edit-bar";
+export type { BulkEditLabels } from "./bulk-edit-bar";
 export { ConfirmDialog } from "./confirm-dialog";
 export { TableDetailLayout } from "./table-detail-layout";
 export { useDetailPanelRoute } from "./use-detail-panel-route";
@@ -32,6 +42,7 @@ export type {
   DataTablePaginationLabels,
   DataTablePaginationProps,
   DataTableProps,
+  DataTableSelection,
   DataTableSortLabels,
   PrimaryColumnDef,
   RowAction,

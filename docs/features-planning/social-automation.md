@@ -1,5 +1,17 @@
 # Social Posting Automation
 
+> **Update (2026-07-28):** the encrypted-token storage this spec assumed is now
+> a shipped core primitive. Build the OAuth **refresh-token / access-token
+> storage on the [`@monark/secrets`](../technical-documentation/secrets.md)
+> store** (per-org encrypted `key → value`, `SECRETS_ENCRYPTION_KEY`) rather than
+> a bespoke `SocialAccount` token-cipher column reusing the TOTP key. A node
+> reads a stored token with `ctx.getSecret(...)`; outbound calls go through
+> `safeFetch` (`@monark/common/http`). This resolves the tier-boundary
+> contradiction the original spec had (an _extended_ module can't add crypto /
+> a new `*_ENCRYPTION_KEY` / a core schema table). A richer OAuth "Connection"
+> model (multi-account-per-network, token refresh) can layer on top of the
+> key→value store when needed; the substrate itself is done.
+
 ## Context
 
 The exec brief lists "automated marketing content : runtime-produced posts and assets generated from preconfigured dynamic layouts" as a priority. The CRM-style app being built in this repo already emits domain events for the lifecycle moments worth posting about (a university gets confirmed, a new project starts, a milestone hits). Hand those events into a small posting pipeline that hydrates pre-approved templates with the event's payload, lets Claude tailor wording to each network, and pushes to the configured social accounts ; team gets an approval queue for the borderline cases, evergreen content cycles on a schedule.

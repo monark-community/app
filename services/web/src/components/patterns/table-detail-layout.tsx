@@ -4,62 +4,7 @@ import { type ReactNode, useEffect, useRef, useState } from "react";
 import { DragHandle } from "@monark/components/ui/drag-handle";
 import { cn } from "@/lib/utils";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
-
-const MOBILE_MAX_WIDTH = 767;
-
-/**
- * The current *screen* width in CSS px, read from `visualViewport.width` (the
- * actual visible viewport) rather than a media query / `innerWidth`, which
- * report the **layout viewport** (ICB).
- *
- * That distinction is load-bearing on iOS. If the layout viewport blows out
- * past the screen for even a moment — a transient during panel open, a wide
- * child painting before its `overflow` clips it — `innerWidth` / `matchMedia`
- * grow with it while `visualViewport.width` stays pinned to the real screen.
- * Both the mobile decision and the pinned panel width below read this, so
- * neither can be corrupted by a blow-out (and thus can't *lock one in* — see
- * {@link usePanelIsMobile}).
- */
-function readScreenWidth(): number | null {
-  if (typeof window === "undefined") return null;
-  return Math.round(window.visualViewport?.width ?? window.innerWidth);
-}
-
-function useScreenWidth(): number | null {
-  const [width, setWidth] = useState<number | null>(readScreenWidth);
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const update = () => setWidth(readScreenWidth());
-    update();
-    const vv = window.visualViewport;
-    vv?.addEventListener("resize", update);
-    window.addEventListener("resize", update);
-    return () => {
-      vv?.removeEventListener("resize", update);
-      window.removeEventListener("resize", update);
-    };
-  }, []);
-  return width;
-}
-
-/**
- * Mobile check, correct on the *first client render* (the panel is a
- * client-only portal, never in the SSR HTML, so reading the viewport in the
- * lazy initializer above can't cause a hydration mismatch). It matters because
- * a deep link (`?project=<id>`) opens the panel on the first render : a stale
- * value would pick the right-side `slide-in-from-right` variant, which paints
- * off-screen on a phone and blows the layout viewport out. Worse, a
- * media-query check would then *read that blown layout viewport* as "desktop",
- * lock the transform variant in, and never recover (the "pinch to see the
- * whole width" bug). Driving the decision off the visual-viewport width breaks
- * the feedback loop : the panel stays on the transform-free `full` variant.
- *
- * `null` (SSR / no window yet) reads as desktop — the panel isn't painted on
- * the server anyway, and the first client value resolves synchronously.
- */
-function usePanelIsMobile(width: number | null): boolean {
-  return width != null && width <= MOBILE_MAX_WIDTH;
-}
+import { usePanelIsMobile, useScreenWidth } from "@/hooks/use-panel-is-mobile";
 
 // The detail-panel width is persisted per screen (localStorage, desktop
 // only) : the base key below is suffixed with the caller's `storageKey`, so

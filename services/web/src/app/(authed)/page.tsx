@@ -1,5 +1,4 @@
 import { getTranslations } from "next-intl/server";
-import { AppBar } from "@/components/app-bar";
 import { BrandedAppLogo } from "@/components/branded-app-logo";
 
 export default async function Home() {
@@ -9,13 +8,10 @@ export default async function Home() {
   // content (placeholder welcome block for now).
   const t = await getTranslations("home");
   return (
-    <>
-      <AppBar />
-      <main className="mx-auto flex w-full max-w-5xl flex-col items-center px-4 py-16 text-center sm:px-6">
-        <BrandedAppLogo size={88} className="mb-6" />
-        <h1 className="text-4xl font-semibold tracking-tight">{t("heading")}</h1>
-        <p className="mt-3 text-muted-foreground">{t("subheading")}</p>
-      </main>
-    </>
+    <main className="mx-auto flex w-full max-w-5xl flex-col items-center px-4 py-16 text-center sm:px-6">
+      <BrandedAppLogo size={88} className="mb-6" />
+      <h1 className="text-4xl font-semibold tracking-tight">{t("heading")}</h1>
+      <p className="mt-3 text-muted-foreground">{t("subheading")}</p>
+    </main>
   );
 }

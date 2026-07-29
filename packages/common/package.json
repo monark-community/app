@@ -25,6 +25,14 @@
     "./pagination": {
       "types": "./src/pagination.ts",
       "default": "./src/pagination.ts"
+    },
+    "./crypto": {
+      "types": "./src/crypto.ts",
+      "default": "./src/crypto.ts"
+    },
+    "./http": {
+      "types": "./src/http.ts",
+      "default": "./src/http.ts"
     }
   },
   "scripts": {

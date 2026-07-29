@@ -137,10 +137,7 @@ export function PanelHeader({
               key={i}
               variant="ghost"
               size="icon"
-              className={cn(
-                "h-8 w-8",
-                a.destructive && "text-destructive hover:text-destructive",
-              )}
+              className={cn("h-8 w-8", a.destructive && "text-destructive hover:text-destructive")}
               disabled={a.disabled}
               onClick={a.onSelect}
             >

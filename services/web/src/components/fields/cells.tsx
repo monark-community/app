@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Check, Link2, Mail, Minus } from "lucide-react";
+import { Check, Link2, Mail, Minus, Paperclip } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { FieldAvatar } from "./field-avatar";
@@ -213,6 +213,19 @@ export function renderFieldValue(def: FieldDef, value: unknown, labels: CellLabe
             avatar: def.avatars ? { label: o.label, src: o.avatarUrl } : undefined,
           }))}
         />
+      );
+    }
+
+    case "file": {
+      // The cell can't fetch file metadata per row (like relation cells, it
+      // receives raw ids), so it shows a paperclip + count rather than names.
+      const ids = Array.isArray(value) ? (value as string[]) : value ? [value as string] : [];
+      if (ids.length === 0) return <span className="text-muted-foreground">{labels.empty}</span>;
+      return (
+        <Badge variant="outline" className="gap-1 font-normal">
+          <Paperclip className="h-3 w-3" aria-hidden />
+          {ids.length}
+        </Badge>
       );
     }
 

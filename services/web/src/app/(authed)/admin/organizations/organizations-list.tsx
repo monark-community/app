@@ -10,7 +10,9 @@ import {
   FilterBarSearch,
   PanelHeader,
   TableDetailLayout,
+  TableEmptyState,
   TableTools,
+  tableEmptyReason,
   useDataTableLayout,
   useDetailPanelRoute,
   type DataColumnDef,
@@ -21,6 +23,7 @@ import { SheetTitle } from "@/components/ui/sheet";
 import { OrganizationLogo } from "@/components/organization-logo";
 import { rewriteForCurrentHost } from "@/lib/dev-host-rewrite";
 import { trpc } from "@/lib/trpc";
+import { useTableEmptyLabels } from "@/lib/use-table-empty-labels";
 import { OrganizationDetail } from "./[id]/organization-detail";
 
 function useDebounced<T>(value: T, ms: number): T {
@@ -40,6 +43,7 @@ export function OrganizationsList() {
   const [rawSearch, setRawSearch] = useState("");
   const search = useDebounced(rawSearch.trim(), 250);
   const [limit, setLimit] = useState(25);
+  const emptyLabels = useTableEmptyLabels({ query: search, noData: t("empty") });
 
   useEffect(() => {
     setLimit(25);
@@ -67,7 +71,6 @@ export function OrganizationsList() {
       />
     ),
     label: (org) => org.displayName,
-    subtext: (org) => <span className="font-mono">{org.slug}</span>,
     href: (org) => `/admin/organizations?organization=${org.id}`,
     enableSorting: true,
     sortAccessor: (org) => org.displayName,
@@ -126,6 +129,16 @@ export function OrganizationsList() {
             primaryColumn={primaryColumn}
             columns={orgColumns}
             labels={toolsLabels}
+            include={["filters", "sorting"]}
+          />
+        }
+        actions={
+          <TableTools
+            layout={layout}
+            primaryColumn={primaryColumn}
+            columns={orgColumns}
+            labels={toolsLabels}
+            include={["columns"]}
           />
         }
       />
@@ -172,7 +185,13 @@ export function OrganizationsList() {
             isLoading={query.isLoading}
             isError={query.isError}
             onRetry={() => query.refetch()}
-            emptyState={search ? t("emptySearch", { query: search }) : t("empty")}
+            emptyState={
+              <TableEmptyState
+                reason={tableEmptyReason({ hasSearch: search.length > 0, hasFilters: false })}
+                labels={emptyLabels}
+                onClearSearch={() => setRawSearch("")}
+              />
+            }
             primaryColumn={primaryColumn}
             columns={orgColumns}
           />

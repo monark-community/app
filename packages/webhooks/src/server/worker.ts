@@ -118,6 +118,9 @@ export async function deliverOne(
         headers,
         body,
         signal: controller.signal,
+        // Don't transparently follow a 3xx to an unvalidated (possibly internal)
+        // target ; a redirect is recorded as a non-2xx delivery failure.
+        redirect: "manual",
       });
       statusCode = response.status;
       if (response.status >= 200 && response.status < 300) {

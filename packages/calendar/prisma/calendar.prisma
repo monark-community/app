@@ -1,0 +1,93 @@
+// @monark/calendar — Prisma schema fragment (extended module).
+// Assembled into packages/db/prisma/schema.prisma by `pnpm gen:schema`.
+// Edit HERE, never the generated schema.prisma. Relations to core models
+// (Organization, Role) resolve at assembly time.
+
+// ── MODULE: calendar ──────────────────────────────────────
+model Calendar {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String
+  description    String?
+  color          String?
+  isPersonal     Boolean      @default(false)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  deletedAt      DateTime?
+
+  events     CalendarEvent[]
+  roleAccess CalendarRoleAccess[]
+
+  @@index([organizationId])
+}
+
+// Per-calendar RBAC: a role whose id appears here can see this calendar.
+// Users with `calendar.manage` bypass this table and see all org calendars.
+model CalendarRoleAccess {
+  calendarId String
+  calendar   Calendar @relation(fields: [calendarId], references: [id], onDelete: Cascade)
+  roleId     String
+  role       Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([calendarId, roleId])
+  @@index([roleId])
+}
+
+enum CalendarEventType {
+  STANDARD
+  PUNCTUAL
+  ALL_DAY
+}
+
+model CalendarEvent {
+  id             String            @id @default(cuid())
+  calendarId     String
+  calendar       Calendar          @relation(fields: [calendarId], references: [id], onDelete: Cascade)
+  organizationId String
+  organization   Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  title          String
+  description    String?
+  location       String?
+  participants   String[]
+  startAt        DateTime
+  endAt          DateTime
+  eventType      CalendarEventType @default(STANDARD)
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  deletedAt      DateTime?
+
+  // Set when this event was materialized from a Data Record's calendar
+  // integration mapping (see @monark/data-models's DataModelIntegration and
+  // the registerCalendarDataModelSubscriber() in this module). Both null
+  // for an ordinary, hand-created event ; the pair is how the subscriber
+  // finds "the event for this record" to upsert/delete idempotently on
+  // repeated data-models.record-* events, without Calendar needing to know
+  // anything about the source module beyond this string pair.
+  sourceModule   String?
+  sourceRecordId String?
+
+  reminders CalendarEventReminder[]
+
+  @@unique([sourceModule, sourceRecordId])
+  @@index([calendarId])
+  @@index([organizationId])
+  @@index([startAt])
+}
+
+model CalendarEventReminder {
+  id              String        @id @default(cuid())
+  calendarEventId String
+  calendarEvent   CalendarEvent @relation(fields: [calendarEventId], references: [id], onDelete: Cascade)
+  organizationId  String
+  organization    Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  minutesBefore   Int
+  scheduledFor    DateTime
+  notifiedAt      DateTime?
+  createdAt       DateTime      @default(now())
+
+  @@index([scheduledFor, notifiedAt])
+  @@index([calendarEventId])
+  @@index([organizationId])
+}
+

@@ -488,8 +488,7 @@ export function DayView({
       const columnsRect = columnsRef.current?.getBoundingClientRect();
       const scrollTop = columnsRef.current?.scrollTop ?? 0;
       const anchorX = (columnsRect?.left ?? 0) + 64;
-      const anchorY =
-        (columnsRect?.top ?? 0) + (startMin / 60) * HOUR_HEIGHT_PX - scrollTop;
+      const anchorY = (columnsRect?.top ?? 0) + (startMin / 60) * HOUR_HEIGHT_PX - scrollTop;
       setSelectedEventId(null);
       setPendingEventType(type);
       setPendingSlot({ columnId: calendarId, startTime, endTime });
@@ -964,7 +963,12 @@ export function DayView({
                       const rect = e.currentTarget.getBoundingClientRect();
                       const side: "left" | "right" =
                         window.innerWidth - rect.right < 660 ? "left" : "right";
-                      handleEventClick(ev, side === "left" ? rect.left : rect.right, rect.top, side);
+                      handleEventClick(
+                        ev,
+                        side === "left" ? rect.left : rect.right,
+                        rect.top,
+                        side,
+                      );
                     }}
                   >
                     {ev.title}

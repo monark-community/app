@@ -22,11 +22,11 @@ export function useFilterBarToolsBudget(): number | null {
  *
  * - `search` — the query field, left-aligned (pair with {@link FilterBarSearch}).
  * - `tools` — the list controls (filters / sorting / columns ; pair with
- *   `TableTools`), right-aligned just left of the actions. The row measures
- *   the space available to this slot and exposes it via
- *   {@link useFilterBarToolsBudget}, so the controls can collapse into a
- *   single trigger when the row gets tight.
- * - `actions` — the primary CTA, right-most. Never collapses.
+ *   `TableTools`), sitting immediately right of the search field (grouped with
+ *   it, apart from the actions). The row measures the space available to this
+ *   slot and exposes it via {@link useFilterBarToolsBudget}, so the controls
+ *   can collapse into a single trigger when the row gets tight.
+ * - `actions` — the primary CTA(s), right-most. Never collapses.
  *
  * Presentational only — the caller supplies the concrete nodes (i18n stays
  * with the caller).
@@ -75,18 +75,16 @@ export function FilterBar({
           {search}
         </div>
       )}
-      <div className="ml-auto flex items-center gap-2">
-        {tools != null && (
-          <ToolsBudgetContext.Provider value={budget}>
-            <div className="flex items-center gap-2">{tools}</div>
-          </ToolsBudgetContext.Provider>
-        )}
-        {actions != null && (
-          <div ref={actionsRef} className="flex items-center gap-2">
-            {actions}
-          </div>
-        )}
-      </div>
+      {tools != null && (
+        <ToolsBudgetContext.Provider value={budget}>
+          <div className="flex items-center gap-2">{tools}</div>
+        </ToolsBudgetContext.Provider>
+      )}
+      {actions != null && (
+        <div ref={actionsRef} className="ml-auto flex items-center gap-2">
+          {actions}
+        </div>
+      )}
     </div>
   );
 }

@@ -76,9 +76,7 @@ export function DiscussionSection({
           {comments.map((c) => (
             <li key={c.id} className="flex gap-3">
               <Avatar className="h-8 w-8">
-                <AvatarFallback className="text-xs font-medium">
-                  {c.authorInitials}
-                </AvatarFallback>
+                <AvatarFallback className="text-xs font-medium">{c.authorInitials}</AvatarFallback>
               </Avatar>
               <div className="min-w-0 flex-1 space-y-1">
                 <div className="flex flex-wrap items-baseline gap-x-2">

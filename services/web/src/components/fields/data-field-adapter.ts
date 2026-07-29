@@ -1,5 +1,6 @@
+import { DATA_MODEL_FILES_BUCKET, inferResultType } from "@monark/data-models/contracts";
 import { SELECT_OPTION_TONES } from "./types";
-import type { BadgeTone, FieldDef, RelationSource, SelectOption } from "./types";
+import type { BadgeTone, FieldDef, FileSource, RelationSource, SelectOption } from "./types";
 
 /**
  * The server's field-type vocabulary — mirrors `DataFieldType` in
@@ -24,7 +25,9 @@ export type DataFieldServerType =
   | "RELATION"
   | "URL"
   | "EMAIL"
-  | "FORMULA";
+  | "FORMULA"
+  | "FILE"
+  | "ATTACHMENTS";
 
 /** The subset of a `DataField` row this adapter needs. */
 export interface DataFieldForAdapter {
@@ -88,8 +91,18 @@ interface RelationConfig {
 }
 interface FormulaConfig {
   expression: string;
-  resultType: "TEXT" | "NUMBER" | "BOOLEAN" | "DATE";
 }
+interface FileConfig {
+  allowedFormats?: string[];
+  maxSizeBytes?: number;
+  /** Max file count (ATTACHMENTS only). */
+  max?: number;
+}
+
+const emptyFileSource: FileSource = {
+  loadByIds: async () => [],
+  getDownloadUrl: async () => "",
+};
 const FORMULA_RESULT_TYPE_MAP = {
   TEXT: "text",
   NUMBER: "number",
@@ -120,7 +133,7 @@ const emptyRelationSource = (model: string): RelationSource => ({
  */
 export function dataFieldToFieldDef(
   field: DataFieldForAdapter,
-  opts: { relationSource?: RelationSourceResolver } = {},
+  opts: { relationSource?: RelationSourceResolver; fileSource?: FileSource } = {},
 ): FieldDef {
   const base = {
     name: field.key,
@@ -171,6 +184,20 @@ export function dataFieldToFieldDef(
       const source = opts.relationSource?.(c) ?? emptyRelationSource(c.relationTarget);
       return { ...base, type: "relation", source, multiple: c.cardinality === "MANY", max: c.max };
     }
+    case "FILE":
+    case "ATTACHMENTS": {
+      const c = field.config as FileConfig;
+      return {
+        ...base,
+        type: "file",
+        source: opts.fileSource ?? emptyFileSource,
+        bucket: DATA_MODEL_FILES_BUCKET,
+        multiple: field.type === "ATTACHMENTS",
+        max: c.max,
+        allowedFormats: c.allowedFormats,
+        maxSizeBytes: c.maxSizeBytes,
+      };
+    }
     case "URL": {
       const c = field.config as TextConfig;
       return { ...base, type: "url", maxLength: c.maxLength };
@@ -181,12 +208,17 @@ export function dataFieldToFieldDef(
     }
     case "FORMULA": {
       const c = field.config as FormulaConfig;
-      return {
-        ...base,
-        type: "formula",
-        expression: c.expression,
-        resultType: FORMULA_RESULT_TYPE_MAP[c.resultType] ?? "text",
-      };
+      // The result type is derived from the expression (see `inferResultType`),
+      // not stored ; an unparseable expression falls back to text (the live
+      // preview surfaces the syntax error separately).
+      let resultType: (typeof FORMULA_RESULT_TYPE_MAP)[keyof typeof FORMULA_RESULT_TYPE_MAP] =
+        "text";
+      try {
+        resultType = FORMULA_RESULT_TYPE_MAP[inferResultType(c.expression)];
+      } catch {
+        // Keep the "text" fallback.
+      }
+      return { ...base, type: "formula", expression: c.expression, resultType };
     }
   }
 }

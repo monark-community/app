@@ -1,0 +1,1142 @@
+// Core schema (base fragment) — datasource, generator, and every core
+// module's models. Extended modules add packages/<module>/prisma/*.prisma.
+// `pnpm gen:schema` concatenates base + fragments into the generated
+// schema.prisma ; do NOT put extended-module models here.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// Modules own logical slices of this schema. Add new tables under
+// a section banner so tooling can detect out-of-module edits, e.g.:
+//
+// // ── MODULE: auth ──────────────────────────────────────────
+// model User { ... }
+//
+// Keep the banner comments in sync with the module manifest.
+
+// ── MODULE: users ─────────────────────────────────────────
+// The User.id is owned externally (Supabase Auth UUID); we never generate it.
+// See docs/features-planning/phase-1/user-management.md.
+model User {
+  id                   String    @id
+  email                String    @unique
+  emailVerifiedAt      DateTime?
+  displayName          String?
+  avatarUrl            String?
+  bannerUrl            String?
+  bio                  String?
+  localePreference     String    @default("en")
+  // How long a recognised TrustedDevice stays trusted before it has to
+  // re-prove itself (TOTP re-challenge + new-device email on next
+  // sign-in). Configured by the user in /account/security ; values
+  // exposed in the UI are 30 / 60 / 90 days. Default 90 because most
+  // users sign in often enough that even the longest option doesn't
+  // force a re-challenge in practice ; the RFC 6265bis 400-day cookie
+  // ceiling still acts as a hard upper bound enforced by the browser.
+  trustedDeviceTtlDays Int       @default(90)
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+  deletedAt            DateTime? // self-initiated, grace period applies
+  disabledAt           DateTime? // admin-initiated, indefinite
+
+  pendingEmailChange  PendingEmailChange?
+  emailResendAttempts EmailResendAttempt[]
+  trustedDevices      TrustedDevice[]
+  totpSecret          TotpSecret?
+  memberships         OrganizationMembership[]
+  sentInvites         Invite[]                 @relation("InviteSender")
+  acceptedInvites     Invite[]                 @relation("InviteAcceptor")
+  roleAssignments     RoleAssignment[]
+  rolesGranted        RoleAssignment[]         @relation("RoleGranter")
+  rolesRevoked        RoleAssignment[]         @relation("RoleRevoker")
+  notifications       Notification[]
+  notifPreferences    NotificationPreference[]
+  metadata            UserMetadata[]
+  dataRecordWatches   DataRecordWatcher[]
+  dataModelWatches    DataModelWatcher[]
+}
+
+// Generic key/value sidecar for non-core modules to attach data to a
+// User without modifying the core schema. Identity is (userId,
+// module, key) ; the value is unstructured JSON. Modules read + write
+// only their own slice (`module = '<their-package-name>'`) — the
+// generic CRUD procedures in @monark/users gate access via
+// `users.write-metadata-for-module-<x>` permissions registered by the
+// owning module. Core modules don't use this sidecar ; they extend
+// User directly (the schema lives next to them) — the sidecar is for
+// extensions that can't or shouldn't touch core.
+model UserMetadata {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  module    String
+  key       String
+  value     Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, module, key])
+  @@index([module])
+  @@index([userId, module])
+}
+
+model PendingEmailChange {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  newEmail    String
+  tokenHash   String   @unique
+  requestedAt DateTime @default(now())
+  expiresAt   DateTime
+}
+
+// Tracks resend attempts for the signup confirmation email so we can enforce
+// a 5-per-hour cap without building a separate rate-limit system.
+model EmailResendAttempt {
+  id     String   @id @default(cuid())
+  userId String
+  user   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  at     DateTime @default(now())
+
+  @@index([userId, at])
+}
+
+// ── MODULE: auth ─────────────────────────────────────────
+// See docs/features-planning/phase-1/auth-trusted-devices.md.
+// Cookie identity for recognizing returning devices; raw cookie is never
+// persisted, only a SHA-256 hash.
+model TrustedDevice {
+  id             String          @id @default(cuid())
+  userId         String
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cookieHash     String          @unique
+  label          String
+  userAgent      String
+  // High-entropy User-Agent Client Hints captured at recognize-time
+  // when the browser sends them (Chrome / Edge after the middleware's
+  // `Accept-CH` header lands). Stored as JSON :
+  // `{ model?: string, platformVersion?: string, fullVersionList?: string }`.
+  // Lets `toView` show the real device model ("Pixel 7") instead of
+  // the UA-reduced placeholder ("K") that modern Android Chrome
+  // freezes the UA's device-model field to for privacy. Null on
+  // browsers that don't implement UA-CH (Firefox, Safari) — `toView`
+  // falls back to ua-parser-js on the userAgent string in that case.
+  clientHints    Json?
+  firstSeenIp    String?
+  firstSeenAt    DateTime        @default(now())
+  lastSeenIp     String?
+  lastSeenAt     DateTime        @default(now())
+  country        String?
+  revokedAt      DateTime?
+  // DB-side trust expiry. The browser cookie's `Max-Age` is already
+  // capped at 400 days by RFC 6265bis, so an inactive device naturally
+  // falls out of the cookie store after that ; this column adds a
+  // belt-and-suspenders gate so a row whose cookie somehow outlives the
+  // browser (manual restore, attacker-copied cookie, browser bug) still
+  // gets rejected at lookup time. Slides forward to `now + 400 days`
+  // every time the device is recognised on a fresh sign-in. The
+  // `dbgenerated` default matches the app-side TTL constant in
+  // `packages/auth/src/server/trusted-devices.ts` so DB inserts that
+  // skip the column (legacy test fixtures, ad-hoc psql) still land a
+  // sane value.
+  expiresAt      DateTime        @default(dbgenerated("(now() + INTERVAL '400 days')"))
+  // Stamped when the user clears a TOTP challenge on this device; the
+  // sign-in gate checks this to decide whether to re-challenge.
+  totpVerifiedAt DateTime?
+  sessions       DeviceSession[]
+
+  @@index([userId])
+  // Single-column index on expiresAt powers the planned sweep cron
+  // (`WHERE expiresAt < now()`). Cheap on the typical fleet size + the
+  // alternative full-scan would be visible once the table grows past
+  // a few thousand rows.
+  @@index([expiresAt])
+}
+
+// Maps Supabase session ids to the trusted device they were issued from,
+// so revoking a device can target only its own sessions instead of the
+// blunt global signOut. Created on every recognize-or-register; cleared
+// when the device is revoked.
+model DeviceSession {
+  id                String        @id @default(cuid())
+  deviceId          String
+  device            TrustedDevice @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  supabaseSessionId String        @unique
+  createdAt         DateTime      @default(now())
+
+  @@index([deviceId])
+}
+
+// TOTP enrollment; `activatedAt` is null while the user has started
+// enrollment but hasn't verified their first code. The secret is encrypted
+// with AES-256-GCM using `TOTP_ENCRYPTION_KEY`; IV + auth tag are stored
+// next to the ciphertext.
+model TotpSecret {
+  id           String    @id @default(cuid())
+  userId       String    @unique
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  secretCipher Bytes
+  secretIv     Bytes
+  secretTag    Bytes
+  enrolledAt   DateTime  @default(now())
+  activatedAt  DateTime?
+
+  recoveryCodes RecoveryCode[]
+}
+
+// One-time recovery codes; `codeHash` is bcrypt(plaintext).
+model RecoveryCode {
+  id             String     @id @default(cuid())
+  totpSecretId   String
+  totpSecret     TotpSecret @relation(fields: [totpSecretId], references: [id], onDelete: Cascade)
+  codeHash       String
+  usedAt         DateTime?
+  // Stamped after the post-sign-in reminder modal has shown the user
+  // their use + they've confirmed striking it from their saved list.
+  // The modal's trigger query is "exists a row with usedAt IS NOT NULL
+  // AND acknowledgedAt IS NULL" ; the unack state survives sign-out so
+  // the modal re-appears on next sign-in until acknowledged.
+  acknowledgedAt DateTime?
+
+  @@index([totpSecretId])
+}
+
+// ── MODULE: rbac ─────────────────────────────────────────
+// Roles are table-driven : the previous `Role` enum collapsed into a
+// single built-in row (`key = "ADMIN"`, `builtIn = true`,
+// `organizationId = null`) and operator-defined custom roles per-org.
+// Code-side guarantees on the built-in :
+//   - `key` and `builtIn` are immutable from API ; only `name` and
+//     `description` are editable.
+//   - Hard-block deletion in the rbac package's write helpers.
+//   - `hasPermission` short-circuits to true for users holding any
+//     active ADMIN assignment ; `RolePermission` rows for ADMIN are
+//     decorative — never read by the check, so new permissions added
+//     to the system later are auto-granted.
+// Custom roles are scoped : `Role.organizationId` carries the owning
+// org, and any RoleAssignment to that role must match its
+// `organizationId`. Multi-role-per-user is allowed by the (userId,
+// organizationId, roleId) unique tuple.
+model Role {
+  id             String        @id @default(cuid())
+  // Stable identifier used by code-side guards (e.g. `isAdmin` checks
+  // `key === "ADMIN"`). Lowercase / kebab-case for custom roles is
+  // recommended but not enforced at the DB level.
+  key            String
+  name           String
+  description    String?
+  // Optional brand color for UI scannability. Hex string (`#RGB` or
+  // `#RRGGBB`) ; null falls back to a neutral muted tone in the UI.
+  color          String?
+  builtIn        Boolean       @default(false)
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  permissions       RolePermission[]
+  assignments       RoleAssignment[]
+  invites           Invite[]
+  flagOverrides     FeatureFlagOverride[]
+  calendarAccess    CalendarRoleAccess[]
+  dataRecordAccess  DataRecordRoleAccess[]
+  kanbanBoardAccess KanbanBoardRoleAccess[]
+
+  // Each org can have its own list of role keys ; the built-in ADMIN
+  // row's `(ADMIN, null)` slot is enforced uniquely too. PostgreSQL's
+  // null-distinct unique semantics let `(ADMIN, null)` coexist with
+  // `(ADMIN, "org_xxx")` safely (the built-in stays a singleton).
+  @@unique([key, organizationId])
+  @@index([organizationId])
+}
+
+model RolePermission {
+  id         String   @id @default(cuid())
+  roleId     String
+  role       Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  // Module that registered this permission via `registerPermissions()`.
+  // Two modules may declare the same `permission` slug without
+  // colliding because uniqueness is on (roleId, module, permission).
+  module     String
+  // Permission slug : a string from the merged permission registry
+  // built at api boot. Stored as text so the DB doesn't need to care
+  // about which permissions exist ; the code-side resolver ignores
+  // rows whose (module, permission) pair isn't currently registered.
+  permission String
+  createdAt  DateTime @default(now())
+
+  @@unique([roleId, module, permission])
+  @@index([roleId])
+}
+
+model RoleAssignment {
+  id             String        @id @default(cuid())
+  userId         String
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // The assignment's scope. ADMIN assignments may carry null (= platform
+  // tier, the equivalent of the retired MONARK_ADMIN) ; custom-role
+  // assignments must match the role's `organizationId` (enforced at
+  // the rbac write-layer, not via a DB constraint since SQL can't
+  // express "FK A's column equals FK B's column").
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  roleId         String
+  role           Role          @relation(fields: [roleId], references: [id], onDelete: Restrict)
+  // Nullable so system-driven grants (e.g. the `tools/sysadmin.ts`
+  // CLI bootstrapping the first SYSADMIN before any operator exists)
+  // can record "no granter". UI grants always carry a non-null
+  // actor (enforced upstream at the tRPC layer via
+  // `requireAdmin(ctx.userId)`).
+  grantedById    String?
+  granter        User?         @relation("RoleGranter", fields: [grantedById], references: [id], onDelete: SetNull)
+  grantedAt      DateTime      @default(now())
+  revokedAt      DateTime?
+  revokedById    String?
+  revoker        User?         @relation("RoleRevoker", fields: [revokedById], references: [id])
+  reason         String?
+
+  @@unique([userId, organizationId, roleId])
+  @@index([userId])
+  @@index([organizationId])
+  @@index([roleId])
+}
+
+// ── MODULE: organizations ────────────────────────────────
+// See docs/features-planning/phase-1/organization-management.md.
+model Organization {
+  id          String    @id @default(cuid())
+  slug        String    @unique
+  displayName String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  logoUrl      String?
+  primaryColor String?
+
+  memberships            OrganizationMembership[]
+  invites                Invite[]
+  slugRedirects          OrgSlugRedirect[]
+  roleAssignments        RoleAssignment[]
+  roles                  Role[]
+  metadata               OrganizationMetadata[]
+  webhookEndpoints       WebhookEndpoint[]
+  calendars              Calendar[]
+  calendarEvents         CalendarEvent[]
+  calendarEventReminders CalendarEventReminder[]
+  dataModels             DataModel[]
+  dataRecords            DataRecord[]
+  kanbanBoards           KanbanBoard[]
+  kanbanColumns          KanbanColumn[]
+  kanbanCards            KanbanCard[]
+  automations            Automation[]
+  automationRuns         AutomationRun[]
+  storedFiles            StoredFile[]
+  secrets                Secret[]
+}
+
+// Same shape as UserMetadata, scoped to an organization. Powers
+// extended modules that need per-org settings without modifying the
+// core schema. Identity is (organizationId, module, key).
+model OrganizationMetadata {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  module         String
+  key            String
+  value          Json
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@unique([organizationId, module, key])
+  @@index([module])
+  @@index([organizationId, module])
+}
+
+model OrganizationMembership {
+  id             String       @id @default(cuid())
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  joinedAt DateTime  @default(now())
+  leftAt   DateTime?
+
+  @@unique([userId, organizationId])
+  @@index([organizationId])
+}
+
+model Invite {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  email        String
+  // Optional display-name pre-fill captured by the inviter (e.g. "Jane
+  // Doe"). Used in the invite email greeting and pre-fills the user's
+  // displayName on signup acceptance ; null when the inviter didn't
+  // supply one.
+  displayName  String?
+  // FK to Role table. The role's `organizationId` must match the
+  // invite's `organizationId` (enforced at the write layer).
+  roleId       String
+  role         Role      @relation(fields: [roleId], references: [id], onDelete: Restrict)
+  invitedById  String
+  invitedBy    User      @relation("InviteSender", fields: [invitedById], references: [id])
+  tokenHash    String    @unique
+  expiresAt    DateTime
+  acceptedAt   DateTime?
+  acceptedById String?
+  acceptedBy   User?     @relation("InviteAcceptor", fields: [acceptedById], references: [id])
+
+  @@index([organizationId])
+  @@index([email])
+  @@index([roleId])
+}
+
+model OrgSlugRedirect {
+  id             String       @id @default(cuid())
+  oldSlug        String       @unique
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  expiresAt      DateTime
+
+  @@index([organizationId])
+}
+
+// ── MODULE: feature-flags ────────────────────────────────
+// Flags are keyed on (module, key) so non-core modules can register
+// their own flag namespace without colliding with core. Core modules
+// own these prefixes : `auth`, `feature-flags`, `notifications`,
+// `organizations`, `rbac`, `users`, `webhooks`. An extended module
+// owns whatever module-name string its package uses (e.g. `posts`).
+model FeatureFlag {
+  module      String
+  key         String
+  description String
+  defaultOn   Boolean               @default(false)
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+  overrides   FeatureFlagOverride[]
+
+  @@id([module, key])
+}
+
+model FeatureFlagOverride {
+  id      String      @id @default(cuid())
+  module  String
+  flagKey String
+  flag    FeatureFlag @relation(fields: [module, flagKey], references: [module, key], onDelete: Cascade)
+
+  // Exactly one of these three is non-null; enforced at the app layer.
+  // A role-scoped override targets every user holding any active
+  // RoleAssignment for that Role row.
+  organizationId String?
+  userId         String?
+  roleId         String?
+  role           Role?   @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  enabled Boolean
+  setById String
+  setAt   DateTime @default(now())
+  note    String?
+
+  @@unique([module, flagKey, organizationId, userId, roleId])
+  @@index([module, flagKey])
+}
+
+// ── MODULE: notifications ────────────────────────────────
+// One row per *delivered* notification (not per-event ; an event that fans
+// out to N recipients writes N rows). Owns both the in-app surface
+// (read/dismissed state) and the audit trail for email/push channels
+// (delivered/failed status). The `kind` is a stable string from the
+// in-code registry ; the `category` mirror is denormalised so the inbox
+// can filter without a registry lookup at query time.
+model Notification {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  kind     String
+  category NotificationCategory
+  channel  NotificationChannel
+
+  subject String
+  body    String?
+  link    String?
+
+  // In-app channel only ; null for email/push deliveries.
+  readAt      DateTime?
+  dismissedAt DateTime?
+
+  // Email/push channel ; null for in-app.
+  deliveredAt   DateTime?
+  failedAt      DateTime?
+  failureReason String?
+
+  // Used by the de-dup check inside dispatch ; sha-256 hex of the
+  // event-data payload, scoped per (userId, kind). Not exposed.
+  dedupeKey String?
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([userId, channel, readAt])
+  @@index([userId, channel, dismissedAt])
+  @@index([kind, createdAt])
+  @@index([userId, kind, dedupeKey, createdAt])
+}
+
+// Per-user × per-category × per-channel preferences. Categories are coarser
+// than `kind` so the prefs surface stays compact. "No row" means use the
+// kind's `defaultEnabled` from the in-code registry ; rows are inserted
+// only when the user explicitly toggles, keeping the table small and
+// letting registry defaults change without a backfill.
+model NotificationPreference {
+  id        String              @id @default(cuid())
+  userId    String
+  user      User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Per-KIND override (e.g. "auth.new-device"), not per-category — a user
+  // can silence one specific event without muting its whole category. The
+  // kind's `category` (from the registry) is only used to group the prefs
+  // UI. Unmatched kinds fall back to the registry default.
+  kind      String
+  channel   NotificationChannel
+  enabled   Boolean
+  updatedAt DateTime            @updatedAt
+
+  @@unique([userId, kind, channel])
+  @@index([userId])
+}
+
+enum NotificationChannel {
+  IN_APP
+  EMAIL
+}
+
+enum NotificationCategory {
+  SECURITY
+  ACCOUNT
+  ACTIVITY
+  DIGEST
+}
+
+// ── MODULE: webhooks ────────────────────────────────────
+// Operator-registered HTTP endpoints that receive a fan-out of domain
+// events. The lifecycle :
+//   1. An operator (or extended module on its behalf) creates a
+//      `WebhookEndpoint` row with target URL + a freshly-minted shared
+//      secret (only the SHA-256 hash is persisted).
+//   2. They subscribe the endpoint to one or more event types via
+//      `WebhookSubscription` rows. Subscriptions can be exact
+//      (`type = "rbac.role-assigned"`) or prefix (`isPrefix = true`,
+//      e.g. `type = "rbac."` matches every rbac event).
+//   3. At emit-time the webhook subscriber writes a `WebhookDelivery`
+//      outbox row inside the same Prisma transaction as the source
+//      mutation. The outbox guarantees at-least-once semantics across
+//      process crashes ; subscribers never lose work between
+//      `emit()` and the actual HTTP POST.
+//   4. A worker (in-process setInterval + the `/cron/sweep-webhook-
+//      deliveries` endpoint as a fallback) drains pending rows,
+//      signs the body with HMAC-SHA-256 of the endpoint's secret,
+//      POSTs, and records the attempt in `WebhookDeliveryAttempt`.
+//   5. Failures retry with exponential backoff up to a hard cap ; the
+//      endpoint is auto-disabled after `WebhookDeliveryFailureLimit`
+//      consecutive failures and emits `webhook.endpoint-disabled-
+//      after-failures` for operator notification.
+//
+// Extended modules don't need to touch any of this. The subscriber
+// listens for `*` from the in-memory event bus, so any event whose
+// type matches a subscription routes automatically — including
+// extended modules' events the moment they're added to
+// `modules.manifest.ts`.
+model WebhookEndpoint {
+  id                  String                @id @default(cuid())
+  // Optional org scope. Null = platform-tier endpoint (only sysadmins
+  // can manage). Non-null = the org's operators manage it ; only
+  // events scoped to that org reach it.
+  organizationId      String?
+  organization        Organization?         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  // Operator-facing label. Surfaces on the admin list, the page
+  // header, the breadcrumb, and any future filtering UI ; the URL
+  // is too long + cluttered to read as the row identity. Required ;
+  // existing rows are backfilled from the URL host on migration.
+  name                String
+  url                 String
+  description         String?
+  // SHA-256 hash of the shared signing secret. The plaintext is
+  // returned exactly once at creation time (and on rotation) so the
+  // operator can configure their receiver ; never stored.
+  secretHash          String
+  // Lifecycle. `active` is the steady state ; `disabled` is set
+  // manually by an operator OR automatically after consecutive
+  // delivery failures hit the cap. A disabled endpoint stops
+  // accumulating outbox rows ; pre-existing pending rows are still
+  // delivered on the next sweep so an outage doesn't lose
+  // already-queued events.
+  status              WebhookEndpointStatus @default(active)
+  // Consecutive failure count, reset on the next successful delivery.
+  // Used by the worker to flip status → disabled when the cap is hit.
+  consecutiveFailures Int                   @default(0)
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+  disabledAt          DateTime?
+  disabledReason      String?
+
+  subscriptions WebhookSubscription[]
+  deliveries    WebhookDelivery[]
+
+  @@index([organizationId])
+  @@index([status])
+}
+
+enum WebhookEndpointStatus {
+  active
+  disabled
+}
+
+model WebhookSubscription {
+  id         String          @id @default(cuid())
+  endpointId String
+  endpoint   WebhookEndpoint @relation(fields: [endpointId], references: [id], onDelete: Cascade)
+  // Event-type filter. When `isPrefix = false` (default) the type
+  // must match exactly. When `isPrefix = true` any event whose type
+  // starts with this string matches — e.g. `"rbac."` catches every
+  // rbac event, `""` catches every event (use sparingly).
+  eventType  String
+  isPrefix   Boolean         @default(false)
+  createdAt  DateTime        @default(now())
+
+  @@unique([endpointId, eventType, isPrefix])
+  @@index([endpointId])
+  @@index([eventType])
+}
+
+// One row per intended delivery. Created inside the source
+// transaction, drained asynchronously. `nextAttemptAt` is the schedule
+// hint the worker uses to pick rows ; on success we set
+// `deliveredAt` ; on permanent failure (retries exhausted) we set
+// `failedAt` + `lastError`.
+model WebhookDelivery {
+  id             String                @id @default(cuid())
+  endpointId     String
+  endpoint       WebhookEndpoint       @relation(fields: [endpointId], references: [id], onDelete: Cascade)
+  eventType      String
+  // Full DomainEvent payload as the subscriber saw it. Receivers
+  // parse this against the published event schema for the matching
+  // type ; we keep it untyped at the DB layer because the event
+  // shape is owned by the originating module.
+  payload        Json
+  // Stable hash of `(endpointId, eventType, dedupeBasis)` where
+  // dedupeBasis is the event's own `correlationId` if present (or
+  // a hash of the payload otherwise). Sent in the
+  // `Webhook-Delivery-Idempotency-Key` HTTP header so a receiver
+  // dedupes retries without seeing two near-identical bodies.
+  idempotencyKey String                @unique
+  status         WebhookDeliveryStatus @default(pending)
+  attempts       Int                   @default(0)
+  // First attempt is `createdAt` ; on retry we push this forward by
+  // an exponential-backoff delta. The worker only picks rows where
+  // `nextAttemptAt <= now()` AND `status = 'pending'`.
+  nextAttemptAt  DateTime              @default(now())
+  deliveredAt    DateTime?
+  failedAt       DateTime?
+  lastError      String?
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+
+  attempts_ WebhookDeliveryAttempt[]
+
+  @@index([endpointId])
+  @@index([status, nextAttemptAt])
+  @@index([eventType])
+}
+
+enum WebhookDeliveryStatus {
+  pending
+  delivered
+  failed
+}
+
+// One row per HTTP attempt. Survives the parent `WebhookDelivery`'s
+// success / failure terminal state so operators can debug a flaky
+// endpoint by reading the per-attempt status / latency / error rows.
+model WebhookDeliveryAttempt {
+  id            String          @id @default(cuid())
+  deliveryId    String
+  delivery      WebhookDelivery @relation(fields: [deliveryId], references: [id], onDelete: Cascade)
+  attemptNumber Int
+  startedAt     DateTime        @default(now())
+  finishedAt    DateTime?
+  // HTTP status code when the request completed ; null when the
+  // attempt failed before getting a response (DNS / TCP / TLS / read
+  // timeout).
+  statusCode    Int?
+  // Network / parse error string when statusCode is null. Truncated
+  // to 1k chars by the worker so a chatty receiver can't blow the
+  // row size up.
+  error         String?
+  durationMs    Int?
+
+  @@index([deliveryId])
+}
+
+// ── MODULE: data-models ───────────────────────────────────
+// Admin-configurable, polymorphic "Data Model" engine (Notion-Databases
+// style). Every admin-defined record type is one DataModel row ; its
+// fields are DataField rows ; its rows are DataRecord rows. Storage is a
+// hybrid : fixed, indexed columns for the system envelope (id, slug,
+// title, timestamps, org scope) + a single JSONB `data` column for
+// admin-defined field values, namespaced by DataField.key. Core tier —
+// every org needs it, and it must be depended on by extended modules
+// (e.g. calendar's materialization subscriber), which extended-tier
+// modules can't provide for each other. See
+// docs/features-planning/phase-2/polymorphic-db.md for the full design
+// rationale, including the deliberate relation-in-JSONB and
+// opt-in-index tradeoffs.
+enum DataFieldType {
+  TEXT
+  LONG_TEXT
+  RICH_TEXT
+  NUMBER
+  BOOLEAN
+  DATE
+  DATETIME
+  SELECT
+  MULTI_SELECT
+  RELATION
+  URL
+  EMAIL
+  // Computed, read-only field ; its value is derived from other fields on the
+  // same record by a formula expression (see packages/data-models formula.ts),
+  // recomputed on every write. Config holds { expression } ; the result type is
+  // inferred from the expression (inferResultType), not stored.
+  FORMULA
+  // A single uploaded file ; value is a `StoredFile.id` soft reference (like a
+  // RELATION ONE). Config holds { allowedFormats?, maxSizeBytes? }.
+  FILE
+  // A bucket of many uploaded files ; value is `StoredFile.id[]` (like a
+  // RELATION MANY). Config holds { allowedFormats?, maxSizeBytes?, max? }.
+  ATTACHMENTS
+}
+
+// A model definition. Every Data Model is org-scoped ; platform-wide
+// (null-org) models are disallowed. Key uniqueness is per-org and scoped
+// to LIVE rows only — a soft-deleted model frees its key for reuse (see
+// the partial index note at the bottom of the model).
+model DataModel {
+  id             String        @id @default(cuid())
+  // Every Data Model is org-scoped ; platform-wide (null-org) models are
+  // disallowed. Always set to the creating admin's active org.
+  organizationId String
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  // Stable, URL-safe machine name. Immutable after create (used in
+  // route segments and event payloads) ; renaming is a "label" edit
+  // (`name`), never a "key" edit.
+  key         String
+  name        String
+  description String?
+  icon        String?
+
+  // The record title is a reserved convention, not an admin choice: every
+  // model owns a TEXT field with key `title` (auto-created on model create,
+  // protected from archive/delete/retype) whose value backs `DataRecord.title`
+  // and the pinned primary column. There is no title-field pointer to store.
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+  createdBy String
+
+  fields       DataField[]
+  records      DataRecord[]
+  integrations DataModelIntegration[]
+  watchers     DataModelWatcher[]
+
+  // Per-org key uniqueness among LIVE models is enforced by the hand-
+  // written partial index `DataModel_org_key_active_unique`
+  // (`WHERE deletedAt IS NULL`) in the 20260707060000 migration. Prisma's
+  // `@@unique` can't express the NULL-aware WHERE, and a plain unique
+  // would reserve a soft-deleted model's key forever — but the data layer
+  // (findDataModelByKey / findFreeDataModelKey) filters `deletedAt IS
+  // NULL` and expects a soft-deleted key to free up.
+  @@index([organizationId])
+  @@index([deletedAt])
+}
+
+model DataField {
+  id          String    @id @default(cuid())
+  dataModelId String
+  dataModel   DataModel @relation(fields: [dataModelId], references: [id], onDelete: Cascade)
+
+  // Immutable machine name, `^[a-z][a-z0-9_]*$`. This is the literal
+  // JSON key used inside every DataRecord.data blob for this field ;
+  // the admin UI only ever offers a "label" edit after create, never a
+  // key edit, since renaming the key would silently orphan existing
+  // values.
+  key         String
+  label       String
+  description String?
+  type        DataFieldType
+  // Per-type shape, validated by the matching zod schema in
+  // packages/data-models/src/contracts/field-types.ts. E.g.
+  // { minLength, maxLength } for TEXT, { options: [...] } for SELECT,
+  // { relationTarget, relationTargetKind, cardinality } for RELATION.
+  config      Json          @default("{}")
+  required    Boolean       @default(false)
+  position    Int           @default(0)
+
+  // Whether Postgres has a provisioned expression index for this
+  // field's hot path. Server-owned, not admin-writable directly.
+  indexed Boolean @default(false)
+
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  // Archiving (not deleting) a field keeps historical DataRecord.data
+  // parseable — the admin UI hides archived fields from the create/edit
+  // form and column picker, but past records' values stay readable.
+  archivedAt DateTime?
+
+  @@unique([dataModelId, key])
+  @@index([dataModelId, archivedAt])
+}
+
+model DataRecord {
+  id             String        @id @default(cuid())
+  dataModelId    String
+  dataModel      DataModel     @relation(fields: [dataModelId], references: [id], onDelete: Cascade)
+  // Denormalized from DataModel.organizationId at write time so a
+  // record-level query never has to join DataModel to scope by org.
+  organizationId String
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  // Optional URL-safe identifier, same slugify() + collision-suffix
+  // convention as today's Project/Industry. Nullable — not every Data
+  // Model needs a public URL.
+  slug  String?
+  // Denormalized plain-text copy of the title field's current value.
+  // Lets the DataTable's mandatory pinned primary column render without
+  // reaching into JSONB, and gives a record with no title field
+  // configured yet something to show ("Untitled" fallback lives in the
+  // UI layer, not here).
+  title String
+
+  data Json @default("{}")
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+  createdBy String
+  // Partial-unique (dataModelId, slug) WHERE slug IS NOT NULL is added
+  // by hand-written migration SQL, same reason as DataModel above.
+
+  roleAccess DataRecordRoleAccess[]
+  watchers   DataRecordWatcher[]
+
+  @@index([dataModelId, deletedAt])
+  @@index([organizationId, dataModelId])
+  @@index([dataModelId, updatedAt])
+}
+
+// Per-record role access (row-level authorization), mirroring
+// CalendarRoleAccess. A DataRecord with NO rows here is visible to everyone
+// who can access its Data Model (the default, fully backward-compatible) ;
+// with rows, only those roles may read it — plus data admins
+// (`data-models.manage-schema`, which ADMIN/SYSADMIN short-circuit), who
+// bypass the row filter. Model-level access (per-model or generic record
+// permission) is still required first ; this only further restricts WHICH
+// records within an accessible model are visible.
+model DataRecordRoleAccess {
+  dataRecordId String
+  dataRecord   DataRecord @relation(fields: [dataRecordId], references: [id], onDelete: Cascade)
+  roleId       String
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([dataRecordId, roleId])
+  @@index([roleId])
+}
+
+// A user watching a single record : notified when that record changes /
+// is deleted (row-level access still applies — a watcher who loses access
+// stops being notified). "Watch this page", Notion-style.
+model DataRecordWatcher {
+  dataRecordId String
+  dataRecord   DataRecord @relation(fields: [dataRecordId], references: [id], onDelete: Cascade)
+  userId       String
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([dataRecordId, userId])
+  @@index([userId])
+}
+
+// A user watching a whole model : notified when ANY record in it is
+// created / changed / deleted (subject to row-level access). "Subscribe
+// to the database" ; the only place a record-created notification fires.
+model DataModelWatcher {
+  dataModelId String
+  dataModel   DataModel @relation(fields: [dataModelId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([dataModelId, userId])
+  @@index([userId])
+}
+
+// Which DataField(s) on a DataModel satisfy a given business-integration
+// "slot" registered by another module (e.g. calendar's `time` /
+// `calendarRef` slots via registerModelIntegration). One row per
+// (dataModelId, module) ; slotMappings maps slot key -> DataField.id.
+model DataModelIntegration {
+  id           String    @id @default(cuid())
+  dataModelId  String
+  dataModel    DataModel @relation(fields: [dataModelId], references: [id], onDelete: Cascade)
+  module       String
+  slotMappings Json
+  enabled      Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@unique([dataModelId, module])
+  @@index([module])
+}
+
+// Tracks admin-requested expression indexes on DataRecord.data so the
+// server never issues a duplicate CREATE INDEX CONCURRENTLY and the
+// admin UI can show an "indexed" badge next to a field.
+model DataFieldIndex {
+  id          String   @id @default(cuid())
+  dataFieldId String   @unique
+  indexName   String   @unique
+  status      String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+
+// ── MODULE: automation ────────────────────────────────────
+// Event-triggered automation flows. Each Automation is a node graph
+// (React Flow nodes + edges, stored as a single JSON blob) whose entry is a
+// trigger node bound to a domain event type. When a matching event fires, the
+// wildcard event-bus subscriber enqueues one AutomationRun — the durable
+// outbox row — per enabled matching automation ; a background worker claims
+// PENDING runs, executes the graph node-by-node, and records an
+// AutomationRunStep per node for observability + retryable failure handling.
+// Core tier : the trigger engine subscribes to the platform-wide event bus
+// and must be depend-able by extended modules that contribute node types via
+// registerAutomationNodes(). See docs/technical-documentation/automation.md.
+
+enum AutomationRunStatus {
+  PENDING
+  RUNNING
+  SUCCEEDED
+  FAILED
+  CANCELED
+}
+
+enum AutomationRunStepStatus {
+  RUNNING
+  SUCCEEDED
+  FAILED
+  SKIPPED
+}
+
+model Automation {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  name        String
+  description String?
+  // New automations start disabled ; an admin enables one once its graph is
+  // wired. The subscriber only enqueues runs for enabled, live automations.
+  enabled     Boolean @default(false)
+
+  // The domain event type this automation triggers on (e.g.
+  // "data-models.record-created"), matched against event.type by the wildcard
+  // subscriber. Indexed with organizationId for fast per-event matching.
+  triggerEventType String
+
+  // The full node graph as React Flow sees it : { nodes: [...], edges: [...] }.
+  // Validated against the AutomationGraph zod schema (contracts/graph.ts) on
+  // save ; the worker re-parses it before execution.
+  graph Json @default("{}")
+
+  // For a scheduled (cron-like) trigger : the next UTC instant this automation
+  // is due to fire, else null (not a schedule trigger, or disabled). The
+  // scheduler claims due rows (`enabled AND scheduleNextRunAt <= now`), enqueues
+  // a run, and advances this to the following occurrence. Kept in sync on every
+  // save/enable from the trigger node's schedule config.
+  scheduleNextRunAt DateTime?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+  createdBy String
+
+  runs AutomationRun[]
+
+  @@index([organizationId])
+  @@index([deletedAt])
+  @@index([organizationId, triggerEventType])
+  // The scheduler's claim query : enabled rows whose next fire is due.
+  @@index([scheduleNextRunAt])
+}
+
+model AutomationRun {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  automationId   String
+  automation     Automation   @relation(fields: [automationId], references: [id], onDelete: Cascade)
+
+  status AutomationRunStatus @default(PENDING)
+
+  // The domain event that triggered this run (or a synthetic payload for a
+  // manual "run now"), stored so the worker executes without the original
+  // event and the UI can show what fired it.
+  triggerEventType String
+  triggerPayload   Json    @default("{}")
+  // Whether this run was enqueued by the event subscriber or a manual test.
+  manual           Boolean @default(false)
+
+  // Outbox bookkeeping : the worker polls PENDING rows whose nextAttemptAt has
+  // passed, claims them atomically, and on a retryable failure bumps attempts
+  // + nextAttemptAt (backoff) rather than failing outright.
+  attempts      Int       @default(0)
+  nextAttemptAt DateTime  @default(now())
+  startedAt     DateTime?
+  finishedAt    DateTime?
+  error         String?
+  output        Json?
+
+  createdAt DateTime @default(now())
+  // The owner identity the run executes as (Automation.createdBy at enqueue
+  // time). Nullable so a run survives its owner being removed.
+  createdBy String?
+
+  steps AutomationRunStep[]
+
+  @@index([automationId])
+  @@index([organizationId])
+  // The worker's claim query : PENDING rows due for execution, oldest first.
+  @@index([status, nextAttemptAt])
+}
+
+model AutomationRunStep {
+  id    String        @id @default(cuid())
+  runId String
+  run   AutomationRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+
+  // The graph node this step executed (NodeInstance.id) + its registered type.
+  nodeId   String
+  nodeType String
+  // Execution order within the run (topological index), 0-based.
+  sequence Int
+
+  status AutomationRunStepStatus @default(RUNNING)
+  input  Json?
+  output Json?
+  error  String?
+  // Structured log lines the node emitted during this step (`ctx.log(...)`),
+  // an array of { ts, level, message }. Surfaced per-node in the editor.
+  logs   Json?
+  // Output handles this node activated (branching). Persisted so a run
+  // suspended by a Delay resumes without re-activating pruned branches — on
+  // resume the engine re-activates exactly these. Empty for skipped / failed.
+  activeHandles String[] @default([])
+
+  startedAt  DateTime  @default(now())
+  finishedAt DateTime?
+
+  @@index([runId])
+}
+
+// ── MODULE: files ─────────────────────────────────────────
+// Generic file-upload service (see @monark/files). A `FileBucket` is
+// project-level infra (mirrors a Supabase Storage bucket) ; a `StoredFile` is
+// an org-scoped object living inside a bucket, partitioned by key prefix
+// (`{organizationId}/{fileId}-{name}`). Uploads use a signed-URL flow : a row
+// is created PENDING, the browser uploads the bytes directly, then the API
+// confirms and flips it READY.
+
+enum StoredFileStatus {
+  PENDING
+  READY
+}
+
+model FileBucket {
+  id   String @id @default(cuid())
+  // The Supabase Storage bucket name (globally unique within the project).
+  name String @unique
+  // Public buckets serve objects via a public URL ; private ones require a
+  // signed download URL (the default).
+  isPublic Boolean @default(false)
+  // Optional policy, enforced by the API on upload and by Supabase at the
+  // storage layer. `fileSizeLimit` is bytes ; empty `allowedMimeTypes` = any.
+  fileSizeLimit    Int?
+  allowedMimeTypes String[] @default([])
+  // The user who created the bucket (an org-member userId, not an FK).
+  createdBy String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model StoredFile {
+  id             String           @id @default(cuid())
+  organizationId String
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  // The bucket name and the object key within it. The key is unique across the
+  // whole store (it embeds the org + a cuid).
+  bucket String
+  key    String @unique
+  // The original filename + resolved content type + byte size.
+  name        String
+  contentType String
+  size        Int
+  status      StoredFileStatus @default(PENDING)
+  // The uploader (an org-member userId, not an FK).
+  uploadedBy String
+  createdAt  DateTime  @default(now())
+  deletedAt  DateTime?
+
+  @@index([organizationId])
+  @@index([bucket])
+  @@index([status])
+}
+
+// ── MODULE: secrets ───────────────────────────────────────
+// Per-org encrypted key→value store ("environment variables") for external
+// platform access tokens, consumed by automation nodes via `ctx.getSecret` and
+// by any module's server code (`getSecretValue`). The value is AES-256-GCM
+// encrypted at rest (`@monark/common/crypto`, keyed by `SECRETS_ENCRYPTION_KEY`) ;
+// the plaintext is never returned over tRPC — the admin surface is write-only.
+model Secret {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  // Env-var-style name, unique per org (e.g. "GITHUB_TOKEN").
+  key            String
+  // AES-256-GCM ciphertext + iv + auth tag of the secret value.
+  valueCipher    Bytes
+  valueIv        Bytes
+  valueTag       Bytes
+  description    String?
+  // The user id that last set the value (no FK — matches the house convention).
+  createdBy      String
+  // Stamped each time a consumer decrypts the value, for a "last used" hint.
+  lastUsedAt     DateTime?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@unique([organizationId, key])
+  @@index([organizationId])
+}

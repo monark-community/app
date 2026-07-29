@@ -19,8 +19,26 @@ export const DATA_FIELD_TYPES = [
   "URL",
   "EMAIL",
   "FORMULA",
+  "FILE",
+  "ATTACHMENTS",
 ] as const;
 export type DataFieldType = (typeof DATA_FIELD_TYPES)[number];
+
+/**
+ * The reserved field key every Data Model owns. A TEXT field with this key is
+ * auto-created on model creation and backs `DataRecord.title` + the pinned
+ * primary column ; it's protected from archive / delete / retype. The record
+ * title is this field's value — never an admin-chosen "title field" pointer.
+ */
+export const TITLE_FIELD_KEY = "title";
+
+/**
+ * The single private `@monark/files` bucket every Data Model FILE / ATTACHMENTS
+ * field uploads into (auto-provisioned ; see `ensureDataModelFilesBucket`). The
+ * *field* config (allowed formats, max size) is the real gate, so the bucket
+ * stays permissive and one bucket serves every file field.
+ */
+export const DATA_MODEL_FILES_BUCKET = "data-model-files";
 
 /**
  * Per-type shape of `DataField.config` — what an admin sets once, in the
@@ -85,9 +103,28 @@ export const fieldConfigSchemas = {
   // reference resolution + cycle detection (which need the model's other
   // fields) happen server-side in `server/data.ts`. The value is never taken
   // from client input — it's computed on write from the record's own data.
+  // The result *type* isn't configured : it's derived from the expression by
+  // `inferResultType` (an explicit `toNumber()` / `toText()` / … cast is the
+  // override), so a formula never carries a redundant, drift-prone type field.
   FORMULA: z.object({
     expression: z.string().trim().min(1).max(2000),
-    resultType: z.enum(["TEXT", "NUMBER", "BOOLEAN", "DATE"]),
+  }),
+  // A single uploaded file. The stored value is a `StoredFile.id` soft
+  // reference (like RELATION ONE) ; `allowedFormats` are MIME types (exact,
+  // e.g. "application/pdf", or a wildcard prefix like "image/*") and
+  // `maxSizeBytes` caps a file's size — both enforced server-side against the
+  // resolved `StoredFile` on record write (the value schema only checks the
+  // id shape).
+  FILE: z.object({
+    allowedFormats: z.array(z.string().min(1)).optional(),
+    maxSizeBytes: z.number().int().min(1).optional(),
+  }),
+  // A bucket of many uploaded files. Stored value is `StoredFile.id[]` (like
+  // RELATION MANY / MULTI_SELECT) ; `max` caps the count.
+  ATTACHMENTS: z.object({
+    allowedFormats: z.array(z.string().min(1)).optional(),
+    maxSizeBytes: z.number().int().min(1).optional(),
+    max: z.number().int().min(1).optional(),
   }),
 } as const satisfies Record<DataFieldType, z.ZodTypeAny>;
 
@@ -267,6 +304,20 @@ export function valueSchemaFor(
       // write schema drops FORMULA keys and recomputes them). Any stored
       // value is tolerated on the way back out.
       return z.unknown();
+
+    case "FILE":
+      // A single `StoredFile.id` (soft ref) — same shape as SELECT / RELATION
+      // ONE. Format/size are checked server-side against the resolved file.
+      return def.required
+        ? z.string({ invalid_type_error: m.required }).min(1, m.required)
+        : z.string().nullable();
+
+    case "ATTACHMENTS": {
+      // An array of `StoredFile.id` — same shape as MULTI_SELECT / RELATION MANY.
+      let a = z.array(z.string());
+      if (def.maxItems != null) a = a.max(def.maxItems, m.tooManyItems?.(def.maxItems));
+      return def.required ? a.min(1, m.required) : a;
+    }
   }
 }
 
@@ -292,8 +343,16 @@ export function valueSchemaForField(
     min: numOrUndef(parsed.min),
     max: type === "NUMBER" ? numOrUndef(parsed.max) : undefined,
     integer: typeof parsed.integer === "boolean" ? parsed.integer : undefined,
-    maxItems: type === "MULTI_SELECT" || type === "RELATION" ? numOrUndef(parsed.max) : undefined,
-    multiple: type === "RELATION" ? parsed.cardinality === "MANY" : undefined,
+    maxItems:
+      type === "MULTI_SELECT" || type === "RELATION" || type === "ATTACHMENTS"
+        ? numOrUndef(parsed.max)
+        : undefined,
+    multiple:
+      type === "RELATION"
+        ? parsed.cardinality === "MANY"
+        : type === "ATTACHMENTS"
+          ? true
+          : undefined,
   };
   return valueSchemaFor(shape, m);
 }

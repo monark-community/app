@@ -16,7 +16,10 @@ import {
   FilterBarSearch,
   PanelHeader,
   TableDetailLayout,
+  TableEmptyState,
   TableTools,
+  clearAllFilters,
+  tableEmptyReason,
   useDataTableLayout,
   useDetailPanelRoute,
   usePaginatedList,
@@ -29,6 +32,7 @@ import { AutoForm, useDebounced, type FieldDef } from "@/components/fields";
 import { formatRelativeTime } from "@/lib/format-time";
 import { trpc } from "@/lib/trpc";
 import { usePaginationLabels } from "@/lib/use-pagination-labels";
+import { useTableEmptyLabels } from "@/lib/use-table-empty-labels";
 
 type ConfirmMode = null | { type: "delete"; id: string; name: string };
 
@@ -90,7 +94,7 @@ export function DataModelsList() {
   });
 
   const rows = query.data?.items ?? [];
-  const isFiltered = search.length > 0;
+  const emptyLabels = useTableEmptyLabels({ query: search, noData: t("empty") });
 
   type ModelRow = (typeof rows)[number];
 
@@ -140,15 +144,10 @@ export function DataModelsList() {
     label: (m) => m.name,
     subtext: (m) =>
       m.deletedAt ? (
-        <span className="flex items-center gap-2">
-          <span>{m.key}</span>
-          <Badge variant="outline" size="sm" className="text-muted-foreground">
-            {t("actions.delete")}
-          </Badge>
-        </span>
-      ) : (
-        m.key
-      ),
+        <Badge variant="outline" size="sm" className="text-muted-foreground">
+          {t("actions.delete")}
+        </Badge>
+      ) : undefined,
     href: (m) => `/admin/data-models/${m.id}`,
     enableSorting: true,
   };
@@ -177,13 +176,6 @@ export function DataModelsList() {
       maxLength: 80,
     },
     {
-      type: "text",
-      name: "key",
-      label: tCreate("keyLabel"),
-      placeholder: tCreate("keyPlaceholder"),
-      description: tCreate("keyHint"),
-    },
-    {
       type: "longText",
       name: "description",
       label: tCreate("descriptionLabel"),
@@ -209,13 +201,23 @@ export function DataModelsList() {
             columns={columns}
             filters={filterConfigs}
             labels={toolsLabels}
+            include={["filters", "sorting"]}
           />
         }
         actions={
-          <Button onClick={panel.openCreate}>
-            <Plus className="mr-1.5 h-4 w-4" aria-hidden />
-            {t("createCta")}
-          </Button>
+          <div className="flex items-center gap-2">
+            <TableTools
+              layout={layout}
+              primaryColumn={primaryColumn}
+              columns={columns}
+              labels={toolsLabels}
+              include={["columns"]}
+            />
+            <Button onClick={panel.openCreate}>
+              <Plus className="mr-1.5 h-4 w-4" aria-hidden />
+              {t("createCta")}
+            </Button>
+          </div>
         }
       />
 
@@ -234,7 +236,6 @@ export function DataModelsList() {
                   fields={createFields}
                   onSubmit={async (values) => {
                     await createMutation.mutateAsync({
-                      key: (values.key as string) || undefined,
                       name: values.name as string,
                       description: (values.description as string) || undefined,
                     });
@@ -278,7 +279,18 @@ export function DataModelsList() {
             isLoading={query.isLoading}
             isError={query.isError}
             onRetry={() => query.refetch()}
-            emptyState={isFiltered ? t("emptySearch", { query: search }) : t("empty")}
+            emptyState={
+              <TableEmptyState
+                reason={tableEmptyReason({
+                  hasSearch: search.length > 0,
+                  hasFilters: showArchived,
+                })}
+                labels={emptyLabels}
+                onClearSearch={() => setRawSearch("")}
+                onClearFilters={() => clearAllFilters(filterConfigs)}
+                createAction={{ label: t("createCta"), onClick: panel.openCreate }}
+              />
+            }
             pagination={pagination.getFooterProps(query.data, paginationLabels)}
           />
         }

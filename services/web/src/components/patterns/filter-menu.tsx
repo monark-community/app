@@ -4,12 +4,7 @@ import { type ReactNode, useState } from "react";
 import { Check, Filter, RotateCcw, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -93,11 +88,7 @@ export interface DateFilter extends BaseFilter {
  * `select` → radio list, `multiSelect` → checkboxes, `text` → text input,
  * `date` → date input. Omitting `type` means `select` (back-compat).
  */
-export type FilterConfig =
-  | SelectFilter
-  | MultiSelectFilter
-  | TextFilter
-  | DateFilter;
+export type FilterConfig = SelectFilter | MultiSelectFilter | TextFilter | DateFilter;
 
 /** Translated chrome text (kept out of the component per the i18n rule). */
 export interface FilterMenuLabels {
@@ -281,9 +272,7 @@ export function FilterMenu({
         <DialogTrigger asChild>{trigger}</DialogTrigger>
         <DialogContent hideClose mobileFullScreen className="gap-0 border-0 p-0">
           <div className="flex h-14 shrink-0 items-center justify-between border-b border-border px-4">
-            <DialogTitle className="text-base">
-              {labels.title ?? labels.trigger}
-            </DialogTitle>
+            <DialogTitle className="text-base">{labels.title ?? labels.trigger}</DialogTitle>
             <Button
               variant="ghost"
               size="icon"
@@ -712,7 +701,10 @@ export function FilterFieldControl({
         // scrolling behind it and insets the separator + button to match the
         // sort / columns config panels.
         <div
-          className={cn("sticky bottom-0 z-20 px-1.5 pb-1.5", searchSurfaceClassName ?? "bg-popover")}
+          className={cn(
+            "sticky bottom-0 z-20 px-1.5 pb-1.5",
+            searchSurfaceClassName ?? "bg-popover",
+          )}
         >
           <div className={INSET_SEPARATOR_CLASS} />
           <button type="button" onClick={() => clearFilter(filter)} className={RESET_ROW_CLASS}>

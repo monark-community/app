@@ -32,7 +32,7 @@ function indexNameFor(dataFieldId: string): string {
 // value" filters. Every scalar type gets a plain B-tree over the extracted
 // + cast value, which supports both equality and range filters/sorts.
 function usesGin(type: DataFieldType): boolean {
-  return type === "MULTI_SELECT" || type === "RELATION";
+  return type === "MULTI_SELECT" || type === "RELATION" || type === "ATTACHMENTS";
 }
 
 function indexExpression(type: DataFieldType, key: string): string {
@@ -46,6 +46,8 @@ function indexExpression(type: DataFieldType, key: string): string {
       return `((data->>'${key}')::timestamptz)`;
     case "MULTI_SELECT":
     case "RELATION":
+    // ATTACHMENTS stores a `StoredFile.id[]` array — GIN for containment.
+    case "ATTACHMENTS":
       return `(data->'${key}')`;
     case "TEXT":
     case "LONG_TEXT":
@@ -53,6 +55,8 @@ function indexExpression(type: DataFieldType, key: string): string {
     case "SELECT":
     case "URL":
     case "EMAIL":
+    // FILE stores a single `StoredFile.id` string — a scalar B-tree, like SELECT.
+    case "FILE":
     // A FORMULA stores its computed scalar as text/number/bool/date in JSONB ;
     // a plain text extraction is a safe generic B-tree for equality/sort.
     case "FORMULA":

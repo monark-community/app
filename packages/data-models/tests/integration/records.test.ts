@@ -10,14 +10,13 @@ import {
   listDataRecords,
   restoreDataRecord,
   softDeleteDataRecord,
-  updateDataModel,
   updateDataRecord,
 } from "../../src/server/data";
 
 // Integration tests for DataRecord CRUD — dynamic value validation (shared
 // with the client via `valueSchemaForField`), title derivation from the
-// model's title field, and slug uniqueness, against a real Postgres
-// testcontainer.
+// model's reserved `title` field (auto-created with every model), and slug
+// uniqueness, against a real Postgres testcontainer.
 
 const ORG_A = "dm-rec-org-a";
 const ACTOR = "dm-rec-actor";
@@ -53,19 +52,12 @@ afterAll(async () => {
 });
 
 async function seedTaskModel() {
+  // The reserved required TEXT `title` field is auto-created with the model.
   const model = await createDataModel({
     organizationId: ORG_A,
     key: "tasks",
     name: "Tasks",
     createdBy: ACTOR,
-  });
-  const title = await createDataField({
-    dataModelId: model.id,
-    key: "title",
-    label: "Title",
-    type: "TEXT",
-    config: { maxLength: 120 },
-    required: true,
   });
   await createDataField({
     dataModelId: model.id,
@@ -74,8 +66,7 @@ async function seedTaskModel() {
     type: "BOOLEAN",
     config: {},
   });
-  await updateDataModel(model.id, { titleFieldId: title.id });
-  return { model, title };
+  return { model };
 }
 
 describe("createDataRecord — validation + title derivation", () => {
@@ -108,49 +99,16 @@ describe("createDataRecord — validation + title derivation", () => {
     expect(record.data).toEqual({ title: "Valid", done: true });
   });
 
-  it("falls back to 'Untitled' when the model has no title field configured", async () => {
-    const model = await createDataModel({
-      organizationId: ORG_A,
-      key: "no-title",
-      name: "No Title",
-      createdBy: ACTOR,
-    });
-    await createDataField({
-      dataModelId: model.id,
-      key: "note",
-      label: "Note",
-      type: "LONG_TEXT",
-      config: {},
-    });
+  it("derives 'Untitled' when the title value is blank", async () => {
+    // The title field is required (min length 1), so a whitespace-only value
+    // passes validation but derives to the "Untitled" display fallback.
+    const { model } = await seedTaskModel();
     const record = await createDataRecord({
       dataModelId: model.id,
-      data: { note: "hello" },
+      data: { title: "   ", done: false },
       createdBy: ACTOR,
     });
     expect(record.title).toBe("Untitled");
-  });
-
-  it("strips HTML when the title field is RICH_TEXT", async () => {
-    const model = await createDataModel({
-      organizationId: ORG_A,
-      key: "notes",
-      name: "Notes",
-      createdBy: ACTOR,
-    });
-    const body = await createDataField({
-      dataModelId: model.id,
-      key: "body",
-      label: "Body",
-      type: "RICH_TEXT",
-      config: {},
-    });
-    await updateDataModel(model.id, { titleFieldId: body.id });
-    const record = await createDataRecord({
-      dataModelId: model.id,
-      data: { body: "<p>Hello <strong>world</strong></p>" },
-      createdBy: ACTOR,
-    });
-    expect(record.title).toBe("Hello world");
   });
 });
 
@@ -224,5 +182,163 @@ describe("listDataRecords — search + soft delete", () => {
     await hardDeleteDataRecord(a.id);
     const afterHardDelete = await listDataRecords({ dataModelId: model.id, includeDeleted: true });
     expect(afterHardDelete.items.map((r) => r.title)).toEqual(["Beta task"]);
+  });
+});
+
+describe("listDataRecords — per-field filters", () => {
+  // A model exercising every filterable value encoding : text, number,
+  // boolean, single-select, multi-select (stored as string[]).
+  async function seedIssueModel() {
+    const model = await createDataModel({
+      organizationId: ORG_A,
+      key: "issues",
+      name: "Issues",
+      createdBy: ACTOR,
+    });
+    await createDataField({
+      dataModelId: model.id,
+      key: "done",
+      label: "Done",
+      type: "BOOLEAN",
+      config: {},
+    });
+    await createDataField({
+      dataModelId: model.id,
+      key: "priority",
+      label: "Priority",
+      type: "NUMBER",
+      config: {},
+    });
+    await createDataField({
+      dataModelId: model.id,
+      key: "status",
+      label: "Status",
+      type: "SELECT",
+      config: {
+        options: [
+          { value: "open", label: "Open" },
+          { value: "closed", label: "Closed" },
+        ],
+      },
+    });
+    await createDataField({
+      dataModelId: model.id,
+      key: "tags",
+      label: "Tags",
+      type: "MULTI_SELECT",
+      config: {
+        options: [
+          { value: "bug", label: "Bug" },
+          { value: "ux", label: "UX" },
+          { value: "perf", label: "Perf" },
+        ],
+      },
+    });
+    return model;
+  }
+
+  async function seedIssues(modelId: string) {
+    const mk = (data: Record<string, unknown>) =>
+      createDataRecord({ dataModelId: modelId, data, createdBy: ACTOR });
+    await mk({ title: "Login bug", done: false, priority: 1, status: "open", tags: ["bug", "ux"] });
+    await mk({ title: "Slow page", done: true, priority: 3, status: "closed", tags: ["perf"] });
+    await mk({ title: "Crash on save", done: false, priority: 1, status: "open", tags: ["bug"] });
+  }
+
+  const titlesOf = (r: { items: { title: string }[] }) => r.items.map((x) => x.title).sort();
+
+  it("filters text (contains), number (equals), and boolean (equals)", async () => {
+    const model = await seedIssueModel();
+    await seedIssues(model.id);
+
+    const byText = await listDataRecords({
+      dataModelId: model.id,
+      fieldFilters: [{ key: "title", type: "text", value: "bug" }],
+    });
+    expect(titlesOf(byText)).toEqual(["Login bug"]);
+
+    const byNumber = await listDataRecords({
+      dataModelId: model.id,
+      fieldFilters: [{ key: "priority", type: "number", value: "1" }],
+    });
+    expect(titlesOf(byNumber)).toEqual(["Crash on save", "Login bug"]);
+
+    const byBool = await listDataRecords({
+      dataModelId: model.id,
+      fieldFilters: [{ key: "done", type: "boolean", value: "true" }],
+    });
+    expect(titlesOf(byBool)).toEqual(["Slow page"]);
+  });
+
+  it("filters single-select (equals + any-of) and multi-select (contains any)", async () => {
+    const model = await seedIssueModel();
+    await seedIssues(model.id);
+
+    const byStatus = await listDataRecords({
+      dataModelId: model.id,
+      fieldFilters: [{ key: "status", type: "select", value: "closed" }],
+    });
+    expect(titlesOf(byStatus)).toEqual(["Slow page"]);
+
+    // `selectAny` — a scalar single-select matched against one OR more values.
+    const oneStatus = await listDataRecords({
+      dataModelId: model.id,
+      fieldFilters: [{ key: "status", type: "selectAny", value: ["open"] }],
+    });
+    expect(titlesOf(oneStatus)).toEqual(["Crash on save", "Login bug"]);
+
+    const eitherStatus = await listDataRecords({
+      dataModelId: model.id,
+      fieldFilters: [{ key: "status", type: "selectAny", value: ["open", "closed"] }],
+    });
+    expect(titlesOf(eitherStatus)).toEqual(["Crash on save", "Login bug", "Slow page"]);
+
+    const byTag = await listDataRecords({
+      dataModelId: model.id,
+      fieldFilters: [{ key: "tags", type: "multiSelect", value: ["bug"] }],
+    });
+    expect(titlesOf(byTag)).toEqual(["Crash on save", "Login bug"]);
+
+    // "any of" — perf (Slow page) OR ux (Login bug)
+    const byTagsAny = await listDataRecords({
+      dataModelId: model.id,
+      fieldFilters: [{ key: "tags", type: "multiSelect", value: ["perf", "ux"] }],
+    });
+    expect(titlesOf(byTagsAny)).toEqual(["Login bug", "Slow page"]);
+  });
+
+  it("ANDs multiple field filters together and ignores neutral values", async () => {
+    const model = await seedIssueModel();
+    await seedIssues(model.id);
+
+    const both = await listDataRecords({
+      dataModelId: model.id,
+      fieldFilters: [
+        { key: "status", type: "select", value: "open" },
+        { key: "priority", type: "number", value: "1" },
+      ],
+    });
+    expect(titlesOf(both)).toEqual(["Crash on save", "Login bug"]);
+
+    // No open record is tagged perf → empty.
+    const contradiction = await listDataRecords({
+      dataModelId: model.id,
+      fieldFilters: [
+        { key: "status", type: "select", value: "open" },
+        { key: "tags", type: "multiSelect", value: ["perf"] },
+      ],
+    });
+    expect(contradiction.items).toEqual([]);
+
+    // Empty / non-numeric values compose out, so the list is unfiltered.
+    const neutral = await listDataRecords({
+      dataModelId: model.id,
+      fieldFilters: [
+        { key: "title", type: "text", value: "   " },
+        { key: "priority", type: "number", value: "" },
+        { key: "tags", type: "multiSelect", value: [] },
+      ],
+    });
+    expect(neutral.items.length).toBe(3);
   });
 });

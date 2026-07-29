@@ -12,7 +12,9 @@ import {
   FilterBarSearch,
   PanelHeader,
   TableDetailLayout,
+  TableEmptyState,
   TableTools,
+  tableEmptyReason,
   useDataTableLayout,
   useDetailPanelRoute,
   type DataColumnDef,
@@ -28,6 +30,7 @@ import {
 } from "@/components/ui/select";
 import { SheetTitle } from "@/components/ui/sheet";
 import { trpc } from "@/lib/trpc";
+import { useTableEmptyLabels } from "@/lib/use-table-empty-labels";
 import { RoleEditor } from "./role-editor";
 
 const ADMIN_ROLE_KEY = "ADMIN";
@@ -101,6 +104,8 @@ export function RolesManager() {
   const showOrgPicker = !isSingleTenant && orgs.length > 0;
 
   type RoleRow = (typeof allRoles)[number];
+
+  const emptyLabels = useTableEmptyLabels({ query: search.trim(), noData: t("empty") });
 
   const layout = useDataTableLayout("admin-roles-table");
 
@@ -200,18 +205,23 @@ export function RolesManager() {
             primaryColumn={primaryColumn}
             columns={roleColumns}
             labels={toolsLabels}
+            include={["filters", "sorting"]}
           />
         }
         actions={
-          <Button
-            type="button"
-            size="sm"
-            onClick={panel.openCreate}
-            disabled={selectedOrgId === ""}
-          >
-            <Plus className="h-4 w-4" aria-hidden />
-            {t("createCta")}
-          </Button>
+          <div className="flex items-center gap-2">
+            <TableTools
+              layout={layout}
+              primaryColumn={primaryColumn}
+              columns={roleColumns}
+              labels={toolsLabels}
+              include={["columns"]}
+            />
+            <Button type="button" onClick={panel.openCreate} disabled={selectedOrgId === ""}>
+              <Plus className="h-4 w-4" aria-hidden />
+              {t("createCta")}
+            </Button>
+          </div>
         }
       />
 
@@ -272,7 +282,14 @@ export function RolesManager() {
             isError={rolesQuery.isError}
             onRetry={() => rolesQuery.refetch()}
             emptyState={
-              trimmedSearch !== "" ? t("emptySearch", { query: search.trim() }) : t("empty")
+              <TableEmptyState
+                reason={tableEmptyReason({ hasSearch: trimmedSearch !== "", hasFilters: false })}
+                labels={emptyLabels}
+                onClearSearch={() => setSearch("")}
+                createAction={
+                  selectedOrgId ? { label: t("createCta"), onClick: panel.openCreate } : undefined
+                }
+              />
             }
             primaryColumn={primaryColumn}
             columns={roleColumns}

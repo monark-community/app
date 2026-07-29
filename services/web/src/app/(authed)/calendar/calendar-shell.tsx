@@ -371,7 +371,6 @@ export function CalendarShell({
           />
         )}
       </div>
-
     </div>
   );
 }
