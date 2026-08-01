@@ -2,6 +2,13 @@
 
 Open follow-up items. See [README.md](README.md) for the convention. Strike items as they ship ; the CHANGELOG carries the history.
 
+## Dependency upgrades — deferred majors
+
+Two routine Dependabot majors were deferred on 2026-08-01 (the rest — @tanstack/react-query, all @trpc/\* unified at 11.18, @tailwindcss/postcss, react, @types/node 25, ESLint 10 + typescript-eslint 8.65, and the GitHub-Actions bumps — landed). Both are dev/runtime majors, **not security**, so there's no urgency.
+
+- [ ] **[2026-08-01] TypeScript 5.9 → 6.0.** Bumping `typescript` to `^6.0.3` breaks Node-global type resolution (`process`/`console`/`__dirname`/`node:*` not found) in packages that don't declare `@types/node` (e.g. `@monark/branding`, `@monark/db`) — and even in ones that do (`@monark/test-utils`). TS 6 changed automatic `@types` inclusion, so the migration needs `@types/node` added to those packages **plus** a `tsconfig.base.json` change (likely an explicit `types`/`typeRoots` or `lib` tweak), then a full re-verify that may surface more TS-6 strictness errors. Note: `typescript-eslint@8.65` already supports TS 6 (peer `<6.1.0`), so the lint side is fine. Until this lands, a `pnpm.overrides` pin (`"typescript": "5.9.3"`) keeps the whole workspace on 5.9.3 — trpc/prisma list `typescript` as an _optional peer_, and pnpm's auto-install-peers otherwise pulls TS 6.0.3 and hoists it to those packages' `tsc`. Remove that override as part of the TS-6 migration.
+- [ ] **[2026-08-01] otplib 12 → 13 (2FA).** otplib 13 is a full API redesign: the `authenticator` singleton is gone, replaced by an `OTP` class + a functional API (`generateSecret` / `generateURI` / `verify` / `verifySync`) with different secret-encoding defaults (base32-assumed) and a new default crypto plugin (`NobleCryptoPlugin`). [packages/auth/src/server/totp.ts](../../packages/auth/src/server/totp.ts) uses `authenticator.{generateSecret,keyuri,check}` + `authenticator.options`, all of which change. Because this is security-critical 2FA, the migration must be rewritten carefully and validated end-to-end against the auth TOTP integration tests (enrollment + verification codes must still match authenticator apps). Deferred rather than rushed.
+
 ## Prisma schema fragments
 
 Per-package schema fragments landed for the extended modules (calendar + kanban own `packages/<module>/prisma/<module>.prisma`, assembled into the generated `schema.prisma` by `pnpm gen:schema` ; `check:tiers` rejects an extended banner in `base.prisma`). Two follow-ups deferred from that work:
