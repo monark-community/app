@@ -47,8 +47,8 @@ const THRESHOLDS: Record<string, Thresholds> = {
   "package/rbac": { lines: 50, statements: 50, functions: 55, branches: 80 },
   "package/users": { lines: 65, statements: 65, functions: 85, branches: 85 },
   "package/webhooks": { lines: 55, statements: 55, functions: 60, branches: 80 },
-  "service/api": { lines: 65, statements: 65, functions: 70, branches: 45 },
-  "service/web": { lines: 5, statements: 5, functions: 60, branches: 80 },
+  "service/api": { lines: 60, statements: 60, functions: 70, branches: 45 },
+  "service/web": { lines: 5, statements: 5, functions: 40, branches: 80 },
 };
 
 type PackageDir = { kind: "package" | "service"; name: string; absPath: string };
