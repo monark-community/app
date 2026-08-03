@@ -16,6 +16,7 @@ paths = [
   # TOTP_ENCRYPTION_KEY ; localhost-only, never leaves the runner.
   '''\.github/workflows/ci\.yml$''',
   '''\.github/workflows/e2e\.yml$''',
+  '''\.github/workflows/lighthouse\.yml$''',
   # e2e specs use fake test passwords (e.g. rotate/signup flows).
   '''services/web/tests/e2e/.*\.spec\.ts$''',
 ]
