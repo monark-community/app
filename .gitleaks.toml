@@ -1,0 +1,21 @@
+# gitleaks configuration. Extends the built-in default ruleset and allowlists a
+# small set of known non-secrets so the scan stays high-signal.
+#
+# IMPORTANT: the allowlisted workflow files must only ever contain CI-LOCAL,
+# throwaway credentials (the fixed values `supabase start` boots on localhost in
+# CI, torn down at job end — they cannot authenticate against any hosted
+# project). Real/production secrets must always come from GitHub Actions secrets
+# (`${{ secrets.* }}`), never a literal here.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "CI-local Supabase + TOTP credentials and e2e test fixtures (not real secrets)"
+paths = [
+  # CI workflows bake the Supabase-local stack's fixed keys + a CI-only
+  # TOTP_ENCRYPTION_KEY ; localhost-only, never leaves the runner.
+  '''\.github/workflows/ci\.yml$''',
+  '''\.github/workflows/e2e\.yml$''',
+  # e2e specs use fake test passwords (e.g. rotate/signup flows).
+  '''services/web/tests/e2e/.*\.spec\.ts$''',
+]

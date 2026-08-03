@@ -1,0 +1,29 @@
+name: Gitleaks
+
+# Secret scanning: fails the build if a credential (API key, token, private key)
+# is committed. Complements GitHub's native push protection. gitleaks-action is
+# free for public repositories (no GITLEAKS_LICENSE required).
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: gitleaks-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0 # full history so a secret in any commit is caught
+
+      - name: Run gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

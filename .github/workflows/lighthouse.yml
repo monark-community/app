@@ -1,0 +1,69 @@
+name: Lighthouse CI
+
+# Manual-trigger only (like the e2e suite): builds the web app for production,
+# serves it, and runs Lighthouse against the public pages, reporting
+# performance / accessibility / best-practices / SEO. Assertions are WARN-level
+# (see lighthouserc.json), so this NEVER fails the build — it produces a report
+# (uploaded to temporary public storage; link in the job log) for you to review.
+#
+# NOTE: this is a scaffold. Run it once from Actions -> Lighthouse CI -> Run
+# workflow to validate the build+serve path in CI, then tighten the budgets and
+# flip assertions from "warn" to "error" once they're calibrated. A simpler
+# alternative, if you have a stable deployed/staging URL, is to point
+# `collect.url` at that URL and drop the build + startServerCommand entirely.
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: lighthouse-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lighthouse:
+    runs-on: ubuntu-latest
+    # Local-stack env, mirroring e2e.yml — fixed localhost-only credentials that
+    # `supabase start` boots; safe to hardcode (never leaves the runner).
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:54322/postgres
+      DIRECT_URL: postgresql://postgres:postgres@localhost:54322/postgres
+      SUPABASE_URL: http://127.0.0.1:54321
+      SUPABASE_PUBLISHABLE_KEY: sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH
+      SUPABASE_SECRET_KEY: sb_secret_N7UND0UgjKTVK-Uodkm0Hg_xSvEMPvz
+      NEXT_PUBLIC_APP_URL: http://localhost:3000
+      NEXT_PUBLIC_API_URL: http://localhost:4000
+      NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH
+      WEB_ORIGIN: http://localhost:3000
+      APP_URL: http://localhost:3000
+      TOTP_ENCRYPTION_KEY: d371e31288d4f5e19dd6e192ad7ab8edb3b2143695b23c70afba4d59ad8584c7
+      INITIAL_ORG_SLUG: monark
+      INITIAL_ORG_NAME: Monark
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # The app is fully functional against the local stack (matches e2e), so a
+      # production build + server render against a real backend.
+      - name: Start Supabase local stack
+        run: pnpm exec supabase start
+
+      - name: Run database migrations
+        run: pnpm db:migrate
+
+      - name: Build web (production)
+        run: pnpm --filter web build
+
+      - name: Run Lighthouse CI
+        run: pnpm dlx @lhci/cli@0.15.x autorun
