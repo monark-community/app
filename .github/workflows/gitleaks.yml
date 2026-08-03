@@ -1,8 +1,11 @@
 name: Gitleaks
 
 # Secret scanning: fails the build if a credential (API key, token, private key)
-# is committed. Complements GitHub's native push protection. gitleaks-action is
-# free for public repositories (no GITLEAKS_LICENSE required).
+# is committed. Complements GitHub's native push protection.
+#
+# We run the gitleaks CLI directly rather than gitleaks-action, because the
+# action requires a paid GITLEAKS_LICENSE for organization-owned repos (even
+# public ones). The CLI is free. Config + allowlist live in .gitleaks.toml.
 
 on:
   push:
@@ -23,7 +26,14 @@ jobs:
         with:
           fetch-depth: 0 # full history so a secret in any commit is caught
 
-      - name: Run gitleaks
-        uses: gitleaks/gitleaks-action@v2
+      - name: Install gitleaks
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_VERSION: "8.30.1"
+        run: |
+          curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" -o gitleaks.tar.gz
+          tar -xzf gitleaks.tar.gz gitleaks
+          sudo mv gitleaks /usr/local/bin/gitleaks
+          gitleaks version
+
+      - name: Scan git history
+        run: gitleaks git . --redact --no-banner --config .gitleaks.toml
