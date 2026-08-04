@@ -20,3 +20,10 @@ paths = [
   # e2e specs use fake test passwords (e.g. rotate/signup flows).
   '''services/web/tests/e2e/.*\.spec\.ts$''',
 ]
+regexes = [
+  # Documentation placeholder for a public-API key (the `mrk_` prefix) in the
+  # user-guide + MCP README curl examples ; the `curl-auth-header` default rule
+  # flags any `Authorization: Bearer <token>`. Not a real key — a real key is a
+  # random token, never the literal "your_key_here" — so this can't mask one.
+  '''mrk_your_key_here''',
+]
