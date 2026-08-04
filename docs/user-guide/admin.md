@@ -2,7 +2,7 @@
 
 For operators of an organization — anyone with a Monark `ADMIN` (org-tier) or `SYSADMIN` (platform-tier) role. Visible to non-admins as a missing affordance : the admin pin doesn't appear in the primary navigation drawer, and `/admin` URLs redirect to the home page.
 
-The admin section lives at `/admin/*` and ships four tabs : **Organizations**, **Users**, **Roles & permissions**, **Webhooks**.
+The admin section lives at `/admin/*` and ships eight tabs : **Organizations**, **Users**, **Roles & permissions**, **Webhooks**, **Data Models**, **Files**, **Secrets**, and **Service accounts**. Some tabs are gated by a feature flag and only appear when it's turned on for the deploy.
 
 ## Reaching `/admin`
 
@@ -10,7 +10,7 @@ The admin section lives at `/admin/*` and ships four tabs : **Organizations**, *
 - Click it. You land on the first tab (Organizations).
 - Or type `/admin` in the URL ; it redirects to the same place.
 
-The admin layout pins a sidebar with the four tab links. On wide viewports it sits to the left of the content ; on narrow viewports it collapses to a horizontal strip across the top.
+The admin layout pins a sidebar with the tab links. On wide viewports it sits to the left of the content ; on narrow viewports it collapses to a horizontal strip across the top.
 
 ## A note on tenancy
 
@@ -277,6 +277,36 @@ Endpoints can be scoped to a single organization or to the entire platform :
 
 - **Platform-tier** (no organization selected) ; receives every matching event regardless of source org. Use for sysadmin / SIEM / audit-log integrations.
 - **Org-scoped** ; receives events that carry a matching `organizationId`, plus user-tied events (sign-in, password change, TOTP changes) for users who are members of that org.
+
+## Data Models
+
+`/admin/data-models`. Define your own record types at runtime — no code change, no deploy. This is Monark's general-purpose database layer (Notion-databases style) ; the records themselves are browsed and edited by end users at `/data/models/<model-key>`.
+
+### Schema builder
+
+The list page shows every Data Model in the org ; **New model** creates one (name, an immutable URL-safe key, optional icon). Opening a model gives you its field editor :
+
+- **Add field** — pick a type (text, long text, rich text, number, boolean, date, date-time, single-select, multi-select, relation, URL, email, formula, file, attachments) and its per-type options (select choices, relation target, formula expression, allowed file formats, …). A field's **key is immutable** after creation (it's the stored property name) ; only its label is editable later.
+- **Reorder** fields by dragging ; **archive** a field to hide it from forms while keeping old values readable.
+- Every model automatically owns a reserved required **title** field.
+- **Request an index** on a hot field for faster filtering at scale (provisioned in the background).
+- **Integrations** — map the model's fields onto another module's needs (e.g. Calendar's "time" + "calendar" slots) so records materialize into that module.
+
+### Access
+
+Two layers. **Model-level** : each model auto-registers per-model record permissions (read / write / delete) that surface in the role editor, so a role can be granted just one model's records. **Record-level** : an individual record can be restricted to specific roles (a record with no restriction is visible to everyone who can access the model ; a restricted record is invisible — a 404 — to others). Data admins (`data-models.manage-schema`, which built-in admins hold) bypass the record layer.
+
+## Files
+
+`/admin/files`. Manage the org's uploaded files. Files are stored via a signed-upload flow (the server never handles the bytes) into private buckets ; a Data Model `FILE` / `ATTACHMENTS` field is the most common source. The page lists the org's files with size + type, offers a short-lived signed download link, and lets you remove a file (object deleted + row soft-deleted). Gated by the `files.enabled` flag ; actions gate on the `files.*` permissions.
+
+## Secrets
+
+`/admin/secrets`. A per-organization encrypted **key → value** store for external tokens and API keys, encrypted at rest (AES-256-GCM). It is **write-only over the wire** : you add or replace a secret by name, but the value is never displayed again and there is no "reveal" — the plaintext is readable only server-side, on the trusted automation-node path (`ctx.getSecret`). The page lists secret **names** + metadata (description, last-used) only. Add / edit gates on `secrets.manage` ; the list on `secrets.read`. This is what lets an Automation node reach an external system without an author ever seeing the credential.
+
+## Service accounts
+
+`/admin/service-accounts`. Machine principals for the public API — an org-owned "user" (of kind `SERVICE`) that a script, agent, or integration authenticates as, with its own admin-assigned roles. From here you **create** a service account, **assign / change its roles** (which is its least-privilege knob), **disable** it (instantly kills its keys), and manage its **API keys** (minted once, shown once). Gated by the `public-api.service-accounts` feature flag and the `api-keys.manage-service-accounts` permission. Personal (human) API keys live separately under [your account](account.md), not here. See the [public API guide](public-api.md) for how keys authenticate.
 
 ## Audit + observability
 

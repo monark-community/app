@@ -6,6 +6,7 @@ import { Lock, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SheetTitle } from "@/components/ui/sheet";
 import {
+  CreateFab,
   DataTable,
   FilterBar,
   FilterBarSearch,
@@ -166,7 +167,20 @@ export function SecretsList() {
             )}
           </div>
         }
+        mobileOptions={
+          <TableTools
+            mode="sheet"
+            layout={layout}
+            primaryColumn={primaryColumn}
+            columns={columns}
+            labels={toolsLabels}
+            include={["sorting", "columns"]}
+          />
+        }
       />
+      {!panel.isOpen && canManage && (
+        <CreateFab onClick={panel.openCreate} label={t("createCta")} />
+      )}
 
       <TableDetailLayout
         open={panel.isOpen}

@@ -19,6 +19,10 @@ export const webhookNode = defineNode({
     icon: "Webhook",
     inputs: [{ id: "in" }],
     outputs: [{ id: "out" }],
+    outputFields: [
+      { key: "status", type: "number", description: "The HTTP status code returned." },
+      { key: "ok", type: "boolean", description: "True for a 2xx response." },
+    ],
     configFields: [
       {
         key: "url",

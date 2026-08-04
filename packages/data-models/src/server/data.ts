@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { ValidationError } from "@monark/common";
-import { getDb, type Prisma } from "@monark/db";
+import { getDb, Prisma } from "@monark/db";
 import {
   cursorFindArgs,
   resolveLimit,
@@ -25,6 +25,13 @@ import {
 import { getModelIntegrationDef } from "../contracts/integrations";
 import { DATA_MODEL_FILES_BUCKET } from "../contracts/field-types";
 import { ensureBucket, getReadyFilesByIds } from "@monark/files/server";
+import type { FilterNode, QueryContext } from "../contracts/query";
+import {
+  compileFilterToSql,
+  type CompileFields,
+  type CompileFieldMeta,
+  type RelationTargets,
+} from "./query-compiler";
 
 export { DATA_FIELD_TYPES } from "../contracts/field-types";
 export type { DataFieldType } from "../contracts/field-types";
@@ -714,9 +721,201 @@ export async function listDataRecords(
   return toPage(rows, total, limit);
 }
 
+// ── Structured query language (MonarkQL) list path ───────
+//
+// Unlike `listDataRecords` (structured Prisma `where`, driven by the legacy
+// filter menu), the query-language path compiles a `FilterNode` tree to raw
+// SQL — the only way to get case-insensitive `ILIKE` and to hit the expression
+// indexes in `indexing.ts`. It stays keyset-paginated with the SAME cursor
+// contract (last row's id, `updatedAt desc, id desc`) so the shared
+// `usePaginatedList` / `Paginated<T>` convention holds ; the cursor row's sort
+// key is resolved via a subquery so a bare id is still a valid cursor.
+
+/** The stored value is a JSON array (drives array vs scalar SQL). */
+function isArrayValued(field: DataFieldRow): boolean {
+  if (field.type === "MULTI_SELECT" || field.type === "ATTACHMENTS") return true;
+  if (field.type === "RELATION") {
+    const config = field.config as { cardinality?: unknown } | null;
+    return config?.cardinality === "MANY";
+  }
+  return false;
+}
+
+/** Build the compiler's field-metadata map from a model's `DataField` rows.
+ *  Archived fields are excluded — you can't filter on a field that's gone. */
+export function buildCompileFields(fields: DataFieldRow[]): CompileFields {
+  const map: CompileFields = new Map();
+  for (const f of fields) {
+    if (f.archivedAt) continue;
+    const meta: CompileFieldMeta = { type: f.type, arrayValued: isArrayValued(f) };
+    if (f.type === "FORMULA") {
+      const config = f.config as { expression?: unknown } | null;
+      if (typeof config?.expression === "string") meta.formulaExpression = config.expression;
+    }
+    map.set(f.key, meta);
+  }
+  return map;
+}
+
+export type ListDataRecordsByQueryInput = PaginationArgs & {
+  dataModelId: string;
+  includeDeleted?: boolean;
+  search?: string;
+  /** The compiled query tree. */
+  filter: FilterNode;
+  /** Field metadata for the model, from {@link buildCompileFields}. */
+  fields: CompileFields;
+  /** Caller id + "now", to resolve `@variable` values in the tree. */
+  queryContext?: QueryContext;
+  /** Resolved target models for `relation.subField` traversal (built by the
+   *  router, which has DB + access context). */
+  relationTargets?: RelationTargets;
+  roleIds?: string[];
+  bypassRoleAccess?: boolean;
+};
+
+/** Raw-SQL role-access predicate, mirroring {@link recordRoleAccessWhere} : a
+ *  record with no role restriction is visible to all ; otherwise the caller
+ *  must hold one of its roles. `alias` is the record's table alias ("r" for the
+ *  main list, "t" for a relation-traversal target) — a compile-time constant,
+ *  never request input. Exported so the router can build a traversal target's
+ *  predicate (see {@link RelationTarget}). */
+export function recordRoleAccessSql(roleIds: string[], bypass: boolean, alias = "r"): Prisma.Sql {
+  if (bypass) return Prisma.sql`TRUE`;
+  const rowId = Prisma.raw(`${alias}.id`);
+  const unrestricted = Prisma.sql`NOT EXISTS (SELECT 1 FROM "DataRecordRoleAccess" ra WHERE ra."dataRecordId" = ${rowId})`;
+  if (roleIds.length === 0) return Prisma.sql`(${unrestricted})`;
+  const held = Prisma.sql`EXISTS (SELECT 1 FROM "DataRecordRoleAccess" ra WHERE ra."dataRecordId" = ${rowId} AND ra."roleId" IN (${Prisma.join(
+    roleIds.map((id) => Prisma.sql`${id}`),
+  )}))`;
+  return Prisma.sql`(${unrestricted} OR ${held})`;
+}
+
+export async function listDataRecordsWithQuery(
+  input: ListDataRecordsByQueryInput,
+): Promise<Paginated<DataRecordRow>> {
+  const db = getDb();
+  const limit = resolveLimit(input.limit);
+  const search = input.search?.trim();
+
+  // Conditions shared by the page + count queries (everything except the
+  // keyset cursor window).
+  const base: Prisma.Sql[] = [Prisma.sql`r."dataModelId" = ${input.dataModelId}`];
+  if (!input.includeDeleted) base.push(Prisma.sql`r."deletedAt" IS NULL`);
+  if (search && search.length > 0) {
+    const like = `%${search.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
+    base.push(Prisma.sql`(r.title ILIKE ${like} OR r.slug ILIKE ${like})`);
+  }
+  base.push(
+    compileFilterToSql(input.filter, input.fields, input.queryContext, input.relationTargets),
+  );
+  base.push(recordRoleAccessSql(input.roleIds ?? [], input.bypassRoleAccess ?? false));
+  const baseWhere = Prisma.join(base, " AND ");
+
+  // Keyset window : rows ordered after the cursor row in (updatedAt desc, id
+  // desc). The cursor is a bare id ; resolve its sort key via a subquery so an
+  // invalidated cursor simply yields an empty page (NULL comparison).
+  const pageWhere = input.cursor
+    ? Prisma.sql`${baseWhere} AND (r."updatedAt", r.id) < (SELECT c."updatedAt", c.id FROM "DataRecord" c WHERE c.id = ${input.cursor})`
+    : baseWhere;
+
+  const [rows, countRows] = await Promise.all([
+    db.$queryRaw<DataRecordRow[]>(
+      Prisma.sql`SELECT r.id, r."dataModelId", r."organizationId", r.slug, r.title, r.data,
+                        r."createdAt", r."updatedAt", r."deletedAt", r."createdBy"
+                 FROM "DataRecord" r
+                 WHERE ${pageWhere}
+                 ORDER BY r."updatedAt" DESC, r.id DESC
+                 LIMIT ${limit + 1}`,
+    ),
+    db.$queryRaw<{ count: number }[]>(
+      Prisma.sql`SELECT count(*)::int AS count FROM "DataRecord" r WHERE ${baseWhere}`,
+    ),
+  ]);
+  return toPage(rows, countRows[0]?.count ?? 0, limit);
+}
+
 export async function findDataRecordById(id: string): Promise<DataRecordRow | null> {
   const db = getDb();
   return db.dataRecord.findUnique({ where: { id } });
+}
+
+// ── Saved views (named MonarkQL queries) ─────────────────
+
+export type DataRecordViewRow = Prisma.DataRecordViewGetPayload<Record<string, never>>;
+
+/** A model's saved views visible to `userId` : their own plus anyone's shared
+ *  ones. Not cursor-paginated — a user's saved queries for one model are
+ *  inherently few (there's no unbounded fan-out here). Ordered shared-first
+ *  then by name, ending in id for a stable sort. */
+export async function listDataRecordViews(
+  dataModelId: string,
+  userId: string,
+): Promise<DataRecordViewRow[]> {
+  const db = getDb();
+  return db.dataRecordView.findMany({
+    where: { dataModelId, OR: [{ createdBy: userId }, { shared: true }] },
+    orderBy: [{ shared: "asc" }, { name: "asc" }, { id: "asc" }],
+  });
+}
+
+export async function findDataRecordViewById(id: string): Promise<DataRecordViewRow | null> {
+  const db = getDb();
+  return db.dataRecordView.findUnique({ where: { id } });
+}
+
+export type CreateDataRecordViewInput = {
+  dataModelId: string;
+  organizationId: string;
+  name: string;
+  query: FilterNode;
+  shared?: boolean;
+  createdBy: string;
+};
+
+export async function createDataRecordView(
+  input: CreateDataRecordViewInput,
+): Promise<DataRecordViewRow> {
+  const db = getDb();
+  return db.dataRecordView.create({
+    data: {
+      dataModelId: input.dataModelId,
+      organizationId: input.organizationId,
+      name: input.name,
+      // The FilterNode tree stored verbatim as JSON (validated at the router).
+      query: input.query as unknown as Prisma.InputJsonValue,
+      shared: input.shared ?? false,
+      createdBy: input.createdBy,
+    },
+  });
+}
+
+export type UpdateDataRecordViewPatch = {
+  name?: string;
+  query?: FilterNode;
+  shared?: boolean;
+};
+
+export async function updateDataRecordView(
+  id: string,
+  patch: UpdateDataRecordViewPatch,
+): Promise<DataRecordViewRow> {
+  const db = getDb();
+  return db.dataRecordView.update({
+    where: { id },
+    data: {
+      ...(patch.name !== undefined ? { name: patch.name } : {}),
+      ...(patch.query !== undefined
+        ? { query: patch.query as unknown as Prisma.InputJsonValue }
+        : {}),
+      ...(patch.shared !== undefined ? { shared: patch.shared } : {}),
+    },
+  });
+}
+
+export async function deleteDataRecordView(id: string): Promise<void> {
+  const db = getDb();
+  await db.dataRecordView.delete({ where: { id } });
 }
 
 // True when the caller's roles may access this specific record (or `bypass`).

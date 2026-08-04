@@ -19,6 +19,22 @@ export interface AutomationNodePort {
   label?: string;
 }
 
+/** Value-type hint for an output field, mirrors the event-field type hint. */
+export type AutomationOutputFieldType = "string" | "number" | "boolean" | "date" | "object";
+
+/**
+ * One field a node exposes on its output object. Declared per node type so the
+ * editor's variable picker can list what a node makes available downstream (the
+ * same idea as an event's payload `fields`), referenceable as
+ * `{{ steps.<node>.<key> }}`. Metadata only ; it does not shape the emitted
+ * output. A node with its error output enabled implicitly also exposes `error`.
+ */
+export interface AutomationOutputField {
+  key: string;
+  type: AutomationOutputFieldType;
+  description: string;
+}
+
 /**
  * A config field rendered by the web fields toolkit. Kept intentionally small
  * for the first slice ; grow the `type` union as new nodes need new editors.
@@ -50,12 +66,11 @@ export interface AutomationNodeConfigField {
   /** Options for a `select` field. */
   options?: Array<{ value: string; label: string }>;
   /**
-   * Every config field is a wireable input: the node renders a `field:<key>`
-   * target port, and an incoming edge into it feeds the upstream node's output
-   * as this field's value at run time (overriding the typed value). Use
-   * `{{ nodeId.path }}` interpolation instead to pull a scalar out of an
-   * upstream output. `linkable` is retained only as an author hint that a field
-   * is object-shaped (e.g. a JSON payload) ; it no longer gates the port.
+   * Vestigial. Data flows via `{{ }}` references now, not per-field wires, so
+   * the editor no longer renders a `field:<key>` port and this flag gates
+   * nothing. Retained only so already-registered nodes that still pass it
+   * type-check ; a runtime engine still resolves any legacy `field:` edge in an
+   * old saved graph (see automation-data-flow.md). Do not set it on new nodes.
    */
   linkable?: boolean;
 }
@@ -72,12 +87,24 @@ export interface AutomationNodeDescriptor {
   kind: AutomationNodeKind;
   /** Palette grouping (e.g. "trigger", "communication", "data", "rbac"). */
   category: string;
-  /** Human label (English fallback ; the web layer may i18n built-in nodes). */
+  /**
+   * Human label, a canonical English registry string (same class as permission
+   * / event-type / flag descriptions), rendered directly by the editor. Node
+   * labels are intentionally NOT localized ; add new node labels here in
+   * English rather than adding per-node i18n keys. See docs/agents/i18n.md.
+   */
   label: string;
   description?: string;
   /** Lucide icon name the editor renders for the node/palette entry. */
   icon?: string;
   inputs: AutomationNodePort[];
   outputs: AutomationNodePort[];
+  /**
+   * The fields this node's output object carries, for the editor's variable
+   * picker. Optional ; a node that emits nothing useful (or hasn't declared it
+   * yet) simply offers no downstream fields. See
+   * [automation-data-flow.md](../../../../docs/technical-documentation/automation-data-flow.md).
+   */
+  outputFields?: AutomationOutputField[];
   configFields: AutomationNodeConfigField[];
 }

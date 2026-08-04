@@ -51,9 +51,26 @@ const fragmentPaths = moduleFragments();
 const fragments = fragmentPaths.map((f) => stripTrailing(readFileSync(f, "utf8")));
 
 const assembled = `${HEADER}\n${[base, ...fragments].join("\n\n")}\n`;
-writeFileSync(OUT, assembled);
-
 const rel = fragmentPaths.map((f) => f.replace(ROOT, "").replace(/\\/g, "/").replace(/^\//, ""));
-console.log(
-  `gen:schema — assembled base + ${fragments.length} fragment(s): ${rel.join(", ") || "(none)"}`,
-);
+
+// `--check` : verify the committed schema.prisma matches what the sources
+// assemble to, without rewriting it. This is the CI drift guard the header
+// promises — it rides next to `gen:events --check` / `gen:routers --check` in
+// the repo-checks job. Fails if base/a fragment was edited without re-running
+// `pnpm gen:schema`.
+if (process.argv.includes("--check")) {
+  const current = existsSync(OUT) ? readFileSync(OUT, "utf8") : "";
+  if (current !== assembled) {
+    console.error(
+      "gen:schema — DRIFT: packages/db/prisma/schema.prisma is out of date with base.prisma + the module fragments.\n" +
+        "  Run `pnpm gen:schema` (or `pnpm gen`) and commit the result.",
+    );
+    process.exit(1);
+  }
+  console.log(`gen:schema — check OK (base + ${fragments.length} fragment(s) match schema.prisma)`);
+} else {
+  writeFileSync(OUT, assembled);
+  console.log(
+    `gen:schema — assembled base + ${fragments.length} fragment(s): ${rel.join(", ") || "(none)"}`,
+  );
+}

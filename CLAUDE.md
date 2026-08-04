@@ -5,7 +5,7 @@ Rules for every change in this monorepo. They encode conventions the codebase al
 Companion docs, read them before large work:
 
 - [docs/technical-documentation/extensibility-contract.md](docs/technical-documentation/extensibility-contract.md) — the canonical "can a feature ship without touching core?" reference. Every integration point below is spelled out there in full.
-- [docs/technical-documentation/architecture.md](docs/technical-documentation/architecture.md) — module system, event bus, boundaries.
+- [docs/technical-documentation/architecture.md](docs/technical-documentation/architecture.md) — module system, boundaries, event bus, monorepo layout & tooling.
 - [modules.manifest.ts](modules.manifest.ts) — the core / extended tier registry.
 
 ## Every feature must consider these four systems
@@ -143,10 +143,10 @@ Each package owns a `README.md` following the shape already used across `package
 
 Two documentation audiences, both required when the change reaches them:
 
-- **User docs** — [docs/user-guide](docs/user-guide) for anything user-facing. No code, written for the person using the app.
+- **User docs** — [docs/user-guide](docs/user-guide) for anything user-facing. No code, written for the person using the app. **Extended modules** keep their user guide _with the package_ (`packages/<module>/docs/user-guide.md`, as `@monark/calendar` and `@monark/kanban` do) so it travels with the module ; link it from the [user-guide index](docs/user-guide/_index.md) under "Extensions".
 - **Developer docs** — [docs/technical-documentation](docs/technical-documentation) for internals (architecture, data models, extension points, runbooks). Add a new file per topic and cross-link ; update [docs/README.md](docs/README.md) if you add one.
 
-All user-facing strings go through i18n in both `en` and `fr` — never hardcode visible text. `pnpm check:i18n` (a CI gate) enforces that every locale catalog under [services/web/src/messages](services/web/src/messages) carries the exact same key set as `en` ; add a key to one locale and you must add it to all.
+All user-facing strings go through i18n in both `en` and `fr` — never hardcode visible text. `pnpm check:i18n` (a CI gate) enforces that every locale catalog under [services/web/src/messages](services/web/src/messages) carries the exact same key set as `en` ; add a key to one locale and you must add it to all. Before touching i18n keys, read [docs/agents/i18n.md](docs/agents/i18n.md) : what to translate vs. keep as canonical English registry strings (event / permission / flag / node descriptions are NOT localized), and the parity gate's blind spot (a key missing from _both_ locales still passes `check:i18n` but renders a raw key path at runtime).
 
 ## CHANGELOG
 
@@ -167,10 +167,10 @@ House style throughout docs, commits, READMEs, and CHANGELOG: use `;` rather tha
 Run the same sequence CI runs, in order, before a change is done:
 
 ```
-pnpm gen && pnpm typecheck && pnpm lint && pnpm test && pnpm check:tiers && pnpm check:modules && pnpm check:i18n
+pnpm gen && pnpm typecheck && pnpm lint && pnpm test && pnpm check:tiers && pnpm check:modules && pnpm check:i18n && pnpm check:mcp
 ```
 
-`pnpm gen` first so a stale generated file doesn't fail `typecheck` ; `check:tiers` confirms no boundary was crossed ; `check:modules` confirms every module is complete (registered in the manifest, README + `contracts/events.ts` present, integration suite present ; conscious exceptions live in `ACKNOWLEDGED_GAPS` in [tools/check-modules.ts](tools/check-modules.ts)) ; `check:i18n` confirms every locale catalog has the exact same key set as `en` (no missing or dead keys).
+`pnpm gen` first so a stale generated file doesn't fail `typecheck` ; `check:tiers` confirms no boundary was crossed ; `check:modules` confirms every module is complete (registered in the manifest, README + `contracts/events.ts` present, integration suite present ; conscious exceptions live in `ACKNOWLEDGED_GAPS` in [tools/check-modules.ts](tools/check-modules.ts)) ; `check:i18n` confirms every locale catalog has the exact same key set as `en` (no missing or dead keys) ; `check:mcp` confirms every public-API route (`V1_ROUTES`) made an explicit MCP-visibility decision (`mcp: { expose } | { skip }`) and that exposed tool names are unique + well-formed — the MCP server auto-generates its tools from these, so an undecided route can't silently ship.
 
 ## Definition of done
 
@@ -187,4 +187,4 @@ pnpm gen && pnpm typecheck && pnpm lint && pnpm test && pnpm check:tiers && pnpm
 - [ ] i18n keys added for en + fr
 - [ ] CHANGELOG entry added, dated, under `[Unreleased]`
 - [ ] `register*` helpers wired into [services/api/src/server.ts](services/api/src/server.ts)
-- [ ] Pre-PR gate passes: `pnpm gen && pnpm typecheck && pnpm lint && pnpm test && pnpm check:tiers && pnpm check:modules && pnpm check:i18n`
+- [ ] Pre-PR gate passes: `pnpm gen && pnpm typecheck && pnpm lint && pnpm test && pnpm check:tiers && pnpm check:modules && pnpm check:i18n && pnpm check:mcp`

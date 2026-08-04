@@ -2,20 +2,21 @@
 
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Bell, KeyRound, ShieldAlert, UserCircle2, type LucideIcon } from "lucide-react";
+import { Bell, Braces, KeyRound, ShieldAlert, UserCircle2, type LucideIcon } from "lucide-react";
 import { Sidebar, type SidebarItem } from "@/components/sidebar";
 import { trpc } from "@/lib/trpc";
 
-type TabValue = "profile" | "security" | "notifications" | "danger";
+type TabValue = "profile" | "security" | "notifications" | "apiKeys" | "danger";
 
 const TABS: ReadonlyArray<{
   value: TabValue;
-  href: `/account/${TabValue}`;
+  href: string;
   icon: LucideIcon;
 }> = [
   { value: "profile", href: "/account/profile", icon: UserCircle2 },
   { value: "security", href: "/account/security", icon: KeyRound },
   { value: "notifications", href: "/account/notifications", icon: Bell },
+  { value: "apiKeys", href: "/account/api-keys", icon: Braces },
   { value: "danger", href: "/account/danger", icon: ShieldAlert },
 ];
 

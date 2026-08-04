@@ -7,6 +7,7 @@ import type {
   CalendarEvent,
   CalendarEventTime,
   CalendarEventType,
+  CalendarViewSettings,
 } from "@monark/calendar/contracts";
 import {
   DaySchedule,
@@ -15,6 +16,10 @@ import {
   HOUR_HEIGHT_PX,
   TOTAL_HEIGHT_PX,
   useCurrentTime,
+  getWeekStart,
+  isWeekendDay,
+  buildWeekDays,
+  getWeekdayLabels,
 } from "@monark/calendar/client";
 import { trpc } from "@/lib/trpc";
 import { CalendarSidebar } from "./calendar-sidebar";
@@ -22,19 +27,6 @@ import { CalendarManageDialog } from "./calendar-manage-dialog";
 import { NewEventPopover, type NewEventSubmitPayload } from "./new-event-popover";
 
 // ── Helpers ────────────────────────────────────────────────
-
-function getWeekStart(date: Date): Date {
-  const d = new Date(date);
-  d.setDate(d.getDate() - d.getDay()); // Sunday-first: subtract day-of-week (Sun=0)
-  d.setHours(0, 0, 0, 0);
-  return d;
-}
-
-function addDays(date: Date, n: number): Date {
-  const d = new Date(date);
-  d.setDate(d.getDate() + n);
-  return d;
-}
 
 function isSameDay(a: Date, b: Date): boolean {
   return (
@@ -61,6 +53,18 @@ function isMultiDay(ev: CalendarEvent): boolean {
 function addOneHour(t: CalendarEventTime): CalendarEventTime {
   const total = Math.min(t.hour * 60 + t.minute + 60, 24 * 60 - 1);
   return { hour: Math.floor(total / 60), minute: total % 60 };
+}
+
+// Shared by both drag flows below (moving an existing event, and dragging the
+// pending-creation ghost across days) so the day-under-the-pointer math lives
+// in exactly one place.
+const TIMELINE_W = 64; // w-16
+
+function dayIndexFromPointerX(clientX: number, rect: DOMRect, dayCount: number): number {
+  const colAreaWidth = rect.width - TIMELINE_W;
+  const colWidth = colAreaWidth / dayCount;
+  const relX = clientX - rect.left - TIMELINE_W;
+  return Math.max(0, Math.min(dayCount - 1, Math.floor(relX / colWidth)));
 }
 
 // ── Multi-day layout ───────────────────────────────────────
@@ -122,7 +126,7 @@ function layoutMultiDayEvents(events: CalendarEvent[], days: Date[]): MultiDayPo
 
     let row = 0;
     outer: while (true) {
-      if (!grid[row]) grid[row] = Array(7).fill(false);
+      if (!grid[row]) grid[row] = Array(days.length).fill(false);
       for (let d = startIdx; d <= endIdx; d++) {
         if (grid[row]![d]) {
           row++;
@@ -142,6 +146,10 @@ function layoutMultiDayEvents(events: CalendarEvent[], days: Date[]): MultiDayPo
 
 type PendingSlot = {
   dayIndex: number;
+  // Day currently under the pointer while dragging the pending-creation
+  // ghost ; equals `dayIndex` until the drag crosses into another column.
+  // A mismatch on release means the user dragged a multi-day span.
+  currentDayIndex: number;
   startTime: CalendarEventTime;
   endTime: CalendarEventTime;
 };
@@ -176,6 +184,10 @@ type PopoverState =
       startTime: CalendarEventTime;
       selectedDate: Date;
       defaultCalendarId?: string;
+      // Set when the pending-creation ghost was dragged across day columns —
+      // the popover opens pre-seeded as a multi-day ALL_DAY span.
+      forceAllDay?: boolean;
+      endDate?: Date;
     }
   | {
       mode: "edit";
@@ -197,6 +209,7 @@ export function WeekView({
   initialCalendars,
   canManage,
   canDelete,
+  settings,
 }: {
   initialDate: Date;
   weekStart?: Date;
@@ -205,24 +218,40 @@ export function WeekView({
   initialCalendars: CalendarDef[];
   canManage: boolean;
   canDelete?: boolean;
+  settings: CalendarViewSettings;
 }) {
   const tEvent = useTranslations("calendar.dayView.newEvent");
   const tWeek = useTranslations("calendar.weekView");
 
   // ── Controlled/uncontrolled weekStart ──────────────────────
-  const [weekStartState, setWeekStartState] = useState(() => getWeekStart(initialDate));
+  const [weekStartState, setWeekStartState] = useState(() =>
+    getWeekStart(initialDate, settings.weekStartsOn),
+  );
   const weekStart = weekStartProp ?? weekStartState;
   function handleWeekChange(date: Date) {
-    const newStart = getWeekStart(date);
+    const newStart = getWeekStart(date, settings.weekStartsOn);
     if (onWeekChange) onWeekChange(newStart);
     else setWeekStartState(newStart);
   }
 
+  // `days` is the visually rendered set of columns (weekend-filtered if the
+  // setting is on) ; `fullWeek` always spans all 7 days and anchors the event
+  // fetch range + sidebar mini-calendar, so a multi-day event spanning a
+  // hidden weekend still fetches correctly and renders across the visible
+  // weekday columns.
+  const fullWeek = useMemo(() => buildWeekDays(weekStart), [weekStart]);
   const days = useMemo(
-    () => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)),
-    [weekStart],
+    () => buildWeekDays(weekStart, { hideWeekends: settings.hideWeekends }),
+    [weekStart, settings.hideWeekends],
   );
-  const weekEnd = days[6]!;
+  const weekEnd = fullWeek[6]!;
+  const dayLabels = useMemo(
+    () =>
+      getWeekdayLabels(settings.weekStartsOn, (key) => tWeek(key), {
+        hideWeekends: settings.hideWeekends,
+      }),
+    [settings.weekStartsOn, settings.hideWeekends, tWeek],
+  );
 
   // ── State ──────────────────────────────────────────────────
   const [hiddenCalendarIds, setHiddenCalendarIds] = useState(new Set<string>());
@@ -363,9 +392,11 @@ export function WeekView({
       }
     }
 
-    // Inject pending creation ghost
+    // Inject pending creation ghost. Follows `currentDayIndex` (not the drag's
+    // anchor `dayIndex`) so the block visually tracks the day under the
+    // pointer while the user drags it across columns.
     if (pendingSlot && pendingEventType !== "ALL_DAY") {
-      const day = days[pendingSlot.dayIndex];
+      const day = days[pendingSlot.currentDayIndex];
       if (day) {
         const startAt = new Date(day);
         startAt.setHours(pendingSlot.startTime.hour, pendingSlot.startTime.minute, 0, 0);
@@ -378,7 +409,7 @@ export function WeekView({
                 return d;
               })();
         const pendingCal = pendingCalendarId ?? visibleCalendars[0]?.id ?? "";
-        perDay[pendingSlot.dayIndex]!.push({
+        perDay[pendingSlot.currentDayIndex]!.push({
           id: "__pending__",
           calendarId: pendingCal,
           color: colorMap[pendingCal] ?? undefined,
@@ -470,7 +501,7 @@ export function WeekView({
       setSelectedEventId(null);
       setPendingEventType("STANDARD");
       setPendingEventEdit(null);
-      setPendingSlot({ dayIndex, startTime: time, endTime });
+      setPendingSlot({ dayIndex, currentDayIndex: dayIndex, startTime: time, endTime });
       setPendingCalendarId(visibleCalendars[0]?.id ?? null);
       setPopoverState({
         mode: "create",
@@ -503,7 +534,7 @@ export function WeekView({
             anchorY,
             side,
             startTime: ps.startTime,
-            selectedDate: days[ps.dayIndex]!,
+            selectedDate: days[ps.currentDayIndex]!,
             defaultCalendarId: visibleCalendars[0]?.id,
           });
         }
@@ -657,10 +688,15 @@ export function WeekView({
           Math.min(Math.round(rawStart / 15) * 15, 24 * 60 - pd.durationMin),
         );
         const newEnd = newStart + pd.durationMin;
+        // A "move" drag also tracks which day column the pointer is over, so
+        // dragging horizontally extends the pending block across days ; a
+        // "resize" drag only changes duration within the same day.
+        const newDayIndex = dayIndexFromPointerX(e.clientX, rect, days.length);
         setPendingSlot((prev) =>
           prev
             ? {
                 ...prev,
+                currentDayIndex: newDayIndex,
                 startTime: { hour: Math.floor(newStart / 60), minute: newStart % 60 },
                 endTime: { hour: Math.floor(newEnd / 60), minute: newEnd % 60 },
               }
@@ -674,14 +710,19 @@ export function WeekView({
       setIsPendingDragging(false);
       const ps = pendingSlotRef.current;
       if (!ps) return;
+      const spansMultipleDays = ps.currentDayIndex !== ps.dayIndex;
+      const startIdx = Math.min(ps.dayIndex, ps.currentDayIndex);
+      const endIdx = Math.max(ps.dayIndex, ps.currentDayIndex);
+      if (spansMultipleDays) setPendingEventType("ALL_DAY");
       setPopoverState({
         mode: "create",
         anchorX: e.clientX,
         anchorY: e.clientY,
         side: window.innerWidth - e.clientX < 660 ? "left" : "right",
         startTime: ps.startTime,
-        selectedDate: days[ps.dayIndex]!,
+        selectedDate: days[startIdx]!,
         defaultCalendarId: visibleCalendars[0]?.id,
+        ...(spansMultipleDays ? { forceAllDay: true, endDate: days[endIdx]! } : {}),
       });
     }
 
@@ -707,8 +748,6 @@ export function WeekView({
   useLayoutEffect(() => {
     if (!dragState) return;
 
-    const TIMELINE_W = 64; // w-16
-
     function onPointerMove(e: PointerEvent) {
       const ds = dragStateRef.current;
       if (!ds || !scrollRef.current) return;
@@ -718,10 +757,7 @@ export function WeekView({
       const yInSchedule = e.clientY - rect.top - headerH + scrollTop;
       const cursorMin = (yInSchedule / TOTAL_HEIGHT_PX) * (24 * 60);
 
-      const colAreaWidth = rect.width - TIMELINE_W;
-      const colWidth = colAreaWidth / 7;
-      const relX = e.clientX - rect.left - TIMELINE_W;
-      const newDayIndex = Math.max(0, Math.min(6, Math.floor(relX / colWidth)));
+      const newDayIndex = dayIndexFromPointerX(e.clientX, rect, days.length);
 
       setDragState((prev) => {
         if (!prev) return null;
@@ -909,21 +945,12 @@ export function WeekView({
   const { totalMinutes } = useCurrentTime();
   const timeIndicatorTop = (totalMinutes / (24 * 60)) * TOTAL_HEIGHT_PX;
 
-  const DAY_NAMES = [
-    tWeek("sun"),
-    tWeek("mon"),
-    tWeek("tue"),
-    tWeek("wed"),
-    tWeek("thu"),
-    tWeek("fri"),
-    tWeek("sat"),
-  ];
-
   return (
     <div className="flex h-full overflow-hidden">
       <CalendarSidebar
         selectedDate={weekStart}
         weekRange={{ from: weekStart, to: weekEnd }}
+        weekStartsOn={settings.weekStartsOn}
         onDateChange={handleWeekChange}
         calendars={calendars}
         hiddenCalendarIds={hiddenCalendarIds}
@@ -952,7 +979,7 @@ export function WeekView({
             />
             {days.map((day, i) => {
               const isToday = isSameDay(day, today);
-              const isWeekend = day.getDay() === 0 || day.getDay() === 6;
+              const isWeekend = isWeekendDay(day);
               return (
                 <div
                   key={i}
@@ -960,7 +987,7 @@ export function WeekView({
                   style={{ height: COLUMN_HEADER_HEIGHT }}
                 >
                   <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                    {DAY_NAMES[i]}
+                    {dayLabels[i]}
                   </span>
                   <button
                     type="button"
@@ -987,8 +1014,8 @@ export function WeekView({
               >
                 {multiDayPositions.map(({ event, startDayIdx, endDayIdx, row }) => {
                   const ec = event.color;
-                  const widthPct = ((endDayIdx - startDayIdx + 1) / 7) * 100;
-                  const leftPct = (startDayIdx / 7) * 100;
+                  const widthPct = ((endDayIdx - startDayIdx + 1) / days.length) * 100;
+                  const leftPct = (startDayIdx / days.length) * 100;
                   return (
                     <button
                       key={event.id}
@@ -1028,16 +1055,37 @@ export function WeekView({
 
         {/* Hour grid + day columns */}
         <div className="flex" style={{ height: TOTAL_HEIGHT_PX }}>
-          <DayTimeline date={weekStart} hideHeader />
+          <DayTimeline
+            date={weekStart}
+            hideHeader
+            timeFormat={settings.timeFormat}
+            workingHours={settings.workingHours}
+          />
           {days.map((day, i) => {
             const events = dayEventsMap[i] ?? [];
-            const isWeekend = day.getDay() === 0 || day.getDay() === 6;
+            const isWeekend = isWeekendDay(day);
             return (
               <div
                 key={i}
                 className={`relative flex min-w-30 flex-1 flex-col border-r border-border last:border-r-0${isWeekend ? " bg-muted/30" : ""}`}
                 style={{ height: TOTAL_HEIGHT_PX }}
               >
+                {settings.workingHours.enabled && (
+                  <>
+                    <div
+                      className="pointer-events-none absolute inset-x-0 top-0 bg-muted/40"
+                      style={{ height: settings.workingHours.startHour * HOUR_HEIGHT_PX }}
+                      aria-hidden
+                    />
+                    <div
+                      className="pointer-events-none absolute inset-x-0 bottom-0 bg-muted/40"
+                      style={{
+                        height: TOTAL_HEIGHT_PX - settings.workingHours.endHour * HOUR_HEIGHT_PX,
+                      }}
+                      aria-hidden
+                    />
+                  </>
+                )}
                 {Array.from({ length: 24 }, (_, h) => (
                   <div
                     key={h}
@@ -1070,6 +1118,7 @@ export function WeekView({
                   events={events}
                   selectedEventId={selectedEventId}
                   pendingEditEventId={pendingEditEventId}
+                  timeFormat={settings.timeFormat}
                   onSlotClick={(_colId, time, anchorX, anchorY, side) =>
                     handleSlotClick(i, time, anchorX, anchorY, side)
                   }
@@ -1100,6 +1149,10 @@ export function WeekView({
           defaultCalendarId={
             popoverState.mode === "create" ? popoverState.defaultCalendarId : undefined
           }
+          initialEventType={
+            popoverState.mode === "create" && popoverState.forceAllDay ? "ALL_DAY" : undefined
+          }
+          endDateOverride={popoverState.mode === "create" ? popoverState.endDate : undefined}
           onDismiss={popoverState.mode === "create" ? clearPopover : dismissPopover}
           onCancel={clearPopover}
           onSubmit={handleEventSubmit}

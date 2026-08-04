@@ -1,0 +1,44 @@
+# Codecov configuration.
+#
+# The HARD coverage gate is the per-package floor map in
+# tools/merge-coverage.ts, enforced in the `coverage-upload` CI job — that
+# guards *aggregate* coverage from regressing. Codecov adds the complementary
+# signal the floors structurally can't: coverage of the DIFF. A PR can hold a
+# package's average above its floor while the new code it adds is untested ;
+# `patch` catches exactly that.
+#
+#   project → informational (the floor map already gates it, no double-block)
+#   patch   → new/changed lines must clear the target, per PR
+
+coverage:
+  status:
+    project:
+      default:
+        informational: true
+    patch:
+      default:
+        target: 80%
+        threshold: 5% # effective floor ~75% on the diff
+        only_pulls: true
+
+# Mirror vitest.shared.ts's instrumentation exclusions, plus paths that are
+# exercised by e2e / codegen / not unit-testable, so patch coverage reflects
+# real hand-written logic rather than boilerplate.
+ignore:
+  - "**/tests/**"
+  - "**/*.test.ts"
+  - "**/*.test.tsx"
+  - "**/*.spec.ts"
+  - "**/contracts/**"
+  - "**/index.ts"
+  - "**/types.ts"
+  - "**/*.generated.ts"
+  - "**/prisma/**"
+  - "tools/**"
+  - "**/*.config.ts"
+  - "**/*.config.mjs"
+  - "**/*.config.js"
+
+comment:
+  layout: "condensed_header, diff, flags, components"
+  require_changes: true # only comment when coverage actually moves

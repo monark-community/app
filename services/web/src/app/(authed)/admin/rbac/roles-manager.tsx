@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
+  CreateFab,
   DataTable,
   FilterBar,
   FilterBarSearch,
@@ -223,7 +224,20 @@ export function RolesManager() {
             </Button>
           </div>
         }
+        mobileOptions={
+          <TableTools
+            mode="sheet"
+            layout={layout}
+            primaryColumn={primaryColumn}
+            columns={roleColumns}
+            labels={toolsLabels}
+            include={["sorting", "columns"]}
+          />
+        }
       />
+      {!panel.isOpen && selectedOrgId !== "" && (
+        <CreateFab onClick={panel.openCreate} label={t("createCta")} />
+      )}
 
       <TableDetailLayout
         open={panel.isOpen}

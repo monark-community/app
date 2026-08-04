@@ -15,6 +15,7 @@
     "test:integration:coverage": "vitest run --config vitest.integration.config.ts --coverage --passWithNoTests"
   },
   "dependencies": {
+    "@monark/api-keys": "workspace:*",
     "@monark/auth": "workspace:*",
     "@monark/automation": "workspace:*",
     "@monark/calendar": "workspace:*",
@@ -26,6 +27,7 @@
     "@monark/kanban": "workspace:*",
     "@monark/notifications": "workspace:*",
     "@monark/organizations": "workspace:*",
+    "@monark/public-api": "workspace:*",
     "@monark/rbac": "workspace:*",
     "@monark/secrets": "workspace:*",
     "@monark/users": "workspace:*",
@@ -38,6 +40,8 @@
     "zod": "^3.23.0"
   },
   "devDependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "@monark/mcp": "workspace:*",
     "@monark/test-utils": "workspace:*",
     "@types/cors": "^2.8.17",
     "@types/express": "^5.0.0",

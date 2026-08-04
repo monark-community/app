@@ -22,9 +22,17 @@ import {
   registerDataModelRegistrations,
 } from "./registrations";
 import { isWatchingModel, isWatchingRecord, setModelWatch, setRecordWatch } from "./watchers";
-import { DATA_FIELD_TYPES, TITLE_FIELD_KEY } from "../contracts/field-types";
+import { DATA_FIELD_TYPES, TITLE_FIELD_KEY, type DataFieldType } from "../contracts/field-types";
 import { listModelIntegrations } from "../contracts/integrations";
 import { getFieldIndexStatus, requestFieldIndex } from "./indexing";
+import {
+  collectTraversalRelationKeys,
+  filterableKindOf,
+  filterQuerySchema,
+  type FilterableKind,
+  type FilterNode,
+} from "../contracts/query";
+import type { RelationTargets } from "./query-compiler";
 import type {
   DataModelRecordCreatedEvent,
   DataModelRecordDeletedEvent,
@@ -47,9 +55,17 @@ import {
   findFreeDataModelKey,
   hardDeleteDataModel,
   hardDeleteDataRecord,
+  buildCompileFields,
+  recordRoleAccessSql,
+  createDataRecordView,
+  deleteDataRecordView,
+  findDataRecordViewById,
   listDataFields,
   listDataModels,
   listDataRecords,
+  listDataRecordsWithQuery,
+  listDataRecordViews,
+  updateDataRecordView,
   listModelIntegrationsForModel,
   reorderDataFields,
   restoreDataModel,
@@ -65,6 +81,7 @@ import {
   type DataModelIntegrationRow,
   type DataModelRow,
   type DataRecordRow,
+  type DataRecordViewRow,
 } from "./data";
 
 const paginationInput = {
@@ -197,6 +214,92 @@ async function requireModelById(id: string): Promise<DataModelRow> {
   const model = await findDataModelById(id);
   if (!model) throw new NotFoundError("DataModel", id);
   return model;
+}
+
+// Resolve the target models a query traverses into (`relation.subField`). Only
+// DATA_MODEL relations in the caller's org are traversable, and only if the
+// caller can read the target model's records (else a 403) — the target's own
+// row-level access is then applied inside the traversal subquery, so traversal
+// can't surface a related record the caller couldn't see directly. A relation
+// left unresolved here makes the compiler reject its traversal leaf (400).
+async function buildRelationTargets(
+  ctx: RbacContext,
+  sourceModel: DataModelRow,
+  sourceFields: DataFieldRow[],
+  filter: FilterNode,
+  access: { roleIds: string[]; bypass: boolean },
+): Promise<RelationTargets> {
+  const targets: RelationTargets = new Map();
+  for (const relKey of collectTraversalRelationKeys(filter)) {
+    const field = sourceFields.find((f) => f.key === relKey);
+    if (!field || field.type !== "RELATION") continue;
+    const config = field.config as {
+      relationTarget?: string;
+      relationTargetKind?: string;
+    } | null;
+    if (config?.relationTargetKind !== "DATA_MODEL" || !config.relationTarget) continue;
+    const targetModel = await findDataModelByKey(sourceModel.organizationId, config.relationTarget);
+    if (!targetModel) continue;
+    await requireModelAccess(ctx, targetModel, "data-models.record-read");
+    const targetFields = buildCompileFields(await listDataFields(targetModel.id));
+    targets.set(relKey, {
+      dataModelId: targetModel.id,
+      fields: targetFields,
+      roleAccess: recordRoleAccessSql(access.roleIds, access.bypass, "t"),
+    });
+  }
+  return targets;
+}
+
+// A saved view, serialized for the client : the `query` JSON is surfaced as a
+// typed FilterNode (avoids leaking Prisma's recursive JsonValue into the tRPC
+// output type), plus a `mine` flag so the UI can gate rename/delete/share.
+function serializeView(view: DataRecordViewRow, userId: string) {
+  return {
+    id: view.id,
+    dataModelId: view.dataModelId,
+    name: view.name,
+    query: view.query as unknown as FilterNode,
+    shared: view.shared,
+    mine: view.createdBy === userId,
+    createdAt: view.createdAt,
+    updatedAt: view.updatedAt,
+  };
+}
+
+// Query-bar field metadata (mirrors the web `QueryFieldMeta`) : identity, the
+// resolved filter `kind` (so the client stays schema-agnostic — no DataFieldType
+// on the wire), and the value options the autocomplete + DSL parser need.
+type QueryFieldMeta = {
+  key: string;
+  label: string;
+  kind: FilterableKind;
+  options?: { value: string; label: string }[];
+};
+
+function toQueryField(f: DataFieldRow): QueryFieldMeta {
+  const cfg = (f.config ?? {}) as {
+    options?: { value: string; label: string }[];
+    expression?: string;
+  };
+  // No type today resolves to a null kind ; `text` is the safe universal view.
+  const kind =
+    filterableKindOf(f.type as DataFieldType, { formulaExpression: cfg.expression }) ?? "text";
+  return {
+    key: f.key,
+    label: f.label,
+    kind,
+    ...(cfg.options ? { options: cfg.options } : {}),
+  };
+}
+
+// Load a view and assert the caller owns it — a shared view is readable by all
+// but only its creator may edit or delete it.
+async function requireOwnedView(id: string, userId: string): Promise<DataRecordViewRow> {
+  const view = await findDataRecordViewById(id);
+  if (!view) throw new NotFoundError("DataRecordView", id);
+  if (view.createdBy !== userId) throw new ForbiddenError("You can only edit your own views.");
+  return view;
 }
 
 export const dataModelsRouter = router({
@@ -688,6 +791,10 @@ export const dataModelsRouter = router({
             )
             .max(50)
             .optional(),
+          // Structured query language (MonarkQL) tree — advanced operators +
+          // boolean groups. When present it takes precedence over the legacy
+          // `fieldFilters` and runs the raw-SQL compiled path.
+          filter: filterQuerySchema.optional(),
           ...paginationInput,
         }),
       )
@@ -696,6 +803,30 @@ export const dataModelsRouter = router({
         const model = await requireModelById(input.dataModelId);
         const orgId = await requireModelAccess(ctx, model, "data-models.record-read");
         const access = await recordAccessContext(ctx.userId, orgId);
+        if (input.filter) {
+          const fields = await listDataFields(input.dataModelId);
+          const relationTargets = await buildRelationTargets(
+            ctx,
+            model,
+            fields,
+            input.filter,
+            access,
+          );
+          const page = await listDataRecordsWithQuery({
+            dataModelId: input.dataModelId,
+            includeDeleted: input.includeDeleted ?? false,
+            search: input.search,
+            filter: input.filter,
+            fields: buildCompileFields(fields),
+            queryContext: { userId: ctx.userId, now: new Date() },
+            relationTargets,
+            limit: input.limit,
+            cursor: input.cursor,
+            roleIds: access.roleIds,
+            bypassRoleAccess: access.bypass,
+          });
+          return { ...page, items: page.items.map(serializeRecord) };
+        }
         const page = await listDataRecords({
           dataModelId: input.dataModelId,
           includeDeleted: input.includeDeleted ?? false,
@@ -707,6 +838,42 @@ export const dataModelsRouter = router({
           bypassRoleAccess: access.bypass,
         });
         return { ...page, items: page.items.map(serializeRecord) };
+      }),
+
+    // Field metadata for the query bar (MonarkQL) : the model's own fields plus
+    // "virtual" dotted fields for one-level relation traversal
+    // (`assignee.title`), so the bar can parse + autocomplete them. Traversal
+    // virtuals are only included for a DATA_MODEL relation the caller can read.
+    queryFields: publicProcedure
+      .input(z.object({ dataModelId: z.string().min(1) }))
+      .query(async ({ ctx, input }) => {
+        if (!ctx.userId) throw new UnauthorizedError();
+        const model = await requireModelById(input.dataModelId);
+        const orgId = await requireModelAccess(ctx, model, "data-models.record-read");
+        const fields = (await listDataFields(input.dataModelId)).filter((f) => !f.archivedAt);
+        const out: QueryFieldMeta[] = fields.map(toQueryField);
+
+        for (const f of fields) {
+          if (f.type !== "RELATION") continue;
+          const cfg = f.config as { relationTarget?: string; relationTargetKind?: string } | null;
+          if (cfg?.relationTargetKind !== "DATA_MODEL" || !cfg.relationTarget) continue;
+          const target = await findDataModelByKey(orgId, cfg.relationTarget);
+          if (!target) continue;
+          // Skip (don't 403 the whole call) a target the caller can't read.
+          try {
+            await requireModelAccess(ctx, target, "data-models.record-read");
+          } catch {
+            continue;
+          }
+          const subs = (await listDataFields(target.id)).filter(
+            (s) => !s.archivedAt && s.type !== "RELATION", // one level only
+          );
+          for (const s of subs) {
+            const meta = toQueryField(s);
+            out.push({ ...meta, key: `${f.key}.${s.key}`, label: `${f.label} › ${s.label}` });
+          }
+        }
+        return out;
       }),
 
     getById: publicProcedure
@@ -994,6 +1161,76 @@ export const dataModelsRouter = router({
         }
         await setRecordWatch(record.id, ctx.userId, input.watching);
         return { watching: input.watching };
+      }),
+  }),
+
+  // Saved MonarkQL queries per model (personal, or shared to everyone with
+  // read access). Reading a model's views needs record-read ; editing a view is
+  // scoped to its owner (a shared view is still only editable by whoever made
+  // it). A stale view (a field it references was archived/retyped) simply errors
+  // at run time when the compiler rejects it — nothing to migrate.
+  views: router({
+    list: publicProcedure
+      .input(z.object({ dataModelId: z.string().min(1) }))
+      .query(async ({ ctx, input }) => {
+        if (!ctx.userId) throw new UnauthorizedError();
+        const model = await requireModelById(input.dataModelId);
+        await requireModelAccess(ctx, model, "data-models.record-read");
+        const views = await listDataRecordViews(input.dataModelId, ctx.userId);
+        return views.map((v) => serializeView(v, ctx.userId!));
+      }),
+
+    create: publicProcedure
+      .input(
+        z.object({
+          dataModelId: z.string().min(1),
+          name: z.string().trim().min(1).max(80),
+          query: filterQuerySchema,
+          shared: z.boolean().optional(),
+        }),
+      )
+      .mutation(async ({ ctx, input }) => {
+        if (!ctx.userId) throw new UnauthorizedError();
+        const model = await requireModelById(input.dataModelId);
+        const orgId = await requireModelAccess(ctx, model, "data-models.record-read");
+        const view = await createDataRecordView({
+          dataModelId: input.dataModelId,
+          organizationId: orgId,
+          name: input.name,
+          query: input.query,
+          shared: input.shared ?? false,
+          createdBy: ctx.userId,
+        });
+        return serializeView(view, ctx.userId);
+      }),
+
+    update: publicProcedure
+      .input(
+        z.object({
+          id: z.string().min(1),
+          name: z.string().trim().min(1).max(80).optional(),
+          query: filterQuerySchema.optional(),
+          shared: z.boolean().optional(),
+        }),
+      )
+      .mutation(async ({ ctx, input }) => {
+        if (!ctx.userId) throw new UnauthorizedError();
+        await requireOwnedView(input.id, ctx.userId);
+        const updated = await updateDataRecordView(input.id, {
+          name: input.name,
+          query: input.query,
+          shared: input.shared,
+        });
+        return serializeView(updated, ctx.userId);
+      }),
+
+    delete: publicProcedure
+      .input(z.object({ id: z.string().min(1) }))
+      .mutation(async ({ ctx, input }) => {
+        if (!ctx.userId) throw new UnauthorizedError();
+        await requireOwnedView(input.id, ctx.userId);
+        await deleteDataRecordView(input.id);
+        return { id: input.id };
       }),
   }),
 });

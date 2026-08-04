@@ -3,7 +3,13 @@
 import "../contracts/notifications";
 import { z } from "zod";
 import { router, publicProcedure } from "@monark/common/trpc";
-import { emit, NotFoundError, UnauthorizedError, ValidationError } from "@monark/common";
+import {
+  emit,
+  ForbiddenError,
+  NotFoundError,
+  UnauthorizedError,
+  ValidationError,
+} from "@monark/common";
 import { requireOrg } from "@monark/organizations/server";
 import { getUserRoles, hasPermission, requirePermission } from "@monark/rbac/server";
 import type {
@@ -16,17 +22,24 @@ import type {
   KanbanColumnCreatedEvent,
 } from "../contracts/events";
 import { parseSubtasks, type KanbanSubtask } from "../contracts/types";
+import { filterQuerySchema, type FilterNode } from "@monark/query/contracts";
+import { compileKanbanFilter } from "./query-compiler";
 import {
   createBoard,
   createCard,
   createColumn,
+  createKanbanView,
   deleteColumn,
+  deleteKanbanView,
   findBoardById,
   findCardById,
   findColumnById,
+  findKanbanViewById,
   listAccessibleBoards,
   listCardsForBoard,
+  listCardsForBoardWithQuery,
   listColumnsForBoard,
+  listKanbanViews,
   listOrgMembers,
   moveCard,
   searchCards,
@@ -38,6 +51,8 @@ import {
   updateBoard,
   updateCard,
   updateColumn,
+  updateKanbanView,
+  type KanbanViewRow,
 } from "./data";
 
 // Subtasks travel as a JSON-encoded string in the tRPC input, then get parsed +
@@ -359,6 +374,25 @@ export const kanbanRouter = router({
 
   // ── Cards ──────────────────────────────────────────────
   cards: router({
+    // Filtered board card load (MonarkQL). Same board-scoped read as
+    // `boards.get`'s card slice, AND-ed with a compiled filter tree. Cards
+    // inherit board access, so the board-access guard is the whole gate.
+    list: publicProcedure
+      .input(z.object({ boardId: z.string().min(1), filter: filterQuerySchema.optional() }))
+      .query(async ({ ctx, input }) => {
+        if (!ctx.userId) throw new UnauthorizedError();
+        const org = await requireOrg({
+          userId: ctx.userId,
+          activeOrganizationId: ctx.activeOrganizationId,
+        });
+        await requirePermission(ctx, "kanban.view", org.id);
+        const board = await requireAccessibleBoard(ctx.userId, org.id, input.boardId);
+        const where = input.filter
+          ? compileKanbanFilter(input.filter, { userId: ctx.userId, now: new Date() })
+          : undefined;
+        return listCardsForBoardWithQuery(board.id, where);
+      }),
+
     create: publicProcedure
       .input(
         z.object({
@@ -639,6 +673,93 @@ export const kanbanRouter = router({
         return searchCards({ organizationId: org.id, boardIds, query: input.query });
       }),
   }),
+
+  // ── Saved views ────────────────────────────────────────
+  // Named MonarkQL queries per board (personal, or shared to everyone with
+  // board access). Reading needs kanban.view + board access ; editing is scoped
+  // to the view's owner. Mirrors data-models' dataModels.views.*.
+  views: router({
+    list: publicProcedure
+      .input(z.object({ boardId: z.string().min(1) }))
+      .query(async ({ ctx, input }) => {
+        if (!ctx.userId) throw new UnauthorizedError();
+        const org = await requireOrg({
+          userId: ctx.userId,
+          activeOrganizationId: ctx.activeOrganizationId,
+        });
+        await requirePermission(ctx, "kanban.view", org.id);
+        await requireAccessibleBoard(ctx.userId, org.id, input.boardId);
+        const views = await listKanbanViews(input.boardId, ctx.userId);
+        return views.map((v) => serializeKanbanView(v, ctx.userId!));
+      }),
+
+    create: publicProcedure
+      .input(
+        z.object({
+          boardId: z.string().min(1),
+          name: z.string().trim().min(1).max(80),
+          query: filterQuerySchema,
+          shared: z.boolean().optional(),
+        }),
+      )
+      .mutation(async ({ ctx, input }) => {
+        if (!ctx.userId) throw new UnauthorizedError();
+        const org = await requireOrg({
+          userId: ctx.userId,
+          activeOrganizationId: ctx.activeOrganizationId,
+        });
+        await requirePermission(ctx, "kanban.view", org.id);
+        const board = await requireAccessibleBoard(ctx.userId, org.id, input.boardId);
+        const view = await createKanbanView({
+          boardId: input.boardId,
+          organizationId: board.organizationId,
+          name: input.name,
+          query: input.query,
+          shared: input.shared ?? false,
+          createdBy: ctx.userId,
+        });
+        return serializeKanbanView(view, ctx.userId);
+      }),
+
+    update: publicProcedure
+      .input(
+        z.object({
+          id: z.string().min(1),
+          name: z.string().trim().min(1).max(80).optional(),
+          query: filterQuerySchema.optional(),
+          shared: z.boolean().optional(),
+        }),
+      )
+      .mutation(async ({ ctx, input }) => {
+        if (!ctx.userId) throw new UnauthorizedError();
+        const org = await requireOrg({
+          userId: ctx.userId,
+          activeOrganizationId: ctx.activeOrganizationId,
+        });
+        const view = await requireOwnedKanbanView(input.id, ctx.userId);
+        await requireAccessibleBoard(ctx.userId, org.id, view.boardId);
+        const updated = await updateKanbanView(input.id, {
+          name: input.name,
+          query: input.query,
+          shared: input.shared,
+        });
+        return serializeKanbanView(updated, ctx.userId);
+      }),
+
+    delete: publicProcedure
+      .input(z.object({ id: z.string().min(1) }))
+      .mutation(async ({ ctx, input }) => {
+        if (!ctx.userId) throw new UnauthorizedError();
+        const org = await requireOrg({
+          userId: ctx.userId,
+          activeOrganizationId: ctx.activeOrganizationId,
+        });
+        const view = await requireOwnedKanbanView(input.id, ctx.userId);
+        await requireAccessibleBoard(ctx.userId, org.id, view.boardId);
+        await deleteKanbanView(input.id);
+        return { id: input.id };
+      }),
+  }),
 });
 
 /** Drop duplicate ids, preserving first-seen order (`undefined` → `[]`). */
@@ -661,6 +782,31 @@ function parseOptionalDate(value: string | null | undefined): Date | null | unde
   const d = new Date(value);
   if (isNaN(d.getTime())) throw new ValidationError("Invalid date");
   return d;
+}
+
+// A saved view for the client : the `query` JSON surfaced as a typed FilterNode
+// (keeps Prisma's recursive JsonValue out of the tRPC output type), plus a
+// `mine` flag so the UI can gate rename/delete/share.
+function serializeKanbanView(view: KanbanViewRow, userId: string) {
+  return {
+    id: view.id,
+    boardId: view.boardId,
+    name: view.name,
+    query: view.query as unknown as FilterNode,
+    shared: view.shared,
+    mine: view.createdBy === userId,
+    createdAt: view.createdAt,
+    updatedAt: view.updatedAt,
+  };
+}
+
+// Load a view and assert the caller owns it — a shared view is readable by all
+// with board access, but only its creator may edit or delete it.
+async function requireOwnedKanbanView(id: string, userId: string): Promise<KanbanViewRow> {
+  const view = await findKanbanViewById(id);
+  if (!view) throw new NotFoundError("KanbanView", id);
+  if (view.createdBy !== userId) throw new ForbiddenError("You can only edit your own views.");
+  return view;
 }
 
 export { registerKanbanPermissions } from "./permissions";

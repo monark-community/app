@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { SheetTitle } from "@/components/ui/sheet";
 import {
   ConfirmDialog,
+  CreateFab,
   DataTable,
   FilterBar,
   FilterBarSearch,
@@ -219,7 +220,19 @@ export function DataModelsList() {
             </Button>
           </div>
         }
+        mobileOptions={
+          <TableTools
+            mode="sheet"
+            layout={layout}
+            primaryColumn={primaryColumn}
+            columns={columns}
+            filters={filterConfigs}
+            labels={toolsLabels}
+            include={["filters", "sorting", "columns"]}
+          />
+        }
       />
+      {!panel.isOpen && <CreateFab onClick={panel.openCreate} label={t("createCta")} />}
 
       <TableDetailLayout
         open={panel.isOpen}

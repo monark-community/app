@@ -41,7 +41,7 @@ app/
 │   ├── gen-events.ts    # regenerate the DomainEvent union
 │   └── gen-routers.ts   # regenerate the tRPC app-router composition
 ├── docs/
-│   └── features-planning/    # per-feature specs, grouped by phase
+│   └── features-planning/    # per-feature specs (shipped, by phase) + proposed/
 ├── modules.manifest.ts
 ├── turbo.json
 ├── tsconfig.base.json
@@ -98,7 +98,7 @@ If `pnpm dev` fails with `Can't reach database server at localhost:54322`, the s
 
 `NEXT_PUBLIC_API_URL` and `WEB_ORIGIN` cross-wire the two services. The default `.env.example` values target the local stack ; production values for both flow through Vercel + Render's dashboards (see [docs/technical-documentation/deploy-checklist.md](docs/technical-documentation/deploy-checklist.md)).
 
-See [SCAFFOLDING.md](SCAFFOLDING.md) for the current Phase 0 state and known follow-ups.
+See [docs/features-planning/phase-0/scaffolding-status.md](docs/features-planning/phase-0/scaffolding-status.md) for the Phase 0 scaffolding record and known follow-ups.
 
 ## Available scripts
 
@@ -128,7 +128,7 @@ Run from the repository root.
 
 ## Documentation
 
-- [SCAFFOLDING.md](SCAFFOLDING.md); current Phase 0 state, first-run steps, known follow-ups.
+- [docs/features-planning/phase-0/scaffolding-status.md](docs/features-planning/phase-0/scaffolding-status.md); Phase 0 scaffolding record, first-run steps, known follow-ups.
 - [docs/features-planning/](docs/features-planning/); per-feature implementation specs grouped by phase.
 - [docs/features-planning/phase-0/modular-architecture.md](docs/features-planning/phase-0/modular-architecture.md); two-tier module architecture.
 - [docs/features-planning/phase-0/project-scaffolding.md](docs/features-planning/phase-0/project-scaffolding.md); concrete layout and tooling.

@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
+  CreateFab,
   DataTable,
   FilterBar,
   FilterBarSearch,
@@ -265,7 +266,21 @@ export function WebhooksManager() {
             </Button>
           </div>
         }
+        mobileOptions={
+          <TableTools
+            mode="sheet"
+            layout={layout}
+            primaryColumn={primaryColumn}
+            columns={endpointColumns}
+            filters={filterConfigs}
+            labels={toolsLabels}
+            include={["filters", "sorting", "columns"]}
+          />
+        }
       />
+      {!panel.isOpen && selectedOrgValue !== "" && (
+        <CreateFab onClick={panel.openCreate} label={t("createCta")} />
+      )}
 
       <TableDetailLayout
         open={panel.isOpen}

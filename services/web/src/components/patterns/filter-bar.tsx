@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useRef, useState, type ReactNode 
 import { Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
+import { ListMobileBar } from "./list-mobile-bar";
 
 /**
  * Pixel budget the `tools` slot may occupy before its controls should
@@ -35,11 +36,23 @@ export function FilterBar({
   search,
   tools,
   actions,
+  mobileOptions,
   className,
 }: {
   search?: ReactNode;
   tools?: ReactNode;
   actions?: ReactNode;
+  /**
+   * Opt-in mobile consolidation. When provided, the roomy desktop row is hidden
+   * on mobile (`hidden md:flex`) and a {@link ListMobileBar} takes its place —
+   * the `search` field leads and this node (typically a `TableTools mode="sheet"`)
+   * is the single ⋯ options trigger. The primary action moves to a `CreateFab`
+   * the screen renders separately. Omit it to keep the original wrapping-row
+   * behaviour unchanged. Screens with their own bespoke mobile bar (e.g. the
+   * Views-first record list) don't use this — they compose `ListMobileBar`
+   * directly.
+   */
+  mobileOptions?: ReactNode;
   className?: string;
 }) {
   const rowRef = useRef<HTMLDivElement>(null);
@@ -68,8 +81,16 @@ export function FilterBar({
     return () => ro.disconnect();
   }, []);
 
-  return (
-    <div ref={rowRef} className={cn("flex flex-wrap items-center gap-2", className)}>
+  const row = (
+    <div
+      ref={rowRef}
+      className={cn(
+        "flex flex-wrap items-center gap-2",
+        // Desktop-only once the mobile consolidation is opted into.
+        mobileOptions != null && "hidden md:flex",
+        className,
+      )}
+    >
       {search != null && (
         <div ref={searchRef} className="flex min-w-0 flex-1 items-center md:flex-none">
           {search}
@@ -86,6 +107,15 @@ export function FilterBar({
         </div>
       )}
     </div>
+  );
+
+  if (mobileOptions == null) return row;
+
+  return (
+    <>
+      {row}
+      <ListMobileBar lead={search} options={mobileOptions} className={className} />
+    </>
   );
 }
 

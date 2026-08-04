@@ -36,7 +36,6 @@ import {
   Bell,
   Box,
   Braces,
-  Cable,
   ChevronDown,
   Clock,
   Copy,
@@ -57,6 +56,7 @@ import {
   Sigma,
   Trash2,
   User,
+  Variable,
   Webhook,
   X,
   Zap,
@@ -67,13 +67,25 @@ import { toast } from "sonner";
 import {
   validateGraph,
   HTTP_TRIGGER_TYPE,
+  DATA_RECORD_TRIGGER_TYPE,
+  dataRecordEventType,
+  NODE_SLUG_RE,
+  slugifyLabel,
+  uniqueNodeSlug,
   type GraphIssue,
   type AutomationRunStepLog,
   type AutomationRunStepLogLevel,
   type AutomationSchedule,
 } from "@monark/automation/contracts";
 import { DragHandle } from "@monark/components/ui/drag-handle";
+import {
+  VariableInput,
+  type VariableInputHandle,
+  type ResolvedVariableToken,
+  type VariableSuggestion,
+} from "@monark/components/ui/variable-input";
 import { ScheduleBuilder } from "./schedule-builder";
+import { VariablePicker } from "./variable-picker";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { ConfirmDialog } from "@/components/patterns/confirm-dialog";
@@ -98,11 +110,15 @@ import {
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
-import { Textarea } from "@/components/ui/textarea";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/lib/trpc";
 import { edgeRunState, EDGE_STATE_STYLE, flowOutDotClass, type StepStatus } from "./run-viz";
+
+// The built-in Set Variable node type — the editor reads its `name` config to
+// list the workflow variables (`{{ vars.<name> }}`) a node can reference. Kept
+// in step with the registry key in packages/automation/src/server/nodes/index.ts.
+const SET_VARIABLE_TYPE = "automation.set-variable";
 
 type NodeDescriptor = {
   type: string;
@@ -114,6 +130,8 @@ type NodeDescriptor = {
   icon?: string;
   inputs: Array<{ id: string; label?: string }>;
   outputs: Array<{ id: string; label?: string }>;
+  /** Fields this node's output carries, for the variable picker (see nodes.ts). */
+  outputFields?: Array<{ key: string; type: string; description: string }>;
   configFields: Array<{
     key: string;
     label: string;
@@ -133,7 +151,6 @@ type NodeDescriptor = {
     placeholder?: string;
     help?: string;
     options?: Array<{ value: string; label: string }>;
-    linkable?: boolean;
   }>;
 };
 
@@ -152,8 +169,12 @@ type FlowNodeData = {
   inputs: NodePort[];
   outputs: NodePort[];
   fields: FieldPort[];
-  /** Config-field keys exposed as input ports (a subset of `fields`). */
-  exposed: string[];
+  /**
+   * Stable, unique-within-the-graph handle used to reference this node's output
+   * as `{{ steps.<slug>.field }}`. Assigned on creation (from the label) and
+   * editable via the rename dialog ; persisted on the graph.
+   */
+  slug: string;
   /** Optional per-instance name shown on the node face. */
   name?: string;
   /** When true, the node has an "on error" output that fires on failure. */
@@ -163,10 +184,26 @@ type FlowNodeData = {
 type AppNode = Node<FlowNodeData>;
 
 /**
- * One labelled variable port : a React Flow handle pinned to the node's edge,
+ * The `triggerEventType` a trigger node maps to for run-matching. The Data
+ * Record trigger maps its `operation` to the real `data-models.record-<op>`
+ * event ; the generic Event Trigger uses its chosen `eventType`. Other triggers
+ * (manual / http / schedule) fire off the bus, so they contribute no event here.
+ */
+function triggerEventTypeForNode(
+  data: Pick<FlowNodeData, "descriptorType" | "config">,
+): string | undefined {
+  if (data.descriptorType === DATA_RECORD_TRIGGER_TYPE) {
+    const op = data.config.operation;
+    return typeof op === "string" && op ? dataRecordEventType(op) : undefined;
+  }
+  return typeof data.config.eventType === "string" ? data.config.eventType : undefined;
+}
+
+/**
+ * One labelled control port : a React Flow handle pinned to the node's edge,
  * aligned with its label row. The row is the handle's positioning context, so
- * the dot lines up with its label. Used for a node's config-variable inputs
- * (primary, left) and a branch node's named outputs (grey, right).
+ * the dot lines up with its label. Used for a node's flow entry (left) and a
+ * branch node's named outputs (grey, right) plus the error output.
  */
 function PortRow({
   side,
@@ -178,7 +215,7 @@ function PortRow({
 }: {
   side: "left" | "right";
   handleId: string;
-  variant: "control" | "data" | "error";
+  variant: "control" | "error";
   label: string;
   title: string;
   /** Run-driven dot color override (e.g. green once the output fired). */
@@ -193,23 +230,14 @@ function PortRow({
         title={title}
         className={cn(
           "!h-2.5 !w-2.5 !border-2 !border-background",
-          dotClassName ??
-            (variant === "data"
-              ? "!bg-primary"
-              : variant === "error"
-                ? "!bg-destructive"
-                : "!bg-muted-foreground"),
+          dotClassName ?? (variant === "error" ? "!bg-destructive" : "!bg-muted-foreground"),
         )}
       />
       <span
         className={cn(
           "whitespace-nowrap text-[11px]",
           side === "left" ? "pl-3 pr-2" : "ml-auto pl-2 pr-3",
-          variant === "data"
-            ? "font-medium text-foreground"
-            : variant === "error"
-              ? "font-medium text-destructive"
-              : "text-muted-foreground",
+          variant === "error" ? "font-medium text-destructive" : "text-muted-foreground",
         )}
       >
         {label}
@@ -242,18 +270,14 @@ function FlowNode({ id, data, selected }: NodeProps) {
   const outputs: NodePort[] = d.errorOutput ? [...baseOutputs, { id: "error" }] : baseOutputs;
   const singleOut = outputs.length === 1;
   const flowOutId = outputs[0]?.id ?? "out";
-  // A trigger is the flow entry — it has no variable inputs to wire. Otherwise
-  // show a port only for the config fields the author exposed as inputs.
-  const fields = isTrigger ? [] : d.fields.filter((f) => d.exposed.includes(f.key));
-  // The body holds only data ports now (flow outputs moved to the header), so a
-  // node needs a body only when it has exposed input variables.
-  const hasBody = fields.length > 0;
   // Face title : the instance name if set, else the node-type label. The
   // subtitle then shows the trigger's chosen event (so the graph reads at a
   // glance), the node type when renamed, or the palette category.
   const name = d.name?.trim();
   const title = name || d.label;
-  const eventType = typeof d.config.eventType === "string" ? d.config.eventType : "";
+  // Show the raw dotted event type (developer-facing event-bus id), not a prose
+  // description ; the Data Record trigger derives it from model + operation.
+  const eventLabel = triggerEventTypeForNode(d) ?? "";
   const Icon = nodeIcon({ icon: d.icon, category: d.category });
   return (
     <div
@@ -273,7 +297,7 @@ function FlowNode({ id, data, selected }: NodeProps) {
                   : "border-border",
       )}
     >
-      <div className={cn("relative px-3 py-2", hasBody && "border-b border-border")}>
+      <div className="relative px-3 py-2">
         {!isTrigger && d.inputs.length > 0 && (
           <Handle
             id={flowInId}
@@ -302,7 +326,7 @@ function FlowNode({ id, data, selected }: NodeProps) {
                 triggers have no event to select. */}
             {isTrigger && d.fields.some((f) => f.type === "event-type") && (
               <div className="truncate text-[10px] text-muted-foreground">
-                {eventType || t("triggerNoEvent")}
+                {eventLabel || t("triggerNoEvent")}
               </div>
             )}
           </div>
@@ -342,25 +366,6 @@ function FlowNode({ id, data, selected }: NodeProps) {
           )}
         </div>
       </div>
-      {hasBody && (
-        // Body : data ports. The left column lists one input port per exposed
-        // config variable ; the right column is reserved for future data-output
-        // ports (a node's emitted values) — flow outputs stay in the header.
-        <div className="flex justify-between gap-2 py-1.5">
-          <div className="flex flex-col">
-            {fields.map((f) => (
-              <PortRow
-                key={`field:${f.key}`}
-                side="left"
-                handleId={`field:${f.key}`}
-                variant="data"
-                label={f.label}
-                title={t("portDataHint")}
-              />
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
@@ -382,22 +387,17 @@ function genId(prefix: string): string {
 // output into a config field ; style it apart from a control-flow edge (a
 // distinct primary stroke) so the two kinds of connection read differently.
 function styleEdge(edge: Edge): Edge {
-  const isData = typeof edge.targetHandle === "string" && edge.targetHandle.startsWith("field:");
-  // All edges use the custom `automationEdge` renderer (adds the click-to-detach
-  // control) ; data-link edges get the primary stroke. At rest every edge is
-  // solid — the marching-dash animation is reserved for an in-progress run (see
-  // `edgeRunState` / `automation-edge-flow`), so a resting graph stays calm.
-  return isData
-    ? { ...edge, type: "automationEdge", style: { stroke: "var(--primary)" } }
-    : { ...edge, type: "automationEdge" };
+  // Every edge is control flow now (data moves via `{{ }}` references, not
+  // wires) and uses the custom `automationEdge` renderer (click-to-detach). At
+  // rest edges are solid ; the marching-dash animation is reserved for an
+  // in-progress run (see `edgeRunState` / `automation-edge-flow`).
+  return { ...edge, type: "automationEdge" };
 }
 
 // Build a node's face data from a descriptor — shared by "add node" and
-// "replace node". Config resets to empty ; the exposed input ports default to
-// the author-flagged linkable fields, unioned with any `exposedExtra` keys the
-// caller keeps (a replace preserves the ports whose surviving edges feed them).
-function descriptorToNodeData(desc: NodeDescriptor, exposedExtra: string[] = []): FlowNodeData {
-  const linkable = desc.configFields.filter((f) => f.linkable).map((f) => f.key);
+// "replace node". Config resets to empty. The caller supplies the (already
+// unique) slug, since uniqueness needs the rest of the graph.
+function descriptorToNodeData(desc: NodeDescriptor, slug: string): FlowNodeData {
   return {
     descriptorType: desc.type,
     label: desc.label,
@@ -407,10 +407,42 @@ function descriptorToNodeData(desc: NodeDescriptor, exposedExtra: string[] = [])
     inputs: desc.inputs,
     outputs: desc.outputs,
     fields: desc.configFields.map((f) => ({ key: f.key, label: f.label, type: f.type })),
-    exposed: [...new Set([...linkable, ...exposedExtra])],
+    slug,
     errorOutput: false,
     config: {},
   };
+}
+
+// Rewrite legacy node-id references (`{{ <nodeId>… }}`) in a config string to the
+// readable `{{ steps.<slug>… }}` form, using an id -> slug map. The first path
+// segment is the node id ; `trigger` / `vars` / `steps` and unknown ids (no slug)
+// pass through untouched. Used once on load to migrate stored graphs.
+function rewriteIdRefsToSlugs(value: string, slugById: Map<string, string>): string {
+  return value.replace(/\{\{\s*([\w-]+)/g, (whole, id: string) => {
+    const slug = slugById.get(id);
+    return slug ? whole.replace(id, `steps.${slug}`) : whole;
+  });
+}
+
+// Rewrite `{{ steps.<oldSlug>… }}` references to a new slug across a config, when
+// a node's slug is edited — so references to it don't break. Slugs are
+// `[a-z0-9_]`, so they need no regex escaping.
+function rewriteSlugRefs(
+  config: Record<string, unknown>,
+  oldSlug: string,
+  newSlug: string,
+): Record<string, unknown> {
+  const re = new RegExp(`(\\{\\{\\s*steps\\.)${oldSlug}(?=[.\\s}])`, "g");
+  let changed = false;
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(config)) {
+    if (typeof v === "string") {
+      const nv = v.replace(re, `$1${newSlug}`);
+      if (nv !== v) changed = true;
+      out[k] = nv;
+    } else out[k] = v;
+  }
+  return changed ? out : config;
 }
 
 // Whether an edge survives replacing node `nodeId` with `desc`. An edge not
@@ -557,7 +589,7 @@ function toGraphPayload(nodes: AppNode[], edges: Edge[]) {
       type: n.data.descriptorType,
       position: n.position,
       config: n.data.config,
-      inputs: n.data.exposed,
+      ...(n.data.slug ? { slug: n.data.slug } : {}),
       ...(n.data.name?.trim() ? { name: n.data.name.trim() } : {}),
       ...(n.data.errorOutput ? { errorOutput: true } : {}),
     })),
@@ -631,7 +663,13 @@ function EditorInner({
     [descriptors],
   );
   const eventTypeOptions = useMemo(
-    () => (eventTypesQuery.data?.groups ?? []).flatMap((g) => g.events.map((e) => e.type)),
+    () =>
+      // Options show the dotted event type id (e.g. "automation.created"), not the
+      // verbose registry description : these are developer-facing event-bus events,
+      // and the concise id reads better in the "when this event fires" picker.
+      (eventTypesQuery.data?.groups ?? []).flatMap((g) =>
+        g.events.map((e) => ({ value: e.type, label: e.type })),
+      ),
     [eventTypesQuery.data],
   );
   // event type -> its exposed fields (payload + common base), so the trigger's
@@ -798,23 +836,68 @@ function EditorInner({
   useEffect(() => {
     if (initialized || !automationQuery.data || descriptors.length === 0) return;
     const graph = automationQuery.data.graph;
+    // Assign every node a stable, unique slug (reuse a stored one, else derive
+    // from its name/label + de-duplicate) and build id -> slug, so legacy
+    // references can be rewritten to the readable `{{ steps.<slug> }}` form.
+    const slugById = new Map<string, string>();
+    const takenSlugs = new Set<string>();
+    for (const n of graph.nodes) {
+      const desc = descriptorByType.get(n.type);
+      const desired =
+        n.slug && NODE_SLUG_RE.test(n.slug)
+          ? n.slug
+          : slugifyLabel(n.name?.trim() || desc?.label || n.type);
+      const slug = uniqueNodeSlug(desired, takenSlugs);
+      takenSlugs.add(slug);
+      slugById.set(n.id, slug);
+    }
+    // Migrate legacy per-field data wires to `{{ }}` references: for each edge
+    // into a `field:<key>` port, write a reference into that field (unless the
+    // author already put an expression there) and drop the edge. The engine
+    // still resolves any un-migrated `field:` edge, so an old graph runs the same
+    // until the next save persists the reference form.
+    const isField = (h: string | null | undefined): h is string =>
+      typeof h === "string" && h.startsWith("field:");
+    const patchedConfig = new Map<string, Record<string, unknown>>();
+    for (const e of graph.edges) {
+      if (!isField(e.targetHandle)) continue;
+      const target = graph.nodes.find((n) => n.id === e.target);
+      if (!target) continue;
+      const key = e.targetHandle.slice("field:".length);
+      const cfg = patchedConfig.get(e.target) ?? { ...(target.config ?? {}) };
+      const existing = cfg[key];
+      if (typeof existing !== "string" || !existing.includes("{{")) {
+        const srcOut = descriptorByType.get(
+          graph.nodes.find((n) => n.id === e.source)?.type ?? "",
+        )?.outputFields;
+        const srcSlug = slugById.get(e.source);
+        const ref = srcSlug ? `steps.${srcSlug}` : e.source;
+        cfg[key] =
+          srcOut?.length === 1 && srcOut[0]?.key === "value"
+            ? `{{ ${ref}.value }}`
+            : `{{ ${ref} }}`;
+      }
+      patchedConfig.set(e.target, cfg);
+    }
+    // Rewrite any legacy `{{ <nodeId>… }}` reference in a config to its readable
+    // slug form (the engine still resolves the id form, so this is a display
+    // upgrade that self-persists on the next save).
+    const migrateRefs = (config: Record<string, unknown>): Record<string, unknown> => {
+      let changed = false;
+      const out: Record<string, unknown> = {};
+      for (const [k, v] of Object.entries(config)) {
+        if (typeof v === "string") {
+          const nv = rewriteIdRefsToSlugs(v, slugById);
+          if (nv !== v) changed = true;
+          out[k] = nv;
+        } else out[k] = v;
+      }
+      return changed ? out : config;
+    };
     setNodes(
       graph.nodes.map((n) => {
         const desc = descriptorByType.get(n.type);
         const configFields = desc?.configFields ?? [];
-        // Fields already fed by an edge must show their port.
-        const wired = graph.edges
-          .filter(
-            (e) =>
-              e.target === n.id &&
-              typeof e.targetHandle === "string" &&
-              e.targetHandle.startsWith("field:"),
-          )
-          .map((e) => (e.targetHandle as string).slice("field:".length));
-        // Persisted exposure if present, else the legacy default (fields the
-        // node author flagged `linkable`). Always union the wired set.
-        const base = n.inputs ?? configFields.filter((f) => f.linkable).map((f) => f.key);
-        const exposed = [...new Set([...base, ...wired])];
         return {
           id: n.id,
           type: "automationNode",
@@ -828,31 +911,33 @@ function EditorInner({
             inputs: desc?.inputs ?? [{ id: "in" }],
             outputs: desc?.outputs ?? [{ id: "out" }],
             fields: configFields.map((f) => ({ key: f.key, label: f.label, type: f.type })),
-            exposed,
+            slug: slugById.get(n.id) ?? slugifyLabel(desc?.label ?? n.type),
             name: n.name,
             errorOutput: n.errorOutput ?? false,
-            config: n.config ?? {},
+            config: migrateRefs(patchedConfig.get(n.id) ?? n.config ?? {}),
           },
         } satisfies AppNode;
       }),
     );
     setEdges(
-      graph.edges.map((e) =>
-        styleEdge({
-          id: e.id,
-          source: e.source,
-          target: e.target,
-          sourceHandle: e.sourceHandle ?? undefined,
-          targetHandle: e.targetHandle ?? undefined,
-        }),
-      ),
+      graph.edges
+        .filter((e) => !isField(e.targetHandle))
+        .map((e) =>
+          styleEdge({
+            id: e.id,
+            source: e.source,
+            target: e.target,
+            sourceHandle: e.sourceHandle ?? undefined,
+            targetHandle: e.targetHandle ?? undefined,
+          }),
+        ),
     );
     setEnabled(automationQuery.data.enabled);
     setInitialized(true);
   }, [automationQuery.data, descriptors, descriptorByType, initialized]);
 
   // Capture the loaded graph as the baseline, then flag `dirty` whenever the
-  // canvas diverges from it (drag, edit, wire, expose, rename, delete).
+  // canvas diverges from it (drag, edit, wire, rename, delete).
   useEffect(() => {
     if (!initialized) return;
     const current = JSON.stringify(toGraphPayload(nodes, edges));
@@ -894,22 +979,36 @@ function EditorInner({
 
   const addNode = useCallback((desc: NodeDescriptor) => {
     const id = genId("n");
-    setNodes((nds) => [
-      ...nds,
-      {
-        id,
-        type: "automationNode",
-        position: { x: 120 + nds.length * 40, y: 80 + nds.length * 30 },
-        data: descriptorToNodeData(desc),
-      },
-    ]);
+    setNodes((nds) => {
+      const slug = uniqueNodeSlug(slugifyLabel(desc.label), new Set(nds.map((n) => n.data.slug)));
+      return [
+        ...nds,
+        {
+          id,
+          type: "automationNode",
+          position: { x: 120 + nds.length * 40, y: 80 + nds.length * 30 },
+          data: descriptorToNodeData(desc, slug),
+        },
+      ];
+    });
     setSelectedId(id);
   }, []);
 
-  // Rename a node by id (from the right-click "Rename" dialog). An empty name
-  // clears the custom label so the node face falls back to its type label.
-  const renameNode = useCallback((nodeId: string, name: string) => {
-    setNodes((nds) => nds.map((n) => (n.id === nodeId ? { ...n, data: { ...n.data, name } } : n)));
+  // Rename a node by id (from the right-click "Rename" dialog) : the display name
+  // (empty clears the custom label) and the reference slug. When the slug
+  // changes, rewrite `{{ steps.<oldSlug> }}` references in every other node so
+  // they keep pointing at this node.
+  const renameNode = useCallback((nodeId: string, name: string, slug: string) => {
+    setNodes((nds) => {
+      const oldSlug = nds.find((n) => n.id === nodeId)?.data.slug;
+      const slugChanged = oldSlug != null && slug !== oldSlug;
+      return nds.map((n) => {
+        if (n.id === nodeId) return { ...n, data: { ...n.data, name, slug } };
+        if (!slugChanged) return n;
+        const cfg = rewriteSlugRefs(n.data.config, oldSlug, slug);
+        return cfg === n.data.config ? n : { ...n, data: { ...n.data, config: cfg } };
+      });
+    });
   }, []);
 
   // Delete a node by id (right-click "Delete") along with every edge touching it.
@@ -921,21 +1020,14 @@ function EditorInner({
 
   // Replace a node's type in place (right-click "Replace", after confirm) : keep
   // its id + position, reset config/name, and prune edges the new node can't
-  // carry — surviving `field:` inputs stay exposed so their wires still render.
+  // carry.
   const replaceNode = useCallback(
     (nodeId: string, desc: NodeDescriptor) => {
       const kept = edges.filter((e) => edgeSurvivesReplace(e, nodeId, desc));
-      const keptFieldKeys = kept
-        .filter(
-          (e) =>
-            e.target === nodeId &&
-            typeof e.targetHandle === "string" &&
-            e.targetHandle.startsWith("field:"),
-        )
-        .map((e) => (e.targetHandle as string).slice("field:".length));
       setNodes((nds) =>
         nds.map((n) =>
-          n.id === nodeId ? { ...n, data: descriptorToNodeData(desc, keptFieldKeys) } : n,
+          // Keep the node's slug across a type swap — references to it stay valid.
+          n.id === nodeId ? { ...n, data: descriptorToNodeData(desc, n.data.slug) } : n,
         ),
       );
       setEdges(kept);
@@ -958,29 +1050,6 @@ function EditorInner({
     [selectedId],
   );
 
-  // Toggle a config field on/off as an input port. Turning it off also drops
-  // any edge feeding that port (the value falls back to the typed config).
-  const toggleSelectedInput = useCallback(
-    (key: string, on: boolean) => {
-      if (!selectedId) return;
-      setNodes((nds) =>
-        nds.map((n) => {
-          if (n.id !== selectedId) return n;
-          const next = new Set(n.data.exposed);
-          if (on) next.add(key);
-          else next.delete(key);
-          return { ...n, data: { ...n.data, exposed: [...next] } };
-        }),
-      );
-      if (!on) {
-        setEdges((eds) =>
-          eds.filter((e) => !(e.target === selectedId && e.targetHandle === `field:${key}`)),
-        );
-      }
-    },
-    [selectedId],
-  );
-
   // Toggle the node's error output. Turning it off drops any edge leaving its
   // `error` handle (that branch no longer exists).
   const toggleSelectedErrorOutput = useCallback(
@@ -998,22 +1067,15 @@ function EditorInner({
     [selectedId],
   );
 
-  // Reject nonsensical wires before they land : no self-loops, and at most one
-  // connection into a given variable port (a field takes a single value).
-  const isValidConnection = useCallback(
-    (conn: Connection | Edge) => {
-      if (conn.source === conn.target) return false;
-      if (
-        typeof conn.targetHandle === "string" &&
-        conn.targetHandle.startsWith("field:") &&
-        edges.some((e) => e.target === conn.target && e.targetHandle === conn.targetHandle)
-      ) {
-        return false;
-      }
-      return true;
-    },
-    [edges],
-  );
+  // Reject nonsensical wires : self-loops, and any legacy field-port target
+  // (data moves via `{{ }}` references now, not per-field wires).
+  const isValidConnection = useCallback((conn: Connection | Edge) => {
+    if (conn.source === conn.target) return false;
+    if (typeof conn.targetHandle === "string" && conn.targetHandle.startsWith("field:")) {
+      return false;
+    }
+    return true;
+  }, []);
 
   const deleteSelected = useCallback(() => {
     if (!selectedId) return;
@@ -1060,10 +1122,7 @@ function EditorInner({
     // The saved graph becomes the new clean baseline once the write lands.
     const snapshot = JSON.stringify(graph);
     const triggerNode = nodes.find((n) => n.data.kind === "trigger");
-    const triggerEventType =
-      typeof triggerNode?.data.config.eventType === "string"
-        ? (triggerNode.data.config.eventType as string)
-        : undefined;
+    const triggerEventType = triggerNode ? triggerEventTypeForNode(triggerNode.data) : undefined;
     saveMutation.mutate(
       {
         id: automationId,
@@ -1086,10 +1145,7 @@ function EditorInner({
       const graph = toGraphPayload(nodes, edges);
       const snapshot = JSON.stringify(graph);
       const triggerNode = nodes.find((n) => n.data.kind === "trigger");
-      const triggerEventType =
-        typeof triggerNode?.data.config.eventType === "string"
-          ? (triggerNode.data.config.eventType as string)
-          : undefined;
+      const triggerEventType = triggerNode ? triggerEventTypeForNode(triggerNode.data) : undefined;
       try {
         await saveMutation.mutateAsync({
           id: automationId,
@@ -1153,8 +1209,7 @@ function EditorInner({
     const groups: VarGroup[] = [];
     const trigger = nodes.find((n) => n.data.kind === "trigger");
     if (trigger && ancestors.has(trigger.id)) {
-      const evType =
-        typeof trigger.data.config.eventType === "string" ? trigger.data.config.eventType : "";
+      const evType = triggerEventTypeForNode(trigger.data) ?? "";
       const items: VarItem[] = (eventFieldsByType.get(evType) ?? []).map((f) => ({
         label: f.key,
         token: `{{ trigger.${f.key} }}`,
@@ -1175,19 +1230,83 @@ function EditorInner({
     for (const n of nodes) {
       if (n.data.kind === "trigger" || !ancestors.has(n.id)) continue;
       const desc = descriptorByType.get(n.data.descriptorType);
+      const ref = `steps.${n.data.slug}`;
       const items: VarItem[] = [
-        { label: t("varWholeOutput"), token: `{{ ${n.id} }}`, hint: desc?.label },
+        { label: t("varWholeOutput"), token: `{{ ${ref} }}`, hint: desc?.label },
       ];
+      // Declared output fields — available without a test run (the node's schema).
+      const seen = new Set<string>();
+      for (const f of desc?.outputFields ?? []) {
+        items.push({ label: f.key, token: `{{ ${ref}.${f.key} }}`, hint: f.type });
+        seen.add(f.key);
+      }
+      // Plus any extra keys a test run actually produced that weren't declared.
       const out = runSteps.find((s) => s.nodeId === n.id)?.output;
       if (out != null && typeof out === "object" && !Array.isArray(out)) {
         for (const key of Object.keys(out as Record<string, unknown>)) {
-          items.push({ label: key, token: `{{ ${n.id}.${key} }}` });
+          if (!seen.has(key)) items.push({ label: key, token: `{{ ${ref}.${key} }}` });
         }
       }
       groups.push({ id: n.id, title: n.data.name?.trim() || desc?.label || n.data.label, items });
     }
+    // Workflow variables : names set by any upstream Set Variable node, offered
+    // as `{{ vars.<name> }}`. Run-global (distinct from per-step outputs), so a
+    // value set on a branch is referenceable after the branches converge.
+    const varNames = new Set<string>();
+    for (const n of nodes) {
+      if (n.data.descriptorType !== SET_VARIABLE_TYPE || !ancestors.has(n.id)) continue;
+      const name = typeof n.data.config.name === "string" ? n.data.config.name.trim() : "";
+      if (name) varNames.add(name);
+    }
+    if (varNames.size > 0) {
+      groups.push({
+        id: "vars",
+        title: t("varWorkflowVars"),
+        items: [...varNames].map((name) => ({
+          label: name,
+          token: `{{ vars.${name} }}`,
+          hint: t("varWorkflowVarHint"),
+        })),
+      });
+    }
     return groups;
   }, [selectedNode, nodes, edges, eventFieldsByType, descriptorByType, runSteps, t]);
+
+  // Label a `{{ }}` token for the chip renderer inside config fields: a friendly
+  // step name + path (`{{ steps.find_record.id }}` → "Find record.id"), the
+  // `trigger` / `vars` path as-is, and an "invalid" flag when a `steps.<slug>`
+  // reference points at a node that no longer exists.
+  const resolveToken = useCallback(
+    (raw: string): ResolvedVariableToken => {
+      const inner = raw
+        .replace(/^\{\{\s*/, "")
+        .replace(/\s*\}\}$/, "")
+        .trim();
+      const nameOf = (node: AppNode, fallback: string) =>
+        node.data.name?.trim() || descriptorByType.get(node.data.descriptorType)?.label || fallback;
+      const stepMatch = /^steps\.([\w-]+)(?:\.(.+))?$/.exec(inner);
+      if (stepMatch) {
+        const slug = stepMatch[1];
+        const rest = stepMatch[2];
+        const node = nodes.find((n) => n.data.slug === slug);
+        if (!node) return { label: inner, invalid: true, title: `${raw} — no such step` };
+        const name = nameOf(node, slug ?? inner);
+        return { label: rest ? `${name}.${rest}` : name, title: raw };
+      }
+      if (/^(trigger|vars)(\.|$)/.test(inner)) return { label: inner, title: raw };
+      // Legacy `{{ <nodeId>… }}` (pre-slug graphs) — resolve by id if it survives.
+      const idMatch = /^([\w-]+)(?:\.(.+))?$/.exec(inner);
+      if (idMatch) {
+        const node = nodes.find((n) => n.id === idMatch[1]);
+        if (node) {
+          const name = nameOf(node, idMatch[1] ?? inner);
+          return { label: idMatch[2] ? `${name}.${idMatch[2]}` : name, title: raw };
+        }
+      }
+      return { label: inner, title: raw };
+    },
+    [nodes, descriptorByType],
+  );
   // The selected node's step from the run being visualized, so the inspector
   // can show that node's actual input / output / result. Cleared when the run
   // overlay is closed (activeRunId reset).
@@ -1195,23 +1314,6 @@ function EditorInner({
     () => (activeRunId ? (runSteps.find((s) => s.nodeId === selectedId) ?? null) : null),
     [activeRunId, runSteps, selectedId],
   );
-  // Config variables the selected node has wired from an upstream node (an edge
-  // into its `field:<key>` port). A wired field's value comes from the
-  // connection at run time, so its panel editor is locked with a hint.
-  const wiredFieldKeys = useMemo(() => {
-    const keys = new Set<string>();
-    if (!selectedId) return keys;
-    for (const e of edges) {
-      if (
-        e.target === selectedId &&
-        typeof e.targetHandle === "string" &&
-        e.targetHandle.startsWith("field:")
-      ) {
-        keys.add(e.targetHandle.slice("field:".length));
-      }
-    }
-    return keys;
-  }, [edges, selectedId]);
 
   // Pre-flight validation (shared with the server's runNow guard). Only once
   // descriptors are loaded, else every node reads as an unknown type.
@@ -1253,6 +1355,8 @@ function EditorInner({
           return t("preflight.orphan", { node: nodeLabel });
         case "cycle":
           return t("preflight.cycle");
+        case "duplicate-slug":
+          return t("preflight.duplicateSlug", { node: nodeLabel, slug: node?.data.slug ?? "" });
         case "unknown-node":
           return t("preflight.unknownNode", { node: nodeLabel });
         default:
@@ -1446,7 +1550,8 @@ function EditorInner({
                   <Background color="var(--border)" gap={18} />
                   <Controls showInteractive={false} />
                   <MiniMap pannable zoomable />
-                  {/* Legend : what the two handle / edge colors mean. */}
+                  {/* Legend : edges are the run-order spine (data flows via
+                      `{{ }}` references, not wires). */}
                   <Panel
                     position="top-right"
                     className="pointer-events-none rounded-md border border-border bg-background/90 px-2 py-1 shadow-sm backdrop-blur"
@@ -1455,10 +1560,6 @@ function EditorInner({
                       <span className="flex items-center gap-1">
                         <span className="h-2 w-2 rounded-full bg-muted-foreground" aria-hidden />
                         {t("legendFlow")}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <span className="h-2 w-2 rounded-full bg-primary" aria-hidden />
-                        {t("legendData")}
                       </span>
                     </div>
                   </Panel>
@@ -1525,11 +1626,9 @@ function EditorInner({
                 selectedNode={selectedNode}
                 selectedDescriptor={selectedDescriptor}
                 canEdit={canEdit}
-                wiredKeys={wiredFieldKeys}
                 errorKeys={selectedErrorKeys}
                 runStep={selectedStep}
                 onDelete={deleteSelected}
-                onToggleInput={toggleSelectedInput}
                 onToggleErrorOutput={toggleSelectedErrorOutput}
                 automationId={automationId}
                 onGenerateHttpSecret={generateHttpSecret}
@@ -1537,6 +1636,7 @@ function EditorInner({
                 eventTypeOptions={eventTypeOptions}
                 eventFields={eventFieldsByType}
                 variables={variableGroups}
+                resolveToken={resolveToken}
                 modelOptions={modelOptions}
                 memberOptions={memberOptions}
                 secretOptions={secretOptions}
@@ -1568,11 +1668,9 @@ function EditorInner({
                 selectedNode={selectedNode}
                 selectedDescriptor={selectedDescriptor}
                 canEdit={canEdit}
-                wiredKeys={wiredFieldKeys}
                 errorKeys={selectedErrorKeys}
                 runStep={selectedStep}
                 onDelete={deleteSelected}
-                onToggleInput={toggleSelectedInput}
                 onToggleErrorOutput={toggleSelectedErrorOutput}
                 automationId={automationId}
                 onGenerateHttpSecret={generateHttpSecret}
@@ -1580,6 +1678,7 @@ function EditorInner({
                 eventTypeOptions={eventTypeOptions}
                 eventFields={eventFieldsByType}
                 variables={variableGroups}
+                resolveToken={resolveToken}
                 modelOptions={modelOptions}
                 memberOptions={memberOptions}
                 secretOptions={secretOptions}
@@ -1595,7 +1694,11 @@ function EditorInner({
           <SheetHeader>
             <SheetTitle>{t("runHistory")}</SheetTitle>
           </SheetHeader>
-          <RunHistory automationId={automationId} open={historyOpen} />
+          <RunHistory
+            automationId={automationId}
+            open={historyOpen}
+            nodeLabelOf={(type) => descriptorByType.get(type)?.label ?? type}
+          />
         </SheetContent>
       </Sheet>
 
@@ -1630,14 +1733,16 @@ function EditorInner({
       <RenameNodeDialog
         open={renameTarget != null}
         initialName={renameNodeInst?.data.name ?? ""}
+        initialSlug={renameNodeInst?.data.slug ?? ""}
+        takenSlugs={new Set(nodes.filter((n) => n.id !== renameTarget).map((n) => n.data.slug))}
         placeholder={
           (renameNodeInst && descriptorByType.get(renameNodeInst.data.descriptorType)?.label) ?? ""
         }
         onOpenChange={(o) => {
           if (!o) setRenameTarget(null);
         }}
-        onSave={(name) => {
-          if (renameTarget) renameNode(renameTarget, name);
+        onSave={(name, slug) => {
+          if (renameTarget) renameNode(renameTarget, name, slug);
           setRenameTarget(null);
         }}
       />
@@ -1696,6 +1801,7 @@ const NODE_ICON_BY_NAME: Record<string, LucideIcon> = {
   Braces,
   Clock,
   Sigma,
+  Variable,
   Bell,
   Mail,
   Webhook,
@@ -1804,52 +1910,99 @@ function NodeContextMenu({
 }
 
 /**
- * Rename-node dialog (opened from the right-click menu). Seeds from the node's
- * current name ; an empty value clears the custom label so the face falls back
- * to the type label. Node naming lives only here now — the inspector has no
- * name field.
+ * Rename-node dialog (opened from the right-click menu). Edits two things: the
+ * display **name** (empty clears the custom label so the face falls back to the
+ * type label) and the **reference slug** — the `{{ steps.<slug> }}` handle other
+ * nodes address this node by. The slug must be a valid identifier and unique in
+ * the graph ; changing it rewrites references to it (handled by the caller).
  */
 function RenameNodeDialog({
   open,
   initialName,
+  initialSlug,
+  takenSlugs,
   placeholder,
   onOpenChange,
   onSave,
 }: {
   open: boolean;
   initialName: string;
+  initialSlug: string;
+  /** Slugs of every OTHER node, so the edited slug can be checked for collisions. */
+  takenSlugs: Set<string>;
   placeholder: string;
   onOpenChange: (open: boolean) => void;
-  onSave: (name: string) => void;
+  onSave: (name: string, slug: string) => void;
 }) {
   const t = useTranslations("automation.editor");
   const [name, setName] = useState(initialName);
+  const [slug, setSlug] = useState(initialSlug);
   useEffect(() => {
-    if (open) setName(initialName);
-  }, [open, initialName]);
-  const save = () => onSave(name.trim());
+    if (open) {
+      setName(initialName);
+      setSlug(initialSlug);
+    }
+  }, [open, initialName, initialSlug]);
+  const trimmedSlug = slug.trim();
+  const slugError =
+    trimmedSlug === "" || !NODE_SLUG_RE.test(trimmedSlug)
+      ? t("slugInvalid")
+      : takenSlugs.has(trimmedSlug)
+        ? t("slugTaken")
+        : null;
+  const save = () => {
+    if (slugError) return;
+    onSave(name.trim(), trimmedSlug);
+  };
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-sm">
         <DialogTitle>{t("renameTitle")}</DialogTitle>
         <div className="space-y-4 pt-1">
-          <Input
-            autoFocus
-            value={name}
-            placeholder={placeholder}
-            onChange={(e) => setName(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                save();
-              }
-            }}
-          />
+          <div className="space-y-1.5">
+            <Label className="text-xs">{t("nodeDisplayName")}</Label>
+            <Input
+              autoFocus
+              value={name}
+              placeholder={placeholder}
+              onChange={(e) => setName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  save();
+                }
+              }}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">{t("nodeSlug")}</Label>
+            <Input
+              value={slug}
+              spellCheck={false}
+              onChange={(e) => setSlug(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  save();
+                }
+              }}
+            />
+            <p
+              className={cn(
+                "text-[11px]",
+                slugError ? "text-destructive" : "text-muted-foreground",
+              )}
+            >
+              {slugError ?? t("slugHint", { token: `{{ steps.${trimmedSlug || "name"} }}` })}
+            </p>
+          </div>
           <div className="flex justify-end gap-2">
             <Button variant="outline" onClick={() => onOpenChange(false)}>
               {t("cancel")}
             </Button>
-            <Button onClick={save}>{t("save")}</Button>
+            <Button onClick={save} disabled={slugError != null}>
+              {t("save")}
+            </Button>
           </div>
         </div>
       </DialogContent>
@@ -2006,11 +2159,9 @@ function ConfigPanel({
   selectedNode,
   selectedDescriptor,
   canEdit,
-  wiredKeys,
   errorKeys,
   runStep,
   onDelete,
-  onToggleInput,
   onToggleErrorOutput,
   automationId,
   onGenerateHttpSecret,
@@ -2018,6 +2169,7 @@ function ConfigPanel({
   eventTypeOptions,
   eventFields,
   variables,
+  resolveToken,
   modelOptions,
   memberOptions,
   secretOptions,
@@ -2026,19 +2178,19 @@ function ConfigPanel({
   selectedNode: AppNode | null;
   selectedDescriptor: NodeDescriptor | undefined;
   canEdit: boolean;
-  wiredKeys: Set<string>;
   errorKeys: Set<string>;
   runStep: RunStepView | null;
   onDelete: () => void;
-  onToggleInput: (key: string, on: boolean) => void;
   onToggleErrorOutput: (on: boolean) => void;
   automationId: string;
   onGenerateHttpSecret: () => void;
   generatingSecret: boolean;
-  eventTypeOptions: string[];
+  eventTypeOptions: { value: string; label: string }[];
   eventFields: Map<string, EventField[]>;
   /** `{{ ... }}` references available to this node, grouped by source. */
   variables: VarGroup[];
+  /** Label a `{{ }}` token for its chip in a config field. */
+  resolveToken: (raw: string) => ResolvedVariableToken;
   modelOptions: Array<{ value: string; label: string }>;
   memberOptions: Array<{ value: string; label: string }>;
   /** Names of the org's secrets for a `secret` config field (never values). */
@@ -2047,11 +2199,44 @@ function ConfigPanel({
 }) {
   const t = useTranslations("automation.editor");
 
+  // Click-to-insert: the focused VariableInput registers its imperative handle
+  // here (and clears it on blur). The variable picker calls `insertToken` to drop
+  // a `{{ ... }}` chip at the caret ; it falls back to clipboard copy when no
+  // field is focused. Also cleared when the selection changes, so a stale,
+  // detached field is never written to.
+  const activeInputRef = useRef<VariableInputHandle | null>(null);
+  useEffect(() => {
+    activeInputRef.current = null;
+  }, [selectedNode?.id]);
+  const registerActiveInput = useCallback((handle: VariableInputHandle | null) => {
+    activeInputRef.current = handle;
+  }, []);
+  const insertVariable = useCallback(
+    (token: string) => {
+      const active = activeInputRef.current;
+      if (!active) {
+        void navigator.clipboard?.writeText(token);
+        toast.success(t("outputCopied", { ref: token }));
+        return;
+      }
+      active.insertToken(token);
+    },
+    [t],
+  );
+  // The same available variables, flattened for the fields' inline autocomplete
+  // (typing `{{` in a field opens a menu grouped by source node).
+  const suggestions = useMemo<VariableSuggestion[]>(
+    () =>
+      variables.flatMap((g) =>
+        g.items.map((it) => ({ token: it.token, label: it.label, group: g.title, hint: it.hint })),
+      ),
+    [variables],
+  );
+
   if (!selectedNode || !selectedDescriptor) {
     return <p className="text-sm text-muted-foreground">{t("noSelection")}</p>;
   }
 
-  const exposed = new Set(selectedNode.data.exposed);
   const NodeTypeIcon = nodeIcon(selectedDescriptor);
   // Advanced disclosure (currently just the error-output toggle) applies to
   // editable, non-trigger nodes ; triggers are the flow entry with no error out.
@@ -2059,25 +2244,13 @@ function ConfigPanel({
   // A trigger's outputs: the fields the chosen event exposes, so the author can
   // see (and copy) what `{{ trigger.* }}` values the rest of the flow can read.
   const isTrigger = selectedNode.data.kind === "trigger";
-  const triggerEventType =
-    isTrigger && typeof selectedNode.data.config.eventType === "string"
-      ? (selectedNode.data.config.eventType as string)
-      : null;
+  const triggerEventType = isTrigger ? (triggerEventTypeForNode(selectedNode.data) ?? null) : null;
   const triggerOutputs = triggerEventType ? (eventFields.get(triggerEventType) ?? []) : [];
   // HTTP trigger: its inbound URL + per-automation secret (generated server-side).
   const isHttpTrigger = selectedNode.data.descriptorType === HTTP_TRIGGER_TYPE;
   const httpSecret =
     typeof selectedNode.data.config.secret === "string" ? selectedNode.data.config.secret : "";
   const httpUrl = `${process.env.NEXT_PUBLIC_API_URL ?? ""}/hooks/automation/${automationId}`;
-  // The last run's step `input` is the fully-resolved config, so it carries the
-  // actual value each wired input received — surfaced read-only on those fields.
-  const resolvedInput =
-    runStep &&
-    runStep.input != null &&
-    typeof runStep.input === "object" &&
-    !Array.isArray(runStep.input)
-      ? (runStep.input as Record<string, unknown>)
-      : null;
 
   return (
     <div>
@@ -2169,20 +2342,20 @@ function ConfigPanel({
         >
           {selectedDescriptor.configFields.map((field) => (
             <ConfigField
-              key={field.key}
+              // Key by node too, so the per-field value/variable mode resets when
+              // the selection changes (it's local state, not persisted).
+              key={`${selectedNode.id}:${field.key}`}
               field={field}
               value={selectedNode.data.config[field.key]}
-              resolvedValue={wiredKeys.has(field.key) ? resolvedInput?.[field.key] : undefined}
               disabled={!canEdit}
-              wired={wiredKeys.has(field.key)}
               error={errorKeys.has(field.key)}
-              exposed={exposed.has(field.key)}
-              canExpose={selectedNode.data.kind !== "trigger"}
-              onToggleInput={(on) => onToggleInput(field.key, on)}
               eventTypeOptions={eventTypeOptions}
               modelOptions={modelOptions}
               memberOptions={memberOptions}
               secretOptions={secretOptions}
+              resolveToken={resolveToken}
+              suggestions={suggestions}
+              onFocusRegister={registerActiveInput}
               onChange={(v) => onConfigChange(field.key, v)}
             />
           ))}
@@ -2224,7 +2397,7 @@ function ConfigPanel({
       {/* Section 3b — variables : for a non-trigger node, every `{{ ... }}` it can
           reference (trigger fields + upstream node outputs), so the author never
           has to reopen the trigger / earlier nodes to recall what's available. */}
-      {!isTrigger && <NodeVariables groups={variables} />}
+      {!isTrigger && <NodeVariables groups={variables} onInsert={insertVariable} />}
 
       {/* Section 4 — last run : always shown, inert until a run produces a step. */}
       <RunResult key={`run-${runStep?.id ?? "none"}`} step={runStep} />
@@ -2235,48 +2408,91 @@ function ConfigPanel({
   );
 }
 
+/** A config value currently holding a `{{ }}` reference rather than a fixed value. */
+function valueIsExpression(value: unknown): boolean {
+  return typeof value === "string" && value.includes("{{");
+}
+
+// Field types whose native editor (dropdown / switch / number spinner) can't
+// hold a `{{ }}` token, so they get a "value / variable" toggle that swaps in a
+// plain text box. `text` / `textarea` / `json` already accept references ;
+// `event-type` is trigger-only (no upstream variables) and drives the event-
+// fields UI ; `schedule` is a structured builder — none of those get the toggle.
+const VARIABLE_TOGGLE_TYPES = new Set([
+  "boolean",
+  "number",
+  "select",
+  "data-model",
+  "user",
+  "secret",
+]);
+
 function ConfigField({
   field,
   value,
-  resolvedValue,
   disabled,
-  wired,
   error,
-  exposed,
-  canExpose,
-  onToggleInput,
   eventTypeOptions,
   modelOptions,
   memberOptions,
   secretOptions,
+  resolveToken,
+  suggestions,
   onChange,
+  onFocusRegister,
 }: {
   field: NodeDescriptor["configFields"][number];
   value: unknown;
-  /** For a wired field, the value the last run resolved (`undefined` until a
-   *  run has resolved it) ; shown read-only in place of the hidden editor. */
-  resolvedValue?: unknown;
   disabled: boolean;
-  wired: boolean;
   error: boolean;
-  exposed: boolean;
-  canExpose: boolean;
-  onToggleInput: (on: boolean) => void;
-  eventTypeOptions: string[];
+  eventTypeOptions: { value: string; label: string }[];
   modelOptions: Array<{ value: string; label: string }>;
   memberOptions: Array<{ value: string; label: string }>;
   /** Names of the org's secrets for a `secret` config field (never values). */
   secretOptions: string[];
+  /** Label a `{{ }}` token for its chip in this field's variable input. */
+  resolveToken: (raw: string) => ResolvedVariableToken;
+  /** Variables offered by the field's inline autocomplete (typing `{{`). */
+  suggestions: VariableSuggestion[];
   onChange: (value: unknown) => void;
+  /** Register the focused variable input so the picker can insert at its caret. */
+  onFocusRegister?: (handle: VariableInputHandle | null) => void;
 }) {
   const t = useTranslations("automation.editor");
-  // A wired variable takes its value from the incoming connection at run time,
-  // so its editor is hidden entirely (see below) rather than shown disabled.
   const inputDisabled = disabled;
   const strValue = typeof value === "string" ? value : value == null ? "" : String(value);
+  // A field whose native control can't hold a `{{ }}` token offers a toggle to a
+  // plain text box. It's forced on whenever the stored value is already an
+  // expression (e.g. a saved graph), so such a value always shows as editable
+  // text rather than silently vanishing from a dropdown that has no such option.
+  const [varMode, setVarMode] = useState(false);
+  const canToggleVariable = VARIABLE_TOGGLE_TYPES.has(field.type);
+  const useVariable = canToggleVariable && (varMode || valueIsExpression(value));
+  const toggleVariable = () => {
+    if (useVariable) {
+      // Leaving variable mode : clear an expression so the native control is usable.
+      if (valueIsExpression(value)) onChange(undefined);
+      setVarMode(false);
+    } else {
+      setVarMode(true);
+    }
+  };
+  // Free-text fields (message body, subject) always take references, so they get
+  // a `{ }` picker button that inserts a chip at the caret (via the field's
+  // handle, captured on focus ; append as a fallback if never focused).
+  const isTextField = field.type === "text" || field.type === "textarea" || field.type === "json";
+  const fieldHandleRef = useRef<VariableInputHandle | null>(null);
+  const registerFieldHandle = (h: VariableInputHandle | null) => {
+    onFocusRegister?.(h);
+    if (h) fieldHandleRef.current = h;
+  };
+  const insertIntoField = (token: string) => {
+    if (fieldHandleRef.current) fieldHandleRef.current.insertToken(token);
+    else onChange(strValue ? `${strValue} ${token}` : token);
+  };
   const selectOptions =
     field.type === "event-type"
-      ? eventTypeOptions.map((o) => ({ value: o, label: o }))
+      ? eventTypeOptions
       : field.type === "data-model"
         ? modelOptions
         : field.type === "user"
@@ -2295,39 +2511,64 @@ function ConfigField({
           {field.label}
           {error && <span aria-hidden> *</span>}
         </Label>
-        <div className="flex items-center gap-1.5">
-          {wired && (
-            <Badge variant="outline" size="sm" className="text-primary">
-              {t("fieldWired")}
-            </Badge>
-          )}
-          {canExpose && !disabled && (
-            <button
-              type="button"
-              onClick={() => onToggleInput(!exposed)}
-              aria-pressed={exposed}
-              title={exposed ? t("removeInput") : t("useAsInput")}
-              aria-label={exposed ? t("removeInput") : t("useAsInput")}
-              className={cn(
-                "rounded p-0.5 transition hover:text-primary",
-                exposed ? "text-primary" : "text-muted-foreground/60",
-              )}
-            >
-              <Cable className="h-3.5 w-3.5" aria-hidden />
-            </button>
-          )}
-        </div>
+        {canToggleVariable && !disabled ? (
+          <button
+            type="button"
+            onClick={toggleVariable}
+            aria-pressed={useVariable}
+            title={useVariable ? t("useFixedValue") : t("useVariable")}
+            aria-label={useVariable ? t("useFixedValue") : t("useVariable")}
+            className={cn(
+              "rounded p-0.5 transition hover:text-primary",
+              useVariable ? "text-primary" : "text-muted-foreground/60",
+            )}
+          >
+            <Braces className="h-3.5 w-3.5" aria-hidden />
+          </button>
+        ) : isTextField && !disabled ? (
+          <VariablePicker
+            suggestions={suggestions}
+            onPick={insertIntoField}
+            ariaLabel={t("variablePickerTitle")}
+            triggerClassName="rounded p-0.5 text-muted-foreground/60 transition hover:text-primary"
+          >
+            <Braces className="h-3.5 w-3.5" aria-hidden />
+          </VariablePicker>
+        ) : null}
       </div>
       <div className="min-w-0 space-y-1.5">
-        {/* A wired field's value comes from the connection at run time. Before a
-          run there's nothing to show (the "Wired" badge + hint carry it) ; once
-          a test run resolves the value we show it read-only, disabled. An
-          exposed-but-unwired field keeps its editor (typed value is the default
-          until something is wired in). */}
-        {wired ? (
-          resolvedValue !== undefined ? (
-            <ResolvedValueField value={resolvedValue} />
-          ) : null
+        {useVariable ? (
+          <VariablePicker
+            suggestions={suggestions}
+            onPick={(token) => onChange(token)}
+            disabled={inputDisabled}
+            ariaLabel={field.label}
+            triggerClassName={cn(
+              "flex h-9 w-full items-center gap-2 rounded-md border border-input bg-transparent px-3 text-left text-sm shadow-sm transition-colors",
+              "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50",
+            )}
+          >
+            {valueIsExpression(value) ? (
+              (() => {
+                const r = resolveToken(strValue);
+                return (
+                  <span
+                    className={cn(
+                      "truncate rounded px-1 text-[0.85em] font-medium",
+                      r.invalid
+                        ? "bg-destructive/10 text-destructive"
+                        : "bg-primary/10 text-primary",
+                    )}
+                  >
+                    {r.label}
+                  </span>
+                );
+              })()
+            ) : (
+              <span className="truncate text-muted-foreground">{t("chooseVariable")}</span>
+            )}
+            <ChevronDown className="ml-auto h-4 w-4 shrink-0 opacity-50" aria-hidden />
+          </VariablePicker>
         ) : field.type === "schedule" ? (
           <ScheduleBuilder
             value={value as AutomationSchedule | undefined}
@@ -2335,12 +2576,16 @@ function ConfigField({
             onChange={onChange}
           />
         ) : field.type === "textarea" || field.type === "json" ? (
-          <Textarea
+          <VariableInput
+            multiline
             value={strValue}
-            disabled={inputDisabled}
+            onChange={(v) => onChange(v)}
+            resolveToken={resolveToken}
+            suggestions={suggestions}
             placeholder={field.placeholder}
-            onChange={(e) => onChange(e.target.value)}
-            rows={4}
+            disabled={inputDisabled}
+            aria-label={field.label}
+            onFocusRegister={registerFieldHandle}
           />
         ) : field.type === "boolean" ? (
           <div>
@@ -2385,11 +2630,15 @@ function ConfigField({
             </SelectContent>
           </Select>
         ) : (
-          <Input
+          <VariableInput
             value={strValue}
-            disabled={inputDisabled}
+            onChange={(v) => onChange(v)}
+            resolveToken={resolveToken}
+            suggestions={suggestions}
             placeholder={field.placeholder}
-            onChange={(e) => onChange(e.target.value)}
+            disabled={inputDisabled}
+            aria-label={field.label}
+            onFocusRegister={registerFieldHandle}
           />
         )}
         {field.help && <p className="text-[11px] text-muted-foreground">{field.help}</p>}
@@ -2485,36 +2734,6 @@ function RunLogs({ step }: { step: RunStepView | null }) {
         ))}
       </ol>
     </PanelSection>
-  );
-}
-
-/**
- * Read-only display of a wired field's value once a test run has resolved it —
- * a disabled input (scalar) or a JSON block (object), so the author sees exactly
- * what flowed into the connected input. Shown in place of the hidden editor.
- */
-function ResolvedValueField({ value }: { value: unknown }) {
-  const t = useTranslations("automation.editor");
-  const isObj = value != null && typeof value === "object";
-  const text =
-    typeof value === "string"
-      ? value
-      : (() => {
-          try {
-            return JSON.stringify(value, null, isObj ? 2 : 0);
-          } catch {
-            return String(value);
-          }
-        })();
-  return (
-    <div className="space-y-1">
-      {isObj ? (
-        <Textarea value={text} disabled readOnly rows={3} className="font-mono text-[11px]" />
-      ) : (
-        <Input value={text} disabled readOnly />
-      )}
-      <p className="text-[10px] text-muted-foreground">{t("resolvedFromRun")}</p>
-    </div>
   );
 }
 
@@ -2614,14 +2833,16 @@ function PanelSection({
  * reference is click-to-copy, so the author can pull values from earlier in the
  * flow without navigating back to those nodes. Inert until a variable exists.
  */
-function NodeVariables({ groups }: { groups: VarGroup[] }) {
+function NodeVariables({
+  groups,
+  onInsert,
+}: {
+  groups: VarGroup[];
+  onInsert: (token: string) => void;
+}) {
   const t = useTranslations("automation.editor");
   if (groups.length === 0) return <PanelSection title={t("variables")} disabled />;
   const total = groups.reduce((n, g) => n + g.items.length, 0);
-  const copy = (token: string) => {
-    void navigator.clipboard?.writeText(token);
-    toast.success(t("outputCopied", { ref: token }));
-  };
   return (
     <PanelSection
       title={t("variables")}
@@ -2644,12 +2865,13 @@ function NodeVariables({ groups }: { groups: VarGroup[] }) {
               <li key={it.token} className="flex items-center gap-2">
                 <button
                   type="button"
-                  onClick={() => copy(it.token)}
-                  title={t("copyReference")}
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => onInsert(it.token)}
+                  title={t("insertVariable")}
                   className="group flex min-w-0 items-center gap-1 rounded bg-background px-1.5 py-0.5 font-mono text-[11px] hover:text-primary"
                 >
                   <span className="truncate">{it.label}</span>
-                  <Copy
+                  <Plus
                     className="h-3 w-3 shrink-0 opacity-0 transition group-hover:opacity-100"
                     aria-hidden
                   />
@@ -2868,7 +3090,15 @@ function RunLogPanel({
   );
 }
 
-function RunHistory({ automationId, open }: { automationId: string; open: boolean }) {
+function RunHistory({
+  automationId,
+  open,
+  nodeLabelOf,
+}: {
+  automationId: string;
+  open: boolean;
+  nodeLabelOf: (type: string) => string;
+}) {
   const t = useTranslations("automation.editor");
   const tStatus = useTranslations("automation.runStatus");
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -2928,7 +3158,7 @@ function RunHistory({ automationId, open }: { automationId: string; open: boolea
                 <ol className="space-y-1">
                   {(runDetail.data?.steps ?? []).map((step) => (
                     <li key={step.id} className="flex items-center justify-between gap-2 text-xs">
-                      <code className="text-muted-foreground">{step.nodeType}</code>
+                      <span className="text-muted-foreground">{nodeLabelOf(step.nodeType)}</span>
                       <span className={statusTone[step.status] ?? ""}>
                         {stepStatusLabel(t, step.status)}
                       </span>

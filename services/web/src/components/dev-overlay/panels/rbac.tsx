@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc";
@@ -10,6 +11,7 @@ export function RbacPanel() {
   const roles = trpc.rbac.myRoles.useQuery(undefined, { refetchOnWindowFocus: false });
   const perms = trpc.rbac.myPermissions.useQuery(undefined, { refetchOnWindowFocus: false });
   const utils = trpc.useUtils();
+  const [filter, setFilter] = useState("");
 
   const toggleSysadmin = trpc.rbac.devToggleSysadmin.useMutation({
     onSuccess: () => {
@@ -45,13 +47,24 @@ export function RbacPanel() {
             {t("rbac.permissions", { count: perms.data?.length ?? 0 })}
           </p>
           {perms.data && perms.data.length > 0 ? (
-            <ul className="space-y-0.5 text-[11px] font-mono">
-              {perms.data.map((p) => (
-                <li key={p} className="text-emerald-400">
-                  {p}
-                </li>
-              ))}
-            </ul>
+            <>
+              <input
+                value={filter}
+                onChange={(e) => setFilter(e.target.value)}
+                placeholder={t("rbac.filterPlaceholder")}
+                aria-label={t("rbac.filterPlaceholder")}
+                className="mb-1.5 h-7 w-full rounded-md border border-input bg-background px-2 text-[11px]"
+              />
+              <ul className="max-h-40 space-y-0.5 overflow-y-auto text-[11px] font-mono">
+                {perms.data
+                  .filter((p) => p.toLowerCase().includes(filter.toLowerCase()))
+                  .map((p) => (
+                    <li key={p} className="text-emerald-400">
+                      {p}
+                    </li>
+                  ))}
+              </ul>
+            </>
           ) : (
             <p className="text-xs text-muted-foreground">{t("rbac.noneGranted")}</p>
           )}

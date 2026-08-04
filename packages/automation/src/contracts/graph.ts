@@ -29,10 +29,20 @@ export const nodeInstanceSchema = z.object({
    */
   name: z.string().optional(),
   /**
-   * Config-field keys the author exposed as wireable input ports in the editor.
-   * Editor-only presentation state — the engine resolves data links from the
-   * edges alone, so this never affects execution. A field with an incoming
-   * `field:<key>` edge is always treated as exposed regardless.
+   * Stable, unique-within-the-graph handle for addressing this node's output as
+   * `{{ steps.<slug>.field }}`. The editor assigns one to every node (derived
+   * from its label, de-duplicated) and lets the author edit it ; the engine
+   * reads it to build the `steps` scope. Optional for backward-compat — a graph
+   * saved before slugs existed has none, and the engine falls back to the
+   * node-id scope key (`{{ <nodeId> }}`) for those until the next save. See
+   * [slug.ts](./slug.ts) for the derivation.
+   */
+  slug: z.string().optional(),
+  /**
+   * Vestigial. Once held the config-field keys exposed as wireable input ports ;
+   * per-field data wires were removed (data flows via `{{ }}` references now), so
+   * the editor no longer writes this and nothing reads it. Kept optional only so
+   * an old saved graph still parses. Do not use.
    */
   inputs: z.array(z.string()).optional(),
   /**

@@ -211,6 +211,8 @@ export function NewEventPopover({
   existingEvent,
   calendars,
   defaultCalendarId,
+  initialEventType,
+  endDateOverride,
   onCancel,
   onSubmit,
   onUpdate,
@@ -231,6 +233,11 @@ export function NewEventPopover({
   existingEvent?: CalendarEvent;
   calendars: CalendarDef[];
   defaultCalendarId?: string;
+  // Create mode only : preset the event type (e.g. a multi-day drag seeds
+  // ALL_DAY) and/or the end date, instead of defaulting both from
+  // `selectedDate`/"STANDARD".
+  initialEventType?: CalendarEventType;
+  endDateOverride?: Date;
   onCancel: () => void;
   onSubmit: (payload: NewEventSubmitPayload) => Promise<void>;
   onUpdate?: (eventId: string, patch: Partial<NewEventSubmitPayload>) => Promise<void>;
@@ -282,12 +289,12 @@ export function NewEventPopover({
       : "09:00";
     return {
       calendarId: defaultCalId,
-      eventType: "STANDARD",
+      eventType: initialEventType ?? "STANDARD",
       title: "",
       startDate: baseDateStr,
       startTime: startStr,
       endTime: addMinutesToTimeString(startStr, 60),
-      endDate: baseDateStr,
+      endDate: endDateOverride ? toDateInputValue(endDateOverride) : baseDateStr,
       description: "",
       location: "",
       participants: meLabel ? [meLabel] : [],
@@ -423,37 +430,38 @@ export function NewEventPopover({
     onTypeChange?.(newType);
   }
 
+  function computeDateRange(f: FormState): { startAt: Date; endAt: Date } {
+    if (f.eventType === "ALL_DAY") {
+      const [sy, sm, sd] = (f.startDate || toDateInputValue(selectedDate)).split("-").map(Number);
+      const startAt = new Date(sy!, (sm ?? 1) - 1, sd!, 0, 0, 0, 0);
+      const [ey, em, ed] = (f.endDate || f.startDate || toDateInputValue(selectedDate))
+        .split("-")
+        .map(Number);
+      const lastDay = new Date(ey!, (em ?? 1) - 1, ed!, 0, 0, 0, 0);
+      const endAt =
+        lastDay >= startAt
+          ? new Date(lastDay.getTime() + 24 * 60 * 60 * 1000)
+          : new Date(startAt.getTime() + 24 * 60 * 60 * 1000);
+      return { startAt, endAt };
+    }
+    if (f.eventType === "PUNCTUAL") {
+      const dateBase = parseDateStr(f.startDate || toDateInputValue(selectedDate));
+      const startAt = timeStringToDate(dateBase, f.startTime);
+      return { startAt, endAt: new Date(startAt) };
+    }
+    const dateBase = parseDateStr(f.startDate || toDateInputValue(selectedDate));
+    const startAt = timeStringToDate(dateBase, f.startTime);
+    const endAt = timeStringToDate(dateBase, f.endTime);
+    return { startAt, endAt };
+  }
+
   function buildPayload(): NewEventSubmitPayload | null {
     if (!form.title.trim()) {
       titleRef.current?.focus();
       return null;
     }
 
-    let startAt: Date;
-    let endAt: Date;
-
-    if (form.eventType === "ALL_DAY") {
-      const [sy, sm, sd] = (form.startDate || toDateInputValue(selectedDate))
-        .split("-")
-        .map(Number);
-      startAt = new Date(sy!, (sm ?? 1) - 1, sd!, 0, 0, 0, 0);
-      const [ey, em, ed] = (form.endDate || form.startDate || toDateInputValue(selectedDate))
-        .split("-")
-        .map(Number);
-      const lastDay = new Date(ey!, (em ?? 1) - 1, ed!, 0, 0, 0, 0);
-      endAt =
-        lastDay >= startAt
-          ? new Date(lastDay.getTime() + 24 * 60 * 60 * 1000)
-          : new Date(startAt.getTime() + 24 * 60 * 60 * 1000);
-    } else if (form.eventType === "PUNCTUAL") {
-      const dateBase = parseDateStr(form.startDate || toDateInputValue(selectedDate));
-      startAt = timeStringToDate(dateBase, form.startTime);
-      endAt = new Date(startAt);
-    } else {
-      const dateBase = parseDateStr(form.startDate || toDateInputValue(selectedDate));
-      startAt = timeStringToDate(dateBase, form.startTime);
-      endAt = timeStringToDate(dateBase, form.endTime);
-    }
+    const { startAt, endAt } = computeDateRange(form);
 
     return {
       calendarId: form.calendarId,
@@ -470,6 +478,30 @@ export function NewEventPopover({
           : undefined,
     };
   }
+
+  // ── Conflict detection ─────────────────────────────────────
+  // Debounced so a same-calendar overlap check doesn't fire on every
+  // keystroke-equivalent field change ; non-blocking, purely informational.
+  const dateRange = computeDateRange(form);
+  const [debouncedRange, setDebouncedRange] = useState(dateRange);
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedRange(dateRange), 400);
+    return () => clearTimeout(timer);
+  }, [dateRange.startAt.getTime(), dateRange.endAt.getTime(), form.calendarId]);
+
+  const conflictsQuery = trpc.calendar.events.checkConflicts.useQuery(
+    {
+      calendarId: form.calendarId,
+      startAt: debouncedRange.startAt.toISOString(),
+      endAt: debouncedRange.endAt.toISOString(),
+      excludeEventId: mode === "edit" ? existingEvent?.id : undefined,
+    },
+    {
+      enabled: open && !!form.calendarId && debouncedRange.endAt > debouncedRange.startAt,
+      refetchOnWindowFocus: false,
+    },
+  );
+  const conflicts = conflictsQuery.data ?? [];
 
   async function handleSubmit() {
     const payload = buildPayload();
@@ -878,6 +910,17 @@ export function NewEventPopover({
           </div>
         </div>
       </div>
+
+      {conflicts.length > 0 && (
+        <p className="mt-3 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-800 dark:text-amber-300">
+          {conflicts.length === 1
+            ? tc("conflictWarningOne", { title: conflicts[0]!.title })
+            : tc("conflictWarningMore", {
+                title: conflicts[0]!.title,
+                count: conflicts.length - 1,
+              })}
+        </p>
+      )}
 
       {formError && <p className="mt-3 text-xs text-destructive">{formError}</p>}
     </>

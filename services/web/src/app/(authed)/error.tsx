@@ -25,7 +25,7 @@ export default function AuthedError({
 
   useEffect(() => {
     // Surface the error for the browser console / error-tracking hook once
-    // one is wired (see docs/review/collaboration.md).
+    // one is wired (see docs/archive/audit-2026-07-01/collaboration.md).
     console.error(error);
   }, [error]);
 

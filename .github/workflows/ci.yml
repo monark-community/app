@@ -71,6 +71,7 @@ jobs:
 
       - name: Check codegen drift
         run: |
+          pnpm gen:schema --check
           pnpm gen:events --check
           pnpm gen:routers --check
 
@@ -82,6 +83,49 @@ jobs:
 
       - name: Check i18n key parity
         run: pnpm check:i18n
+
+  # Migration ↔ schema drift. Replays every committed migration into a throwaway
+  # Postgres and diffs the result against schema.prisma (modulo an allowlist of
+  # raw-SQL divergences the Prisma datamodel can't express). Catches a modeled
+  # change that shipped without a migration, or a migration hand-edited away from
+  # the schema. Needs a real DB, so it's its own job with a `postgres` service
+  # rather than folding into repo-checks.
+  migration-drift:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: shadow
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Check migrations reproduce the committed schema
+        run: pnpm check:migrations
+        env:
+          SHADOW_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/shadow
 
   # Unit suites only. Coverage outputs upload to a per-job artifact so
   # the codecov-upload job below can fuse them with the integration
@@ -165,10 +209,11 @@ jobs:
   # ; this job downloads both into the per-package `coverage/{unit,
   # integration}/` shape the merge script expects, then runs
   # `pnpm coverage:merge` to produce `coverage/coverage-final.json`
-  # + `coverage/lcov.info` per package. Codecov reads the merged
-  # lcov files via the explicit `files:` list (auto-discovery is
-  # disabled to avoid uploading the per-run files alongside, which
-  # would land three conflicting numbers per package).
+  # + `coverage/lcov.info` per package. The upload step globs those
+  # merged lcov files (one per package that emitted coverage) so the
+  # file set stays in lockstep with the package list — a newly-tested
+  # module is picked up with no edit here — while `disable_search`
+  # still stops Codecov from also grabbing any stray per-run lcov.
   coverage-upload:
     runs-on: ubuntu-latest
     needs: [unit-tests, integration-tests]
@@ -206,11 +251,24 @@ jobs:
       - name: Merge coverage (unit + integration)
         run: pnpm coverage:merge
 
+      # Enumerate exactly the merged per-package lcov files the merge step
+      # produced. Globbing keeps this in lockstep with the package set — the
+      # previous hardcoded list had silently gone stale, omitting 8 tested
+      # packages (api-keys, automation, calendar, data-models, files, kanban,
+      # secrets, query) from the Codecov dashboard.
+      - name: Collect merged lcov files
+        id: lcov
+        if: always()
+        run: |
+          files=$(find packages services -maxdepth 3 -path '*/coverage/lcov.info' | sort | paste -sd, -)
+          echo "Uploading lcov files: $files"
+          echo "files=$files" >> "$GITHUB_OUTPUT"
+
       - name: Upload coverage to Codecov
         if: always()
         uses: codecov/codecov-action@v6
         with:
-          files: ./packages/auth/coverage/lcov.info,./packages/common/coverage/lcov.info,./packages/feature-flags/coverage/lcov.info,./packages/notifications/coverage/lcov.info,./packages/organizations/coverage/lcov.info,./packages/rbac/coverage/lcov.info,./packages/users/coverage/lcov.info,./packages/webhooks/coverage/lcov.info,./services/api/coverage/lcov.info,./services/web/coverage/lcov.info
+          files: ${{ steps.lcov.outputs.files }}
           disable_search: true
           fail_ci_if_error: false
           token: ${{ secrets.CODECOV_TOKEN }}

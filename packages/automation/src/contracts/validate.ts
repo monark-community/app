@@ -26,6 +26,7 @@ export type GraphIssueCode =
   | "missing-required"
   | "orphan-node"
   | "cycle"
+  | "duplicate-slug"
   | "unknown-node";
 
 export type GraphIssueSeverity = "error" | "warning";
@@ -111,6 +112,20 @@ export function validateGraph(
       nodeId: trig.id,
       fieldKey: eventField.key,
     });
+  }
+
+  // ── Slug uniqueness ───────────────────────────────────────────────────────
+  // A node's `{{ steps.<slug> }}` address must be unique, else a reference
+  // resolves ambiguously (the engine builds the `steps` map last-wins). The
+  // editor prevents duplicates, but a graph created via the API might carry them.
+  const slugCounts = new Map<string, number>();
+  for (const n of nodes) {
+    if (n.slug) slugCounts.set(n.slug, (slugCounts.get(n.slug) ?? 0) + 1);
+  }
+  for (const n of nodes) {
+    if (n.slug && (slugCounts.get(n.slug) ?? 0) > 1) {
+      issues.push({ code: "duplicate-slug", severity: "error", nodeId: n.id });
+    }
   }
 
   // ── Per-node: unknown type + unsatisfied required fields ──────────────────

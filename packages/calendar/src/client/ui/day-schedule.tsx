@@ -2,6 +2,7 @@
 
 import type { CalendarEvent, CalendarEventTime } from "../../contracts/types";
 import { TOTAL_HEIGHT_PX } from "../constants";
+import type { TimeFormat } from "../date-utils";
 import { DayEventBlock } from "./day-event-block";
 
 function snapToQuarter(rawMinutes: number): CalendarEventTime {
@@ -85,6 +86,7 @@ export function DaySchedule({
   selectedEventId,
   pendingEditEventId,
   color,
+  timeFormat,
   onSlotClick,
   onEventClick,
   onDragStart,
@@ -94,6 +96,7 @@ export function DaySchedule({
   selectedEventId?: string | null;
   pendingEditEventId?: string | null;
   color?: string;
+  timeFormat?: TimeFormat;
   onSlotClick: (
     columnId: string,
     time: CalendarEventTime,
@@ -147,6 +150,7 @@ export function DaySchedule({
             color={color}
             colIndex={colIndex}
             colSpan={colSpan}
+            timeFormat={timeFormat}
             onClick={(ax, ay, side) => onEventClick?.(event, ax, ay, side)}
             onDragStart={(type, clientY) => onDragStart?.(event, columnId, type, clientY)}
           />

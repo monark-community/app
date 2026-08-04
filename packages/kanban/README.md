@@ -1,5 +1,7 @@
 # @monark/kanban
 
+> **User guide:** [docs/user-guide.md](docs/user-guide.md) — how to use the boards (this README is the developer reference).
+
 A configurable **Kanban board** view (a sibling to `@monark/calendar`). An
 organization owns multiple named boards ; each board owns an ordered list of
 columns (Backlog / Todo / In Progress / Review / QA / Done by default), and each
@@ -44,7 +46,7 @@ schema fragment [`prisma/kanban.prisma`](prisma/kanban.prisma) under the
 | `kanbanRouter`                                    | `/server`    | tRPC router (`boards` / `columns` / `cards`)        |
 | `registerKanbanPermissions()`                     | `/server`    | registers `kanban.{view,create,edit,delete,manage}` |
 | `registerKanbanEventTypes()`                      | `/server`    | registers the webhook-picker descriptions           |
-| `registerKanbanFeatureFlags()`                    | `/server`    | registers the `kanban.board` flag                   |
+| `registerKanbanFeatureFlags()`                    | `/server`    | registers the `kanban.board` + `kanban.query` flags |
 | `registerKanbanNotificationKinds()`               | `/server`    | registers the `kanban.card.assigned` kind           |
 | `registerKanbanNotificationSubscriber()`          | `/server`    | notifies the assignee on `card-assigned`            |
 | `createBoard` / `moveCard` / `reorderColumns` / … | `/server`    | data-layer helpers                                  |
@@ -57,7 +59,7 @@ schema fragment [`prisma/kanban.prisma`](prisma/kanban.prisma) under the
 Prisma models under the `// ── MODULE: kanban ──` banner in this module's own
 fragment [`prisma/kanban.prisma`](prisma/kanban.prisma) (assembled into the
 generated `schema.prisma`) — migrations
-`20260725200201_add_kanban` + `20260726023411_kanban_card_fields`:
+`20260725200201_add_kanban` ; `20260726023411_kanban_card_fields` ; `20260726040000_kanban_card_multi_assignee` ; `20260727150000_kanban_card_multi_reviewer` ; `20260727170000_kanban_card_subtasks`:
 
 - **`KanbanBoard`** — org-scoped, soft-deleted ; `name`, `description`, `color`.
 - **`KanbanBoardRoleAccess`** — `(boardId, roleId)` per-board role grant.
@@ -69,12 +71,15 @@ generated `schema.prisma`) — migrations
     `KanbanSubtask[]` of `{ id, title, done }`, coerced with `parseSubtasks`),
     `position`, soft-deleted. `assigneeIds` / `reviewerIds` are org-member userIds
     (not FKs, resolved for display by the web).
+- **`KanbanView`** — a saved MonarkQL query per board : `boardId`, `name`,
+  `query` (`FilterNode` JSON), `shared`, `createdBy` ; migration
+  `20260803140000_add_kanban_views`.
 
 ## Events emitted
 
 `kanban.board-created`, `kanban.column-created`, `kanban.card-created`,
 `kanban.card-updated` (carries a `changed` array over `title` / `description` /
-`assignee` / `reviewer` / `dueAt` / `priority` / `estimate`, and the full
+`assignee` / `reviewer` / `dueAt` / `priority` / `estimate` / `subtasks`, and the full
 `assigneeIds`), `kanban.card-moved` (carries `fromColumnId` / `toColumnId`),
 `kanban.card-deleted`, `kanban.card-assigned` (per newly-added assignee ; carries
 `boardName` / `cardTitle` / `assigneeId`).
@@ -92,8 +97,7 @@ activated by a side-effect import in `server/index.ts`.
 
 ## Feature flags
 
-`registerKanbanFeatureFlags()` registers `kanban.board` (default-on). The web
-route 404s and the primary-nav entry hides when it resolves `false`.
+`registerKanbanFeatureFlags()` registers `kanban.board` (default-on) and `kanban.query` (default-off). The web route 404s and the primary-nav entry hides when `kanban.board` resolves `false` ; `kanban.query` gates the MonarkQL query bar and the `cards.list` filter.
 
 ## tRPC surface
 
@@ -107,6 +111,17 @@ route 404s and the primary-nav entry hides when it resolves `false`.
 - `cards.search` — title match across the caller's accessible boards (scoped by
   the same row-level rule as `boards.list`), returning each card's board name.
   Powers the global command palette's kanban results.
+- `cards.list` — a board's cards AND-ed with an optional MonarkQL `filter` tree
+  (`@monark/query`), compiled to a Prisma `where` by `server/query-compiler.ts`
+  (`compileKanbanFilter`). Fields : `title` / `description` (text), `status`
+  (columnId), `assignee` / `reviewer` (id arrays), `priority` (ordered enum —
+  `>=HIGH`), `due` (date), `estimate` (number), `created` / `updated`. Gated by
+  `kanban.view` + board access ; `@variables` (`@me`, `@today`, …) resolve on the
+  server. Behind the `kanban.query` flag.
+- `views.{list, create, update, delete}` — **saved views** : a named `filter`
+  tree per board (`KanbanView`), personal or `shared` to everyone with board
+  access, editable only by its owner. Reading gates on `kanban.view` + board
+  access ; `list` returns a `mine` flag. Parity with data-models' record views.
 - `members` — active org members for the assignee picker + avatar resolution.
 
 Every mutation guards with `requirePermission(ctx, "kanban.<key>", orgId)` and

@@ -68,7 +68,7 @@ function checkNode(): void {
   if (Number.isNaN(major) || major < 22) {
     fail(
       "node",
-      `Node 22+ required (have ${process.versions.node}). The .nvmrc pins v24 ; install with nvm / fnm / volta.`,
+      `Node 22+ required (have ${process.versions.node}). The .nvmrc pins v22 ; install with nvm / fnm / volta.`,
     );
   }
   log("node", `${process.versions.node} (>=22 required) ✓`);

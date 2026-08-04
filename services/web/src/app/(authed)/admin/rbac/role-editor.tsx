@@ -168,7 +168,13 @@ export function RoleEditor(
     () =>
       (permsQuery.data?.categories ?? []).map((cat) => ({
         key: cat.category,
-        label: t(`categories.${cat.category}` as const),
+        // Registered module categories carry a translated label ; data-models
+        // registers *dynamic* per-model categories ("Data Model: <name>") that
+        // can't have a static i18n key, so fall back to the raw category
+        // string — already human-readable — instead of a missing-key path.
+        label: t.has(`categories.${cat.category}` as const)
+          ? t(`categories.${cat.category}` as const)
+          : cat.category,
         items: cat.permissions.map((p) => ({
           value: p.key,
           primary: p.key,

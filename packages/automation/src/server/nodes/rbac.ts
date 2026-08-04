@@ -13,6 +13,14 @@ export const rbacAssignRoleNode = defineNode({
     icon: "ShieldPlus",
     inputs: [{ id: "in" }],
     outputs: [{ id: "out" }],
+    outputFields: [
+      { key: "assignmentId", type: "string", description: "The role-assignment id." },
+      {
+        key: "alreadyActive",
+        type: "boolean",
+        description: "True if the user already held the role.",
+      },
+    ],
     configFields: [
       { key: "userId", label: "User", type: "user", required: true },
       { key: "roleKey", label: "Role key", type: "text", required: true, placeholder: "editor" },
@@ -50,6 +58,10 @@ export const rbacRemoveRoleNode = defineNode({
     icon: "ShieldMinus",
     inputs: [{ id: "in" }],
     outputs: [{ id: "out" }],
+    outputFields: [
+      { key: "revoked", type: "boolean", description: "Whether a role was revoked." },
+      { key: "roleKey", type: "string", description: "The role key that was revoked." },
+    ],
     configFields: [
       { key: "userId", label: "User", type: "user", required: true },
       { key: "roleKey", label: "Role key", type: "text", required: true },

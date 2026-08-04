@@ -705,6 +705,145 @@ describe("automation — control nodes", () => {
     expect(run.steps.find((s) => s.nodeId === "e2")?.status).toBe("SUCCEEDED");
   });
 
+  it("Set Variable exposes a run-global {{ vars.<name> }} to a downstream node", async () => {
+    const runId = await runGraph("Vars", {
+      nodes: [
+        { id: "t", type: "automation.event-trigger", position: { x: 0, y: 0 }, config: {} },
+        {
+          id: "sv",
+          type: "automation.set-variable",
+          position: { x: 200, y: 0 },
+          config: { name: "greeting", value: "hello-var" },
+        },
+        {
+          id: "e",
+          type: "test.echo",
+          position: { x: 400, y: 0 },
+          config: { message: "{{ vars.greeting }}" },
+        },
+      ],
+      edges: [
+        { id: "e1", source: "t", target: "sv" },
+        { id: "e2", source: "sv", target: "e" },
+      ],
+    });
+    await drain();
+    const run = await callerFor(U_ADMIN, ORG).runs.getById({ id: runId });
+    expect(run.status).toBe("SUCCEEDED");
+    // The downstream echo resolved the variable the Set Variable node set.
+    expect((run.steps.find((s) => s.nodeId === "e")?.output as { echoed?: string })?.echoed).toBe(
+      "hello-var",
+    );
+  });
+
+  it("resolves a node output addressed by its `{{ steps.<slug> }}` alias", async () => {
+    const runId = await runGraph("Slugged", {
+      nodes: [
+        { id: "t", type: "automation.event-trigger", position: { x: 0, y: 0 }, config: {} },
+        {
+          id: "c",
+          type: "automation.constant",
+          position: { x: 150, y: 0 },
+          config: { valueType: "text", value: "from-slug" },
+          slug: "my_const",
+        },
+        {
+          id: "e",
+          type: "test.echo",
+          position: { x: 350, y: 0 },
+          // References the Constant by its slug, not its node id ; the engine must
+          // pull `c` in (no control edge) and resolve `steps.my_const.value`.
+          config: { message: "{{ steps.my_const.value }}" },
+        },
+      ],
+      edges: [{ id: "e1", source: "t", target: "e" }],
+    });
+    await drain();
+    const run = await callerFor(U_ADMIN, ORG).runs.getById({ id: runId });
+    expect(run.status).toBe("SUCCEEDED");
+    expect((run.steps.find((s) => s.nodeId === "e")?.output as { echoed?: string })?.echoed).toBe(
+      "from-slug",
+    );
+  });
+
+  it("composes the whole data-flow redesign: steps.<slug> feeding a Set Variable read downstream via vars", async () => {
+    const runId = await runGraph("FullFlow", {
+      nodes: [
+        { id: "t", type: "automation.event-trigger", position: { x: 0, y: 0 }, config: {} },
+        // Emits { title: "linked title" }, addressed by its slug below.
+        { id: "p", type: "test.payload", position: { x: 150, y: 0 }, config: {}, slug: "lookup" },
+        // Stores the slug-addressed value into a workflow variable.
+        {
+          id: "sv",
+          type: "automation.set-variable",
+          position: { x: 300, y: 0 },
+          config: { name: "msg", value: "{{ steps.lookup.title }}" },
+        },
+        // Reads it back through the vars scope.
+        {
+          id: "e",
+          type: "test.echo",
+          position: { x: 450, y: 0 },
+          config: { message: "{{ vars.msg }}" },
+        },
+      ],
+      edges: [
+        { id: "e1", source: "t", target: "p" },
+        { id: "e2", source: "p", target: "sv" },
+        { id: "e3", source: "sv", target: "e" },
+      ],
+    });
+    await drain();
+    const run = await callerFor(U_ADMIN, ORG).runs.getById({ id: runId });
+    expect(run.status).toBe("SUCCEEDED");
+    // steps.lookup.title → set var msg → vars.msg → echo, all the way through.
+    expect((run.steps.find((s) => s.nodeId === "e")?.output as { echoed?: string })?.echoed).toBe(
+      "linked title",
+    );
+  });
+
+  it("a workflow variable set before a Delay is still in scope after the run resumes", async () => {
+    // Proves `collectVars` replay on resume: the var is set, the run suspends at
+    // the Delay, and on resume the downstream node must still see `{{ vars.v }}`.
+    const runId = await runGraph("VarsResume", {
+      nodes: [
+        { id: "t", type: "automation.event-trigger", position: { x: 0, y: 0 }, config: {} },
+        {
+          id: "sv",
+          type: "automation.set-variable",
+          position: { x: 150, y: 0 },
+          config: { name: "v", value: "kept" },
+        },
+        { id: "d", type: "automation.delay", position: { x: 300, y: 0 }, config: { seconds: 1 } },
+        {
+          id: "e",
+          type: "test.echo",
+          position: { x: 450, y: 0 },
+          config: { message: "{{ vars.v }}" },
+        },
+      ],
+      edges: [
+        { id: "e1", source: "t", target: "sv" },
+        { id: "e2", source: "sv", target: "d" },
+        { id: "e3", source: "d", target: "e" },
+      ],
+    });
+    await drain();
+    // Suspended at the Delay: the echo hasn't run yet.
+    let run = await callerFor(U_ADMIN, ORG).runs.getById({ id: runId });
+    expect(run.status).toBe("PENDING");
+    expect(run.steps.find((s) => s.nodeId === "e")).toBeUndefined();
+
+    await new Promise((r) => setTimeout(r, 1200));
+    await drain();
+    run = await callerFor(U_ADMIN, ORG).runs.getById({ id: runId });
+    expect(run.status).toBe("SUCCEEDED");
+    // The variable survived the suspend/resume and resolved for the echo.
+    expect((run.steps.find((s) => s.nodeId === "e")?.output as { echoed?: string })?.echoed).toBe(
+      "kept",
+    );
+  });
+
   it("runs a source Constant (no control edge) wired into multiple fields", async () => {
     const runId = await runGraph("FanOut", {
       nodes: [

@@ -6,7 +6,7 @@ Spec: [docs/features-planning/phase-1/auth-login-password.md](../../docs/feature
 
 ## What's here (Phase 1 MVP)
 
-- `/server` — `authRouter` (tRPC) with `ping`, `session`, `checkPassword`, `signUp`, `notifySignedIn` / `notifySignedOut` / `notifyPasswordChanged`, `markOwnEmailVerified`, `requestConfirmationResend`, plus the `trustedDevices` sub-router (`mine`, `recognize`, `revoke`) and the `totp` sub-router (`status`, `beginEnrollment`, `confirmEnrollment`, `verifyCode`, `verifyRecoveryCode`, `regenerateRecoveryCodes`, `disable`, `isChallengeRequired`, `adminEnforcement`); `signUpUser` orchestrator (public `auth.signUp`, triggers verification email); `checkPassword` (offline rules + HIBP k-anonymity); email-verification helpers (`markEmailVerified`, `recordResendAttempt`, `requireVerifiedEmail`); trusted-device helpers (`recognizeOrRegister`, `listTrustedDevices`, `revokeTrustedDevice`, `DEVICE_COOKIE_NAME`) with per-device Supabase session revocation via the `DeviceSession` join table; TOTP helpers (`beginTotpEnrollment`, `confirmTotpEnrollment`, `verifyTotpCode`, `verifyRecoveryCode`, `regenerateRecoveryCodes`, `disableTotp`, `getTotpStatus`, `isTotpActive`, `requiresTotpChallenge`, `markDeviceTotpVerified`, `adminTotpEnforcement`, `cleanupStaleTotpEnrollments`, `TotpRateLimitError`); account lifecycle (`hardDeleteUser`, `processExpiredDeletions`); AES-256-GCM crypto (`encryptSecret` / `decryptSecret`); SMTP outbound (`sendMail`, `registerNewDeviceEmailListener`); admin client (`getSupabaseAdmin`); event emitters; `getCurrentUser` / `requireUser` read interface.
+- `/server` — `authRouter` (tRPC) with `ping`, `session`, `checkPassword`, `signUp`, `notifySignedIn` / `notifySignedOut` / `notifyPasswordChanged`, `markOwnEmailVerified`, `requestConfirmationResend`, plus the `trustedDevices` sub-router (`mine`, `recognize`, `revoke`, `revokeAll`) and the `totp` sub-router (`status`, `beginEnrollment`, `confirmEnrollment`, `verifyCode`, `verifyRecoveryCode`, `regenerateRecoveryCodes`, `disable`, `isChallengeRequired`, `adminEnforcement`); `signUpUser` orchestrator (public `auth.signUp`, triggers verification email); `checkPassword` (offline rules + HIBP k-anonymity); email-verification helpers (`markEmailVerified`, `recordResendAttempt`, `requireVerifiedEmail`); trusted-device helpers (`recognizeOrRegister`, `listTrustedDevices`, `revokeTrustedDevice`, `DEVICE_COOKIE_NAME`) with per-device Supabase session revocation via the `DeviceSession` join table; TOTP helpers (`beginTotpEnrollment`, `confirmTotpEnrollment`, `verifyTotpCode`, `verifyRecoveryCode`, `regenerateRecoveryCodes`, `disableTotp`, `getTotpStatus`, `isTotpActive`, `requiresTotpChallenge`, `markDeviceTotpVerified`, `adminTotpEnforcement`, `cleanupStaleTotpEnrollments`, `TotpRateLimitError`); account lifecycle (`hardDeleteUser`, `processExpiredDeletions`); AES-256-GCM crypto (`encryptSecret` / `decryptSecret`); SMTP outbound (`sendMail`, `registerNewDeviceEmailListener`); admin client (`getSupabaseAdmin`); event emitters; `getCurrentUser` / `requireUser` read interface.
 - `/contracts` — event types (including `EmailVerifiedEvent`, `TrustedDeviceAddedEvent`, `TrustedDeviceRevokedEvent`, `TotpEnabledEvent`, `TotpDisabledEvent`, `TotpRecoveryCodeUsedEvent`), `PASSWORD_RULES` constants, `PasswordCheckResult` + `PasswordFailureReason` types, `checkPasswordOffline` pure function (safe for browser + server), `PASSWORD_RULE_HINTS` map for UI.
 - `/client` — placeholder. The web's signup/signin/verification/totp pages live under [`services/web/src/app/signin`](../../services/web/src/app/signin) / [`signup`](../../services/web/src/app/signup) / [`auth/confirm`](../../services/web/src/app/auth/confirm) directly, because they rely on Next-specific primitives (server actions, `redirect()`, `cookies()`).
 
@@ -86,6 +86,7 @@ tRPC procedures under `auth.*`:
 | `auth.signUp`                       | `SignUpInput`                                                             | `SignUpResult` (mutation; runs `signUpUser` end-to-end)                                                    |
 | `auth.notifySignedIn`               | `{ trustedDeviceId? }?`                                                   | void (mutation; requires `ctx.userId`)                                                                     |
 | `auth.notifySignedOut`              | `{ scope: "local" \| "global" }`                                          | void (mutation)                                                                                            |
+| `auth.notifyPasswordChanged`        | `{ triggeredBy?: "user" \| "reset" }`                                     | void (mutation; requires `ctx.userId`; emits `user.password-changed`)                                      |
 | `auth.markOwnEmailVerified`         | —                                                                         | void (mutation; uses `ctx.userId` post-verifyOtp)                                                          |
 | `auth.requestConfirmationResend`    | `{ email }`                                                               | `ResendActionResult` (mutation)                                                                            |
 | `auth.trustedDevices.mine`          | —                                                                         | `TrustedDeviceView[]`                                                                                      |
@@ -100,6 +101,7 @@ tRPC procedures under `auth.*`:
 | `auth.totp.regenerateRecoveryCodes` | `{ code }`                                                                | `{ recoveryCodes }` (mutation; invalidates old codes)                                                      |
 | `auth.totp.disable`                 | `{ code }`                                                                | void (mutation)                                                                                            |
 | `auth.totp.isChallengeRequired`     | `{ trustedDeviceId? }?`                                                   | `boolean` (query)                                                                                          |
+| `auth.totp.adminEnforcement`        | —                                                                         | `{ required, … }` (query; admin TOTP enforcement status for the caller)                                    |
 
 ## Dependencies
 
@@ -158,17 +160,18 @@ Pull all four values from `pnpm supabase status`. The server-only `SUPABASE_SECR
   - [`services/web/src/lib/supabase/server.ts`](../../services/web/src/lib/supabase/server.ts) for server components + server actions
 - The api's token verification lives in [`services/api/src/lib/supabase.ts`](../../services/api/src/lib/supabase.ts) and feeds into the tRPC context in [`services/api/src/trpc/context.ts`](../../services/api/src/trpc/context.ts).
 
-### Creating a MONARK_ADMIN bootstrap user
+### Creating a SYSADMIN bootstrap user
 
-After signing up your first user, grant them MONARK_ADMIN:
+After signing up your first user, grant them the built-in SYSADMIN role through the `tools/sysadmin.ts` CLI (or a direct SQL insert) ; `assignRole` takes a `roleId`, not a role name, and SYSADMIN is never assignable through the admin UI:
 
 ```ts
 import { assignRole } from "@monark/rbac/server";
 
 await assignRole({
   userId: "<your supabase uuid>",
-  role: "MONARK_ADMIN",
-  grantedById: "system",
+  roleId: "<built-in SYSADMIN role id>",
+  organizationId: null,
+  grantedById: null,
   reason: "bootstrap",
 });
 ```

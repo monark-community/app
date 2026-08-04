@@ -16,6 +16,9 @@ export const delayNode = defineNode({
     icon: "Clock",
     inputs: [{ id: "in" }],
     outputs: [{ id: "out" }],
+    outputFields: [
+      { key: "delayedSeconds", type: "number", description: "How many seconds the run paused." },
+    ],
     configFields: [{ key: "seconds", label: "Delay (seconds)", type: "number", required: true }],
   },
   configSchema: z.object({ seconds: z.coerce.number().int().min(1).max(86_400) }),

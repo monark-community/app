@@ -13,11 +13,14 @@ import {
   type RelationOption,
 } from "@/components/fields";
 import {
+  Bell,
   CalendarDays,
   Check,
+  ChevronDown,
   Database,
   Download,
   GripVertical,
+  ListFilter,
   MoreHorizontal,
   Share2,
   SquareKanban,
@@ -26,11 +29,16 @@ import {
 } from "lucide-react";
 import { DataTable } from "@/components/patterns/data-table/data-table";
 import { NavRailView } from "@/components/nav-rail";
+import { QueryBar, type QueryFieldMeta } from "@/components/query/query-bar";
+import { QueryChipBar } from "@/components/query/query-chip-bar";
 import {
+  CreateFab,
   DiscussionSection,
   FieldRow,
   FilterBar,
   FilterBarSearch,
+  FilterFieldControl,
+  ListMobileBar,
   FilterMenu,
   FormActionsFooter,
   MultiSelect,
@@ -52,6 +60,15 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -1702,7 +1719,540 @@ const SecretPanelStory: FC = () => {
   );
 };
 
+// The structured query bar (MonarkQL) : a populated valid query, an invalid
+// one (illegal operator → error styling), and the autocomplete popover open on
+// a field's value options. Self-driven — seeds each input's text (and focuses
+// the last) so the static capture shows all three states.
+const QUERY_BAR_FIELDS: QueryFieldMeta[] = [
+  { key: "title", label: "Title", kind: "text" },
+  { key: "status", label: "Status", kind: "select", options: STATUS },
+  { key: "priority", label: "Priority", kind: "number" },
+  { key: "tags", label: "Tags", kind: "multiSelect", options: TAGS },
+  { key: "done", label: "Done", kind: "boolean" },
+  { key: "due", label: "Due date", kind: "date" },
+];
+const QUERY_BAR_LABELS = {
+  placeholder: "Filter… e.g. status:active priority:>3",
+  invalid: "Invalid query:",
+  fieldsHeading: "Fields",
+  valuesHeading: "Values",
+  hint: "Type field:value — e.g. status:active, priority:>3, -done:true",
+};
+
+const QueryDemoBar: FC<{ initial: string; focus?: boolean }> = ({ initial, focus }) => {
+  const [text, setText] = useState(initial);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (focus) ref.current?.querySelector("input")?.focus();
+  }, [focus]);
+  return (
+    <div ref={ref}>
+      <QueryBar
+        fields={QUERY_BAR_FIELDS}
+        text={text}
+        onTextChange={setText}
+        onChange={() => {}}
+        labels={QUERY_BAR_LABELS}
+      />
+    </div>
+  );
+};
+
+const QueryBarStory: FC = () => (
+  <div className="flex max-w-xl flex-col gap-6 p-6">
+    <div>
+      <p className="mb-1 text-xs font-medium text-muted-foreground">Valid query</p>
+      <QueryDemoBar initial="status:active priority:>3 -done:true" />
+    </div>
+    <div>
+      <p className="mb-1 text-xs font-medium text-muted-foreground">Invalid query</p>
+      <QueryDemoBar initial="status:>3" />
+    </div>
+    <div>
+      <p className="mb-1 text-xs font-medium text-muted-foreground">
+        Autocomplete: operators + variables
+      </p>
+      <QueryDemoBar initial="due:" focus />
+    </div>
+  </div>
+);
+
+// The chip / token query editor (MonarkQL) : the same fields the kanban board
+// feeds it, seeded so ids resolve to human labels — `Status: Active`,
+// `Priority ≥ High`, `Assignee: Ada Lovelace, Grace Hopper` (NOT raw ids) — plus
+// the empty "Add filter" state that opens the guided add popover.
+const CHIP_BAR_FIELDS: QueryFieldMeta[] = [
+  { key: "title", label: "Title", kind: "text" },
+  {
+    key: "status",
+    label: "Status",
+    kind: "select",
+    options: STATUS.map((s) => ({ value: s.value, label: s.label })),
+  },
+  {
+    key: "assignee",
+    label: "Assignee",
+    kind: "multiSelect",
+    options: [
+      { value: "u1", label: "Ada Lovelace" },
+      { value: "u2", label: "Alan Turing" },
+      { value: "u3", label: "Grace Hopper" },
+    ],
+    userValued: true,
+  },
+  {
+    key: "priority",
+    label: "Priority",
+    kind: "orderedSelect",
+    options: [
+      { value: "LOW", label: "Low" },
+      { value: "MEDIUM", label: "Medium" },
+      { value: "HIGH", label: "High" },
+      { value: "CRITICAL", label: "Critical" },
+    ],
+  },
+  { key: "due", label: "Due date", kind: "date" },
+  { key: "estimate", label: "Estimate", kind: "number" },
+];
+
+const ChipDemoBar: FC<{ initial: string }> = ({ initial }) => {
+  const [text, setText] = useState(initial);
+  return (
+    <QueryChipBar
+      fields={CHIP_BAR_FIELDS}
+      text={text}
+      onTextChange={setText}
+      onChange={() => {}}
+      labels={QUERY_BAR_LABELS}
+    />
+  );
+};
+
+const QueryChipBarStory: FC = () => (
+  <div className="flex max-w-2xl flex-col gap-6 p-6">
+    <div>
+      <p className="mb-1 text-xs font-medium text-muted-foreground">Resolved chips (ids → names)</p>
+      <ChipDemoBar initial="status:active priority:>=HIGH assignee:u1,u3 estimate:>3" />
+    </div>
+    <div>
+      <p className="mb-1 text-xs font-medium text-muted-foreground">Empty — add a filter</p>
+      <ChipDemoBar initial="" />
+    </div>
+  </div>
+);
+
+// The kanban top toolbar's responsive layout : desktop keeps the roomy single
+// row (board switcher · query · saved views) ; on mobile the three controls stop
+// fighting for one row — the switcher leads, the query collapses behind 🔍, and
+// the views picker sits in the options slot (shared ListMobileBar). Read the
+// MOBILE capture for the fix ; tap-to-expand is shown by `kanban-toolbar-search`.
+function KanbanToolbarShell({ expandSearch }: { expandSearch?: boolean }) {
+  const rootRef = useRef<HTMLDivElement>(null);
+  const done = useRef(false);
+  const [text, setText] = useState("status:active priority:>=HIGH assignee:u1");
+  useEffect(() => {
+    if (!expandSearch || done.current) return;
+    done.current = true;
+    let attempts = 0;
+    const tryClick = () => {
+      const btn = rootRef.current?.querySelector<HTMLButtonElement>(
+        'button[aria-label="Filter cards"]',
+      );
+      if (btn) btn.click();
+      else if (attempts++ < 10) setTimeout(tryClick, 60);
+    };
+    setTimeout(tryClick, 80);
+  }, [expandSearch]);
+
+  const boardSwitcher = (
+    <div className="flex min-w-0 items-center rounded-md border border-input bg-background shadow-sm">
+      <button
+        type="button"
+        className="inline-flex min-w-0 flex-1 items-center gap-1.5 rounded-md py-1.5 pl-3 pr-2 text-sm font-medium hover:bg-accent"
+      >
+        <span
+          className="h-2.5 w-2.5 shrink-0 rounded-full"
+          style={{ backgroundColor: "#6366f1" }}
+        />
+        <span className="min-w-0 flex-1 truncate text-left md:max-w-[45dvw] md:flex-none">
+          Product Roadmap
+        </span>
+        <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+      </button>
+      <button
+        type="button"
+        aria-label="Edit board"
+        className="mr-1 shrink-0 rounded-md p-1.5 text-muted-foreground hover:bg-accent"
+      >
+        <Star className="h-3.5 w-3.5" aria-hidden />
+      </button>
+    </div>
+  );
+  const queryChipBar = (
+    <QueryChipBar
+      fields={CHIP_BAR_FIELDS}
+      text={text}
+      onTextChange={setText}
+      onChange={() => {}}
+      labels={QUERY_BAR_LABELS}
+      className="min-w-0 flex-1"
+    />
+  );
+  const viewsMenu = (
+    <Button variant="outline" size="sm" className="gap-1.5">
+      <Share2 className="h-4 w-4" aria-hidden />
+      Views
+      <ChevronDown className="h-3.5 w-3.5 opacity-60" aria-hidden />
+    </Button>
+  );
+
+  return (
+    <div ref={rootRef} className="border-b border-border px-4 py-2">
+      <div className="hidden items-center gap-2 md:flex">
+        {boardSwitcher}
+        {queryChipBar}
+        {viewsMenu}
+      </div>
+      <ListMobileBar
+        lead={boardSwitcher}
+        search={queryChipBar}
+        options={viewsMenu}
+        searchLabel="Filter cards"
+        closeLabel="Close filter"
+      />
+    </div>
+  );
+}
+const KanbanToolbarStory: FC = () => <KanbanToolbarShell />;
+const KanbanToolbarSearchStory: FC = () => <KanbanToolbarShell expandSearch />;
+
+/**
+ * Real-component validation of the simplified mobile list toolbar (the shared
+ * `ListMobileBar` + `TableTools mode="sheet"` + `CreateFab`). `ListMobileBar` is
+ * `md:hidden`, so read the *mobile* capture. Two variants stack : the data-model
+ * bar (Views lead + expandable query + ⋯ options with a Follow section) and the
+ * admin bar (search leads, no views). The `list-options-sheet` story auto-opens
+ * the ⋯ sheet so its Sort / Columns / Follow sections are visible.
+ */
+const QUERY_FIELDS_DEMO: QueryFieldMeta[] = [
+  { key: "title", label: "Title", kind: "text" },
+  {
+    key: "status",
+    label: "Status",
+    kind: "select",
+    options: STATUS.map((s) => ({ value: s.value, label: s.label })),
+  },
+  { key: "budget", label: "Budget", kind: "number" },
+  { key: "published", label: "Published", kind: "boolean" },
+];
+
+const QUERY_LABELS_DEMO = {
+  placeholder: "field:value…",
+  invalid: "Invalid query:",
+  fieldsHeading: "Fields",
+  valuesHeading: "Values",
+  hint: "Try status:active budget:>5000",
+};
+
+/** Stand-in for the real ViewsMenu lead trigger (the real one needs tRPC). */
+function MockViewsLead({ name }: { name: string }) {
+  return (
+    <button
+      type="button"
+      className="flex w-full items-center gap-2 rounded-md border border-input bg-background px-3 py-2 shadow-sm"
+    >
+      <ListFilter className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+      <span className="min-w-0 flex-1 truncate text-left text-sm font-medium">{name}</span>
+      <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+    </button>
+  );
+}
+
+/** The "Follow this list" row appended into the ⋯ sheet via `extraSections`. */
+function FollowSheetSection() {
+  return (
+    <div className="space-y-1">
+      <h3 className="px-1 text-sm font-semibold text-foreground">Notifications</h3>
+      <div className="flex items-center justify-between rounded-md border border-border px-3 py-2">
+        <span className="flex items-center gap-2 text-sm">
+          <Bell className="h-4 w-4 text-muted-foreground" aria-hidden /> Follow this list
+        </span>
+        <Button variant="outline" size="sm">
+          Follow
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function DataMobileBar() {
+  const layout = useDataTableLayout("screenshot-mobilebar-data");
+  const columns = useDemoColumns();
+  const [q, setQ] = useState("");
+  return (
+    <ListMobileBar
+      searchLabel="Search"
+      closeLabel="Close"
+      lead={<MockViewsLead name="Active deals" />}
+      search={
+        <QueryBar
+          fields={QUERY_FIELDS_DEMO}
+          text={q}
+          onTextChange={setQ}
+          onChange={() => {}}
+          labels={QUERY_LABELS_DEMO}
+        />
+      }
+      options={
+        <TableTools
+          mode="sheet"
+          layout={layout}
+          primaryColumn={DEMO_PRIMARY}
+          columns={columns}
+          labels={TOOLS_LABELS}
+          include={["sorting", "columns"]}
+          extraSections={<FollowSheetSection />}
+        />
+      }
+    />
+  );
+}
+
+function AdminMobileBar() {
+  const layout = useDataTableLayout("screenshot-mobilebar-admin");
+  const columns = useDemoColumns();
+  const [s, setS] = useState("");
+  const filters: FilterConfig[] = [
+    {
+      id: "status",
+      label: "Status",
+      value: "all",
+      onValueChange: () => {},
+      options: [
+        { value: "all", label: "All statuses" },
+        ...STATUS.map((x) => ({ value: x.value, label: x.label })),
+      ],
+    },
+  ];
+  return (
+    <ListMobileBar
+      lead={
+        <FilterBarSearch
+          value={s}
+          onChange={setS}
+          placeholder="Search organizations…"
+          aria-label="Search"
+        />
+      }
+      options={
+        <TableTools
+          mode="sheet"
+          layout={layout}
+          primaryColumn={DEMO_PRIMARY}
+          columns={columns}
+          filters={filters}
+          labels={TOOLS_LABELS}
+          include={["filters", "sorting", "columns"]}
+        />
+      }
+    />
+  );
+}
+
+function MobileListToolbarStory() {
+  return (
+    <div className="space-y-6 p-4">
+      <div className="space-y-2">
+        <p className="text-xs font-mono text-muted-foreground">
+          data list — Views lead / 🔍 / ⋯ (read at mobile width)
+        </p>
+        <div className="rounded-lg border border-border p-3">
+          <DataMobileBar />
+        </div>
+      </div>
+      <div className="space-y-2">
+        <p className="text-xs font-mono text-muted-foreground">admin list — search leads / ⋯</p>
+        <div className="rounded-lg border border-border p-3">
+          <AdminMobileBar />
+        </div>
+      </div>
+      <CreateFab onClick={() => {}} label="Create" />
+    </div>
+  );
+}
+
+/** Auto-opens the ⋯ options sheet (data variant) so its sections are captured. */
+const MobileListOptionsSheetStory: FC = () => {
+  const rootRef = useRef<HTMLDivElement>(null);
+  const done = useRef(false);
+  useEffect(() => {
+    if (done.current) return;
+    done.current = true;
+    let attempts = 0;
+    const tryClick = () => {
+      const btn = rootRef.current?.querySelector<HTMLButtonElement>(
+        `button[aria-label="${TOOLS_LABELS.tools}"]`,
+      );
+      if (btn) btn.click();
+      else if (attempts++ < 10) setTimeout(tryClick, 60);
+    };
+    setTimeout(tryClick, 80);
+  }, []);
+  return (
+    <div ref={rootRef} className="p-4">
+      <DataMobileBar />
+    </div>
+  );
+};
+
+/** Mobile-UX pass verification. The mobile capture emulates a coarse pointer,
+ *  so `pointer-coarse:` touch-target minimums (≥44px) render. Shows: button hit
+ *  areas (incl. a `h-7` row-action and `h-5` file-remove that keep a small
+ *  visual but a 44px tap floor), and AutoForm's mobile sticky save bar. */
+function MobileUxStory() {
+  return (
+    <div className="space-y-6 p-4">
+      <section className="space-y-2">
+        <p className="text-xs font-mono text-muted-foreground">
+          touch targets — coarse pointer floors at ~44px
+        </p>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button>Default</Button>
+          <Button variant="outline">Outline</Button>
+          <Button size="sm">Small</Button>
+          <Button size="icon" aria-label="add">
+            <Plus />
+          </Button>
+          <Button variant="ghost" size="icon" className="h-7 w-7" aria-label="row menu">
+            <MoreHorizontal />
+          </Button>
+          <Button variant="ghost" size="icon" className="h-5 w-5" aria-label="remove">
+            <X />
+          </Button>
+        </div>
+      </section>
+
+      <section className="space-y-2">
+        <p className="text-xs font-mono text-muted-foreground">
+          AutoForm — save bar sticks to the bottom on mobile
+        </p>
+        <div className="h-80 overflow-y-auto rounded-lg border border-border px-6 py-6">
+          <Form />
+        </div>
+      </section>
+    </div>
+  );
+}
+
+/** Auto-open a plain (non-fullscreen) dialog to show the mobile gutter + rounded
+ *  corners + the enlarged close hit area. */
+const MobileDialogStory: FC = () => (
+  <div className="p-4">
+    <Dialog open>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Dialog title</DialogTitle>
+          <DialogDescription>
+            On a phone this now keeps a 1rem gutter, rounded corners, and a larger close target.
+          </DialogDescription>
+        </DialogHeader>
+        <p className="text-sm text-muted-foreground">Body content goes here.</p>
+        <DialogFooter>
+          <Button variant="ghost">Cancel</Button>
+          <Button>Save</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  </div>
+);
+
+/** Date filter now uses the styled Calendar popover (was a native
+ *  `<input type="date">`). Auto-opens the picker so the calendar is captured. */
+const FilterDateStory: FC = () => {
+  const [value, setValue] = useState("2026-08-12");
+  const rootRef = useRef<HTMLDivElement>(null);
+  const done = useRef(false);
+  useEffect(() => {
+    if (done.current) return;
+    done.current = true;
+    let attempts = 0;
+    const open = () => {
+      // The date trigger is portaled inside the PopoverContent, so search the
+      // whole document for the button showing the formatted date.
+      const btn = Array.from(document.querySelectorAll<HTMLButtonElement>("button")).find((b) =>
+        /2026/.test(b.textContent ?? ""),
+      );
+      if (btn) btn.click();
+      else if (attempts++ < 15) setTimeout(open, 60);
+    };
+    setTimeout(open, 120);
+  }, []);
+  const filter: FilterConfig = {
+    id: "due",
+    label: "Due date",
+    type: "date",
+    value,
+    onValueChange: setValue,
+  };
+  // Nested inside an open Popover to exercise the real composition (the calendar
+  // popover opens *inside* the collapsed-tools popover / dropdown submenu). If
+  // the parent panel stays put with the calendar open on top, nesting is safe.
+  return (
+    <div ref={rootRef} className="p-6">
+      <Popover open>
+        <PopoverTrigger asChild>
+          <button type="button" className="rounded-md border border-input px-3 py-1.5 text-sm">
+            Filters
+          </button>
+        </PopoverTrigger>
+        <PopoverContent align="start" className="w-64 p-2">
+          <FilterFieldControl
+            filter={filter}
+            labels={{
+              trigger: "Filters",
+              close: "Close",
+              resetField: "Reset",
+              pickDate: "Pick a date",
+            }}
+          />
+        </PopoverContent>
+      </Popover>
+    </div>
+  );
+};
+
+/** Control-height alignment: a board-selector-style bordered control, a search
+ *  input, and a Views button share one height — h-9 (36px) on desktop, ~44px on
+ *  the mobile viewport (read both captures). Mirrors the kanban toolbar. */
+function ControlHeightsStory() {
+  return (
+    <div className="space-y-3 p-6">
+      <p className="text-xs font-mono text-muted-foreground">
+        board selector · search · views — one height (36px desktop / 44px mobile)
+      </p>
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="flex h-9 items-center gap-1.5 rounded-md border border-input bg-background px-3 text-sm font-medium shadow-sm max-md:min-h-11 pointer-coarse:min-h-11">
+          <span className="h-2.5 w-2.5 rounded-full bg-primary" aria-hidden />
+          Board name
+          <ChevronDown className="h-4 w-4 text-muted-foreground" aria-hidden />
+        </div>
+        <Input placeholder="Search…" className="w-40" />
+        <Button variant="outline" className="gap-1.5">
+          <Bell className="h-4 w-4" aria-hidden />
+          Views
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 export const STORIES: Record<string, FC> = {
+  "control-heights": ControlHeightsStory,
+  "filter-date": FilterDateStory,
+  "mobile-ux": MobileUxStory,
+  "mobile-dialog": MobileDialogStory,
+  "mobile-list-toolbar": MobileListToolbarStory,
+  "list-options-sheet": MobileListOptionsSheetStory,
   "nav-rail": NavRailShellStory,
   "admin-secret-panel": SecretPanelStory,
   "date-picker": DatePickerStory,
@@ -1735,4 +2285,8 @@ export const STORIES: Record<string, FC> = {
   "table-sorting-active": TableSortingActiveStory,
   "panel-header": PanelHeaderStory,
   "discussion-section": DiscussionSectionStory,
+  "query-bar": QueryBarStory,
+  "query-chip-bar": QueryChipBarStory,
+  "kanban-toolbar": KanbanToolbarStory,
+  "kanban-toolbar-search": KanbanToolbarSearchStory,
 };

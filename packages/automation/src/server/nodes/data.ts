@@ -54,6 +54,9 @@ export const dataCreateRecordNode = defineNode({
     icon: "DatabasePlus",
     inputs: [{ id: "in" }],
     outputs: [{ id: "out" }],
+    outputFields: [
+      { key: "recordId", type: "string", description: "The id of the created record." },
+    ],
     configFields: [
       { key: "modelKey", label: "Model", type: "data-model", required: true },
       {
@@ -89,6 +92,9 @@ export const dataUpdateRecordNode = defineNode({
     icon: "DatabasePen",
     inputs: [{ id: "in" }],
     outputs: [{ id: "out" }],
+    outputFields: [
+      { key: "recordId", type: "string", description: "The id of the updated record." },
+    ],
     configFields: [
       { key: "recordId", label: "Record id", type: "text", required: true },
       { key: "data", label: "Patch (JSON)", type: "json", required: true, linkable: true },
@@ -116,6 +122,11 @@ export const dataDeleteRecordNode = defineNode({
     icon: "DatabaseX",
     inputs: [{ id: "in" }],
     outputs: [{ id: "out" }],
+    outputFields: [
+      { key: "recordId", type: "string", description: "The id of the deleted record." },
+      { key: "deleted", type: "boolean", description: "Whether the delete succeeded." },
+      { key: "hard", type: "boolean", description: "True for a hard delete." },
+    ],
     configFields: [
       { key: "recordId", label: "Record id", type: "text", required: true },
       { key: "hard", label: "Hard delete", type: "boolean", help: "Permanently remove the row." },
@@ -154,6 +165,14 @@ export const dataFindRecordsNode = defineNode({
     icon: "DatabaseSearch",
     inputs: [{ id: "in" }],
     outputs: [{ id: "out" }],
+    outputFields: [
+      { key: "count", type: "number", description: "Total matching records." },
+      {
+        key: "records",
+        type: "object",
+        description: "The matched records (id, title, slug, data).",
+      },
+    ],
     configFields: [
       { key: "modelKey", label: "Model", type: "data-model", required: true },
       { key: "field", label: "Field key", type: "text", required: true, placeholder: "status" },
@@ -227,6 +246,12 @@ export const dataFindRecordNode = defineNode({
     icon: "DatabaseSearch",
     inputs: [{ id: "in" }],
     outputs: [{ id: "out" }],
+    outputFields: [
+      { key: "id", type: "string", description: "The record's id." },
+      { key: "title", type: "string", description: "The record's title." },
+      { key: "slug", type: "string", description: "The record's slug." },
+      { key: "data", type: "object", description: "The record's field values." },
+    ],
     configFields: [{ key: "recordId", label: "Record id", type: "text", required: true }],
   },
   configSchema: z.object({ recordId: z.string().min(1) }),

@@ -1,4 +1,5 @@
 import {
+  Braces,
   Building2,
   Database,
   HardDrive,
@@ -10,9 +11,22 @@ import {
 } from "lucide-react";
 
 export type AdminTab = {
-  id: "organizations" | "users" | "rbac" | "webhooks" | "dataModels" | "files" | "secrets";
+  id:
+    | "organizations"
+    | "users"
+    | "rbac"
+    | "webhooks"
+    | "dataModels"
+    | "files"
+    | "secrets"
+    | "serviceAccounts";
   href: `/admin/${string}`;
   icon: LucideIcon;
+  /**
+   * When set, the tab is only shown if this feature flag resolves on for the
+   * viewer. Hidden entirely otherwise (the page itself also 404s off-flag).
+   */
+  flag?: string;
 };
 
 /**
@@ -37,4 +51,10 @@ export const ADMIN_TABS: ReadonlyArray<AdminTab> = [
   { id: "dataModels", href: "/admin/data-models", icon: Database },
   { id: "files", href: "/admin/files", icon: HardDrive },
   { id: "secrets", href: "/admin/secrets", icon: Lock },
+  {
+    id: "serviceAccounts",
+    href: "/admin/service-accounts",
+    icon: Braces,
+    flag: "public-api.service-accounts",
+  },
 ];

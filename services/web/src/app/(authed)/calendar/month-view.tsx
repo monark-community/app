@@ -1,28 +1,25 @@
 "use client";
 
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import type { CalendarDef, CalendarEvent, CalendarEventType } from "@monark/calendar/contracts";
+import type {
+  CalendarDef,
+  CalendarEvent,
+  CalendarEventType,
+  CalendarViewSettings,
+} from "@monark/calendar/contracts";
+import {
+  buildMonthGrid,
+  formatClockTime,
+  getWeekdayLabels,
+  isWeekendDay,
+} from "@monark/calendar/client";
 import { trpc } from "@/lib/trpc";
 import { CalendarManageDialog } from "./calendar-manage-dialog";
 import { CalendarSidebar } from "./calendar-sidebar";
 import { NewEventPopover, type NewEventSubmitPayload } from "./new-event-popover";
 
 // ── Grid helpers ───────────────────────────────────────────────────────────────
-
-function buildMonthGrid(year: number, month: number): Date[][] {
-  // Sunday-first: getDay() returns 0 for Sun → offset 0, 1 for Mon → offset 1, etc.
-  const offset = new Date(year, month, 1).getDay();
-  const weeks: Date[][] = [];
-  for (let w = 0; w < 6; w++) {
-    const week: Date[] = [];
-    for (let d = 0; d < 7; d++) {
-      week.push(new Date(year, month, 1 - offset + w * 7 + d));
-    }
-    weeks.push(week);
-  }
-  return weeks;
-}
 
 function dayKey(d: Date): string {
   return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
@@ -72,8 +69,9 @@ function layoutAllDayEventsForWeek(
   allDayEvents: ParsedEvent[],
 ): { events: SpanningEvent[]; laneCount: number } {
   const msPerDay = 24 * 60 * 60 * 1000;
+  const lastCol = week.length - 1;
   const weekStartMs = new Date(week[0]!).setHours(0, 0, 0, 0);
-  const weekEndMs = new Date(week[6]!).setHours(23, 59, 59, 999);
+  const weekEndMs = new Date(week[lastCol]!).setHours(23, 59, 59, 999);
 
   const overlapping = allDayEvents.filter((ev) => {
     const evStartMs = new Date(ev._startAt).setHours(0, 0, 0, 0);
@@ -94,17 +92,20 @@ function layoutAllDayEventsForWeek(
     const clippedEnd = evEndMs > weekEndMs;
 
     const displayStartMs = clippedStart ? weekStartMs : evStartMs;
-    const displayEndMs = clippedEnd ? new Date(week[6]!).setHours(0, 0, 0, 0) : evEndMs;
+    const displayEndMs = clippedEnd ? new Date(week[lastCol]!).setHours(0, 0, 0, 0) : evEndMs;
 
     const startCol = Math.max(
       0,
-      Math.min(6, Math.round((displayStartMs - weekStartMs) / msPerDay)),
+      Math.min(lastCol, Math.round((displayStartMs - weekStartMs) / msPerDay)),
     );
-    const endCol = Math.max(0, Math.min(6, Math.round((displayEndMs - weekStartMs) / msPerDay)));
+    const endCol = Math.max(
+      0,
+      Math.min(lastCol, Math.round((displayEndMs - weekStartMs) / msPerDay)),
+    );
 
     let lane = 0;
     while (true) {
-      if (!laneBusy[lane]) laneBusy[lane] = Array(7).fill(false);
+      if (!laneBusy[lane]) laneBusy[lane] = Array(week.length).fill(false);
       const conflict = laneBusy[lane]!.slice(startCol, endCol + 1).some(Boolean);
       if (!conflict) {
         for (let c = startCol; c <= endCol; c++) laneBusy[lane]![c] = true;
@@ -122,9 +123,31 @@ function layoutAllDayEventsForWeek(
 // ── Component ──────────────────────────────────────────────────────────────────
 
 type MonthPopoverState =
-  | { mode: "create"; anchorX: number; anchorY: number; date: Date; defaultCalendarId?: string }
+  | {
+      mode: "create";
+      anchorX: number;
+      anchorY: number;
+      date: Date;
+      defaultCalendarId?: string;
+      // Set when the drag-to-create gesture spanned more than one day cell —
+      // the popover opens pre-seeded as a multi-day ALL_DAY span.
+      endDate?: Date;
+      forceAllDay?: boolean;
+    }
   | { mode: "edit"; anchorX: number; anchorY: number; event: CalendarEvent }
   | null;
+
+// Drag-to-create tracks grid (row, col) rather than pixels — month cells are
+// already a discrete `weeks[row][col]` grid, unlike week view's pixel-based
+// columns — via `elementFromPoint` + a `data-cal-row`/`data-cal-col` pair on
+// each cell rather than re-deriving column width from a bounding rect.
+type MonthDragState = {
+  startRow: number;
+  startCol: number;
+  currentRow: number;
+  currentCol: number;
+  hasMoved: boolean;
+};
 
 export function MonthView({
   selectedDate,
@@ -132,12 +155,14 @@ export function MonthView({
   initialCalendars,
   canManage,
   canDelete,
+  settings,
 }: {
   selectedDate: Date;
   onDayClick: (date: Date) => void;
   initialCalendars: CalendarDef[];
   canManage?: boolean;
   canDelete?: boolean;
+  settings: CalendarViewSettings;
 }) {
   const tw = useTranslations("calendar.weekView");
   const tm = useTranslations("calendar.monthView");
@@ -281,32 +306,48 @@ export function MonthView({
     setSelectedEventId(ev.id);
   }, []);
 
-  const handleDayCellClick = useCallback(
-    (date: Date, e: React.MouseEvent) => {
-      e.stopPropagation();
-      setSelectedEventId(null);
-      setPopoverState({
-        mode: "create",
-        anchorX: e.clientX,
-        anchorY: e.clientY,
-        date,
-        defaultCalendarId: calendars[0]?.id,
-      });
-    },
-    [calendars],
-  );
+  // ── Drag-to-create ──────────────────────────────────────────────────────────
+  const [monthDrag, setMonthDrag] = useState<MonthDragState | null>(null);
+  const monthDragRef = useRef<MonthDragState | null>(null);
+  monthDragRef.current = monthDrag;
+
+  const handleCellPointerDown = useCallback((row: number, col: number, e: React.PointerEvent) => {
+    e.stopPropagation();
+    setMonthDrag({
+      startRow: row,
+      startCol: col,
+      currentRow: row,
+      currentCol: col,
+      hasMoved: false,
+    });
+  }, []);
 
   // ── Grid ───────────────────────────────────────────────────────────────────
   const year = selectedDate.getFullYear();
   const month = selectedDate.getMonth();
-  const weeks = useMemo(() => buildMonthGrid(year, month), [year, month]);
+  // `weeks` is the visually rendered grid (weekend-filtered if the setting is
+  // on) ; `fullWeeks` always spans the true 6x7 grid and anchors the event
+  // fetch range, so events on a hidden weekend near the grid's edges still
+  // fetch correctly (mirrors week-view's fullWeek/days split).
+  const fullWeeks = useMemo(
+    () => buildMonthGrid(year, month, settings.weekStartsOn),
+    [year, month, settings.weekStartsOn],
+  );
+  const weeks = useMemo(
+    () =>
+      buildMonthGrid(year, month, settings.weekStartsOn, { hideWeekends: settings.hideWeekends }),
+    [year, month, settings.weekStartsOn, settings.hideWeekends],
+  );
+  const colCount = weeks[0]!.length;
+  const gridColsClass = colCount === 5 ? "grid-cols-5" : "grid-cols-7";
+  const colIsWeekend = useMemo(() => weeks[0]!.map((d) => isWeekendDay(d)), [weeks]);
 
-  const rangeStart = weeks[0]![0]!;
+  const rangeStart = fullWeeks[0]![0]!;
   const rangeEnd = useMemo(() => {
-    const d = new Date(weeks[5]![6]!);
+    const d = new Date(fullWeeks[5]![6]!);
     d.setHours(23, 59, 59, 999);
     return d;
-  }, [weeks]);
+  }, [fullWeeks]);
 
   // ── Events ─────────────────────────────────────────────────────────────────
   const rangeQuery = useMemo(
@@ -446,16 +487,88 @@ export function MonthView({
     [weeks, allDayEvents],
   );
 
-  const colHeaders = [tw("sun"), tw("mon"), tw("tue"), tw("wed"), tw("thu"), tw("fri"), tw("sat")];
+  const colHeaders = getWeekdayLabels(settings.weekStartsOn, (key) => tw(key), {
+    hideWeekends: settings.hideWeekends,
+  });
 
-  function isWeekendCol(col: number) {
-    return col === 0 || col === 6;
+  useLayoutEffect(() => {
+    if (!monthDrag) return;
+
+    function onPointerMove(e: PointerEvent) {
+      const target = document.elementFromPoint(e.clientX, e.clientY);
+      const cell = target instanceof Element ? target.closest<HTMLElement>("[data-cal-row]") : null;
+      if (!cell) return;
+      const row = Number(cell.dataset.calRow);
+      const col = Number(cell.dataset.calCol);
+      setMonthDrag((prev) => {
+        if (!prev) return null;
+        const hasMoved = prev.hasMoved || row !== prev.startRow || col !== prev.startCol;
+        if (row === prev.currentRow && col === prev.currentCol && hasMoved === prev.hasMoved) {
+          return prev;
+        }
+        return { ...prev, currentRow: row, currentCol: col, hasMoved };
+      });
+    }
+
+    function onPointerUp(e: PointerEvent) {
+      const md = monthDragRef.current;
+      setMonthDrag(null);
+      if (!md) return;
+      const startDate = weeks[md.startRow]?.[md.startCol];
+      const endDate = weeks[md.currentRow]?.[md.currentCol];
+      if (!startDate || !endDate) return;
+
+      setSelectedEventId(null);
+      if (!md.hasMoved) {
+        setPopoverState({
+          mode: "create",
+          anchorX: e.clientX,
+          anchorY: e.clientY,
+          date: startDate,
+          defaultCalendarId: calendars[0]?.id,
+        });
+        return;
+      }
+      const lo = startDate <= endDate ? startDate : endDate;
+      const hi = startDate <= endDate ? endDate : startDate;
+      setPopoverState({
+        mode: "create",
+        anchorX: e.clientX,
+        anchorY: e.clientY,
+        date: lo,
+        endDate: hi,
+        forceAllDay: true,
+        defaultCalendarId: calendars[0]?.id,
+      });
+    }
+
+    document.addEventListener("pointermove", onPointerMove);
+    document.addEventListener("pointerup", onPointerUp);
+    return () => {
+      document.removeEventListener("pointermove", onPointerMove);
+      document.removeEventListener("pointerup", onPointerUp);
+    };
+  }, [!!monthDrag, weeks, calendars]);
+
+  const dragOrderRange = useMemo(() => {
+    if (!monthDrag || !monthDrag.hasMoved) return null;
+    const startOrder = monthDrag.startRow * colCount + monthDrag.startCol;
+    const currentOrder = monthDrag.currentRow * colCount + monthDrag.currentCol;
+    return [Math.min(startOrder, currentOrder), Math.max(startOrder, currentOrder)] as const;
+  }, [monthDrag, colCount]);
+
+  function isCellDragging(row: number, col: number): boolean {
+    if (!dragOrderRange) return false;
+    const order = row * colCount + col;
+    return order >= dragOrderRange[0] && order <= dragOrderRange[1];
   }
 
   return (
     <div className="flex h-full overflow-hidden">
       <CalendarSidebar
         selectedDate={selectedDate}
+        weekStartsOn={settings.weekStartsOn}
+        timeFormat={settings.timeFormat}
         onDateChange={onDayClick}
         calendars={calendars}
         hiddenCalendarIds={hiddenCalendarIds}
@@ -471,11 +584,11 @@ export function MonthView({
 
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         {/* Column headers */}
-        <div className="grid shrink-0 grid-cols-7 border-b border-border bg-background">
+        <div className={`grid shrink-0 ${gridColsClass} border-b border-border bg-background`}>
           {colHeaders.map((name, col) => (
             <div
               key={name}
-              className={`py-2 text-center text-xs font-medium text-muted-foreground${isWeekendCol(col) ? " bg-muted/30" : ""}`}
+              className={`py-2 text-center text-xs font-medium text-muted-foreground${colIsWeekend[col] ? " bg-muted/30" : ""}`}
             >
               {name}
             </div>
@@ -493,11 +606,11 @@ export function MonthView({
                 className="flex min-h-0 flex-1 flex-col border-b border-border last:border-b-0"
               >
                 {/* Day number row */}
-                <div className="grid shrink-0 grid-cols-7 border-b border-border">
+                <div className={`grid shrink-0 ${gridColsClass} border-b border-border`}>
                   {week.map((day, col) => {
                     const inMonth = day.getMonth() === month;
                     const isToday = isSameDay(day, today);
-                    const bg = isWeekendCol(col)
+                    const bg = isWeekendDay(day)
                       ? inMonth
                         ? "bg-muted/30"
                         : "bg-muted/40"
@@ -507,8 +620,10 @@ export function MonthView({
                     return (
                       <div
                         key={col}
-                        className={`flex cursor-pointer items-start border-r border-border p-1 last:border-r-0 ${bg}`}
-                        onClick={(e) => handleDayCellClick(day, e)}
+                        data-cal-row={weekIdx}
+                        data-cal-col={col}
+                        className={`flex cursor-pointer items-start border-r border-border p-1 last:border-r-0 ${bg}${isCellDragging(weekIdx, col) ? " bg-primary/10 ring-1 ring-inset ring-primary/40" : ""}`}
+                        onPointerDown={(e) => handleCellPointerDown(weekIdx, col, e)}
                       >
                         <button
                           type="button"
@@ -519,6 +634,7 @@ export function MonthView({
                                 ? "text-foreground hover:bg-muted"
                                 : "text-muted-foreground/60 hover:bg-muted"
                           }`}
+                          onPointerDown={(e) => e.stopPropagation()}
                           onClick={(e) => {
                             e.stopPropagation();
                             onDayClick(day);
@@ -535,19 +651,19 @@ export function MonthView({
                 {laneCount > 0 && (
                   <div className="relative shrink-0" style={{ height: laneCount * LANE_H + 2 }}>
                     {/* Weekend column tint */}
-                    <div className="pointer-events-none absolute inset-0 grid grid-cols-7">
+                    <div className={`pointer-events-none absolute inset-0 grid ${gridColsClass}`}>
                       {week.map((day, col) => (
                         <div
                           key={col}
-                          className={`border-r border-border last:border-r-0${isWeekendCol(col) ? (day.getMonth() === month ? " bg-muted/30" : " bg-muted/40") : day.getMonth() === month ? "" : " bg-muted/20"}`}
+                          className={`border-r border-border last:border-r-0${isWeekendDay(day) ? (day.getMonth() === month ? " bg-muted/30" : " bg-muted/40") : day.getMonth() === month ? "" : " bg-muted/20"}`}
                         />
                       ))}
                     </div>
 
                     {spanEvents.map(({ ev, startCol, endCol, lane, clippedStart, clippedEnd }) => {
                       const cal = calendarMap[ev.calendarId];
-                      const leftPct = (startCol / 7) * 100;
-                      const widthPct = ((endCol - startCol + 1) / 7) * 100;
+                      const leftPct = (startCol / week.length) * 100;
+                      const widthPct = ((endCol - startCol + 1) / week.length) * 100;
                       return (
                         <button
                           key={`${ev.id}-w${weekIdx}`}
@@ -575,14 +691,14 @@ export function MonthView({
                 )}
 
                 {/* Timed events per cell */}
-                <div className="grid min-h-0 flex-1 grid-cols-7">
+                <div className={`grid min-h-0 flex-1 ${gridColsClass}`}>
                   {week.map((day, col) => {
                     const inMonth = day.getMonth() === month;
                     const k = dayKey(day);
                     const dayEvs = timedEventsByDay.get(k) ?? [];
                     const visible = dayEvs.slice(0, MAX_TIMED);
                     const overflow = dayEvs.length - MAX_TIMED;
-                    const bg = isWeekendCol(col)
+                    const bg = isWeekendDay(day)
                       ? inMonth
                         ? "bg-muted/30"
                         : "bg-muted/40"
@@ -593,15 +709,17 @@ export function MonthView({
                     return (
                       <div
                         key={col}
-                        className={`flex min-h-0 cursor-pointer flex-col gap-px overflow-hidden border-r border-border p-0.5 last:border-r-0 ${bg}`}
-                        onClick={(e) => handleDayCellClick(day, e)}
+                        data-cal-row={weekIdx}
+                        data-cal-col={col}
+                        className={`flex min-h-0 cursor-pointer flex-col gap-px overflow-hidden border-r border-border p-0.5 last:border-r-0 ${bg}${isCellDragging(weekIdx, col) ? " bg-primary/10 ring-1 ring-inset ring-primary/40" : ""}`}
+                        onPointerDown={(e) => handleCellPointerDown(weekIdx, col, e)}
                       >
                         {visible.map((ev) => {
                           const cal = calendarMap[ev.calendarId];
                           const isPunctual = ev.eventType === "PUNCTUAL";
                           const timeLabel = isPunctual
                             ? null
-                            : `${String(ev._startAt.getHours()).padStart(2, "0")}:${String(ev._startAt.getMinutes()).padStart(2, "0")}`;
+                            : formatClockTime(ev._startAt, settings.timeFormat);
 
                           return (
                             <button
@@ -619,6 +737,7 @@ export function MonthView({
                                       backgroundColor: "hsl(var(--primary) / 0.3)",
                                     }
                               }
+                              onPointerDown={(e) => e.stopPropagation()}
                               onClick={(e) => handleMonthEventClick(ev, e)}
                             >
                               {timeLabel && (
@@ -634,6 +753,7 @@ export function MonthView({
                           <button
                             type="button"
                             className="px-1 text-left text-[11px] text-muted-foreground hover:text-foreground"
+                            onPointerDown={(e) => e.stopPropagation()}
                             onClick={() => onDayClick(day)}
                           >
                             +{overflow} {tm("more")}
@@ -663,6 +783,10 @@ export function MonthView({
           defaultCalendarId={
             popoverState.mode === "create" ? popoverState.defaultCalendarId : undefined
           }
+          initialEventType={
+            popoverState.mode === "create" && popoverState.forceAllDay ? "ALL_DAY" : undefined
+          }
+          endDateOverride={popoverState.mode === "create" ? popoverState.endDate : undefined}
           calendars={calendars}
           onCancel={closePopover}
           onDismiss={closePopover}

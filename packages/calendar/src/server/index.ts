@@ -7,6 +7,18 @@ import { router, publicProcedure } from "@monark/common/trpc";
 import { emit, NotFoundError, UnauthorizedError, ValidationError } from "@monark/common";
 import { requireOrg } from "@monark/organizations/server";
 import { getUserRoles, hasPermission } from "@monark/rbac/server";
+import {
+  deleteUserMetadataValue,
+  getUserMetadataValue,
+  setUserMetadataValue,
+} from "@monark/users/server";
+import {
+  CALENDAR_SETTINGS_KEY,
+  CALENDAR_SETTINGS_MODULE,
+  calendarViewSettingsPatchSchema,
+  calendarViewSettingsSchema,
+  DEFAULT_CALENDAR_VIEW_SETTINGS,
+} from "../contracts/settings";
 import type {
   CalendarCreatedEvent,
   CalendarDeletedEvent,
@@ -21,9 +33,12 @@ import {
   ensurePersonalCalendar,
   findCalendarById,
   findCalendarEventById,
+  findOverlappingEvents,
   listAccessibleCalendars,
   listCalendarMembers,
   listEventsForDay,
+  listEventsForExport,
+  listEventsPaginated,
   restoreCalendar,
   searchCalendarEvents,
   setCalendarRoleAccess,
@@ -32,10 +47,17 @@ import {
   updateCalendar,
   updateCalendarEvent,
 } from "./data";
+import { generateIcsForEvents, parseIcsEvents } from "./ics";
 
 async function resolveRoleIds(userId: string, orgId: string): Promise<string[]> {
   const roles = await getUserRoles(userId, orgId);
   return roles.map((r) => r.id);
+}
+
+async function getCalendarViewSettings(userId: string) {
+  const raw = await getUserMetadataValue(userId, CALENDAR_SETTINGS_MODULE, CALENDAR_SETTINGS_KEY);
+  const parsed = calendarViewSettingsSchema.safeParse(raw);
+  return parsed.success ? parsed.data : DEFAULT_CALENDAR_VIEW_SETTINGS;
 }
 
 async function resolveAccessibleCalendarIds(userId: string, orgId: string): Promise<string[]> {
@@ -263,6 +285,33 @@ export const calendarRouter = router({
         return listEventsForDay({ organizationId: org.id, calendarIds, startAt, endAt });
       }),
 
+    listAgenda: publicProcedure
+      .input(
+        z.object({
+          from: z.string().min(1),
+          limit: z.number().int().min(1).max(100).optional(),
+          cursor: z.string().nullish(),
+        }),
+      )
+      .query(async ({ ctx, input }) => {
+        if (!ctx.userId) throw new UnauthorizedError();
+        const org = await requireOrg({
+          userId: ctx.userId,
+          activeOrganizationId: ctx.activeOrganizationId,
+        });
+        const calendarIds = await resolveAccessibleCalendarIds(ctx.userId, org.id);
+        if (calendarIds.length === 0) return { items: [], nextCursor: null, total: 0 };
+        const from = new Date(input.from);
+        if (isNaN(from.getTime())) throw new ValidationError("Invalid date");
+        return listEventsPaginated({
+          organizationId: org.id,
+          calendarIds,
+          from,
+          limit: input.limit,
+          cursor: input.cursor,
+        });
+      }),
+
     create: publicProcedure
       .input(
         z.object({
@@ -441,6 +490,129 @@ export const calendarRouter = router({
         if (calendarIds.length === 0) return [];
         return searchCalendarEvents({ organizationId: org.id, calendarIds, query: input.query });
       }),
+
+    checkConflicts: publicProcedure
+      .input(
+        z.object({
+          calendarId: z.string().min(1),
+          startAt: z.string().min(1),
+          endAt: z.string().min(1),
+          excludeEventId: z.string().min(1).optional(),
+        }),
+      )
+      .query(async ({ ctx, input }) => {
+        if (!ctx.userId) throw new UnauthorizedError();
+        const org = await requireOrg({
+          userId: ctx.userId,
+          activeOrganizationId: ctx.activeOrganizationId,
+        });
+        const calendarIds = await resolveAccessibleCalendarIds(ctx.userId, org.id);
+        if (!calendarIds.includes(input.calendarId)) return [];
+        const startAt = new Date(input.startAt);
+        const endAt = new Date(input.endAt);
+        if (isNaN(startAt.getTime()) || isNaN(endAt.getTime())) return [];
+        return findOverlappingEvents({
+          calendarId: input.calendarId,
+          organizationId: org.id,
+          startAt,
+          endAt,
+          excludeEventId: input.excludeEventId,
+        });
+      }),
+
+    exportIcs: publicProcedure
+      .input(z.object({ calendarId: z.string().min(1).optional() }).optional())
+      .query(async ({ ctx, input }) => {
+        if (!ctx.userId) throw new UnauthorizedError();
+        const org = await requireOrg({
+          userId: ctx.userId,
+          activeOrganizationId: ctx.activeOrganizationId,
+        });
+        const accessibleIds = await resolveAccessibleCalendarIds(ctx.userId, org.id);
+        const targetIds = input?.calendarId
+          ? accessibleIds.filter((id) => id === input.calendarId)
+          : accessibleIds;
+        if (targetIds.length === 0) {
+          return { icsText: generateIcsForEvents([]) };
+        }
+        const events = await listEventsForExport({
+          organizationId: org.id,
+          calendarIds: targetIds,
+        });
+        return { icsText: generateIcsForEvents(events) };
+      }),
+
+    importIcs: publicProcedure
+      .input(z.object({ calendarId: z.string().min(1), icsText: z.string().min(1).max(2_000_000) }))
+      .mutation(async ({ ctx, input }) => {
+        if (!ctx.userId) throw new UnauthorizedError();
+        const org = await requireOrg({
+          userId: ctx.userId,
+          activeOrganizationId: ctx.activeOrganizationId,
+        });
+        const calendarIds = await resolveAccessibleCalendarIds(ctx.userId, org.id);
+        if (!calendarIds.includes(input.calendarId)) {
+          throw new NotFoundError("Calendar", input.calendarId);
+        }
+
+        const parsed = parseIcsEvents(input.icsText);
+        const MAX_IMPORT_EVENTS = 500;
+        const toImport = parsed.slice(0, MAX_IMPORT_EVENTS);
+
+        let flattenedRecurrenceCount = 0;
+        for (const ev of toImport) {
+          if (ev.hadRecurrence) flattenedRecurrenceCount++;
+          await createCalendarEvent({
+            calendarId: input.calendarId,
+            organizationId: org.id,
+            title: ev.title,
+            description: ev.description,
+            location: ev.location,
+            startAt: ev.startAt,
+            endAt: ev.endAt,
+            eventType: ev.eventType,
+          });
+        }
+
+        return {
+          imported: toImport.length,
+          skipped: parsed.length - toImport.length,
+          flattenedRecurrenceCount,
+        };
+      }),
+  }),
+
+  // ── View settings ──────────────────────────────────────
+  // Per-user calendar view preferences (hide weekends, week start day, etc.),
+  // stored via the users metadata sidecar. Self-owned data : gated on
+  // ctx.userId only, not the registered users.*-metadata-for-module-calendar
+  // permissions (those exist for registry/admin-tooling hygiene, per
+  // app/CLAUDE.md's metadata sidecar convention ; a user always may read and
+  // write their own view preferences).
+  settings: router({
+    get: publicProcedure.query(async ({ ctx }) => {
+      if (!ctx.userId) throw new UnauthorizedError();
+      return getCalendarViewSettings(ctx.userId);
+    }),
+
+    set: publicProcedure.input(calendarViewSettingsPatchSchema).mutation(async ({ ctx, input }) => {
+      if (!ctx.userId) throw new UnauthorizedError();
+      const current = await getCalendarViewSettings(ctx.userId);
+      const next = calendarViewSettingsSchema.parse({ ...current, ...input });
+      await setUserMetadataValue({
+        userId: ctx.userId,
+        module: CALENDAR_SETTINGS_MODULE,
+        key: CALENDAR_SETTINGS_KEY,
+        value: next,
+      });
+      return next;
+    }),
+
+    reset: publicProcedure.mutation(async ({ ctx }) => {
+      if (!ctx.userId) throw new UnauthorizedError();
+      await deleteUserMetadataValue(ctx.userId, CALENDAR_SETTINGS_MODULE, CALENDAR_SETTINGS_KEY);
+      return DEFAULT_CALENDAR_VIEW_SETTINGS;
+    }),
   }),
 });
 

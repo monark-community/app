@@ -1,0 +1,33 @@
+name: Dependency Review
+
+# Blocks a PR that introduces a dependency with a known high/critical
+# vulnerability or an incompatible license, by diffing the dependency graph
+# between the PR base and head. Complements Dependabot (which keeps deps
+# current) and the CodeQL / gitleaks scans (which look at first-party code and
+# secrets, not third-party CVEs). Requires the repo's Dependency Graph to be
+# enabled (default for public repos ; a settings toggle for private ones).
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: write # for the summary comment
+
+concurrency:
+  group: dependency-review-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  dependency-review:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Dependency review
+        uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: high
+          comment-summary-in-pr: on-failure

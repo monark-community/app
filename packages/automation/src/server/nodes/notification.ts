@@ -27,6 +27,10 @@ export const notificationNode = defineNode({
     icon: "Bell",
     inputs: [{ id: "in" }],
     outputs: [{ id: "out" }],
+    outputFields: [
+      { key: "recipientUserId", type: "string", description: "The user that was notified." },
+      { key: "delivered", type: "boolean", description: "Whether dispatch was attempted." },
+    ],
     configFields: [
       {
         key: "recipientUserId",

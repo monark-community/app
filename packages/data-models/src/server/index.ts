@@ -10,6 +10,14 @@ export { registerDataModelsNotificationKinds } from "./notification-kinds";
 export { registerDataModelRecordWatchSubscriber } from "./record-watch-subscriber";
 export { requestFieldIndex, getFieldIndexStatus, type DataFieldIndexStatus } from "./indexing";
 export {
+  compileFilterToSql,
+  type CompileFields,
+  type CompileFieldMeta,
+  type RelationTarget,
+  type RelationTargets,
+} from "./query-compiler";
+export { registerDataModelsFeatureFlags } from "./flags";
+export {
   registerModelIntegration,
   listModelIntegrations,
   getModelIntegrationDef,
@@ -38,7 +46,14 @@ export {
   unarchiveDataField,
   findFreeDataRecordSlug,
   listDataRecords,
+  listDataRecordsWithQuery,
+  buildCompileFields,
   findDataRecordById,
+  listDataRecordViews,
+  findDataRecordViewById,
+  createDataRecordView,
+  updateDataRecordView,
+  deleteDataRecordView,
   findDataRecordBySlug,
   isDataRecordRoleAccessible,
   createDataRecord,
@@ -63,4 +78,7 @@ export type {
   CreateDataRecordInput,
   UpdateDataRecordPatch,
   UpsertModelIntegrationInput,
+  DataRecordViewRow,
+  CreateDataRecordViewInput,
+  UpdateDataRecordViewPatch,
 } from "./data";

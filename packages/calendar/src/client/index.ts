@@ -12,6 +12,17 @@ export { DayColumn } from "./ui/day-column";
 export { DayColumnsArea } from "./ui/day-columns-area";
 export { useCurrentTime } from "./hooks/use-current-time";
 export { HOUR_HEIGHT_PX, TOTAL_HEIGHT_PX } from "./constants";
+export {
+  addDays,
+  getWeekStart,
+  isWeekendDay,
+  buildWeekDays,
+  buildMonthGrid,
+  getWeekdayLabels,
+  formatClockTime,
+  formatHourLabel,
+} from "./date-utils";
+export type { WeekStartsOn, WeekdayKey, TimeFormat } from "./date-utils";
 // `DaySchedule` (the type, = CalendarEvent[]) is intentionally not re-exported here:
 // it would collide with the `DaySchedule` component above. Import it from
 // `@monark/calendar/contracts` if a consumer needs the type.

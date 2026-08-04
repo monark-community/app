@@ -141,6 +141,16 @@ export function OrganizationsList() {
             include={["columns"]}
           />
         }
+        mobileOptions={
+          <TableTools
+            mode="sheet"
+            layout={layout}
+            primaryColumn={primaryColumn}
+            columns={orgColumns}
+            labels={toolsLabels}
+            include={["sorting", "columns"]}
+          />
+        }
       />
 
       <TableDetailLayout

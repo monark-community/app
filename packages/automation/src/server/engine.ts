@@ -8,7 +8,7 @@ import {
 } from "../contracts/run";
 import { addRunStep, finishRunStep, listRunSteps } from "./data";
 import { getSecretValue } from "@monark/secrets/server";
-import { getAutomationNode, type NodeExecutionContext } from "./registry";
+import { getAutomationNode, type AnyAutomationNode, type NodeExecutionContext } from "./registry";
 
 /** Outcome of executing (or resuming) a graph. */
 export type GraphResult =
@@ -23,6 +23,74 @@ export type GraphResult =
  */
 const ERROR_HANDLE = "error";
 
+// The first one or two path segments of a `{{ token }}` — either `{{ <nodeId>… }}`
+// (the node id, hyphenated e.g. `n-a1b2`) or `{{ steps.<slug>… }}` (the stable
+// slug), plus the non-node roots `trigger` / `vars` / `steps`. Used to derive a
+// node's data dependencies from its config.
+const REFERENCE_RE = /\{\{\s*([\w-]+)(?:\.([\w-]+))?/g;
+
+/** A legacy per-field data edge (into a `field:<key>` port) vs. a control edge. */
+function isFieldEdge(targetHandle: string | null | undefined): boolean {
+  return typeof targetHandle === "string" && targetHandle.startsWith("field:");
+}
+
+/** slug -> node id, for resolving `{{ steps.<slug> }}` references to their node. */
+function slugToIdMap(graph: AutomationGraph): Map<string, string> {
+  const map = new Map<string, string>();
+  for (const n of graph.nodes) if (n.slug) map.set(n.slug, n.id);
+  return map;
+}
+
+/**
+ * The source node id a `{{ }}` reference points at, or null if it's not a node
+ * reference (`trigger` / `vars`, or an unknown slug/id). Handles both addressing
+ * forms: `{{ steps.<slug>… }}` (resolved via the slug map) and the legacy
+ * `{{ <nodeId>… }}`.
+ */
+function referencedNodeId(
+  seg1: string,
+  seg2: string | undefined,
+  byId: Map<string, NodeInstance>,
+  slugToId: Map<string, string>,
+): string | null {
+  if (seg1 === "steps") return seg2 ? (slugToId.get(seg2) ?? null) : null;
+  if (seg1 === "trigger" || seg1 === "vars") return null;
+  return byId.has(seg1) ? seg1 : null;
+}
+
+/**
+ * A node's data dependencies (each `{ source, target }` means source runs first):
+ * every node-output reference in the node's config (`{{ steps.<slug>… }}` or the
+ * legacy `{{ <nodeId>… }}`), plus any legacy `field:` data edge. This is what
+ * pulls a value source (a Constant / Transform referenced only via `{{ }}`, with
+ * no control-flow edge) into the run and orders it before its consumer.
+ */
+function dataDependencies(
+  graph: AutomationGraph,
+  byId: Map<string, NodeInstance>,
+): Array<{ source: string; target: string }> {
+  const slugToId = slugToIdMap(graph);
+  const edges: Array<{ source: string; target: string }> = [];
+  for (const n of graph.nodes) {
+    const refs = new Set<string>();
+    for (const value of Object.values(n.config ?? {})) {
+      if (typeof value !== "string") continue;
+      for (const m of value.matchAll(REFERENCE_RE)) {
+        if (!m[1]) continue;
+        const source = referencedNodeId(m[1], m[2], byId, slugToId);
+        if (source && source !== n.id) refs.add(source);
+      }
+    }
+    for (const source of refs) edges.push({ source, target: n.id });
+  }
+  for (const e of graph.edges) {
+    if (isFieldEdge(e.targetHandle) && byId.has(e.source) && byId.has(e.target)) {
+      edges.push({ source: e.source, target: e.target });
+    }
+  }
+  return edges;
+}
+
 /**
  * Resolve the execution order: the sub-graph reachable from the trigger node,
  * topologically sorted (Kahn's algorithm). Nodes not reachable from a trigger
@@ -35,51 +103,61 @@ export function executionOrder(graph: AutomationGraph): NodeInstance[] {
   );
   if (!trigger) throw new Error("Automation graph has no trigger node.");
 
-  // Reachable set from the trigger, following edges source -> target.
-  const outgoing = new Map<string, string[]>();
+  // Control-flow adjacency (source -> target), excluding legacy `field:` data
+  // edges — those are data dependencies, folded in below.
+  const controlOut = new Map<string, string[]>();
   for (const e of graph.edges) {
-    if (!byId.has(e.source) || !byId.has(e.target)) continue;
-    const list = outgoing.get(e.source);
+    if (!byId.has(e.source) || !byId.has(e.target) || isFieldEdge(e.targetHandle)) continue;
+    const list = controlOut.get(e.source);
     if (list) list.push(e.target);
-    else outgoing.set(e.source, [e.target]);
+    else controlOut.set(e.source, [e.target]);
   }
+
+  // Data dependencies from `{{ }}` references + legacy field edges.
+  const depEdges = dataDependencies(graph, byId);
+
+  // Reachable = control-flow-reachable from the trigger, then transitively pull
+  // in every data source a reachable node depends on (a Constant / Transform
+  // referenced only via `{{ }}` still needs to run).
   const reachable = new Set<string>();
   const stack = [trigger.id];
   while (stack.length > 0) {
     const id = stack.pop();
     if (id === undefined || reachable.has(id)) continue;
     reachable.add(id);
-    for (const next of outgoing.get(id) ?? []) stack.push(next);
+    for (const next of controlOut.get(id) ?? []) stack.push(next);
   }
-
-  // Pull in pure data-source nodes: a node feeding a `field:` port of a
-  // reachable node must also execute (and be ordered before it), even with no
-  // control-flow edge into it — e.g. a Constant wired only into a downstream
-  // field. So a value source needs no flow-in connection to run.
-  let addedSource = true;
-  while (addedSource) {
-    addedSource = false;
-    for (const e of graph.edges) {
-      if (
-        typeof e.targetHandle === "string" &&
-        e.targetHandle.startsWith("field:") &&
-        reachable.has(e.target) &&
-        byId.has(e.source) &&
-        !reachable.has(e.source)
-      ) {
-        reachable.add(e.source);
-        addedSource = true;
+  let added = true;
+  while (added) {
+    added = false;
+    for (const { source, target } of depEdges) {
+      if (reachable.has(target) && !reachable.has(source)) {
+        reachable.add(source);
+        added = true;
       }
     }
   }
 
-  // Kahn's over the induced subgraph.
+  // Kahn's over control + data-dependency edges within the reachable set. Edges
+  // are de-duped by `source->target` so a pair present as both a control edge
+  // and a reference doesn't inflate the indegree and deadlock the sort.
+  const orderOut = new Map<string, string[]>();
   const indegree = new Map<string, number>();
   for (const id of reachable) indegree.set(id, 0);
-  for (const e of graph.edges) {
-    if (reachable.has(e.source) && reachable.has(e.target)) {
-      indegree.set(e.target, (indegree.get(e.target) ?? 0) + 1);
-    }
+  const seen = new Set<string>();
+  const allEdges = [
+    ...[...controlOut.entries()].flatMap(([s, ts]) => ts.map((t) => ({ source: s, target: t }))),
+    ...depEdges,
+  ];
+  for (const { source, target } of allEdges) {
+    if (!reachable.has(source) || !reachable.has(target)) continue;
+    const pair = `${source}->${target}`;
+    if (seen.has(pair)) continue;
+    seen.add(pair);
+    const list = orderOut.get(source);
+    if (list) list.push(target);
+    else orderOut.set(source, [target]);
+    indegree.set(target, (indegree.get(target) ?? 0) + 1);
   }
   const queue = [...reachable].filter((id) => (indegree.get(id) ?? 0) === 0);
   const order: NodeInstance[] = [];
@@ -88,7 +166,7 @@ export function executionOrder(graph: AutomationGraph): NodeInstance[] {
     if (id === undefined) continue;
     const node = byId.get(id);
     if (node) order.push(node);
-    for (const next of outgoing.get(id) ?? []) {
+    for (const next of orderOut.get(id) ?? []) {
       const d = (indegree.get(next) ?? 0) - 1;
       indegree.set(next, d);
       if (d === 0) queue.push(next);
@@ -149,8 +227,11 @@ export function interpolateConfig(
   return out;
 }
 
-const WHOLE_TOKEN_RE = /^\s*\{\{\s*([\w.]+)\s*\}\}\s*$/;
-const EMBEDDED_TOKEN_RE = /\{\{\s*([\w.]+)\s*\}\}/g;
+// Path chars: word chars, dots (nesting), and hyphens — node ids are hyphenated
+// (e.g. `n-a1b2`), so without `-` a `{{ n-a1b2.field }}` reference never matched
+// and silently passed through as literal text.
+const WHOLE_TOKEN_RE = /^\s*\{\{\s*([\w.-]+)\s*\}\}\s*$/;
+const EMBEDDED_TOKEN_RE = /\{\{\s*([\w.-]+)\s*\}\}/g;
 
 function interpolateString(value: string, scope: Record<string, unknown>): unknown {
   const whole = value.match(WHOLE_TOKEN_RE);
@@ -178,6 +259,11 @@ export async function executeGraph(params: {
 }): Promise<GraphResult> {
   const order = executionOrder(params.graph);
   const inReach = new Set(order.map((n) => n.id));
+  // node id -> stable slug, for building the `{{ steps.<slug> }}` scope. A node
+  // without a slug (a graph saved before slugs existed) is simply absent from
+  // `steps` ; its output stays addressable by the legacy `{{ <nodeId> }}` key.
+  const slugById = new Map<string, string>();
+  for (const n of params.graph.nodes) if (n.slug) slugById.set(n.id, n.slug);
 
   // Control-flow incoming edges per node (within the reachable set), each
   // normalized to the source's effective output handle (an edge with no
@@ -197,6 +283,15 @@ export async function executeGraph(params: {
   }
 
   const upstream: Record<string, unknown> = {};
+  // Workflow-level variables (`{{ vars.<name> }}`), a run-global bag distinct
+  // from per-step outputs. A node that sets vars declares `collectVars` ; its
+  // writes are merged here after it runs and replayed from persisted outputs on
+  // resume (see below), so a var set before a Delay survives the suspend.
+  const vars: Record<string, unknown> = {};
+  const applyVars = (node: AnyAutomationNode, output: unknown) => {
+    const written = node.collectVars?.(output);
+    if (written) Object.assign(vars, written);
+  };
   const activeHandles = new Set<string>(); // `${nodeId}:${handle}`
   const executed = new Set<string>();
   const processed = new Set<string>(); // executed OR skipped (don't re-run)
@@ -218,6 +313,11 @@ export async function executeGraph(params: {
       executed.add(step.nodeId);
       upstream[step.nodeId] = step.output as unknown;
       last = step.output as unknown;
+      // Replay any workflow variables this node set, from its persisted output,
+      // in sequence order (listRunSteps is ordered by `sequence`) — so a var set
+      // before the suspend is back in scope for the resumed downstream nodes.
+      const priorNode = getAutomationNode(step.nodeType);
+      if (priorNode) applyVars(priorNode.node, step.output as unknown);
       // Re-activate exactly the handles the node chose on its first pass (a
       // branch's taken output, not all of them), persisted on the step — so a
       // branch immediately before a Delay resumes only the taken path.
@@ -252,7 +352,20 @@ export async function executeGraph(params: {
       continue;
     }
 
-    const scope: Record<string, unknown> = { trigger: params.triggerEvent, ...upstream };
+    // `steps.<slug>` mirrors each upstream output under its stable slug, the
+    // readable address the editor writes ; the raw node-id keys stay spread in
+    // for backward-compat with graphs saved before slugs (and un-migrated refs).
+    const steps: Record<string, unknown> = {};
+    for (const [nid, out] of Object.entries(upstream)) {
+      const slug = slugById.get(nid);
+      if (slug) steps[slug] = out;
+    }
+    const scope: Record<string, unknown> = {
+      trigger: params.triggerEvent,
+      vars,
+      steps,
+      ...upstream,
+    };
     const resolvedConfig = interpolateConfig(instance.config, scope);
 
     // Data links: any config variable wired from an upstream node's output
@@ -331,6 +444,8 @@ export async function executeGraph(params: {
       upstream[instance.id] = output;
       last = output;
       executed.add(instance.id);
+      // Merge any workflow variables this node set into the run-global `vars`.
+      applyVars(stored.node, output);
       // Activate the handles the node declared, or all of its outputs by default.
       const outs: string[] = declaredHandles ?? stored.node.descriptor.outputs.map((o) => o.id);
       const active = outs.length > 0 ? outs : ["out"];

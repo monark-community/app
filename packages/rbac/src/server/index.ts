@@ -305,6 +305,52 @@ export const rbacRouter = router({
         .filter((c) => c.permissions.length > 0),
     };
   }),
+
+  // The permissions the CALLER can grant to one of their own API keys : the full
+  // catalog, filtered to what they actually HOLD (an admin holds everything via
+  // the short-circuit) plus org visibility. Same shape as `adminListPermissions`
+  // but NOT admin-gated — it only ever reveals the caller's own authority, so any
+  // authed member can read it to build a least-privilege key. Backs the personal
+  // API-key permission picker.
+  myGrantablePermissions: publicProcedure.query(async ({ ctx }) => {
+    if (!ctx.userId) throw new UnauthorizedError();
+    const userId = ctx.userId;
+    // Server-side callers may not forward the active org ; fall back to the
+    // user's earliest membership like `myPermissions` does.
+    let orgId: string | undefined = ctx.activeOrganizationId ?? undefined;
+    if (!orgId) {
+      const membership = await getDb().organizationMembership.findFirst({
+        where: { userId },
+        select: { organizationId: true },
+        orderBy: { joinedAt: "asc" },
+      });
+      orgId = membership?.organizationId ?? undefined;
+    }
+    const grouped = permissionsByCategory();
+    const visible = await orgVisiblePermissionKeys(orgId ?? null);
+    const categories = Object.keys(grouped).sort();
+    const result: { category: string; permissions: { key: string; description: string }[] }[] = [];
+    for (const category of categories) {
+      const keys = (grouped[category] ?? []).filter((key) => {
+        const def = getPermissionDef(key);
+        return def?.orgScoped ? visible.has(key) : true;
+      });
+      const held = await Promise.all(
+        keys.map((k) => hasPermission(userId, k, orgId).then((ok) => (ok ? k : null))),
+      );
+      const heldKeys = held.filter((k): k is string => k !== null);
+      if (heldKeys.length > 0) {
+        result.push({
+          category,
+          permissions: heldKeys.map((key) => ({
+            key,
+            description: getPermissionDef(key)?.description ?? "",
+          })),
+        });
+      }
+    }
+    return { categories: result };
+  }),
 });
 
 export {

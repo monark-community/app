@@ -65,21 +65,36 @@ export interface NodeExecutionContext {
 export interface AnyAutomationNode {
   descriptor: NodeDescriptorMeta;
   run: (ctx: NodeExecutionContext, rawConfig: unknown) => Promise<unknown>;
+  /**
+   * Optional: derive workflow variables this node sets from its output, as a
+   * `{ name: value }` map merged into the run's `vars` scope after the node runs
+   * (and replayed from the persisted step output on resume, so vars survive a
+   * suspend). The generic "set a global variable" seam — the Set Variable node
+   * implements it, but any node may. Return `undefined` to set nothing.
+   */
+  collectVars?: (output: unknown) => Record<string, unknown> | undefined;
 }
 
 /**
  * Build a node definition. The typed `execute` receives config already parsed
  * (and thus validated) against `configSchema` ; a config that fails validation
- * throws at run time and fails just that node's step.
+ * throws at run time and fails just that node's step. An optional `collectVars`
+ * projects the node's output to the workflow variables it sets (see
+ * {@link AnyAutomationNode.collectVars}).
  */
 export function defineNode<Config, Output>(def: {
   descriptor: NodeDescriptorMeta;
   configSchema: z.ZodType<Config>;
   execute: (ctx: NodeExecutionContext, config: Config) => Promise<Output>;
+  collectVars?: (output: Output) => Record<string, unknown> | undefined;
 }): AnyAutomationNode {
+  const { collectVars } = def;
   return {
     descriptor: def.descriptor,
     run: (ctx, rawConfig) => def.execute(ctx, def.configSchema.parse(rawConfig)),
+    // The engine only ever calls this with THIS node's own output, so the
+    // erased `unknown` is safely narrowed back to `Output` at the call.
+    ...(collectVars ? { collectVars: (output: unknown) => collectVars(output as Output) } : {}),
   };
 }
 

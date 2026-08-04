@@ -19,6 +19,7 @@
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
     "@hookform/resolvers": "^5.2.0",
+    "@monark/api-keys": "workspace:*",
     "@monark/auth": "workspace:*",
     "@monark/automation": "workspace:*",
     "@monark/branding": "workspace:*",
@@ -28,6 +29,7 @@
     "@monark/data-models": "workspace:*",
     "@monark/feature-flags": "workspace:*",
     "@monark/kanban": "workspace:*",
+    "@monark/query": "workspace:*",
     "@radix-ui/react-alert-dialog": "^1.1.14",
     "@radix-ui/react-avatar": "^1.1.11",
     "@radix-ui/react-collapsible": "^1.1.12",
@@ -75,6 +77,7 @@
     "zod": "^3.23.0"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.12.1",
     "@playwright/test": "^1.49.0",
     "@tailwindcss/postcss": "^4.3.3",
     "@testing-library/jest-dom": "^6.6.0",

@@ -23,6 +23,7 @@
     "@monark/feature-flags": "workspace:*",
     "@monark/notifications": "workspace:*",
     "@monark/organizations": "workspace:*",
+    "@monark/query": "workspace:*",
     "@monark/rbac": "workspace:*",
     "zod": "^3.23.0"
   },

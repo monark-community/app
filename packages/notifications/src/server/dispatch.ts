@@ -59,6 +59,7 @@ export async function notify<K extends NotificationKind>(
         displayName: true,
         localePreference: true,
         deletedAt: true,
+        kind: true,
       },
     })
     .catch((err) => {
@@ -67,6 +68,11 @@ export async function notify<K extends NotificationKind>(
     });
   if (!user) {
     logger.warn({ userId: recipient.userId, kind }, "notify: recipient not found, skipping");
+    return result;
+  }
+  // Service accounts are machine principals : no inbox, no in-app surface, no
+  // opt-in preferences. Never dispatch anything to one.
+  if (user.kind === "SERVICE") {
     return result;
   }
 

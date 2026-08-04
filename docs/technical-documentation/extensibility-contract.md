@@ -8,7 +8,7 @@ This document is the canonical reference for "can a new business-logic module sh
 
 The repo has two tiers, locked by [tools/check-tiers.ts](../../tools/check-tiers.ts) and the [modules.manifest.ts](../../modules.manifest.ts) registry :
 
-- **Core** modules (`@monark/auth`, `@monark/branding`, `@monark/feature-flags`, `@monark/notifications`, `@monark/organizations`, `@monark/rbac`, `@monark/users`, `@monark/webhooks`) ship with the platform. They may depend on each other and on `@monark/db` / `@monark/common`.
+- **Core** modules (`@monark/auth`, `@monark/branding`, `@monark/feature-flags`, `@monark/users`, `@monark/organizations`, `@monark/rbac`, `@monark/notifications`, `@monark/webhooks`, `@monark/files`, `@monark/data-models`, `@monark/automation`, `@monark/secrets`, `@monark/api-keys`, `@monark/public-api`) ship with the platform. They may depend on each other and on `@monark/db` / `@monark/common`.
 - **Extended** modules ship business logic on top. They may depend on any core module ; they may **not** depend on another extended module. The tier check fails CI if an extended module's `package.json` lists another extended package.
 
 If a new module is fundamentally infrastructure (auth, billing, observability) it joins core. If it's a feature (posts, events, voting, contributions) it joins extended. The bar for entering core is high — every core module is loaded by every deploy, even ones that don't use that feature.
@@ -107,7 +107,7 @@ trpc.users.metadata.set.mutate({ userId, module: "posts", key: "feed-density", v
 
 - Identity is `(parent_id, module, key)` ; the value is JSON.
 - Reads + writes via tRPC are gated by `users.read-metadata-for-module-<module>` / `users.write-metadata-for-module-<module>` (and the orgs equivalent). Extended modules register their own permission slugs alongside the metadata they read.
-- The sidecar is the cheap path — no schema migration, no codegen, no FK plumbing. When an extended module needs **indexed columns** (filter by metadata value, sort by it, FK from another table), graduate to a per-module schema fragment ; that path is being built out as Phase-2 work and isn't required for shipping basic features today.
+- The sidecar is the cheap path — no schema migration, no codegen, no FK plumbing. When an extended module needs **indexed columns** (filter by metadata value, sort by it, FK from another table), graduate to a per-module schema fragment (`packages/<module>/prisma/<module>.prisma`, assembled into the schema by `pnpm gen:schema`) — the mechanism the extended `calendar` and `kanban` modules already use for their own tables.
 
 ### 5. Domain events + webhooks
 
@@ -155,7 +155,7 @@ Modules that emit events but skip this registration still route through webhooks
 
 These are the boundaries an extended module must not cross. Crossing them means the module is doing something that should ship as a core change instead.
 
-- **Extended modules MUST NOT reshape core or other modules' tables** in [packages/db/prisma/schema.prisma](../../packages/db/prisma/schema.prisma). The schema is a single file owned by `@monark/db`. A module that genuinely needs relational / indexed / FK-bearing storage MAY add **its own** models under its `// ── MODULE: <name> ──` banner (as `@monark/calendar` and `@monark/kanban` do) and own the migration — but it must never rename, restructure, or repurpose any model outside that banner, and schema changes go through `@monark/db` review. The end-state is per-module fragments (see Phase-2 below) ; until that lands, banner-scoped models are the accepted approach. For per-user / per-org data that needs no indexing, relations, or FKs, use the metadata sidecar (option 4 above) instead of a table.
+- **Extended modules MUST NOT reshape core or other modules' tables.** A module that needs relational / indexed / FK-bearing storage adds **its own** models in a per-module fragment [`packages/<module>/prisma/<module>.prisma`](../../packages/calendar/prisma/calendar.prisma) under its `// ── MODULE: <name> ──` banner (as `@monark/calendar` and `@monark/kanban` do) ; `pnpm gen:schema` assembles every fragment into the generated `schema.prisma`, and the module owns its migration. It must never edit [`base.prisma`](../../packages/db/prisma/base.prisma) or the generated `schema.prisma` directly, nor rename / restructure / repurpose any model outside its own banner ; schema changes go through `@monark/db` review. For per-user / per-org data that needs no indexing, relations, or FKs, use the metadata sidecar (option 4 above) instead of a table.
 - **Extended modules MUST NOT depend on another extended module.** Use core packages, the event bus, or the metadata sidecar to compose features.
 - **Extended modules MUST NOT mutate core registries directly** — only call the `register*` APIs. Reaching into `@monark/feature-flags/contracts` to mutate the in-memory map directly would crash boot ordering and bypass validation.
 - **Extended modules MUST NOT rename or repurpose core domain events.** Add new event types under your module's prefix ; never reshape `auth.password-changed` for a different meaning.
@@ -196,7 +196,7 @@ A test that exercises one extension point in isolation calls the matching reset 
 
 ## Phase-2 follow-ups
 
-- **Per-module schema fragments.** A wrapper around `prisma generate` that concatenates per-module `prisma/<module>.prisma` files into the root schema before generation. Lets an extended module ship indexed columns + FK relations without modifying core.
+- ~~**Per-module schema fragments.**~~ **Shipped.** `pnpm gen:schema` concatenates each module's `prisma/<module>.prisma` fragment into the root schema before generation, so a module ships indexed columns + FK relations without touching core (`calendar`, `kanban`, and core `api-keys` own fragments today).
 - **Codegen for boot wiring.** A `pnpm gen:boot` script that scans the manifest and emits a `services/api/src/boot-registrations.generated.ts` file with every module's `register*()` calls. Removes the hand-maintained list in `services/api/src/server.ts`.
 - **Persisted event bus.** The in-memory bus loses events on a process crash _between_ `emit()` and the wildcard subscriber's outbox write. Today the window is the same Prisma transaction so the source-mutation rollback covers it ; if subscribers ever go async-after-commit we'd want a real outbox at the bus level.
 - **Receiver-side webhook verifier package.** A tiny `@monark/webhooks/verifier` that wraps the HMAC compare + timestamp tolerance for hand-rolled receivers.

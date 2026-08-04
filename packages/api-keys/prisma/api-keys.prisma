@@ -1,0 +1,42 @@
+// @monark/api-keys — Prisma schema fragment (core module).
+// Assembled into packages/db/prisma/schema.prisma by `pnpm gen:schema`.
+// Edit HERE, never the generated schema.prisma.
+
+// ── MODULE: api-keys ──────────────────────────────────────
+// A hashed, org-pinned API key for the public API. The plaintext is returned
+// exactly once at mint time and never stored (only its SHA-256 hash). A key
+// authenticates AS its owning principal (`ownerUserId`) : the request runs with
+// that principal's RBAC grants, in exactly one org (`organizationId`). Authority
+// is 100% RBAC — there is no separate scope layer. A user key acts with the
+// user's roles ; a service-account key acts with the machine principal's roles
+// (the admin chooses those roles = the least-privilege knob). See
+// docs/features-planning/phase-3/public-api.md.
+model ApiKey {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  // The principal the key acts as : a human user, or a machine `User` row for a
+  // service-account key. Cascade so a deleted principal's keys die with it.
+  ownerUserId    String
+  owner          User         @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+
+  name       String // human label ("CI bot", "my agent")
+  tokenHash  String    @unique // sha256 hex of the plaintext ; the plaintext is never stored
+  prefix     String // leading chars of the plaintext, for display ("mrk_ab12cd…")
+  // Least-privilege ceiling. `fullAccess = true` (default) : the key acts with
+  // the owner's full CURRENT authority. `fullAccess = false` : the key is capped
+  // to `permissions` — a subset of the owner's RBAC permissions (real dotted
+  // keys), an "abstract sub-role". Empty allowlist + not-full = deny-all (fails
+  // closed). This is only ever a CEILING : the live per-request RBAC check still
+  // runs against the owner, so a key can never exceed the owner's current grants.
+  fullAccess  Boolean  @default(true)
+  permissions String[] @default([])
+  lastUsedAt DateTime?
+  expiresAt  DateTime?
+  createdBy  String // acting user id ; no FK, house convention
+  revokedAt  DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([organizationId])
+  @@index([ownerUserId])
+}

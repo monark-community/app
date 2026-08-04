@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { keepPreviousData } from "@tanstack/react-query";
@@ -84,6 +84,20 @@ export function AutomationsList({
     { refetchOnWindowFocus: false, placeholderData: keepPreviousData },
   );
 
+  // Resolve the raw trigger event type (e.g. `kanban.card-created`) to its human
+  // description (e.g. "Card created") for the Trigger column.
+  const eventTypesQuery = trpc.automation.eventTypes.list.useQuery(undefined, {
+    refetchOnWindowFocus: false,
+    staleTime: 5 * 60 * 1000,
+  });
+  const eventTypeLabels = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const g of eventTypesQuery.data?.groups ?? []) {
+      for (const e of g.events) m.set(e.type, e.description);
+    }
+    return m;
+  }, [eventTypesQuery.data]);
+
   const setEnabled = trpc.automation.automations.setEnabled.useMutation({
     onSuccess: () => utils.automation.automations.list.invalidate(),
     onError: (err) => toast.error(err.message),
@@ -114,9 +128,13 @@ export function AutomationsList({
     {
       id: "trigger",
       header: t("columns.trigger"),
-      cell: (a) => <code className="text-xs text-muted-foreground">{a.triggerEventType}</code>,
+      cell: (a) => (
+        <span className="text-muted-foreground" title={a.triggerEventType}>
+          {eventTypeLabels.get(a.triggerEventType) ?? a.triggerEventType}
+        </span>
+      ),
       enableSorting: true,
-      sortAccessor: (a) => a.triggerEventType,
+      sortAccessor: (a) => eventTypeLabels.get(a.triggerEventType) ?? a.triggerEventType,
     },
     {
       id: "enabled",

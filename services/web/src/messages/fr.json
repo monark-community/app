@@ -68,6 +68,7 @@
   "common": {
     "appName": "{appName}",
     "tagline": "Au service de la collaboration au sein de la communauté Web3.",
+    "done": "Terminé",
     "cancel": "Annuler",
     "save": "Enregistrer",
     "close": "Fermer",
@@ -363,6 +364,7 @@
     "rowActions": "Actions de la ligne",
     "selectRow": "Sélectionner la ligne",
     "selectAll": "Tout sélectionner",
+    "collapseSearch": "Fermer la recherche",
     "loadError": "Impossible de charger cette liste. Veuillez réessayer.",
     "retry": "Réessayer",
     "empty": {
@@ -391,6 +393,64 @@
     "clearAll": "Réinitialiser les filtres",
     "resetField": "Réinitialiser",
     "activeValues": "{count} actifs"
+  },
+  "query": {
+    "op": {
+      "is": "est",
+      "isNot": "n'est pas",
+      "contains": "contient",
+      "notContains": "ne contient pas",
+      "startsWith": "commence par",
+      "endsWith": "finit par",
+      "eq": "égal à",
+      "neq": "différent de",
+      "gt": "supérieur à",
+      "gte": "au moins",
+      "lt": "inférieur à",
+      "lte": "au plus",
+      "between": "entre (a..b)",
+      "before": "avant",
+      "after": "après",
+      "onOrBefore": "au plus tard le",
+      "onOrAfter": "au plus tôt le",
+      "isTrue": "est vrai",
+      "isFalse": "est faux",
+      "isAnyOf": "est l'un de",
+      "isNoneOf": "n'est aucun de",
+      "hasAnyOf": "contient l'un de",
+      "hasAllOf": "contient tous",
+      "hasNoneOf": "ne contient aucun de",
+      "isEmpty": "est vide",
+      "isNotEmpty": "n'est pas vide"
+    },
+    "var": {
+      "me": "L'utilisateur actuel",
+      "now": "Date et heure actuelles",
+      "today": "Début d'aujourd'hui",
+      "yesterday": "Début d'hier",
+      "tomorrow": "Début de demain",
+      "startOfWeek": "Lundi, cette semaine",
+      "endOfWeek": "Lundi, la semaine prochaine",
+      "startOfMonth": "Premier jour de ce mois",
+      "endOfMonth": "Premier jour du mois prochain",
+      "startOfYear": "1er janvier, cette année",
+      "endOfYear": "1er janvier, l'an prochain"
+    },
+    "chip": {
+      "add": "Ajouter un filtre",
+      "remove": "Retirer {field}",
+      "field": "Champ",
+      "operator": "Condition",
+      "apply": "Appliquer",
+      "cancel": "Annuler",
+      "valuePlaceholder": "Valeur…",
+      "addValue": "Ajouter une valeur",
+      "noResults": "Aucun résultat",
+      "pickDate": "Choisir une date",
+      "clearDate": "Effacer la date",
+      "textMode": "Modifier en texte",
+      "chipMode": "Modifier en puces"
+    }
   },
   "globalSearch": {
     "trigger": "Rechercher",
@@ -423,6 +483,38 @@
       "createCta": "Nouveau {model}",
       "searchPlaceholder": "Rechercher…",
       "searchAria": "Rechercher des enregistrements",
+      "options": {
+        "notifications": "Notifications",
+        "follow": "Suivre cette liste"
+      },
+      "query": {
+        "placeholder": "Filtrer… ex. status:open priority:>3",
+        "invalid": "Requête invalide :",
+        "fieldsHeading": "Champs",
+        "valuesHeading": "Valeurs",
+        "hint": "Tapez champ:valeur — ex. status:open, priority:>3, -assignee:present"
+      },
+      "views": {
+        "trigger": "Vues",
+        "all": "Toutes",
+        "custom": "Personnalisée",
+        "heading": "Vues enregistrées",
+        "empty": "Aucune vue enregistrée",
+        "save": "Enregistrer la requête…",
+        "shared": "Partagée",
+        "personal": "Personnelle",
+        "dialogTitle": "Enregistrer la vue",
+        "namePlaceholder": "Nom de la vue",
+        "shareLabel": "Partager avec tout le monde",
+        "saveCta": "Enregistrer",
+        "cancel": "Annuler",
+        "deleteTitle": "Supprimer la vue",
+        "deleteConfirm": "Supprimer",
+        "deleteDescription": "Supprimer la vue « {name} » ? Cette action est irréversible.",
+        "saved": "Vue enregistrée",
+        "deleted": "Vue supprimée",
+        "loaded": "Vue chargée"
+      },
       "empty": "Aucun enregistrement pour le moment.",
       "panelCreateTitle": "Nouveau {model}",
       "openFullPage": "Ouvrir en pleine page",
@@ -505,7 +597,75 @@
       "webhooks": "Webhooks",
       "dataModels": "Modèles de données",
       "files": "Fichiers",
-      "secrets": "Secrets"
+      "secrets": "Secrets",
+      "serviceAccounts": "Comptes de service"
+    },
+    "serviceAccounts": {
+      "title": "Comptes de service",
+      "subtitle": "Principaux machine appartenant à l'organisation, pour les intégrations. Une clé de compte de service agit au nom du compte (pas d'une personne), possède ses propres rôles et survit aux départs du personnel.",
+      "createCta": "Nouveau compte de service",
+      "searchPlaceholder": "Rechercher des comptes de service…",
+      "searchAria": "Rechercher des comptes de service",
+      "empty": "Aucun compte de service pour l'instant.",
+      "rolesCount": "{count, plural, =0 {Aucun rôle} one {# rôle} other {# rôles}}",
+      "createdAt": "Créé {time}",
+      "columns": {
+        "name": "Nom",
+        "status": "Statut",
+        "keys": "Clés",
+        "created": "Créé"
+      },
+      "status": {
+        "active": "Actif",
+        "disabled": "Désactivé"
+      },
+      "panelCreateTitle": "Nouveau compte de service",
+      "form": {
+        "description": "Un compte de service est une identité machine. Donnez-lui un nom et les rôles avec lesquels ses clés doivent agir.",
+        "nameLabel": "Nom",
+        "namePlaceholder": "p. ex. Synchronisation facturation",
+        "rolesLabel": "Rôles",
+        "rolesHelp": "Les clés du compte agissent avec les permissions de ces rôles (restreintes davantage par les portées de chaque clé).",
+        "noRoles": "Aucun rôle assignable dans cette organisation pour l'instant.",
+        "builtIn": "Intégré",
+        "submit": "Créer",
+        "createSuccess": "Compte de service créé.",
+        "saveError": "Impossible de créer le compte de service."
+      },
+      "roles": {
+        "title": "Rôles",
+        "help": "Ce que les clés de ce compte sont autorisées à faire.",
+        "empty": "Aucun rôle assignable dans cette organisation pour l'instant.",
+        "save": "Enregistrer les rôles",
+        "saveSuccess": "Rôles mis à jour.",
+        "saveError": "Impossible de mettre à jour les rôles."
+      },
+      "keys": {
+        "title": "Clés API",
+        "createCta": "Nouvelle clé",
+        "empty": "Ce compte de service n'a aucune clé pour l'instant.",
+        "revoke": "Révoquer",
+        "formTitle": "Créer une clé de compte de service",
+        "formDescription": "La clé agit avec les rôles de ce compte de service. Elle s'affichera une seule fois, juste après sa création.",
+        "rightsNote": "Cette clé peut faire tout ce que les rôles du compte de service permettent. Modifiez les rôles du compte pour changer ce que ses clés peuvent faire."
+      },
+      "disableSuccess": "Compte de service désactivé.",
+      "disableError": "Impossible de désactiver le compte de service.",
+      "deleteSuccess": "Compte de service supprimé.",
+      "deleteError": "Impossible de supprimer le compte de service.",
+      "danger": {
+        "title": "Zone sensible",
+        "disableTitle": "Désactiver ce compte de service",
+        "disableDescription": "Ses clés cessent de fonctionner immédiatement. Il n'est pas possible de le réactiver depuis l'interface pour l'instant.",
+        "disable": "Désactiver",
+        "deleteTitle": "Supprimer ce compte de service",
+        "deleteDescription": "Supprime définitivement le compte et toutes ses clés. Cette action est irréversible.",
+        "delete": "Supprimer",
+        "disableDialogTitle": "Désactiver ce compte de service ?",
+        "disableDialogDescription": "« {name} » et toutes ses clés cesseront de fonctionner immédiatement.",
+        "deleteDialogTitle": "Supprimer ce compte de service ?",
+        "deleteDialogDescription": "« {name} » et toutes ses clés seront définitivement supprimés. Cette action est irréversible."
+      }
     },
     "secrets": {
       "title": "Secrets",
@@ -916,7 +1076,13 @@
           "platform": "Plateforme",
           "calendar": "Calendrier",
           "projects": "Projets",
-          "industries": "Secteurs"
+          "industries": "Secteurs",
+          "api-keys": "Clés API",
+          "secrets": "Secrets",
+          "kanban": "Kanban",
+          "files": "Fichiers",
+          "data-models": "Modèles de données",
+          "automation": "Automatisation"
         },
         "nameRequired": "Le nom du rôle est requis.",
         "create": "Créer le rôle",
@@ -1304,13 +1470,84 @@
       "profile": "Profil et préférences",
       "security": "Compte et sécurité",
       "notifications": "Notifications",
+      "apiKeys": "Clés API",
       "danger": "Zone sensible"
     },
     "subtitles": {
       "profile": "Votre identité publique, ainsi que la langue et le thème qui vous suivent dans toute l'application.",
       "security": "Courriel, mot de passe, authentification à deux facteurs et appareils actuellement connectés.",
       "notifications": "Choisissez quels événements vous atteignent et par quel canal ils arrivent.",
+      "apiKeys": "Accès programmatique aux données de votre organisation via l'API REST.",
       "danger": "Les actions irréversibles vivent ici. Lisez attentivement chacune avant de cliquer."
+    },
+    "apiKeys": {
+      "title": "Clés API",
+      "subtitle": "Les clés authentifient les scripts et intégrations auprès de l'API REST. Une clé agit en votre nom, limitée aux portées que vous lui accordez.",
+      "noPermission": "Vous n'avez pas la permission de gérer les clés API. Demandez l'accès à un administrateur de l'organisation.",
+      "createCta": "Nouvelle clé API",
+      "empty": "Vous n'avez encore aucune clé API.",
+      "loadError": "Impossible de charger vos clés API.",
+      "apiDisabled": "L'API publique n'est pas encore activée pour votre organisation ; les clés créées ici ne fonctionneront pas tant qu'un administrateur ne l'aura pas activée dans les indicateurs de fonctionnalité.",
+      "usage": {
+        "title": "Utiliser vos clés",
+        "intro": "Envoyez votre clé en tant que jeton Bearer vers l'URL de base de l'API. La référence complète, lisible par machine, se trouve à l'endpoint OpenAPI.",
+        "baseUrlLabel": "URL de base",
+        "openApiLabel": "OpenAPI",
+        "exampleLabel": "Exemple"
+      },
+      "revoke": "Révoquer",
+      "revokeSuccess": "Clé API révoquée.",
+      "revokeError": "Impossible de révoquer la clé.",
+      "createdAt": "Créée {time}",
+      "lastUsed": "dernière utilisation {time}",
+      "neverUsed": "jamais utilisée",
+      "expiresAt": "expire {time}",
+      "status": {
+        "active": "Active",
+        "expired": "Expirée",
+        "revoked": "Révoquée"
+      },
+      "access": {
+        "full": "Accès complet",
+        "limited": "{count, plural, one {# permission} other {# permissions}}",
+        "dead": "{count, plural, one {# n'est plus accordée} other {# ne sont plus accordées}}"
+      },
+      "form": {
+        "title": "Créer une clé API",
+        "description": "Nommez la clé et choisissez quelle part de votre accès elle reçoit. Elle s'affichera une seule fois, juste après sa création.",
+        "nameLabel": "Nom",
+        "namePlaceholder": "p. ex. Intégration Zapier",
+        "accessLabel": "Accès",
+        "access_full": "Accès complet",
+        "access_full_hint": "La clé peut faire tout ce que vous pouvez faire — elle agit en votre nom.",
+        "access_limited": "Limité à certaines permissions",
+        "access_limited_hint": "Choisissez un sous-ensemble de ce que vous pouvez faire — un rôle ad hoc pour cette clé.",
+        "permsHelp": "Choisissez parmi les permissions que vous détenez actuellement. La clé ne peut jamais en faire plus que vous, et elle perd automatiquement une permission si vous la perdez.",
+        "permsEmpty": "Vous ne détenez encore aucune permission accordable.",
+        "permsSearchEmpty": "Aucune permission ne correspond à cette recherche.",
+        "expiryLabel": "Expiration",
+        "expiry": {
+          "never": "Aucune expiration",
+          "30": "30 jours",
+          "90": "90 jours",
+          "365": "1 an"
+        },
+        "submit": "Créer la clé",
+        "saveError": "Impossible de créer la clé."
+      },
+      "revokeDialog": {
+        "title": "Révoquer cette clé ?",
+        "description": "« {name} » cessera de fonctionner immédiatement, et toute intégration qui l'utilise perdra l'accès. Cette action est irréversible.",
+        "confirm": "Révoquer la clé"
+      },
+      "reveal": {
+        "title": "« {name} » créée",
+        "description": "Copiez votre clé maintenant. Pour des raisons de sécurité, elle ne sera plus affichée.",
+        "warning": "C'est le seul moment où vous verrez cette clé. Conservez-la en lieu sûr.",
+        "copy": "Copier",
+        "copied": "Copié",
+        "copyError": "Impossible de copier dans le presse-papiers."
+      }
     },
     "notifications": {
       "title": "Notifications",
@@ -1328,19 +1565,6 @@
       "filterAll": "Toutes",
       "filterUnread": "Non lues",
       "loadMore": "Charger plus",
-      "kinds": {
-        "auth": {
-          "new-device": "Nouvelle connexion",
-          "password-changed": "Mot de passe changé",
-          "totp-enabled": "TOTP activé",
-          "totp-disabled": "TOTP désactivé"
-        },
-        "account": {
-          "email-changed": "Adresse e-mail changée",
-          "deletion-scheduled": "Suppression programmée",
-          "deletion-canceled": "Suppression annulée"
-        }
-      },
       "prefs": {
         "title": "Préférences de notification",
         "subtitle": "Choisissez les événements qui vous envoient un courriel. Les alertes dans l'application sont gérées pour vous.",
@@ -1381,7 +1605,10 @@
           "account_deletion-canceled": "Suppression du compte annulée",
           "webhooks_delivery-permanently-failed": "Échec de livraison du webhook",
           "webhooks_endpoint-auto-disabled": "Point de terminaison webhook désactivé automatiquement",
-          "calendar_event_reminder": "Rappel d’événement"
+          "calendar_event_reminder": "Rappel d’événement",
+          "kanban_card_assigned": "Carte assignée",
+          "data-models_record-changed": "Enregistrement modifié",
+          "automation_custom-message": "Message d'automatisation"
         },
         "kindDescriptions": {
           "auth_new-device": "Lorsque votre compte est connecté depuis un appareil que nous ne reconnaissons pas.",
@@ -1395,7 +1622,9 @@
           "auth_recovery-codes-regenerated": "Lorsque vos codes de récupération à deux facteurs sont remplacés par un nouveau lot.",
           "webhooks_delivery-permanently-failed": "Lorsqu'une livraison de webhook échoue définitivement après toutes les tentatives.",
           "webhooks_endpoint-auto-disabled": "Lorsqu'un point de terminaison de webhook est automatiquement désactivé après des échecs répétés.",
-          "account_deletion-scheduled": "Lorsque votre compte est programmé pour suppression, avec la date limite du délai de grâce."
+          "account_deletion-scheduled": "Lorsque votre compte est programmé pour suppression, avec la date limite du délai de grâce.",
+          "kanban_card_assigned": "Lorsqu'une carte Kanban vous est assignée.",
+          "automation_custom-message": "Un message personnalisé qui vous est envoyé par une automatisation."
         },
         "toggleAllAria": "Basculer tous les courriels {category}",
         "forcedBadge": "Requis",
@@ -1702,6 +1931,13 @@
   "devOverlay": {
     "title": "Outils dev",
     "toggleHint": "Alt+D pour basculer",
+    "anchor": {
+      "label": "Position du panneau",
+      "topLeft": "Haut gauche",
+      "topRight": "Haut droite",
+      "bottomLeft": "Bas gauche",
+      "bottomRight": "Bas droite"
+    },
     "themeSwitchTo": "Passer au thème {theme}",
     "theme": {
       "light": "clair",
@@ -1715,12 +1951,56 @@
       "session": "session",
       "apiHealth": "santé api",
       "remoteDiagnostics": "diagnostics dev distant",
+      "eventBus": "bus d'événements",
+      "automation": "exécutions d'automatisation",
+      "webhookDeliveries": "livraisons webhook",
+      "queryPlayground": "bac à sable de requêtes",
+      "secretsKeys": "secrets",
       "currentOrg": "org active",
       "trustedDevices": "appareils de confiance",
       "totp": "totp",
       "rbac": "rbac",
       "featureFlags": "feature flags",
       "notifications": "notifications"
+    },
+    "eventBus": {
+      "signInPrompt": "Connectez-vous pour observer le bus d'événements.",
+      "empty": "Aucun événement capturé — faites quelque chose.",
+      "count": "{count} événements"
+    },
+    "automation": {
+      "signInPrompt": "Connectez-vous pour voir les exécutions.",
+      "unavailable": "Aucun accès automatisation dans cette org.",
+      "empty": "Aucune exécution pour l'instant.",
+      "runsCount": "{count} exécutions",
+      "failedCount": "{count} en échec",
+      "reRun": "Relancer cette automatisation"
+    },
+    "secretsKeys": {
+      "signInPrompt": "Connectez-vous pour voir les secrets.",
+      "unavailable": "Aucun accès secrets dans cette org.",
+      "empty": "Aucun secret configuré.",
+      "count": "{count} clés",
+      "used": "utilisé {when}",
+      "unused": "jamais utilisé"
+    },
+    "webhookDeliveries": {
+      "signInPrompt": "Connectez-vous pour voir les livraisons.",
+      "unavailable": "Aucun accès webhooks dans cette org.",
+      "noEndpoints": "Aucun point de terminaison configuré.",
+      "endpoint": "Point de terminaison",
+      "empty": "Aucune livraison pour l'instant.",
+      "count": "{count} points de terminaison",
+      "attempts": "{count}×",
+      "retry": "Relivrer"
+    },
+    "queryPlayground": {
+      "signInPrompt": "Connectez-vous pour exécuter des requêtes.",
+      "model": "Modèle de données",
+      "selectModel": "Choisir un modèle…",
+      "rows": "{count} lignes",
+      "tree": "Arbre de filtre",
+      "noQuery": "Aucun filtre — tous les enregistrements"
     },
     "remoteDiagnostics": {
       "browserHost": "hôte navigateur",
@@ -1805,6 +2085,7 @@
         "roles": "rôles"
       },
       "permissions": "permissions ({count})",
+      "filterPlaceholder": "Filtrer les permissions…",
       "noneGranted": "Aucune accordée.",
       "dash": "—"
     },
@@ -1871,6 +2152,11 @@
       "restoreCalendar": "Restaurer",
       "restoreSuccess": "Calendrier restauré.",
       "restoreError": "Impossible de restaurer le calendrier. {message}",
+      "exportCalendar": "Exporter (.ics)",
+      "importCalendar": "Importer (.ics)",
+      "importSuccess": "{count} événements importés.",
+      "importSuccessWithRecurrence": "{count} événements importés ({recurring} événements récurrents ont été importés comme événements ponctuels).",
+      "importError": "Impossible d'importer le calendrier. {message}",
       "todayEvents": "Événements d'aujourd'hui",
       "noEventsToday": "Aucun événement aujourd'hui"
     },
@@ -1898,7 +2184,29 @@
       "goToDate": "Aller à la date",
       "day": "Jour",
       "week": "Semaine",
-      "month": "Mois"
+      "month": "Mois",
+      "agenda": "Agenda"
+    },
+    "agendaView": {
+      "title": "À venir",
+      "addEvent": "Ajouter un événement",
+      "noUpcomingEvents": "Aucun événement à venir.",
+      "today": "Aujourd'hui",
+      "loading": "Chargement…",
+      "loadMore": "Charger plus"
+    },
+    "viewOptions": {
+      "trigger": "Options d'affichage",
+      "hideWeekends": "Masquer les week-ends",
+      "weekStartsOn": "La semaine commence le",
+      "weekStartsOnSunday": "Dimanche",
+      "weekStartsOnMonday": "Lundi",
+      "defaultView": "Vue par défaut",
+      "timeFormat": "Format de l'heure",
+      "timeFormat24h": "24 heures",
+      "timeFormat12h": "12 heures",
+      "workingHours": "Mettre en évidence les heures de travail",
+      "workingHoursTo": "à"
     },
     "monthView": {
       "more": "de plus"
@@ -1955,12 +2263,52 @@
         "reminderUnitWeeks": "semaines",
         "reminderBefore": "avant",
         "addReminder": "Ajouter un rappel",
-        "removeReminder": "Supprimer le rappel"
+        "removeReminder": "Supprimer le rappel",
+        "conflictWarningOne": "Ceci chevauche « {title} ».",
+        "conflictWarningMore": "Ceci chevauche « {title} » et {count} de plus."
       }
     }
   },
   "kanban": {
     "title": "Kanban",
+    "query": {
+      "bar": {
+        "placeholder": "Filtrer les cartes… ex. assignee:@me priority:>=HIGH",
+        "invalid": "Requête invalide :",
+        "fieldsHeading": "Champs",
+        "valuesHeading": "Valeurs",
+        "hint": "Tapez champ:valeur — ex. status:… assignee:@me due:@today",
+        "expand": "Filtrer les cartes",
+        "collapse": "Fermer le filtre"
+      },
+      "fields": {
+        "title": "Titre",
+        "description": "Description",
+        "status": "Statut",
+        "assignee": "Responsable",
+        "reviewer": "Relecteur",
+        "priority": "Priorité",
+        "due": "Échéance",
+        "estimate": "Estimation"
+      },
+      "views": {
+        "trigger": "Vues",
+        "heading": "Vues enregistrées",
+        "empty": "Aucune vue enregistrée",
+        "save": "Enregistrer la requête…",
+        "dialogTitle": "Enregistrer la vue",
+        "namePlaceholder": "Nom de la vue",
+        "shareLabel": "Partager avec tout le monde",
+        "saveCta": "Enregistrer",
+        "cancel": "Annuler",
+        "deleteTitle": "Supprimer la vue",
+        "deleteConfirm": "Supprimer",
+        "deleteDescription": "Supprimer la vue « {name} » ? Cette action est irréversible.",
+        "saved": "Vue enregistrée",
+        "deleted": "Vue supprimée",
+        "loaded": "Vue chargée"
+      }
+    },
     "shell": {
       "selectBoard": "Sélectionner un tableau",
       "newBoard": "Nouveau tableau",
@@ -2125,12 +2473,7 @@
       "deleteNode": "Supprimer le nœud",
       "emptyCanvas": "Ajoutez un déclencheur pour commencer votre flux.",
       "portFlowHint": "Ordre d'exécution — la séquence des étapes.",
-      "portDataHint": "Entrée de variable — reliez la sortie d'un nœud ici pour définir cette valeur.",
       "legendFlow": "Ordre d'exécution",
-      "legendData": "Variable",
-      "fieldWired": "Reliée",
-      "useAsInput": "Utiliser comme port d'entrée",
-      "removeInput": "Retirer le port d'entrée",
       "secretsEmpty": "Aucun secret défini. Ajoutez-en un dans <link>Admin › Secrets</link> pour le référencer ici.",
       "nodeName": "Nom",
       "cancel": "Annuler",
@@ -2138,6 +2481,11 @@
       "menuReplace": "Remplacer",
       "menuDelete": "Supprimer",
       "renameTitle": "Renommer le nœud",
+      "nodeDisplayName": "Nom d'affichage",
+      "nodeSlug": "Nom de référence",
+      "slugHint": "Référencez ce nœud avec {token}",
+      "slugInvalid": "Utilisez une lettre, puis des lettres, chiffres ou tirets bas.",
+      "slugTaken": "Un autre nœud utilise déjà ce nom de référence.",
       "replacePickTitle": "Remplacer le nœud",
       "replaceConfirmTitle": "Remplacer ce nœud ?",
       "replaceConfirmBody": "La configuration du nœud est réinitialisée, et toute connexion incompatible avec le nouveau nœud est supprimée — les connexions compatibles sont conservées.",
@@ -2167,10 +2515,22 @@
       "copyReference": "Copier la référence",
       "outputCopied": "Copié {ref}",
       "variables": "Variables",
-      "variablesHint": "Valeurs du déclencheur et des nœuds précédents que vous pouvez insérer dans un champ. Cliquez une référence pour la copier.",
+      "variablesHint": "Valeurs du déclencheur et des nœuds précédents. Cliquez un champ ci-dessus, puis une variable pour l'insérer (ou cliquez-en une sans champ actif pour la copier). Pour une liste déroulante, un interrupteur ou un champ numérique, utilisez d'abord son bouton de variable pour le convertir en champ texte.",
+      "insertVariable": "Insérer dans le champ actif",
+      "useVariable": "Utiliser une variable",
+      "useFixedValue": "Utiliser une valeur fixe",
+      "variablePlaceholder": "'{{' une variable '}}'",
+      "chooseVariable": "Choisir une variable…",
+      "variablePickerTitle": "Insérer une variable",
+      "variableSearch": "Rechercher des variables…",
+      "noVariablesAvailable": "Aucune variable pour l'instant. Connectez cette étape au déclencheur ou à une étape précédente pour référencer leurs valeurs.",
+      "noVariablesMatch": "Aucune variable correspondante.",
+      "useCustomVariable": "Utiliser {ref}",
       "varWholeOutput": "(sortie complète)",
       "varTrigger": "Déclencheur",
       "varBodyHint": "corps de la requête",
+      "varWorkflowVars": "Variables du flux",
+      "varWorkflowVarHint": "définie par un nœud Définir une variable",
       "schedule": {
         "kind": {
           "interval": "À intervalle",
@@ -2197,7 +2557,6 @@
         "nextRun": "Prochaine exécution : {time}",
         "nextRunNone": "Aucune exécution à venir"
       },
-      "resolvedFromRun": "Valeur de la dernière exécution",
       "runInput": "Entrée",
       "runOutput": "Sortie",
       "statusSkipped": "Ignoré",
@@ -2231,6 +2590,7 @@
         "missingRequired": "{node} : « {field} » est requis.",
         "orphan": "{node} : non connecté — ne s’exécutera pas.",
         "cycle": "Le graphe contient une boucle.",
+        "duplicateSlug": "{node} : le nom de référence « {slug} » est utilisé par plusieurs nœuds.",
         "unknownNode": "{node} : type de nœud inconnu."
       }
     },

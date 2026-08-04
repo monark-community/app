@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
+  CreateFab,
   DataTable,
   FilterBar,
   FilterBarSearch,
@@ -403,7 +404,19 @@ export function UsersList() {
             </Button>
           </div>
         }
+        mobileOptions={
+          <TableTools
+            mode="sheet"
+            layout={layout}
+            primaryColumn={primaryColumn}
+            columns={userColumns}
+            filters={filterConfigs}
+            labels={toolsLabels}
+            include={["filters", "sorting", "columns"]}
+          />
+        }
       />
+      {!panel.isOpen && <CreateFab onClick={() => setInviteOpen(true)} label={t("invite.cta")} />}
 
       <TableDetailLayout
         open={panel.isOpen}

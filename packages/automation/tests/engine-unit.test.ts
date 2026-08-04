@@ -61,6 +61,51 @@ describe("executionOrder", () => {
     expect(order).toContain("c");
     expect(order.indexOf("c")).toBeLessThan(order.indexOf("a"));
   });
+
+  it("pulls in a value-source referenced via {{ }} (no edge), ordered before it", () => {
+    // `c` (Constant) has no edge at all — only a `{{ c.value }}` reference in a's
+    // config pulls it into the run and orders it first.
+    const g = graph(
+      [
+        node("t", TRIGGER),
+        { id: "a", type: EMAIL, position: at, config: { subject: "{{ c.value }}" } },
+        node("c", CONST),
+      ],
+      [edge("1", "t", "a")],
+    );
+    const order = ids(g);
+    expect(order).toContain("c");
+    expect(order.indexOf("c")).toBeLessThan(order.indexOf("a"));
+  });
+
+  it("resolves a dependency on a hyphenated node id (the editor mints `n-…`)", () => {
+    const g = graph(
+      [
+        node("t", TRIGGER),
+        { id: "a", type: EMAIL, position: at, config: { subject: "{{ n-c.value }}" } },
+        { id: "n-c", type: CONST, position: at, config: {} },
+      ],
+      [edge("1", "t", "a")],
+    );
+    const order = ids(g);
+    expect(order.indexOf("n-c")).toBeLessThan(order.indexOf("a"));
+  });
+
+  it("pulls in a value-source referenced by its `{{ steps.<slug> }}` alias", () => {
+    // `a` references the Constant by slug, not node id — the slug map must
+    // resolve it to `c` and order `c` before `a`.
+    const g = graph(
+      [
+        node("t", TRIGGER),
+        { id: "a", type: EMAIL, position: at, config: { subject: "{{ steps.the_const.value }}" } },
+        { id: "c", type: CONST, position: at, config: {}, slug: "the_const" },
+      ],
+      [edge("1", "t", "a")],
+    );
+    const order = ids(g);
+    expect(order).toContain("c");
+    expect(order.indexOf("c")).toBeLessThan(order.indexOf("a"));
+  });
 });
 
 describe("interpolateConfig", () => {
@@ -79,9 +124,39 @@ describe("interpolateConfig", () => {
     expect(interpolateConfig({ n: "{{trigger.count}}" }, scope)).toEqual({ n: 5 });
   });
 
+  it("resolves a reference whose node-id segment contains a hyphen", () => {
+    // Editor node ids are hyphenated (`n-…`) ; the path regex must allow `-` or
+    // the whole token silently passes through as literal text.
+    const s = { "n-1": { value: 42 }, "node-2": { id: "abc" } };
+    expect(interpolateConfig({ x: "{{ n-1.value }}" }, s)).toEqual({ x: 42 });
+    expect(interpolateConfig({ x: "id {{ node-2.id }}" }, s)).toEqual({ x: "id abc" });
+  });
+
   it("yields undefined for an unknown whole token and empty string when embedded", () => {
     expect(interpolateConfig({ x: "{{ trigger.nope }}" }, scope)).toEqual({ x: undefined });
     expect(interpolateConfig({ x: "a{{ trigger.nope }}b" }, scope)).toEqual({ x: "ab" });
+  });
+
+  it("resolves a node output addressed by its `steps.<slug>` alias", () => {
+    // Phase 3 addressing : the engine mirrors each upstream output under
+    // `steps.<slug>` alongside the raw node-id key.
+    const s = {
+      trigger: {},
+      steps: { find_record: { id: "abc", title: "Hi" } },
+      "n-1": { id: "abc" },
+    };
+    expect(interpolateConfig({ x: "{{ steps.find_record.id }}" }, s)).toEqual({ x: "abc" });
+    expect(interpolateConfig({ x: "got {{ steps.find_record.title }}" }, s)).toEqual({
+      x: "got Hi",
+    });
+  });
+
+  it("resolves a workflow variable from the `vars` scope", () => {
+    // `{{ vars.<name> }}` is the run-global variable scope a Set Variable node
+    // writes ; it resolves like any other path, preserving the value's type.
+    const s = { trigger: {}, vars: { rewardTotal: 42, label: "gold" } };
+    expect(interpolateConfig({ n: "{{ vars.rewardTotal }}" }, s)).toEqual({ n: 42 });
+    expect(interpolateConfig({ s: "tier {{ vars.label }}" }, s)).toEqual({ s: "tier gold" });
   });
 
   it("passes non-string values through untouched", () => {

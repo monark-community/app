@@ -4,13 +4,10 @@ import { useState } from "react";
 import { DragHandle } from "@monark/components/ui/drag-handle";
 import type { CalendarEvent } from "../../contracts/types";
 import { HOUR_HEIGHT_PX } from "../constants";
+import { formatClockTime, type TimeFormat } from "../date-utils";
 
 function minutesFromMidnight(date: Date): number {
   return date.getHours() * 60 + date.getMinutes();
-}
-
-function formatTime(date: Date): string {
-  return `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
 }
 
 function ZapIcon({ color }: { color?: string }) {
@@ -56,6 +53,7 @@ export function DayEventBlock({
   color,
   colIndex = 0,
   colSpan = 1,
+  timeFormat = "24h",
   onClick,
   onDragStart,
 }: {
@@ -66,6 +64,7 @@ export function DayEventBlock({
   color?: string;
   colIndex?: number;
   colSpan?: number;
+  timeFormat?: TimeFormat;
   onClick?: (anchorX: number, anchorY: number, side: "left" | "right") => void;
   onDragStart?: (type: "move" | "resize", clientY: number) => void;
 }) {
@@ -154,7 +153,7 @@ export function DayEventBlock({
       <p className={titleClass}>{event.title}</p>
       {showTime && (
         <p className="truncate whitespace-nowrap text-muted-foreground">
-          {formatTime(event.startAt)} – {formatTime(event.endAt)}
+          {formatClockTime(event.startAt, timeFormat)} – {formatClockTime(event.endAt, timeFormat)}
         </p>
       )}
     </>

@@ -24,6 +24,7 @@ export function FormActionsFooter({
   submitDisabled = false,
   onDelete,
   deleteLabel,
+  stickyOnMobile = false,
   className,
 }: {
   submitLabel: string;
@@ -33,10 +34,26 @@ export function FormActionsFooter({
   submitDisabled?: boolean;
   onDelete?: () => void;
   deleteLabel?: string;
+  /**
+   * On mobile, float the row as a pinned action bar at the bottom of the
+   * scroll area (a rounded card with a shadow, clearing the home indicator via
+   * `env(safe-area-inset-bottom)`) so Save is reachable without scrolling to the
+   * end of a long form. Reverts to the plain inline row at `md+`. Container-
+   * agnostic — no negative margins, so it works in a padded panel or full page.
+   */
+  stickyOnMobile?: boolean;
   className?: string;
 }) {
   return (
-    <div className={cn("flex items-center gap-2 pt-2", className)}>
+    <div
+      className={cn(
+        "flex items-center gap-2",
+        stickyOnMobile
+          ? "sticky bottom-[calc(0.5rem+env(safe-area-inset-bottom))] z-10 mt-2 rounded-lg border border-border bg-background/95 px-3 py-2 shadow-lg backdrop-blur md:static md:mt-0 md:rounded-none md:border-0 md:bg-transparent md:p-0 md:pt-2 md:shadow-none md:backdrop-blur-none"
+          : "pt-2",
+        className,
+      )}
+    >
       {onDelete && (
         <Button
           type="button"

@@ -19,9 +19,11 @@
   "dependencies": {
     "@monark/common": "workspace:*",
     "@monark/db": "workspace:*",
+    "@monark/feature-flags": "workspace:*",
     "@monark/files": "workspace:*",
     "@monark/notifications": "workspace:*",
     "@monark/organizations": "workspace:*",
+    "@monark/query": "workspace:*",
     "@monark/rbac": "workspace:*",
     "zod": "^3.23.0"
   },

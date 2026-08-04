@@ -18,6 +18,9 @@ export const constantNode = defineNode({
     // downstream node consumes its output ; wire its output into a field.
     inputs: [],
     outputs: [{ id: "out" }],
+    outputFields: [
+      { key: "value", type: "string", description: "The fixed value you configured." },
+    ],
     configFields: [
       {
         key: "valueType",

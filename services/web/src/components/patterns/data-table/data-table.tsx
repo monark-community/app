@@ -750,9 +750,10 @@ function HeaderLabel<TData>({
           </span>
         ) : (
           // Idle sort hint — hidden until the header is hovered, so a quiet
-          // table shows no per-column arrows.
+          // desktop table shows no per-column arrows. On touch (no hover) it
+          // stays faintly visible so "tap to sort" is discoverable.
           <ArrowUpDown
-            className="h-3.5 w-3.5 shrink-0 text-muted-foreground/50 opacity-0 transition-opacity group-hover/th:opacity-100"
+            className="h-3.5 w-3.5 shrink-0 text-muted-foreground/50 opacity-0 transition-opacity pointer-coarse:opacity-100 group-hover/th:opacity-100"
             aria-hidden
           />
         ))}
@@ -769,7 +770,10 @@ function ResizeHandle<TData>({ header }: { header: Header<TData, unknown> }) {
       onMouseDown={header.getResizeHandler()}
       onTouchStart={header.getResizeHandler()}
       onClick={(e) => e.stopPropagation()}
-      className="absolute right-0 top-0 h-full w-1.5"
+      // Hidden on touch : a 6px drag strip is unusable with a finger and easy to
+      // mis-tap next to the sort target ; column width is adjusted from the
+      // toolbar Columns editor on mobile instead.
+      className="absolute right-0 top-0 h-full w-1.5 pointer-coarse:hidden"
     />
   );
 }

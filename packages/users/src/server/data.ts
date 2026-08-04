@@ -35,7 +35,12 @@ export async function listUsersForAdmin(opts: {
   joinedAfter?: Date;
 }): Promise<{ items: UserRow[]; nextCursor: string | null }> {
   const db = getDb();
-  const ands: Prisma.UserWhereInput[] = [{ NOT: { email: { endsWith: "@monark.invalid" } } }];
+  const ands: Prisma.UserWhereInput[] = [
+    { NOT: { email: { endsWith: "@monark.invalid" } } },
+    // Machine principals (service-account keys) never appear in the human
+    // Users admin list ; they have their own admin surface.
+    { kind: "HUMAN" },
+  ];
   const search = opts.search?.trim();
   if (search) {
     ands.push({

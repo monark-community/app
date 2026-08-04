@@ -2,6 +2,7 @@ export * from "./errors";
 export * from "./result";
 export { logger } from "./log";
 export { emit, on, WILDCARD_EVENT_TYPE } from "./events";
+export { installDevEventTap, recentDevEvents, type DevEventEntry } from "./dev-event-log";
 export {
   registerEventTypes,
   getEventTypeDescriptor,

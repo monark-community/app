@@ -41,7 +41,7 @@ Encode every endpoint's secret as a JSON map in one env var. New endpoints requi
 
 ```env
 # services/api/.env
-WEBHOOK_SECRETS={"clx9z…endpoint-id":"whsec_AbC123…","clxAa…endpoint-id":"whsec_DeF456…"}
+WEBHOOK_SECRETS_JSON={"clx9z…endpoint-id":"whsec_AbC123…","clxAa…endpoint-id":"whsec_DeF456…"}
 ```
 
 ```ts
@@ -55,13 +55,13 @@ let cache: Record<string, string> | null = null;
 
 function load(): Record<string, string> {
   if (cache) return cache;
-  const raw = process.env.WEBHOOK_SECRETS;
+  const raw = process.env.WEBHOOK_SECRETS_JSON;
   if (!raw) return (cache = {});
   try {
     cache = SecretsMap.parse(JSON.parse(raw));
     return cache;
   } catch (err) {
-    logger.error({ err }, "WEBHOOK_SECRETS env var failed to parse ; treating as empty");
+    logger.error({ err }, "WEBHOOK_SECRETS_JSON env var failed to parse ; treating as empty");
     return (cache = {});
   }
 }

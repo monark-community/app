@@ -23,7 +23,7 @@ export async function AccountPageHeader({
   tab,
   tone = "default",
 }: {
-  tab: "profile" | "security" | "notifications" | "danger";
+  tab: "profile" | "security" | "notifications" | "apiKeys" | "danger";
   tone?: "default" | "danger";
 }) {
   const t = await getTranslations("account");

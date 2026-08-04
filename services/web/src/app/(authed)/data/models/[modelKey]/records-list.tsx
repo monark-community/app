@@ -12,9 +12,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   BulkEditBar,
   ConfirmDialog,
+  CreateFab,
   DataTable,
   FilterBar,
   FilterBarSearch,
+  ListMobileBar,
   PanelHeader,
   TableDetailLayout,
   TableEmptyState,
@@ -41,8 +43,17 @@ import {
   type FieldDef,
   type RelationSource,
 } from "@/components/fields";
-import { TITLE_FIELD_KEY } from "@monark/data-models/contracts";
+import {
+  filterableKindOf,
+  TITLE_FIELD_KEY,
+  type DataFieldType,
+  type FilterNode,
+} from "@monark/data-models/contracts";
 import { trpc } from "@/lib/trpc";
+import { type QueryFieldMeta } from "@/components/query/query-bar";
+import { QueryChipBar } from "@/components/query/query-chip-bar";
+import { useMqlLabels } from "@/components/query/use-mql-labels";
+import { ViewsMenu } from "./views-menu";
 import { usePaginationLabels } from "@/lib/use-pagination-labels";
 import { useTableEmptyLabels } from "@/lib/use-table-empty-labels";
 import { RecordAccessSection } from "./record-access-section";
@@ -127,8 +138,15 @@ function filterTypeForField(def: FieldDef): RecordFilterType | null {
 // constraint". Chosen not to collide with a real option value.
 const FILTER_ANY = "__any__";
 
-export function RecordsList({ model }: { model: ModelInfo }) {
+export function RecordsList({
+  model,
+  queryLanguageEnabled = false,
+}: {
+  model: ModelInfo;
+  queryLanguageEnabled?: boolean;
+}) {
   const t = useTranslations("data.records");
+  const mqlLabels = useMqlLabels();
   const tTable = useTranslations("table");
   const tFilters = useTranslations("filters");
   const { labels: fieldChromeLabels } = useFieldStrings();
@@ -148,6 +166,11 @@ export function RecordsList({ model }: { model: ModelInfo }) {
   const [fieldFilters, setFieldFilters] = useState<Record<string, string | string[]>>({});
   const setFieldFilter = (key: string, value: string | string[]) =>
     setFieldFilters((prev) => ({ ...prev, [key]: value }));
+  // The structured query-language tree (flag-gated ; replaces search + the
+  // filter menu when on). Null = no query. `queryText` is the bar's controlled
+  // text (owned here so a picked saved view can populate it).
+  const [queryTree, setQueryTree] = useState<FilterNode | null>(null);
+  const [queryText, setQueryText] = useState("");
 
   // Bulk edit is gated by a permission separate from single-record editing :
   // the caller needs record-write on this model AND the org-level
@@ -257,20 +280,55 @@ export function RecordsList({ model }: { model: ModelInfo }) {
     return [{ key: field.key, type, value }];
   });
 
+  // Field metadata for the query bar's autocomplete, built from the model's
+  // live fields — a local fallback while the server list loads.
+  const localQueryFields: QueryFieldMeta[] = activeFields.map((f) => {
+    const config = (f.config ?? {}) as {
+      options?: { value: string; label: string }[];
+      expression?: string;
+    };
+    return {
+      key: f.key,
+      label: f.label,
+      kind:
+        filterableKindOf(f.type as DataFieldType, { formulaExpression: config.expression }) ??
+        "text",
+      options: config.options,
+    };
+  });
+  // The server enriches this with "virtual" dotted fields for one-level relation
+  // traversal (`assignee.title`) — needed so the bar can parse + autocomplete
+  // them. Only fetched when the query language is on.
+  const queryFieldsQuery = trpc.dataModels.records.queryFields.useQuery(
+    { dataModelId: model.id },
+    { enabled: queryLanguageEnabled, refetchOnWindowFocus: false, staleTime: 5 * 60 * 1000 },
+  );
+  const queryFields: QueryFieldMeta[] = queryFieldsQuery.data ?? localQueryFields;
+
   const paginationLabels = usePaginationLabels();
   const pagination = usePaginatedList({
-    resetKey: [search, showArchived, JSON.stringify(fieldFilters)],
+    resetKey: queryLanguageEnabled
+      ? [showArchived, JSON.stringify(queryTree)]
+      : [search, showArchived, JSON.stringify(fieldFilters)],
   });
 
   const query = trpc.dataModels.records.list.useQuery(
-    {
-      dataModelId: model.id,
-      search: search.length > 0 ? search : undefined,
-      includeDeleted: showArchived,
-      fieldFilters: activeFieldFilters.length > 0 ? activeFieldFilters : undefined,
-      limit: pagination.limit,
-      cursor: pagination.cursor,
-    },
+    queryLanguageEnabled
+      ? {
+          dataModelId: model.id,
+          includeDeleted: showArchived,
+          filter: queryTree ?? undefined,
+          limit: pagination.limit,
+          cursor: pagination.cursor,
+        }
+      : {
+          dataModelId: model.id,
+          search: search.length > 0 ? search : undefined,
+          includeDeleted: showArchived,
+          fieldFilters: activeFieldFilters.length > 0 ? activeFieldFilters : undefined,
+          limit: pagination.limit,
+          cursor: pagination.cursor,
+        },
     { refetchOnWindowFocus: false, placeholderData: keepPreviousData },
   );
 
@@ -320,7 +378,9 @@ export function RecordsList({ model }: { model: ModelInfo }) {
   });
 
   const rows: RawRecord[] = query.data?.items ?? [];
-  const hasActiveFilters = activeFieldFilters.length > 0 || showArchived;
+  const hasActiveFilters = queryLanguageEnabled
+    ? queryTree !== null || showArchived
+    : activeFieldFilters.length > 0 || showArchived;
   const emptyLabels = useTableEmptyLabels({ query: search, noData: t("empty") });
 
   // Keep selection scoped to currently-visible rows : prune ids that fall out
@@ -518,44 +578,152 @@ export function RecordsList({ model }: { model: ModelInfo }) {
     differsWarning: t("bulkEdit.differsWarning"),
   };
 
+  const queryBarLabels = {
+    placeholder: t("query.placeholder"),
+    invalid: t("query.invalid"),
+    fieldsHeading: t("query.fieldsHeading"),
+    valuesHeading: t("query.valuesHeading"),
+    hint: t("query.hint"),
+  };
+  const viewsLabels = {
+    trigger: t("views.trigger"),
+    all: t("views.all"),
+    custom: t("views.custom"),
+    heading: t("views.heading"),
+    empty: t("views.empty"),
+    save: t("views.save"),
+    shared: t("views.shared"),
+    personal: t("views.personal"),
+    dialogTitle: t("views.dialogTitle"),
+    namePlaceholder: t("views.namePlaceholder"),
+    shareLabel: t("views.shareLabel"),
+    saveCta: t("views.saveCta"),
+    cancel: t("views.cancel"),
+    deleteTitle: t("views.deleteTitle"),
+    deleteConfirm: t("views.deleteConfirm"),
+    deleteDescription: t("views.deleteDescription"),
+    saved: t("views.saved"),
+    deleted: t("views.deleted"),
+    loaded: t("views.loaded"),
+  };
+
+  const queryBarNode = (
+    <QueryChipBar
+      fields={queryFields}
+      text={queryText}
+      onTextChange={setQueryText}
+      onChange={setQueryTree}
+      labels={queryBarLabels}
+      {...mqlLabels}
+    />
+  );
+  const searchNode = (
+    <FilterBarSearch
+      value={rawSearch}
+      onChange={setRawSearch}
+      placeholder={t("searchPlaceholder")}
+      aria-label={t("searchAria")}
+    />
+  );
+
+  // One consolidated options sheet for mobile : sort + columns (+ filters when
+  // the query language is off) plus a "Follow this list" row, all behind a
+  // single ⋯ trigger.
+  const optionsSheet = (
+    <TableTools
+      mode="sheet"
+      layout={layout}
+      primaryColumn={primaryColumn}
+      columns={columns}
+      filters={filterConfigs}
+      labels={toolsLabels}
+      include={queryLanguageEnabled ? ["sorting", "columns"] : ["filters", "sorting", "columns"]}
+      extraSections={
+        <div className="space-y-1">
+          <h3 className="px-1 text-sm font-semibold text-foreground">
+            {t("options.notifications")}
+          </h3>
+          <div className="flex items-center justify-between rounded-md border border-border px-3 py-2">
+            <span className="text-sm">{t("options.follow")}</span>
+            <ModelWatchButton modelId={model.id} />
+          </div>
+        </div>
+      }
+    />
+  );
+
   return (
     <>
-      <FilterBar
-        search={
-          <FilterBarSearch
-            value={rawSearch}
-            onChange={setRawSearch}
-            placeholder={t("searchPlaceholder")}
-            aria-label={t("searchAria")}
-          />
-        }
-        tools={
-          <TableTools
-            layout={layout}
-            primaryColumn={primaryColumn}
-            columns={columns}
-            filters={filterConfigs}
-            labels={toolsLabels}
-            include={["filters", "sorting"]}
-          />
-        }
-        actions={
-          <div className="flex items-center gap-2">
-            <ModelWatchButton modelId={model.id} />
+      {/* Desktop toolbar : the roomy row, unchanged (hidden on mobile). */}
+      <div className="hidden md:block">
+        <FilterBar
+          search={queryLanguageEnabled ? queryBarNode : searchNode}
+          tools={
             <TableTools
               layout={layout}
               primaryColumn={primaryColumn}
               columns={columns}
+              filters={filterConfigs}
               labels={toolsLabels}
-              include={["columns"]}
+              include={queryLanguageEnabled ? ["sorting"] : ["filters", "sorting"]}
             />
-            <Button onClick={panel.openCreate}>
-              <Plus className="mr-1.5 h-4 w-4" aria-hidden />
-              {t("createCta", { model: model.name })}
-            </Button>
-          </div>
+          }
+          actions={
+            <div className="flex items-center gap-2">
+              {queryLanguageEnabled && (
+                <ViewsMenu
+                  modelId={model.id}
+                  fields={queryFields}
+                  currentQuery={queryTree}
+                  onPick={setQueryText}
+                  labels={viewsLabels}
+                />
+              )}
+              <ModelWatchButton modelId={model.id} />
+              <TableTools
+                layout={layout}
+                primaryColumn={primaryColumn}
+                columns={columns}
+                labels={toolsLabels}
+                include={["columns"]}
+              />
+              <Button onClick={panel.openCreate}>
+                <Plus className="mr-1.5 h-4 w-4" aria-hidden />
+                {t("createCta", { model: model.name })}
+              </Button>
+            </div>
+          }
+        />
+      </div>
+
+      {/* Mobile toolbar : Views (or search) lead + one-tap query + ⋯ options.
+          The labelled Create button becomes a FAB below. */}
+      <ListMobileBar
+        searchLabel={t("searchAria")}
+        closeLabel={tTable("collapseSearch")}
+        lead={
+          queryLanguageEnabled ? (
+            <ViewsMenu
+              asLead
+              modelId={model.id}
+              fields={queryFields}
+              currentQuery={queryTree}
+              onPick={setQueryText}
+              labels={viewsLabels}
+            />
+          ) : (
+            searchNode
+          )
         }
+        search={queryLanguageEnabled ? queryBarNode : undefined}
+        options={optionsSheet}
       />
+
+      {/* Create FAB : mobile-only, hidden while a record panel is open or the
+          bulk-edit bar occupies the bottom. */}
+      {!panel.isOpen && selectedIds.size === 0 && (
+        <CreateFab onClick={panel.openCreate} label={t("createCta", { model: model.name })} />
+      )}
 
       {canBulkEdit && (
         <BulkEditBar

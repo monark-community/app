@@ -31,7 +31,7 @@ vi.mock("@/lib/trpc", () => ({
 import { AccountSidebar } from "@/app/(authed)/account/account-sidebar";
 
 describe("<AccountSidebar>", () => {
-  it("renders all four tabs by default", () => {
+  it("renders all five tabs by default", () => {
     mockPathname.mockReturnValue("/account/profile");
     mockMe.mockReturnValue({ data: { deletedAt: null } });
     renderWithIntl(<AccountSidebar />);
@@ -39,6 +39,7 @@ describe("<AccountSidebar>", () => {
     expect(screen.getByRole("link", { name: /profile/i })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /security/i })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /notifications/i })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /api keys/i })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /danger/i })).toBeInTheDocument();
   });
 
@@ -53,6 +54,7 @@ describe("<AccountSidebar>", () => {
     // The blocked tabs are completely hidden — not greyed out.
     expect(screen.queryByRole("link", { name: /security/i })).toBeNull();
     expect(screen.queryByRole("link", { name: /notifications/i })).toBeNull();
+    expect(screen.queryByRole("link", { name: /api keys/i })).toBeNull();
   });
 
   it("marks the active tab via aria-current=page", () => {
@@ -81,9 +83,9 @@ describe("<AccountSidebar>", () => {
     mockMe.mockReturnValue({ data: { deletedAt: null } });
     renderWithIntl(<AccountSidebar />);
     // No link carries aria-current=page when nothing matches. The
-    // sidebar still renders all four tabs.
+    // sidebar still renders all five tabs.
     const links = screen.getAllByRole("link");
-    expect(links).toHaveLength(4);
+    expect(links).toHaveLength(5);
     expect(links.every((l) => l.getAttribute("aria-current") !== "page")).toBe(true);
   });
 
@@ -94,7 +96,7 @@ describe("<AccountSidebar>", () => {
     // the actual lock).
     mockMe.mockReturnValue({ data: undefined });
     renderWithIntl(<AccountSidebar />);
-    expect(screen.getAllByRole("link")).toHaveLength(4);
+    expect(screen.getAllByRole("link")).toHaveLength(5);
   });
 
   it("renders horizontal orientation when requested (mobile fallback)", () => {

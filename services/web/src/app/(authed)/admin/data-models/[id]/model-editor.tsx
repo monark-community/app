@@ -50,6 +50,18 @@ import { trpc } from "@/lib/trpc";
 import { TITLE_FIELD_KEY } from "@monark/data-models/contracts";
 import { FieldEditorDialog, type FieldEditorValue } from "./field-editor-dialog";
 
+/** A module integration slot key (e.g. `startAt`) as a friendly label —
+ *  camelCase / snake split into words, first letter capitalized. The exact key
+ *  stays available as a `title` tooltip for admins matching the module's slots. */
+function humanizeSlotKey(key: string): string {
+  const words = key
+    .replace(/[_-]+/g, " ")
+    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+    .toLowerCase()
+    .trim();
+  return words.charAt(0).toUpperCase() + words.slice(1);
+}
+
 interface DataModelInitial {
   id: string;
   name: string;
@@ -557,8 +569,8 @@ function IntegrationCard({
           );
           return (
             <div key={slotKey} className="space-y-1.5">
-              <Label>
-                {slotKey}
+              <Label title={slotKey}>
+                {humanizeSlotKey(slotKey)}
                 {slot.required && <span className="text-destructive"> *</span>}
               </Label>
               <Select

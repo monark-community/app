@@ -103,7 +103,7 @@ Driven by [test-plan.md](../technical-documentation/test-plan.md). Items below a
 
 ## Phase-1 closure
 
-- [ ] **[2026-05-05] Account-deletion cron has no scheduler wired.** `POST /cron/process-account-deletions` exists on the api ([services/api/src/server.ts](../../services/api/src/server.ts)) and authenticates via `Authorization: Bearer $CRON_SECRET`, but no Vercel Cron / GitHub Actions / k8s CronJob fires it on a schedule. Until that's connected, expired grace-period rows accumulate in `User.deletedAt` without ever hard-deleting. Fix : pick a scheduler for the target deploy (Vercel Cron is the common case) and document the hook in `services/api/README.md`.
+- [x] ~~**[2026-05-05] Account-deletion cron has no scheduler wired.**~~ resolved via [render.yaml](../../render.yaml) — the `monark-cron-deletions` Cron Job service posts to `/cron/process-account-deletions` daily (`0 3 * * *`) with the shared `CRON_SECRET`.
 
 - [ ] **[2026-05-05] Single-tenant redirect chain on `/admin`.** `/admin` → `/admin/organizations` → singleton edit page is three round-trips on a cold hop. Acceptable in dev ; worth a single-tenant fast path that lands `/admin` straight on `/admin/organizations/<singletonId>` when bootstrap status is single + count=1. Same pattern the AdminSidebar tab uses. Saves ~200ms on cold loads.
 

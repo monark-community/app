@@ -43,7 +43,15 @@ try {
   for (const story of stories) {
     for (const theme of themes) {
       for (const [vpName, viewport] of Object.entries(VIEWPORTS)) {
-        const page = await browser.newPage({ viewport, deviceScaleFactor: 2 });
+        // Emulate touch on the mobile viewport so `@media (pointer: coarse)`
+        // matches (touch-target sizing) and `hover:` styles resolve as they do
+        // on a real phone (no hover). Desktop stays a fine pointer.
+        const page = await browser.newPage({
+          viewport,
+          deviceScaleFactor: 2,
+          hasTouch: vpName === "mobile",
+          isMobile: vpName === "mobile",
+        });
         const errors = [];
         page.on("pageerror", (e) => errors.push(e.message));
         const query = new URLSearchParams({ story, theme });

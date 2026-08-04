@@ -221,7 +221,8 @@ export async function listOrgMembers({
   organizationId: string;
 }): Promise<OrgMember[]> {
   const memberships = await getDb().organizationMembership.findMany({
-    where: { organizationId, leftAt: null },
+    // Exclude machine principals (service accounts) from the member picker.
+    where: { organizationId, leftAt: null, user: { is: { kind: "HUMAN" } } },
     select: { user: { select: { id: true, displayName: true, email: true, avatarUrl: true } } },
     orderBy: { user: { displayName: "asc" } },
   });
@@ -238,6 +239,21 @@ export async function listOrgMembers({
 export async function listCardsForBoard(boardId: string): Promise<KanbanCardRow[]> {
   return getDb().kanbanCard.findMany({
     where: { boardId, deletedAt: null },
+    orderBy: [{ columnId: "asc" }, { position: "asc" }, { id: "asc" }],
+  });
+}
+
+/**
+ * Like {@link listCardsForBoard} but AND-ed with a compiled MonarkQL predicate
+ * (from `compileKanbanFilter`). Board scope + soft-delete are always applied ;
+ * `where` only narrows further. Same board-bounded, unpaginated read.
+ */
+export async function listCardsForBoardWithQuery(
+  boardId: string,
+  where?: Prisma.KanbanCardWhereInput,
+): Promise<KanbanCardRow[]> {
+  return getDb().kanbanCard.findMany({
+    where: { boardId, deletedAt: null, ...where },
     orderBy: [{ columnId: "asc" }, { position: "asc" }, { id: "asc" }],
   });
 }
@@ -406,4 +422,64 @@ export async function moveCard(
       }),
     ),
   );
+}
+
+// ── Saved views (named MonarkQL queries per board) ───────
+
+export type KanbanViewRow = Prisma.KanbanViewGetPayload<Record<string, never>>;
+
+/** A board's saved views visible to `userId` : their own plus anyone's shared
+ *  ones. Not cursor-paginated — a user's saved queries for one board are few. */
+export async function listKanbanViews(boardId: string, userId: string): Promise<KanbanViewRow[]> {
+  const db = getDb();
+  return db.kanbanView.findMany({
+    where: { boardId, OR: [{ createdBy: userId }, { shared: true }] },
+    orderBy: [{ shared: "asc" }, { name: "asc" }, { id: "asc" }],
+  });
+}
+
+export async function findKanbanViewById(id: string): Promise<KanbanViewRow | null> {
+  const db = getDb();
+  return db.kanbanView.findUnique({ where: { id } });
+}
+
+export async function createKanbanView(input: {
+  boardId: string;
+  organizationId: string;
+  name: string;
+  query: unknown;
+  shared?: boolean;
+  createdBy: string;
+}): Promise<KanbanViewRow> {
+  const db = getDb();
+  return db.kanbanView.create({
+    data: {
+      boardId: input.boardId,
+      organizationId: input.organizationId,
+      name: input.name,
+      query: input.query as Prisma.InputJsonValue,
+      shared: input.shared ?? false,
+      createdBy: input.createdBy,
+    },
+  });
+}
+
+export async function updateKanbanView(
+  id: string,
+  patch: { name?: string; query?: unknown; shared?: boolean },
+): Promise<KanbanViewRow> {
+  const db = getDb();
+  return db.kanbanView.update({
+    where: { id },
+    data: {
+      ...(patch.name !== undefined ? { name: patch.name } : {}),
+      ...(patch.query !== undefined ? { query: patch.query as Prisma.InputJsonValue } : {}),
+      ...(patch.shared !== undefined ? { shared: patch.shared } : {}),
+    },
+  });
+}
+
+export async function deleteKanbanView(id: string): Promise<void> {
+  const db = getDb();
+  await db.kanbanView.delete({ where: { id } });
 }

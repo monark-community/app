@@ -1,5 +1,6 @@
 import { registerAutomationNodes } from "../registry";
 import { eventTriggerNode } from "./event-trigger";
+import { dataRecordTriggerNode } from "./data-record-trigger";
 import { manualTriggerNode } from "./manual-trigger";
 import { httpTriggerNode } from "./http-trigger";
 import { scheduledTriggerNode } from "./scheduled-trigger";
@@ -18,6 +19,7 @@ import { userGetNode, userSetActiveNode, userSetMetadataNode, userUpdateProfileN
 import { conditionNode } from "./condition";
 import { constantNode } from "./constant";
 import { transformNode } from "./transform";
+import { setVariableNode } from "./set-variable";
 import { delayNode } from "./delay";
 
 let registered = false;
@@ -33,6 +35,7 @@ export function registerBuiltinAutomationNodes(): void {
   registerAutomationNodes("automation", {
     // Triggers
     "event-trigger": eventTriggerNode,
+    "data-record-trigger": dataRecordTriggerNode,
     "manual-trigger": manualTriggerNode,
     "http-trigger": httpTriggerNode,
     "schedule-trigger": scheduledTriggerNode,
@@ -40,6 +43,7 @@ export function registerBuiltinAutomationNodes(): void {
     condition: conditionNode,
     constant: constantNode,
     transform: transformNode,
+    "set-variable": setVariableNode,
     delay: delayNode,
     // Communication
     notification: notificationNode,

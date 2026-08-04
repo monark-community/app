@@ -1,15 +1,17 @@
 # Phase 2 — Implementation order
 
+> **Status: not built.** Onboarding and referral are still _proposed_ specs (now under [`../proposed/`](../proposed/)) ; this doc is the original sequencing plan for that unbuilt work. The platform's actual phase-2-era deliverable was the shipped Data Models engine ([`polymorphic-db.md`](polymorphic-db.md) → [`@monark/data-models`](../../../packages/data-models/README.md)).
+
 ## Goal
 
 The first two extended modules ship and get users in the door. Each is self-contained, consumes core read interfaces + events, and depends on no other extended module. When Phase 2 is done, a new user can land on a referral link and walk through onboarding end to end with correct attribution.
 
 ## Order
 
-1. **[`user-onboarding.md`](user-onboarding.md)**
+1. **[`user-onboarding.md`](../proposed/user-onboarding.md)**
    Ship first. Onboarding is the default first-run experience for every new user, so it has to exist before any other extended module can assume "this user has been greeted." It consumes the full core (auth, users, orgs, rbac) without depending on anything extended.
 
-2. **[`referral-system.md`](referral-system.md)**
+2. **[`referral-system.md`](../proposed/referral-system.md)**
    Ship second. Referral attribution slots into onboarding's "where did you come from" step rather than defining its own landing-page flow. Until onboarding exists, there's no runway to attribute users _into_.
 
 ## Exit criteria

@@ -36,18 +36,49 @@ const APP_ROOT = resolve(__dirname, "..");
 // have no test suites today ; add them here when they grow tests.
 type Thresholds = { lines: number; statements: number; functions: number; branches: number };
 const THRESHOLDS: Record<string, Thresholds> = {
-  // auth / common / users re-baselined 2026-08-01 after the polymorphic-db
-  // feature merge (the integration coverage gate had been unenforced while the
-  // api integration job was broken, so coverage regressed below the old floors).
-  "package/auth": { lines: 55, statements: 55, functions: 75, branches: 85 },
-  "package/common": { lines: 55, statements: 55, functions: 80, branches: 80 },
+  // Re-baselined 2026-08-02 off a RELIABLE merged run (all 15 integration tasks
+  // green, serialized `--concurrency=1`, plus two latent missing workspace-dep
+  // declarations fixed — calendar→users, data-models→feature-flags — that a
+  // clean isolated install had started failing on). Each floor sits ~5pts below
+  // the measured number (rounded down to 5 %) — a regression guard, not a brag.
+  // Ratcheted up where new tests justify it (calendar/organizations/auth via the
+  // coverage-hardening pass); corrected down where the 2026-08-01 baseline was
+  // depressed by the flaky run and over-set (common/data-models functions).
+  // `service/api` genuinely dropped: the new `public-api` surface (auth/rate-limit
+  // /mount) landed thin, so its floor reflects the honest post-public-api number
+  // until that code is tested. Every package that emits coverage MUST have an
+  // entry here (the gate below fails otherwise), so a new module can't ship
+  // un-gated — hence `package/api-keys`, the newest module, is now floored.
+  // api-keys + automation caught back up 2026-08-03 : the coverage-hardening
+  // pass added the personal-key + service-account-key router branches
+  // (api-keys 61 %→72 % branches, 80 %→93 % functions) and the node executors +
+  // boot registrations (automation 68 %→81 % functions), so both floors ratchet
+  // up well past where the in-flight feature work had dragged them.
+  "package/api-keys": { lines: 80, statements: 80, functions: 85, branches: 65 },
+  "package/auth": { lines: 60, statements: 60, functions: 75, branches: 80 },
+  "package/automation": { lines: 75, statements: 75, functions: 75, branches: 70 },
+  "package/calendar": { lines: 80, statements: 80, functions: 85, branches: 75 },
+  "package/common": { lines: 70, statements: 70, functions: 70, branches: 80 },
+  "package/data-models": { lines: 60, statements: 60, functions: 60, branches: 70 },
   "package/feature-flags": { lines: 80, statements: 80, functions: 75, branches: 85 },
-  "package/notifications": { lines: 60, statements: 60, functions: 85, branches: 80 },
-  "package/organizations": { lines: 50, statements: 50, functions: 70, branches: 80 },
-  "package/rbac": { lines: 50, statements: 50, functions: 55, branches: 80 },
-  "package/users": { lines: 65, statements: 65, functions: 85, branches: 85 },
-  "package/webhooks": { lines: 55, statements: 55, functions: 60, branches: 80 },
-  "service/api": { lines: 60, statements: 60, functions: 70, branches: 45 },
+  "package/files": { lines: 60, statements: 60, functions: 60, branches: 80 },
+  // kanban : the query-compiler unit suite (every field × operator × error
+  // branch of compileKanbanFilter) took branches 65 %→97 %, recovering the dip
+  // the in-flight board work had caused and then some.
+  "package/kanban": { lines: 80, statements: 80, functions: 70, branches: 90 },
+  "package/notifications": { lines: 65, statements: 65, functions: 85, branches: 80 },
+  "package/organizations": { lines: 75, statements: 75, functions: 85, branches: 85 },
+  // Pure lib (AST + DSL + @variables + autocomplete engine), measured ~93 %
+  // lines / 84 % branches / 100 % funcs — floors ~5pts below.
+  "package/query": { lines: 88, statements: 88, functions: 90, branches: 78 },
+  "package/rbac": { lines: 80, statements: 80, functions: 70, branches: 90 },
+  "package/secrets": { lines: 90, statements: 90, functions: 75, branches: 85 },
+  "package/users": { lines: 65, statements: 65, functions: 80, branches: 85 },
+  "package/webhooks": { lines: 85, statements: 85, functions: 80, branches: 80 },
+  // Ratcheted up 2026-08-03 : the public-api service now has an integration
+  // suite (public-api.test.ts), so api jumped 57 % → 75 % lines / 41 % → 79 %
+  // functions once those procedures are exercised.
+  "service/api": { lines: 70, statements: 70, functions: 70, branches: 55 },
   "service/web": { lines: 5, statements: 5, functions: 40, branches: 80 },
 };
 
@@ -223,7 +254,13 @@ async function main(): Promise<void> {
   for (const r of results) {
     const label = `${r.pkg.kind}/${r.pkg.name}`;
     const floor = THRESHOLDS[label];
-    if (!floor) continue;
+    // A package that produced coverage but has no floor is a gap, not a pass —
+    // that silent skip is how newly-added modules drifted un-gated. Fail so a
+    // floor (or a conscious exclusion) is always added with the tests.
+    if (!floor) {
+      violations.push(`  ${label} produced coverage but has no THRESHOLDS entry — add a floor.`);
+      continue;
+    }
     const summary = summarisePercent(r.merged);
     const checks: Array<[keyof Thresholds, number]> = [
       ["lines", summary.lines],

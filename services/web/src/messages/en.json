@@ -50,6 +50,7 @@
   "common": {
     "appName": "{appName}",
     "tagline": "Fostering collaboration within the Web3 community.",
+    "done": "Done",
     "cancel": "Cancel",
     "save": "Save",
     "close": "Close",
@@ -363,6 +364,7 @@
     "rowActions": "Row actions",
     "selectRow": "Select row",
     "selectAll": "Select all rows",
+    "collapseSearch": "Close search",
     "loadError": "Couldn't load this list. Please try again.",
     "retry": "Retry",
     "empty": {
@@ -391,6 +393,64 @@
     "clearAll": "Reset filters",
     "resetField": "Reset",
     "activeValues": "{count} Active"
+  },
+  "query": {
+    "op": {
+      "is": "is",
+      "isNot": "is not",
+      "contains": "contains",
+      "notContains": "does not contain",
+      "startsWith": "starts with",
+      "endsWith": "ends with",
+      "eq": "equals",
+      "neq": "not equal",
+      "gt": "greater than",
+      "gte": "at least",
+      "lt": "less than",
+      "lte": "at most",
+      "between": "between (a..b)",
+      "before": "before",
+      "after": "after",
+      "onOrBefore": "on or before",
+      "onOrAfter": "on or after",
+      "isTrue": "is true",
+      "isFalse": "is false",
+      "isAnyOf": "is any of",
+      "isNoneOf": "is none of",
+      "hasAnyOf": "has any of",
+      "hasAllOf": "has all of",
+      "hasNoneOf": "has none of",
+      "isEmpty": "is empty",
+      "isNotEmpty": "is not empty"
+    },
+    "var": {
+      "me": "The current user",
+      "now": "Current date + time",
+      "today": "Start of today",
+      "yesterday": "Start of yesterday",
+      "tomorrow": "Start of tomorrow",
+      "startOfWeek": "Monday, this week",
+      "endOfWeek": "Monday, next week",
+      "startOfMonth": "First day of this month",
+      "endOfMonth": "First day of next month",
+      "startOfYear": "January 1, this year",
+      "endOfYear": "January 1, next year"
+    },
+    "chip": {
+      "add": "Add filter",
+      "remove": "Remove {field}",
+      "field": "Field",
+      "operator": "Condition",
+      "apply": "Apply",
+      "cancel": "Cancel",
+      "valuePlaceholder": "Value…",
+      "addValue": "Add value",
+      "noResults": "No matches",
+      "pickDate": "Pick a date",
+      "clearDate": "Clear date",
+      "textMode": "Edit as text",
+      "chipMode": "Edit as chips"
+    }
   },
   "globalSearch": {
     "trigger": "Search",
@@ -423,6 +483,38 @@
       "createCta": "New {model}",
       "searchPlaceholder": "Search…",
       "searchAria": "Search records",
+      "options": {
+        "notifications": "Notifications",
+        "follow": "Follow this list"
+      },
+      "query": {
+        "placeholder": "Filter… e.g. status:open priority:>3",
+        "invalid": "Invalid query:",
+        "fieldsHeading": "Fields",
+        "valuesHeading": "Values",
+        "hint": "Type field:value — e.g. status:open, priority:>3, -assignee:present"
+      },
+      "views": {
+        "trigger": "Views",
+        "all": "All",
+        "custom": "Custom",
+        "heading": "Saved views",
+        "empty": "No saved views",
+        "save": "Save current query…",
+        "shared": "Shared",
+        "personal": "Personal",
+        "dialogTitle": "Save view",
+        "namePlaceholder": "View name",
+        "shareLabel": "Share with everyone",
+        "saveCta": "Save",
+        "cancel": "Cancel",
+        "deleteTitle": "Delete view",
+        "deleteConfirm": "Delete",
+        "deleteDescription": "Delete the view “{name}”? This can't be undone.",
+        "saved": "View saved",
+        "deleted": "View deleted",
+        "loaded": "View loaded"
+      },
       "empty": "No records yet.",
       "panelCreateTitle": "New {model}",
       "openFullPage": "Open full page",
@@ -505,7 +597,75 @@
       "webhooks": "Webhooks",
       "dataModels": "Data Models",
       "files": "Files",
-      "secrets": "Secrets"
+      "secrets": "Secrets",
+      "serviceAccounts": "Service accounts"
+    },
+    "serviceAccounts": {
+      "title": "Service accounts",
+      "subtitle": "Org-owned machine principals for integrations. A service-account key acts as the account (not a person), holds its own roles, and survives staff changes.",
+      "createCta": "New service account",
+      "searchPlaceholder": "Search service accounts…",
+      "searchAria": "Search service accounts",
+      "empty": "No service accounts yet.",
+      "rolesCount": "{count, plural, =0 {No roles} one {# role} other {# roles}}",
+      "createdAt": "Created {time}",
+      "columns": {
+        "name": "Name",
+        "status": "Status",
+        "keys": "Keys",
+        "created": "Created"
+      },
+      "status": {
+        "active": "Active",
+        "disabled": "Disabled"
+      },
+      "panelCreateTitle": "New service account",
+      "form": {
+        "description": "A service account is a machine identity. Give it a name and the roles its keys should act with.",
+        "nameLabel": "Name",
+        "namePlaceholder": "e.g. Billing sync",
+        "rolesLabel": "Roles",
+        "rolesHelp": "The account's keys act with these roles' permissions (narrowed further by each key's scopes).",
+        "noRoles": "No assignable roles in this organization yet.",
+        "builtIn": "Built-in",
+        "submit": "Create",
+        "createSuccess": "Service account created.",
+        "saveError": "Couldn't create the service account."
+      },
+      "roles": {
+        "title": "Roles",
+        "help": "What this account's keys are allowed to do.",
+        "empty": "No assignable roles in this organization yet.",
+        "save": "Save roles",
+        "saveSuccess": "Roles updated.",
+        "saveError": "Couldn't update roles."
+      },
+      "keys": {
+        "title": "API keys",
+        "createCta": "New key",
+        "empty": "This service account has no keys yet.",
+        "revoke": "Revoke",
+        "formTitle": "Create a service-account key",
+        "formDescription": "The key acts with this service account's roles. You'll see it once, right after it's created.",
+        "rightsNote": "This key can do whatever the service account's roles allow. Change the account's roles to change what its keys can do."
+      },
+      "disableSuccess": "Service account disabled.",
+      "disableError": "Couldn't disable the service account.",
+      "deleteSuccess": "Service account deleted.",
+      "deleteError": "Couldn't delete the service account.",
+      "danger": {
+        "title": "Danger zone",
+        "disableTitle": "Disable this service account",
+        "disableDescription": "Its keys stop working immediately. You can't currently re-enable it from the UI.",
+        "disable": "Disable",
+        "deleteTitle": "Delete this service account",
+        "deleteDescription": "Permanently removes the account and all of its keys. This can't be undone.",
+        "delete": "Delete",
+        "disableDialogTitle": "Disable this service account?",
+        "disableDialogDescription": "\"{name}\" and all of its keys will stop working immediately.",
+        "deleteDialogTitle": "Delete this service account?",
+        "deleteDialogDescription": "\"{name}\" and all of its keys will be permanently deleted. This can't be undone."
+      }
     },
     "secrets": {
       "title": "Secrets",
@@ -916,7 +1076,13 @@
           "platform": "Platform",
           "calendar": "Calendar",
           "projects": "Projects",
-          "industries": "Industries"
+          "industries": "Industries",
+          "api-keys": "API keys",
+          "secrets": "Secrets",
+          "kanban": "Kanban",
+          "files": "Files",
+          "data-models": "Data models",
+          "automation": "Automation"
         },
         "nameRequired": "Role name is required.",
         "create": "Create role",
@@ -1304,13 +1470,84 @@
       "profile": "Profile & preferences",
       "security": "Account & security",
       "notifications": "Notifications",
+      "apiKeys": "API keys",
       "danger": "Danger zone"
     },
     "subtitles": {
       "profile": "Your public-facing identity, plus the language and theme that follow you across the app.",
       "security": "Email, password, two-factor authentication, and the devices currently signed in.",
       "notifications": "Decide which events reach you, and which channel they arrive on.",
+      "apiKeys": "Programmatic access to your organization's data through the REST API.",
       "danger": "Irreversible actions live here. Read each one carefully before clicking through."
+    },
+    "apiKeys": {
+      "title": "API keys",
+      "subtitle": "Keys authenticate scripts and integrations to the REST API. A key acts as you, limited to the scopes you grant it.",
+      "noPermission": "You don't have permission to manage API keys. Ask an organization admin to grant you access.",
+      "createCta": "New API key",
+      "empty": "You don't have any API keys yet.",
+      "loadError": "Couldn't load your API keys.",
+      "apiDisabled": "The public API isn't enabled for your organization yet, so keys you create here won't work until an admin turns it on in Feature Flags.",
+      "usage": {
+        "title": "Using your keys",
+        "intro": "Send your key as a Bearer token to the API base URL. The full, machine-readable reference lives at the OpenAPI endpoint.",
+        "baseUrlLabel": "Base URL",
+        "openApiLabel": "OpenAPI",
+        "exampleLabel": "Example"
+      },
+      "revoke": "Revoke",
+      "revokeSuccess": "API key revoked.",
+      "revokeError": "Couldn't revoke the key.",
+      "createdAt": "Created {time}",
+      "lastUsed": "last used {time}",
+      "neverUsed": "never used",
+      "expiresAt": "expires {time}",
+      "status": {
+        "active": "Active",
+        "expired": "Expired",
+        "revoked": "Revoked"
+      },
+      "access": {
+        "full": "Full access",
+        "limited": "{count, plural, one {# permission} other {# permissions}}",
+        "dead": "{count, plural, one {# no longer granted} other {# no longer granted}}"
+      },
+      "form": {
+        "title": "Create an API key",
+        "description": "Name the key and choose how much of your access it gets. You'll see it once, right after it's created.",
+        "nameLabel": "Name",
+        "namePlaceholder": "e.g. Zapier integration",
+        "accessLabel": "Access",
+        "access_full": "Full access",
+        "access_full_hint": "The key can do everything you can — it acts as you.",
+        "access_limited": "Limited to specific permissions",
+        "access_limited_hint": "Pick a subset of what you can do — an ad-hoc role just for this key.",
+        "permsHelp": "Choose from the permissions you currently hold. The key can never do more than you can, and it loses a permission automatically if you do.",
+        "permsEmpty": "You don't hold any grantable permissions yet.",
+        "permsSearchEmpty": "No permission matches that search.",
+        "expiryLabel": "Expiration",
+        "expiry": {
+          "never": "No expiration",
+          "30": "30 days",
+          "90": "90 days",
+          "365": "1 year"
+        },
+        "submit": "Create key",
+        "saveError": "Couldn't create the key."
+      },
+      "revokeDialog": {
+        "title": "Revoke this key?",
+        "description": "\"{name}\" will stop working immediately, and any integration using it will lose access. This can't be undone.",
+        "confirm": "Revoke key"
+      },
+      "reveal": {
+        "title": "\"{name}\" created",
+        "description": "Copy your key now. For security, it won't be shown again.",
+        "warning": "This is the only time you'll see this key. Store it somewhere safe.",
+        "copy": "Copy",
+        "copied": "Copied",
+        "copyError": "Couldn't copy to clipboard."
+      }
     },
     "notifications": {
       "title": "Notifications",
@@ -1328,19 +1565,6 @@
       "filterAll": "All",
       "filterUnread": "Unread",
       "loadMore": "Load more",
-      "kinds": {
-        "auth": {
-          "new-device": "New sign-in",
-          "password-changed": "Password changed",
-          "totp-enabled": "TOTP enabled",
-          "totp-disabled": "TOTP disabled"
-        },
-        "account": {
-          "email-changed": "Email changed",
-          "deletion-scheduled": "Deletion scheduled",
-          "deletion-canceled": "Deletion canceled"
-        }
-      },
       "prefs": {
         "title": "Notification preferences",
         "subtitle": "Choose which events email you. In-app alerts are managed for you.",
@@ -1381,7 +1605,10 @@
           "account_deletion-canceled": "Account deletion canceled",
           "webhooks_delivery-permanently-failed": "Webhook delivery failed",
           "webhooks_endpoint-auto-disabled": "Webhook endpoint auto-disabled",
-          "calendar_event_reminder": "Event reminder"
+          "calendar_event_reminder": "Event reminder",
+          "kanban_card_assigned": "Card assigned",
+          "data-models_record-changed": "Record changed",
+          "automation_custom-message": "Automation message"
         },
         "kindDescriptions": {
           "auth_new-device": "When your account is signed in to from a device we don't recognise.",
@@ -1395,7 +1622,9 @@
           "auth_recovery-codes-regenerated": "When your two-factor recovery codes are replaced with a new set.",
           "webhooks_delivery-permanently-failed": "When a webhook delivery fails for good after every retry.",
           "webhooks_endpoint-auto-disabled": "When a webhook endpoint is automatically disabled after repeated failures.",
-          "account_deletion-scheduled": "When your account is scheduled for deletion, with the grace-period deadline."
+          "account_deletion-scheduled": "When your account is scheduled for deletion, with the grace-period deadline.",
+          "kanban_card_assigned": "When a Kanban card is assigned to you.",
+          "automation_custom-message": "A custom message sent to you by an automation."
         },
         "toggleAllAria": "Toggle all {category} emails",
         "forcedBadge": "Required",
@@ -1702,6 +1931,13 @@
   "devOverlay": {
     "title": "Dev overlay",
     "toggleHint": "Alt+D to toggle",
+    "anchor": {
+      "label": "Overlay position",
+      "topLeft": "Top left",
+      "topRight": "Top right",
+      "bottomLeft": "Bottom left",
+      "bottomRight": "Bottom right"
+    },
     "themeSwitchTo": "Switch to {theme} theme",
     "theme": {
       "light": "light",
@@ -1715,12 +1951,56 @@
       "session": "session",
       "apiHealth": "api health",
       "remoteDiagnostics": "remote dev diagnostics",
+      "eventBus": "event bus",
+      "automation": "automation runs",
+      "webhookDeliveries": "webhook deliveries",
+      "queryPlayground": "query playground",
+      "secretsKeys": "secrets",
       "currentOrg": "current org",
       "trustedDevices": "trusted devices",
       "totp": "totp",
       "rbac": "rbac",
       "featureFlags": "feature flags",
       "notifications": "notifications"
+    },
+    "eventBus": {
+      "signInPrompt": "Sign in to watch the event bus.",
+      "empty": "No events captured yet — do something.",
+      "count": "{count} events"
+    },
+    "automation": {
+      "signInPrompt": "Sign in to see automation runs.",
+      "unavailable": "No automation access in this org.",
+      "empty": "No runs yet.",
+      "runsCount": "{count} runs",
+      "failedCount": "{count} failed",
+      "reRun": "Re-run this automation"
+    },
+    "secretsKeys": {
+      "signInPrompt": "Sign in to see secrets.",
+      "unavailable": "No secrets access in this org.",
+      "empty": "No secrets configured.",
+      "count": "{count} keys",
+      "used": "used {when}",
+      "unused": "never used"
+    },
+    "webhookDeliveries": {
+      "signInPrompt": "Sign in to see webhook deliveries.",
+      "unavailable": "No webhook access in this org.",
+      "noEndpoints": "No endpoints configured.",
+      "endpoint": "Endpoint",
+      "empty": "No deliveries yet.",
+      "count": "{count} endpoints",
+      "attempts": "{count}×",
+      "retry": "Redeliver"
+    },
+    "queryPlayground": {
+      "signInPrompt": "Sign in to run queries.",
+      "model": "Data Model",
+      "selectModel": "Select a model…",
+      "rows": "{count} rows",
+      "tree": "Filter tree",
+      "noQuery": "No filter — all records"
     },
     "remoteDiagnostics": {
       "browserHost": "browser host",
@@ -1805,6 +2085,7 @@
         "roles": "roles"
       },
       "permissions": "permissions ({count})",
+      "filterPlaceholder": "Filter permissions…",
       "noneGranted": "None granted.",
       "dash": "—"
     },
@@ -1871,6 +2152,11 @@
       "restoreCalendar": "Restore",
       "restoreSuccess": "Calendar restored.",
       "restoreError": "Could not restore calendar. {message}",
+      "exportCalendar": "Export (.ics)",
+      "importCalendar": "Import (.ics)",
+      "importSuccess": "Imported {count} events.",
+      "importSuccessWithRecurrence": "Imported {count} events ({recurring} recurring events were imported as one-time events).",
+      "importError": "Could not import calendar. {message}",
       "todayEvents": "Today's events",
       "noEventsToday": "No events today"
     },
@@ -1898,7 +2184,29 @@
       "goToDate": "Go to date",
       "day": "Day",
       "week": "Week",
-      "month": "Month"
+      "month": "Month",
+      "agenda": "Agenda"
+    },
+    "agendaView": {
+      "title": "Upcoming",
+      "addEvent": "Add event",
+      "noUpcomingEvents": "No upcoming events.",
+      "today": "Today",
+      "loading": "Loading…",
+      "loadMore": "Load more"
+    },
+    "viewOptions": {
+      "trigger": "View options",
+      "hideWeekends": "Hide weekends",
+      "weekStartsOn": "Week starts on",
+      "weekStartsOnSunday": "Sunday",
+      "weekStartsOnMonday": "Monday",
+      "defaultView": "Default view",
+      "timeFormat": "Time format",
+      "timeFormat24h": "24-hour",
+      "timeFormat12h": "12-hour",
+      "workingHours": "Highlight working hours",
+      "workingHoursTo": "to"
     },
     "monthView": {
       "more": "more"
@@ -1955,12 +2263,52 @@
         "reminderUnitWeeks": "weeks",
         "reminderBefore": "before",
         "addReminder": "Add reminder",
-        "removeReminder": "Remove reminder"
+        "removeReminder": "Remove reminder",
+        "conflictWarningOne": "This overlaps with \"{title}\".",
+        "conflictWarningMore": "This overlaps with \"{title}\" and {count} more."
       }
     }
   },
   "kanban": {
     "title": "Kanban",
+    "query": {
+      "bar": {
+        "placeholder": "Filter cards… e.g. assignee:@me priority:>=HIGH",
+        "invalid": "Invalid query:",
+        "fieldsHeading": "Fields",
+        "valuesHeading": "Values",
+        "hint": "Type field:value — e.g. status:… assignee:@me due:@today",
+        "expand": "Filter cards",
+        "collapse": "Close filter"
+      },
+      "fields": {
+        "title": "Title",
+        "description": "Description",
+        "status": "Status",
+        "assignee": "Assignee",
+        "reviewer": "Reviewer",
+        "priority": "Priority",
+        "due": "Due date",
+        "estimate": "Estimate"
+      },
+      "views": {
+        "trigger": "Views",
+        "heading": "Saved views",
+        "empty": "No saved views",
+        "save": "Save current query…",
+        "dialogTitle": "Save view",
+        "namePlaceholder": "View name",
+        "shareLabel": "Share with everyone",
+        "saveCta": "Save",
+        "cancel": "Cancel",
+        "deleteTitle": "Delete view",
+        "deleteConfirm": "Delete",
+        "deleteDescription": "Delete the view “{name}”? This can't be undone.",
+        "saved": "View saved",
+        "deleted": "View deleted",
+        "loaded": "View loaded"
+      }
+    },
     "shell": {
       "selectBoard": "Select board",
       "newBoard": "New board",
@@ -2125,12 +2473,7 @@
       "deleteNode": "Delete node",
       "emptyCanvas": "Add a trigger to start building your flow.",
       "portFlowHint": "Run order — the sequence steps run in.",
-      "portDataHint": "Variable input — wire a node's output here to set this value.",
       "legendFlow": "Run order",
-      "legendData": "Variable",
-      "fieldWired": "Wired",
-      "useAsInput": "Use as input port",
-      "removeInput": "Remove input port",
       "secretsEmpty": "No secrets defined. Add one in <link>Admin › Secrets</link> to reference it here.",
       "nodeName": "Name",
       "cancel": "Cancel",
@@ -2138,6 +2481,11 @@
       "menuReplace": "Replace",
       "menuDelete": "Delete",
       "renameTitle": "Rename node",
+      "nodeDisplayName": "Display name",
+      "nodeSlug": "Reference name",
+      "slugHint": "Reference this node as {token}",
+      "slugInvalid": "Use a letter, then letters, numbers, or underscores.",
+      "slugTaken": "Another node already uses this reference name.",
       "replacePickTitle": "Replace node",
       "replaceConfirmTitle": "Replace this node?",
       "replaceConfirmBody": "The node's configuration is reset, and any connection that doesn't fit the new node is removed — compatible connections are kept.",
@@ -2167,10 +2515,22 @@
       "copyReference": "Copy reference",
       "outputCopied": "Copied {ref}",
       "variables": "Variables",
-      "variablesHint": "Values from the trigger and earlier nodes you can drop into any field. Click a reference to copy it.",
+      "variablesHint": "Values from the trigger and earlier nodes. Click a field above, then a variable to insert it (or click one with no field focused to copy). For a dropdown, switch, or number field, use its variable toggle first to turn it into a text field.",
+      "insertVariable": "Insert into the focused field",
+      "useVariable": "Use a variable",
+      "useFixedValue": "Use a fixed value",
+      "variablePlaceholder": "'{{' a variable '}}'",
+      "chooseVariable": "Choose a variable…",
+      "variablePickerTitle": "Insert a variable",
+      "variableSearch": "Search variables…",
+      "noVariablesAvailable": "No variables yet. Connect this step to the trigger or an earlier step to reference their values.",
+      "noVariablesMatch": "No matching variable.",
+      "useCustomVariable": "Use {ref}",
       "varWholeOutput": "(whole output)",
       "varTrigger": "Trigger",
       "varBodyHint": "request body",
+      "varWorkflowVars": "Workflow variables",
+      "varWorkflowVarHint": "set by a Set Variable node",
       "schedule": {
         "kind": {
           "interval": "On an interval",
@@ -2191,7 +2551,6 @@
         "nextRun": "Next run: {time}",
         "nextRunNone": "No upcoming run"
       },
-      "resolvedFromRun": "Value from the last run",
       "runInput": "Input",
       "runOutput": "Output",
       "statusSkipped": "Skipped",
@@ -2225,6 +2584,7 @@
         "missingRequired": "{node}: “{field}” is required.",
         "orphan": "{node}: not connected — won’t run.",
         "cycle": "The graph has a loop.",
+        "duplicateSlug": "{node}: reference name “{slug}” is used by more than one node.",
         "unknownNode": "{node}: unknown node type."
       }
     },

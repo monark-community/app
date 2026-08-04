@@ -20,6 +20,7 @@ export default async function KanbanPage() {
     .query()
     .catch(() => ({}) as Record<string, boolean>);
   if (flags["kanban.board"] === false) notFound();
+  const queryEnabled = flags["kanban.query"] === true;
 
   const [rawBoards, myPermissions] = await Promise.all([
     api.kanban.boards.list.query().catch(() => []),
@@ -48,6 +49,7 @@ export default async function KanbanPage() {
           canEdit={canEdit}
           canDelete={canDelete}
           canManage={canManage}
+          queryEnabled={queryEnabled}
         />
       </main>
     </div>

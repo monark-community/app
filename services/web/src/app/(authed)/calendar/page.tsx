@@ -1,5 +1,6 @@
 import { getTranslations } from "next-intl/server";
-import type { CalendarDef } from "@monark/calendar/contracts";
+import type { CalendarDef, CalendarViewSettings } from "@monark/calendar/contracts";
+import { DEFAULT_CALENDAR_VIEW_SETTINGS } from "@monark/calendar/contracts";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createServerTrpcClient } from "@/lib/trpc-server";
 import { CalendarShell } from "./calendar-shell";
@@ -16,9 +17,10 @@ export default async function CalendarPage() {
   // Seed a personal calendar if the user has none yet
   await api.calendar.calendars.ensurePersonal.mutate().catch(() => null);
 
-  const [rawCalendars, myPermissions] = await Promise.all([
+  const [rawCalendars, myPermissions, initialSettings] = await Promise.all([
     api.calendar.calendars.list.query().catch(() => []),
     api.rbac.myPermissions.query().catch(() => [] as string[]),
+    api.calendar.settings.get.query().catch(() => DEFAULT_CALENDAR_VIEW_SETTINGS),
   ]);
 
   const initialCalendars: CalendarDef[] = rawCalendars.map((c) => ({
@@ -41,6 +43,7 @@ export default async function CalendarPage() {
           initialCalendars={initialCalendars}
           canManage={canManage}
           canDelete={canDelete}
+          initialSettings={initialSettings as CalendarViewSettings}
         />
       </main>
     </div>

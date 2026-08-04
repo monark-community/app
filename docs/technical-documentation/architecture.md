@@ -1,17 +1,19 @@
-# Architecture
+# Architecture & Project Structure
 
-Reference documentation for the Monark App's module architecture. Based on the shipped Phase 0 specification ; see [features-planning/phase-0/modular-architecture.md](../features-planning/phase-0/modular-architecture.md) for the full design rationale.
+How the Monark App codebase is organized : the two-tier module system, the package boundaries and how modules communicate, and the monorepo layout + tooling.
+
+Based on the shipped Phase 0 specification ; see [features-planning/phase-0/modular-architecture.md](../features-planning/phase-0/modular-architecture.md) and [project-scaffolding.md](../features-planning/phase-0/project-scaffolding.md) for the full design rationale. For the **authoritative as-is** module inventory (14 core + 2 extended), boot sequence, and per-capability detail, see [platform-overview.md](platform-overview.md) ; for the extension contract ("can a feature ship without touching core?"), see [extensibility-contract.md](extensibility-contract.md).
 
 ## Two-tier module system
 
 Every business domain lives in its own workspace package (`@monark/auth`, `@monark/rbac`, `@monark/webhooks`, etc.). Packages are split into two tiers :
 
-| Tier         | Examples                                                                 | Rules                                                                                                                                         |
-| ------------ | ------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Core**     | auth, users, organizations, rbac, feature-flags, notifications, webhooks | Coupled ; may depend on each other. Cannot be removed without breaking the app.                                                               |
-| **Extended** | referral, voting, contributions, onboarding                              | Self-contained ; may depend on core but never on another extended module. Removing one compiles and passes tests with zero changes to others. |
+| Tier             | Members                                                                                                                                           | Rules                                                                                                                                         |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Core** (14)    | auth, users, organizations, rbac, feature-flags, notifications, webhooks, data-models, automation, secrets, files, api-keys, public-api, branding | Coupled ; may depend on each other. Ship with every deploy ; cannot be removed without breaking the app.                                      |
+| **Extended** (2) | calendar, kanban                                                                                                                                  | Self-contained ; may depend on core but never on another extended module. Removing one compiles and passes tests with zero changes to others. |
 
-The tier assignment lives in `modules.manifest.ts` at the repo root. The `pnpm check:tiers` script enforces the dependency rules at CI time.
+The tier assignment lives in `modules.manifest.ts` at the repo root ; `pnpm check:tiers` enforces the dependency rules at CI time. (The list above is the current membership — [platform-overview.md](platform-overview.md) is the authoritative inventory.)
 
 ## Module boundaries
 
@@ -27,15 +29,13 @@ Anything not exported through these three paths is internal and physically unrea
 
 - **ESLint boundary rule** : `services/web/**` cannot import `@monark/*/server` ; `services/api/**` cannot import `@monark/*/client`.
 - **Tier guard** : `pnpm check:tiers` walks the manifest and fails CI if an extended module imports from another extended module.
-- **Codegen drift** : `pnpm gen:events --check` and `pnpm gen:routers --check` fail CI if a module's events or router registrations are out of sync.
+- **Codegen drift** : `pnpm gen:events --check` / `pnpm gen:routers --check` (and `pnpm gen:schema --check`) fail CI if a module's events, router registrations, or schema fragment are out of sync.
 
 ## Communication between modules
 
 ### Event bus
 
-Owned by `@monark/common`. Backend-only, in-process pub/sub. Modules emit domain events ; other modules subscribe to the events they care about. The event union is generated from each module's `/contracts/events.ts` by `pnpm gen:events`.
-
-Extended modules publish events and subscribe to events from core modules. They never import from each other directly ; the event bus is the communication channel.
+Owned by `@monark/common`. Backend-only, in-process, best-effort pub/sub. Modules emit domain events ; other modules subscribe to the events they care about. The event union is generated from each module's `/contracts/events.ts` by `pnpm gen:events`. Extended modules publish events and subscribe to core events ; they never import from each other directly. (Durability is delegated to `@monark/webhooks`, whose wildcard subscriber persists every emit to an at-least-once outbox.)
 
 ### Read interfaces
 
@@ -43,12 +43,111 @@ Core modules export query functions (e.g. "get user by id", "check permission", 
 
 ## Services
 
-Two thin runnable services consume the module packages :
+Two thin runnable services consume the module packages ; neither contains business logic — they are wiring layers that compose module exports into a running app :
 
-- `services/web` ; Next.js App Router + Tailwind v4. Imports `/client` and `/contracts` from modules.
-- `services/api` ; Express 5 + tRPC v11. Imports `/server` and `/contracts` from modules. Hosts the composed tRPC router (auto-generated by `pnpm gen:routers`).
+- `services/web` ; Next.js 15 App Router + Tailwind v4. Imports `/client` and `/contracts` from modules.
+- `services/api` ; Express 5 + tRPC v11. Imports `/server` and `/contracts` from modules. Hosts the composed tRPC router (auto-generated by `pnpm gen:routers`), plus `/health`, the cron endpoints, and the public REST API (`/api/v1`).
 
-Neither service contains business logic. They are wiring layers that compose module exports into a running application.
+## Directory tree
+
+```
+app/
+├── services/
+│   ├── api/             # Express 5 + tRPC v11 host
+│   └── web/             # Next.js App Router + Tailwind v4
+├── packages/
+│   ├── db/              # Prisma schema (base.prisma + assembled fragments) + client
+│   ├── common/          # event bus, errors, logger, tRPC primitives, http/rate-limit/crypto
+│   ├── query/           # MonarkQL (shared filter AST + text DSL)
+│   ├── shared/          # portable utilities
+│   ├── components/      # app-specific UI primitives (shadcn via the @monark registry)
+│   ├── branding/        # brand config (logo, colours, app name)
+│   ├── test-utils/      # integration-test harness (Postgres testcontainer)
+│   └── <modules>/       # business modules (@monark/auth, @monark/rbac, …) each with prisma/ fragment when they own tables
+├── tools/
+│   ├── check-tiers.ts   # extended-to-extended dep guard
+│   ├── gen-module.ts    # scaffold a new module package
+│   ├── gen-events.ts    # regenerate the DomainEvent union
+│   ├── gen-routers.ts   # regenerate the tRPC app-router composition
+│   └── gen-schema.ts    # assemble schema.prisma from base + per-module fragments
+├── docs/
+│   ├── user-guide/              # end-user documentation
+│   ├── features-planning/       # shipped specs (by phase) + proposed/
+│   ├── technical-documentation/ # developer reference (this folder)
+│   ├── agents/                  # conventions for agents/contributors
+│   ├── archive/                 # dated point-in-time records (audits, …)
+│   └── todo/                    # backlog
+├── supabase/                    # Supabase config + email templates
+├── modules.manifest.ts          # single source of truth for the module graph
+├── render.yaml                  # api + cron deploy blueprint (web deploys on Vercel)
+├── turbo.json
+├── tsconfig.base.json
+├── vitest.shared.ts
+├── eslint.config.mjs
+├── pnpm-workspace.yaml
+└── package.json
+```
+
+## Module manifest
+
+`modules.manifest.ts` at the repo root is the single source of truth for which modules exist and their tier (core / extended). The codegen tools and the tier-check script both read from it.
+
+## Infrastructure packages
+
+Support libraries under `packages/` that aren't tier-registered feature modules :
+
+| Package              | Purpose                                                                                                               |
+| -------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `@monark/db`         | Prisma schema (assembled `base.prisma` + per-module fragments) + generated client.                                    |
+| `@monark/common`     | Event bus runtime, errors, `Result`, pino logger, tRPC primitives, SSRF-safe fetch, rate-limit, crypto. Backend-only. |
+| `@monark/query`      | MonarkQL — the shared filter-tree AST, operator taxonomy, text DSL, and `@variables`.                                 |
+| `@monark/shared`     | Portable utilities with no framework dependencies.                                                                    |
+| `@monark/components` | App-specific UI primitives. Consumes shadcn components via the `@monark` registry.                                    |
+| `@monark/branding`   | Brand config (logo path, app name, colours). Used by services and email templates.                                    |
+| `@monark/test-utils` | Integration-test harness (boots a Postgres testcontainer + migrations).                                               |
+
+## Codegen tools
+
+All tools live in `tools/` and run via pnpm scripts ; **never hand-edit a generated file** (CI fails on drift) :
+
+| Command            | What it does                                                                                         |
+| ------------------ | ---------------------------------------------------------------------------------------------------- |
+| `pnpm gen:module`  | Scaffold a new module package with `/server`, `/client`, `/contracts`. Registers it in the manifest. |
+| `pnpm gen:schema`  | Assemble `schema.prisma` from `base.prisma` + each module's `prisma/<module>.prisma` fragment.       |
+| `pnpm gen:events`  | Regenerate the `DomainEvent` union from every module's event definitions.                            |
+| `pnpm gen:routers` | Regenerate the tRPC app router from every module's server router.                                    |
+| `pnpm gen`         | Run all codegen steps (`gen:schema` + `gen:events` + `gen:routers`).                                 |
+| `pnpm check:tiers` | Enforce the core/extended dependency rules from the manifest.                                        |
+
+Add `--check` to `gen:schema` / `gen:events` / `gen:routers` in CI to fail on drift without overwriting.
+
+## Available scripts
+
+| Script            | What it does                                             |
+| ----------------- | -------------------------------------------------------- |
+| `pnpm dev`        | Launch web (:3000) + api (:4000) concurrently via Turbo. |
+| `pnpm build`      | Topological build across the workspace.                  |
+| `pnpm lint`       | ESLint across every package.                             |
+| `pnpm typecheck`  | `tsc --noEmit` across every package.                     |
+| `pnpm test`       | Vitest across every package.                             |
+| `pnpm test:e2e`   | Playwright against running web + api.                    |
+| `pnpm db:migrate` | Prisma migrate deploy (via `@monark/db`).                |
+| `pnpm db:reset`   | Drop + reseed database.                                  |
+
+The full pre-PR gate is `pnpm gen && pnpm typecheck && pnpm lint && pnpm test && pnpm check:tiers`.
+
+## Tech stack
+
+| Layer    | Technology                                                                |
+| -------- | ------------------------------------------------------------------------- |
+| Frontend | Next.js 15 (App Router), React 19, Tailwind v4, shadcn (@monark registry) |
+| Backend  | Express 5, tRPC v11, pino logger                                          |
+| Database | PostgreSQL via Supabase, Prisma ORM                                       |
+| Auth     | Supabase Auth + custom TOTP / trusted-device logic                        |
+| Testing  | Vitest (unit/integration + testcontainers), Playwright (e2e)              |
+| CI       | GitHub Actions (lint → typecheck → test → e2e)                            |
+| Monorepo | pnpm workspaces, Turborepo                                                |
+| Deploy   | api + crons on Render ([render.yaml](../../render.yaml)) ; web on Vercel  |
 
 ## Adding a new module
 
@@ -58,4 +157,4 @@ pnpm install
 pnpm gen
 ```
 
-The generator scaffolds the package with `/server`, `/client`, `/contracts` entry points, registers it in the manifest, and wires it into the codegen pipeline. The tRPC app router and domain event union update automatically on `pnpm gen`.
+The generator scaffolds the package with `/server`, `/client`, `/contracts` entry points, registers it in the manifest, and wires it into the codegen pipeline. The tRPC app router, domain-event union, and assembled schema update automatically on `pnpm gen`. Wire the module's `register*` helpers into [`services/api/src/server.ts`](../../services/api/src/server.ts), and see [extensibility-contract.md](extensibility-contract.md) for the four integration systems (RBAC, events, notifications, feature flags) every module should consider.

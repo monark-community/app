@@ -7,16 +7,16 @@ Spec: [docs/features-planning/phase-1/organization-management.md](../../docs/fea
 ## What's here (Phase 1 MVP)
 
 - `/server` — `organizationsRouter` tRPC sub-router + read-interface (`getById`, `getByIdOrThrow`, `getBySlug`, `getUserOrgs`, `getCurrentOrg`, `requireOrg`).
-- `/contracts` — event types for the lifecycle (`OrganizationCreatedEvent`, `MemberJoinedEvent`, `MemberRemovedEvent`, `InviteSentEvent`, `InviteAcceptedEvent`); all declared, none emitted yet.
+- `/contracts` — event types for the lifecycle (`OrganizationCreatedEvent`, `OrganizationUpdatedEvent`, `MemberJoinedEvent`, `MemberRemovedEvent`, `InviteSentEvent`, `InviteAcceptedEvent`) ; all are emitted except `organization.member-removed`.
 - `/client` — placeholder.
 
-Prisma schema adds four models under `// ── MODULE: organizations ──`: `Organization`, `OrganizationMembership`, `Invite`, `OrgSlugRedirect`. The `User` model gains `memberships`, `sentInvites`, and `acceptedInvites` back-references.
+Prisma schema adds five models under `// ── MODULE: organizations ──`: `Organization`, `OrganizationMetadata`, `OrganizationMembership`, `Invite`, `OrgSlugRedirect`. The `User` model gains `memberships`, `sentInvites`, and `acceptedInvites` back-references.
 
 ## Key concepts
 
 - **Active org lives in the session.** Once `@monark/auth` is in place, a Supabase JWT carries `activeOrganizationId`. `getCurrentOrg(ctx)` reads that claim and verifies the user still has a live membership before returning the org. Stale `org_id` after removal → returns null so the caller routes to the org switcher.
-- **Slug is the URL identity.** Unique, mutable, and changes trigger a redirect entry in `OrgSlugRedirect` (30-day TTL). That table is declared now; the redirect middleware + cron cleanup ship with the rename flow.
-- **Invite role type is `String` temporarily.** `@monark/rbac` will introduce the canonical `Role` enum; at that point we swap the string column over. Same pattern as `@monark/feature-flags`'s override `role`.
+- **Slug is the URL identity.** Unique, mutable, and changes trigger a redirect entry in `OrgSlugRedirect` (90-day TTL). The `adminUpdate` rename flow already writes these rows ; the redirect middleware + cron cleanup ship later.
+- **Invite role is a `roleId` FK to the `Role` table.** `@monark/rbac` is table-driven (no `Role` enum) ; `Invite.roleId` and `FeatureFlagOverride.roleId` both reference `Role.id`, and the invite's role must belong to the invite's org (enforced at the write layer).
 - **Memberships soft-leave.** `leftAt` is set on removal rather than deleting the row; historical data stays auditable. Read functions filter `leftAt: null` for "current" views.
 
 ## Usage
@@ -52,10 +52,21 @@ const mine = trpc.organizations.mine.useQuery(); // Organization[]
 
 tRPC procedures under `organizations.*`:
 
-| Procedure               | Input | Output                 |
-| ----------------------- | ----- | ---------------------- |
-| `organizations.current` | —     | `Organization \| null` |
-| `organizations.mine`    | —     | `Organization[]`       |
+| Procedure                                      | Input                                                      | Output                 |
+| ---------------------------------------------- | ---------------------------------------------------------- | ---------------------- |
+| `organizations.current`                        | —                                                          | `Organization \| null` |
+| `organizations.mine`                           | —                                                          | `Organization[]`       |
+| `organizations.bootstrapStatus`                | —                                                          | `BootstrapStatus`      |
+| `organizations.ensureBootstrap`                | `{ slug?, displayName?, primaryColor?, logoUrl? }?`        | bootstrap result       |
+| `organizations.adminList`                      | `{ search?, cursor?, limit? }`                             | paged org list         |
+| `organizations.adminGet`                       | `{ id }`                                                   | `Organization`         |
+| `organizations.adminUpdate`                    | `{ id, displayName?, slug?, logoUrl?, primaryColor? }`     | `Organization`         |
+| `organizations.invites.adminList`              | `{ organizationId }`                                       | pending invites        |
+| `organizations.invites.adminListAll`           | `{ search?, roleIds? }?`                                   | pending invites        |
+| `organizations.invites.adminCreate`            | `{ organizationId, email, displayName?, roleId, appUrl? }` | invite + token         |
+| `organizations.invites.adminRevoke`            | `{ inviteId }`                                             | void                   |
+| `organizations.invites.consumePending`         | —                                                          | `{ accepted }`         |
+| `organizations.metadata.{list,get,set,delete}` | org-scoped metadata inputs                                 | metadata rows          |
 
 ## Dependencies
 
@@ -68,17 +79,18 @@ Indirectly (once those ship): `@monark/auth` for session claims, `@monark/rbac` 
 
 Prisma migration `20260424030538_add_organizations` creates the four tables and the User relations. Applied with `pnpm --filter @monark/db exec prisma migrate dev` like any other migration.
 
-No seed data ships by default; the first org is created through the (not-yet-built) `createOrganization` flow.
+No seed data ships by default ; in single-tenant mode the first org is created by the bootstrap flow (`ensureSingletonOrganizationFromInput` / `organizations.ensureBootstrap`, driven by the `INITIAL_ORG_*` env vars), which emits `organization.created`.
 
 ## Events emitted
 
-| Event                          | When                          | Status                         |
-| ------------------------------ | ----------------------------- | ------------------------------ |
-| `organization.created`         | `createOrganization` mutation | type declared, not yet emitted |
-| `organization.member-joined`   | invite accept / direct add    | type declared                  |
-| `organization.member-removed`  | admin removes a member        | type declared                  |
-| `organization.invite-sent`     | `createInvite` mutation       | type declared                  |
-| `organization.invite-accepted` | invite accept flow            | type declared                  |
+| Event                          | When                                      | Status                                       |
+| ------------------------------ | ----------------------------------------- | -------------------------------------------- |
+| `organization.created`         | bootstrap org creation                    | emitted                                      |
+| `organization.updated`         | `adminUpdate` profile / slug change       | emitted ; carries `changed` + `previousSlug` |
+| `organization.member-joined`   | invite accept / singleton auto-membership | emitted                                      |
+| `organization.member-removed`  | admin removes a member                    | type declared, not yet emitted               |
+| `organization.invite-sent`     | `invites.adminCreate` mutation            | emitted                                      |
+| `organization.invite-accepted` | invite accept / auto-consume flow         | emitted                                      |
 
 ## Events consumed
 
@@ -90,11 +102,10 @@ No seed data ships by default; the first org is created through the (not-yet-bui
 
 Full scope from the planning doc; every item below ships once the dependent pieces land.
 
-- **`createOrganization`, `updateOrganization`, `deleteOrganization`** — need an authenticated admin context from `@monark/auth` + `@monark/rbac`.
-- **Invite flow** (`createInvite`, `listInvites`, `revokeInvite`, `acceptInvite`) — shares token-email infrastructure with `@monark/auth`'s email-validation; also needs `Role` enum from `@monark/rbac`.
+- **`createOrganization` / `deleteOrganization`** (self-service multi-org) — need the multi-tenant creation UI ; `adminUpdate` (org profile / slug / branding edit) already ships.
 - **Member management** (`listMembers`, `removeMember`) — admin-guarded; ships after rbac.
 - **`switchActiveOrg`** — mutates the Supabase session claim; requires the JWT claim plumbing from `@monark/auth`.
-- **Slug rename with redirect middleware** — `OrgSlugRedirect` table is present; middleware + 30-day cleanup cron ship with the rename UI.
-- **White-label** (primary color, logo upload) — `primaryColor` + `logoUrl` columns exist; oklch validator + Supabase Storage bucket (`org-logos`) come with the Branding tab.
+- **Slug-redirect middleware** — the `adminUpdate` rename flow already records `OrgSlugRedirect` rows (90-day TTL) ; only the resolving middleware + cleanup cron are still deferred.
+- **White-label** (primary color, logo upload) — `primaryColor` + `logoUrl` are editable via `adminUpdate` (validated as hex ; note the column, not oklch) ; the Supabase Storage bucket (`org-logos`) for logo upload comes with the Branding tab.
 - **Org switcher UI** + `/onboarding/create-org` + `/invite/<token>` pages — depend on `@monark/components` shadcn form primitives.
-- **`feature-flags` integration** — the spec's `orgs.multi-org` flag can be added to `FLAGS` when the multi-org UI ships.
+- **Multi-tenant UI** — the `tenancy.multi-tenant` flag is already registered (default OFF) and gates auto-membership + bootstrap ; the self-service multi-org creation UI ships later.

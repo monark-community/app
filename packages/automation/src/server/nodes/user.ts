@@ -39,6 +39,11 @@ export const userGetNode = defineNode({
     icon: "UserSearch",
     inputs: [{ id: "in" }],
     outputs: [{ id: "out" }],
+    outputFields: [
+      { key: "id", type: "string", description: "The user's id." },
+      { key: "email", type: "string", description: "The user's email." },
+      { key: "displayName", type: "string", description: "The user's display name." },
+    ],
     configFields: [
       {
         key: "lookupBy",
@@ -80,6 +85,9 @@ export const userSetMetadataNode = defineNode({
     icon: "UserCog",
     inputs: [{ id: "in" }],
     outputs: [{ id: "out" }],
+    outputFields: [
+      { key: "ok", type: "boolean", description: "Whether the metadata was written." },
+    ],
     configFields: [
       { key: "userId", label: "User", type: "user", required: true },
       { key: "module", label: "Module", type: "text", required: true, placeholder: "posts" },
@@ -120,6 +128,10 @@ export const userUpdateProfileNode = defineNode({
     icon: "UserPen",
     inputs: [{ id: "in" }],
     outputs: [{ id: "out" }],
+    outputFields: [
+      { key: "id", type: "string", description: "The updated user's id." },
+      { key: "displayName", type: "string", description: "The user's new display name." },
+    ],
     configFields: [
       { key: "userId", label: "User", type: "user", required: true },
       { key: "displayName", label: "Display name", type: "text" },
@@ -165,6 +177,10 @@ export const userSetActiveNode = defineNode({
     icon: "UserX",
     inputs: [{ id: "in" }],
     outputs: [{ id: "out" }],
+    outputFields: [
+      { key: "userId", type: "string", description: "The affected user's id." },
+      { key: "disabled", type: "boolean", description: "True if the user was deactivated." },
+    ],
     configFields: [
       { key: "userId", label: "User", type: "user", required: true },
       {

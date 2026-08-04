@@ -23,8 +23,31 @@ model KanbanBoard {
   columns    KanbanColumn[]
   cards      KanbanCard[]
   roleAccess KanbanBoardRoleAccess[]
+  views      KanbanView[]
 
   @@index([organizationId])
+}
+
+// A saved MonarkQL query for a board — a named filter tree a user can reload
+// (mirrors data-models' DataRecordView). Personal by default (`createdBy` is
+// the owner) ; `shared = true` makes it visible to anyone with board access.
+// `query` is the `FilterNode` JSON (validated on write).
+model KanbanView {
+  id             String       @id @default(cuid())
+  boardId        String
+  board          KanbanBoard  @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String
+  query          Json
+  shared         Boolean      @default(false)
+  createdBy      String
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([boardId])
+  @@index([organizationId])
+  @@index([createdBy])
 }
 
 // Per-board RBAC: a role whose id appears here can see this board. Users with

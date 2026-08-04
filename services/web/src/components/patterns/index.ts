@@ -1,4 +1,6 @@
 export { FilterBar, FilterBarSearch, useFilterBarToolsBudget } from "./filter-bar";
+export { ListMobileBar } from "./list-mobile-bar";
+export { CreateFab } from "./create-fab";
 export {
   FilterMenu,
   FilterFieldControl,

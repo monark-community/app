@@ -17,6 +17,10 @@ export const sendEmailNode = defineNode({
     icon: "Mail",
     inputs: [{ id: "in" }],
     outputs: [{ id: "out" }],
+    outputFields: [
+      { key: "to", type: "string", description: "The address the email was sent to." },
+      { key: "sent", type: "boolean", description: "Whether the send succeeded." },
+    ],
     configFields: [
       { key: "to", label: "To", type: "text", required: true, placeholder: "person@example.com" },
       { key: "subject", label: "Subject", type: "text", required: true },

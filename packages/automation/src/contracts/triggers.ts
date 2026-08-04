@@ -15,6 +15,20 @@ export const EVENT_TRIGGER_TYPE = "automation.event-trigger";
 export const MANUAL_TRIGGER_TYPE = "automation.manual-trigger";
 export const HTTP_TRIGGER_TYPE = "automation.http-trigger";
 export const SCHEDULE_TRIGGER_TYPE = "automation.schedule-trigger";
+/**
+ * The Data Record trigger : a resource-scoped event trigger. Unlike the generic
+ * event trigger (which fires for *every* model's records), it stores a chosen
+ * `dataModelKey` + `operation` and only fires for that model. Its stored
+ * `triggerEventType` is the real `data-models.record-<operation>` bus event, so
+ * matching still uses the indexed column ; the model filter is applied on top by
+ * the subscriber (`eventScopeMatches`).
+ */
+export const DATA_RECORD_TRIGGER_TYPE = "automation.data-record-trigger";
+
+/** The `data-models.record-*` event a Data Record trigger `operation` maps to. */
+export function dataRecordEventType(operation: string): string {
+  return `data-models.record-${operation}`;
+}
 
 /** Sentinel `Automation.triggerEventType` values (bus-ignored `automation.*`). */
 export const MANUAL_TRIGGER_EVENT = "automation.manual";

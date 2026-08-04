@@ -98,6 +98,7 @@ export function AutoForm({
           isBusy={isBusy}
           onDelete={deleteConfig ? () => setConfirmOpen(true) : undefined}
           deleteLabel={deleteConfig?.deleteLabel}
+          stickyOnMobile
         />
       </form>
       {deleteConfig ? (

@@ -44,6 +44,11 @@ const schema = z.object({
   // here ; the cron handlers refuse requests when it's unset so an
   // accidentally-empty secret can't be matched. Set in production.
   CRON_SECRET: z.string().optional(),
+  // Public API (/api/v1) per-key rate limit : a token bucket refilling at
+  // PUBLIC_API_RATE_PER_SECOND up to a ceiling of PUBLIC_API_BURST. Defaults
+  // suit an interactive integration ; raise for higher-throughput deployments.
+  PUBLIC_API_RATE_PER_SECOND: z.coerce.number().positive().default(5),
+  PUBLIC_API_BURST: z.coerce.number().int().positive().default(20),
   // Single-tenant bootstrap : when the `tenancy.multi-tenant` flag is OFF
   // and zero organizations exist, the API boot hook reads these and
   // creates the singleton org so the /setup gate can lift. Idempotent ;

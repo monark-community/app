@@ -1,4 +1,11 @@
 import { getDb, type Prisma } from "@monark/db";
+import {
+  cursorFindArgs,
+  resolveLimit,
+  toPage,
+  type Paginated,
+  type PaginationArgs,
+} from "@monark/common";
 
 export type CalendarRow = Prisma.CalendarGetPayload<{
   include: { roleAccess: true };
@@ -173,6 +180,75 @@ export async function listEventsForDay({
   });
 }
 
+// Forward-chronological, cursor-paginated event listing — backs the agenda
+// view's "scroll for more" access pattern, per the repo's "list methods
+// paginate" convention (unlike `listEventsForDay`, which is date-range-
+// bounded, not incrementally loaded, so it's a justified unbounded exception
+// rather than needing this pattern).
+export async function listEventsPaginated({
+  organizationId,
+  calendarIds,
+  from,
+  limit,
+  cursor,
+}: {
+  organizationId: string;
+  calendarIds: string[];
+  from: Date;
+} & PaginationArgs): Promise<Paginated<CalendarEventRow>> {
+  const db = getDb();
+  const where: Prisma.CalendarEventWhereInput = {
+    organizationId,
+    calendarId: { in: calendarIds },
+    deletedAt: null,
+    endAt: { gt: from },
+  };
+  const resolvedLimit = resolveLimit(limit);
+  const [rows, total] = await Promise.all([
+    db.calendarEvent.findMany({
+      where,
+      include: { reminders: { select: { minutesBefore: true } } },
+      orderBy: [{ startAt: "asc" }, { id: "asc" }],
+      ...cursorFindArgs(resolvedLimit, cursor),
+    }),
+    db.calendarEvent.count({ where }),
+  ]);
+  return toPage(rows, total, resolvedLimit);
+}
+
+// Same-calendar overlap check, backing the create/edit popover's non-blocking
+// conflict banner. `PUNCTUAL` events are zero-duration points in time, so
+// they're exempted on both sides — mirrors the `eventType !== "PUNCTUAL"`
+// exemption already applied to the `endAt >= startAt` check in the router.
+export async function findOverlappingEvents({
+  calendarId,
+  organizationId,
+  startAt,
+  endAt,
+  excludeEventId,
+}: {
+  calendarId: string;
+  organizationId: string;
+  startAt: Date;
+  endAt: Date;
+  excludeEventId?: string;
+}): Promise<CalendarEventRow[]> {
+  return getDb().calendarEvent.findMany({
+    where: {
+      organizationId,
+      calendarId,
+      deletedAt: null,
+      eventType: { not: "PUNCTUAL" },
+      startAt: { lt: endAt },
+      endAt: { gt: startAt },
+      ...(excludeEventId ? { id: { not: excludeEventId } } : {}),
+    },
+    include: { reminders: { select: { minutesBefore: true } } },
+    orderBy: { startAt: "asc" },
+    take: 5,
+  });
+}
+
 export async function createCalendarEvent({
   calendarId,
   organizationId,
@@ -334,6 +410,27 @@ export async function searchCalendarEvents({
   });
 }
 
+// Full-history export for ICS download — an intentionally unbounded (but
+// capped) `findMany`, exempted from the "list methods paginate" convention
+// because this is a one-shot export, not an incrementally-loaded list ; the
+// cap keeps a single export request bounded regardless of calendar size.
+const MAX_EXPORT_EVENTS = 5000;
+
+export async function listEventsForExport({
+  organizationId,
+  calendarIds,
+}: {
+  organizationId: string;
+  calendarIds: string[];
+}): Promise<CalendarEventRow[]> {
+  return getDb().calendarEvent.findMany({
+    where: { organizationId, calendarId: { in: calendarIds }, deletedAt: null },
+    include: { reminders: { select: { minutesBefore: true } } },
+    orderBy: { startAt: "asc" },
+    take: MAX_EXPORT_EVENTS,
+  });
+}
+
 // ── Reminder delivery (cron) ──────────────────────────────
 
 export type PendingReminderRow = {
@@ -391,7 +488,8 @@ export async function listCalendarMembers({
 
   if (roleIds.length === 0) {
     const memberships = await db.organizationMembership.findMany({
-      where: { organizationId, leftAt: null },
+      // Exclude machine principals (service accounts) from the member list.
+      where: { organizationId, leftAt: null, user: { is: { kind: "HUMAN" } } },
       select: { user: { select: { id: true, displayName: true, email: true, avatarUrl: true } } },
     });
     return memberships.map((m) => m.user);
@@ -399,6 +497,7 @@ export async function listCalendarMembers({
 
   return db.user.findMany({
     where: {
+      kind: "HUMAN",
       memberships: { some: { organizationId, leftAt: null } },
       roleAssignments: { some: { organizationId, roleId: { in: roleIds }, revokedAt: null } },
     },

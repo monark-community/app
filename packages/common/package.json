@@ -33,6 +33,10 @@
     "./http": {
       "types": "./src/http.ts",
       "default": "./src/http.ts"
+    },
+    "./rate-limit": {
+      "types": "./src/rate-limit.ts",
+      "default": "./src/rate-limit.ts"
     }
   },
   "scripts": {
@@ -42,6 +46,7 @@
     "test:coverage": "vitest run --coverage --passWithNoTests"
   },
   "dependencies": {
+    "@monark/db": "workspace:*",
     "@trpc/server": "^11.18.0",
     "pino": "^9.5.0",
     "pino-pretty": "^11.3.0"

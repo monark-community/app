@@ -1,11 +1,12 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState, type ChangeEvent } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { fr as frLocale, enUS } from "react-day-picker/locale";
-import { Archive, MoreHorizontal, Pencil, RotateCcw } from "lucide-react";
+import { Archive, Download, MoreHorizontal, Pencil, RotateCcw, Upload } from "lucide-react";
 import { toast } from "sonner";
 import type { CalendarDef } from "@monark/calendar/contracts";
+import { formatClockTime, type TimeFormat, type WeekStartsOn } from "@monark/calendar/client";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,6 +23,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
@@ -43,6 +45,8 @@ export interface CalendarChipLabels {
   archive: string;
   show: string;
   hide: string;
+  export: string;
+  import: string;
 }
 
 /**
@@ -58,6 +62,8 @@ export function CalendarChip({
   onToggle,
   onEdit,
   onArchive,
+  onExport,
+  onImport,
   canDelete,
   labels,
   fullWidth = false,
@@ -67,6 +73,8 @@ export function CalendarChip({
   onToggle: () => void;
   onEdit: () => void;
   onArchive: () => void;
+  onExport?: () => void;
+  onImport?: () => void;
   canDelete: boolean;
   labels: CalendarChipLabels;
   /** Stretch to fill the row (desktop sidebar) instead of sizing to content. */
@@ -120,15 +128,30 @@ export function CalendarChip({
             <Pencil className="mr-2 h-3.5 w-3.5" />
             {labels.edit}
           </DropdownMenuItem>
-          {canDelete && (
-            <DropdownMenuItem
-              className={cal.isPersonal ? "cursor-not-allowed opacity-50" : undefined}
-              disabled={cal.isPersonal}
-              onClick={() => !cal.isPersonal && onArchive()}
-            >
-              <Archive className="mr-2 h-3.5 w-3.5" />
-              {labels.archive}
+          {onExport && (
+            <DropdownMenuItem onClick={onExport}>
+              <Download className="mr-2 h-3.5 w-3.5" />
+              {labels.export}
             </DropdownMenuItem>
+          )}
+          {onImport && (
+            <DropdownMenuItem onClick={onImport}>
+              <Upload className="mr-2 h-3.5 w-3.5" />
+              {labels.import}
+            </DropdownMenuItem>
+          )}
+          {canDelete && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                className={cal.isPersonal ? "cursor-not-allowed opacity-50" : undefined}
+                disabled={cal.isPersonal}
+                onClick={() => !cal.isPersonal && onArchive()}
+              >
+                <Archive className="mr-2 h-3.5 w-3.5" />
+                {labels.archive}
+              </DropdownMenuItem>
+            </>
           )}
         </DropdownMenuContent>
       </DropdownMenu>
@@ -139,6 +162,8 @@ export function CalendarChip({
 export function CalendarSidebar({
   selectedDate,
   weekRange,
+  weekStartsOn = 0,
+  timeFormat = "24h",
   onDateChange,
   calendars,
   hiddenCalendarIds,
@@ -153,6 +178,8 @@ export function CalendarSidebar({
 }: {
   selectedDate: Date;
   weekRange?: { from: Date; to: Date };
+  weekStartsOn?: WeekStartsOn;
+  timeFormat?: TimeFormat;
   onDateChange: (date: Date) => void;
   calendars: CalendarDef[];
   hiddenCalendarIds: Set<string>;
@@ -198,7 +225,49 @@ export function CalendarSidebar({
     archive: t("archiveCalendar"),
     show: t("showCalendar"),
     hide: t("hideCalendar"),
+    export: t("exportCalendar"),
+    import: t("importCalendar"),
   };
+
+  // ── ICS export / import ───────────────────────────────────────────────────
+  const importFileInputRef = useRef<HTMLInputElement>(null);
+  const pendingImportCalendarIdRef = useRef<string | null>(null);
+  const importIcs = trpc.calendar.events.importIcs.useMutation({
+    onSuccess: (result) => {
+      void utils.calendar.events.listForDay.invalidate();
+      if (result.flattenedRecurrenceCount > 0) {
+        toast.success(
+          t("importSuccessWithRecurrence", {
+            count: result.imported,
+            recurring: result.flattenedRecurrenceCount,
+          }),
+        );
+      } else {
+        toast.success(t("importSuccess", { count: result.imported }));
+      }
+    },
+    onError: (err) => toast.error(t("importError", { message: err.message })),
+  });
+
+  function handleExportCalendar(calendarId: string) {
+    window.location.href = `/calendar/export?calendarId=${encodeURIComponent(calendarId)}`;
+  }
+
+  function handleImportCalendar(calendarId: string) {
+    pendingImportCalendarIdRef.current = calendarId;
+    importFileInputRef.current?.click();
+  }
+
+  function handleImportFileSelected(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    const calendarId = pendingImportCalendarIdRef.current;
+    e.target.value = "";
+    if (!file || !calendarId) return;
+    file
+      .text()
+      .then((icsText) => importIcs.mutate({ calendarId, icsText }))
+      .catch(() => toast.error(t("importError", { message: file.name })));
+  }
 
   // Track the displayed month so the mini-calendar navigates when Today button fires
   const activeMonth = weekRange?.from ?? selectedDate;
@@ -227,9 +296,7 @@ export function CalendarSidebar({
                   const isAllDay = ev.eventType === "ALL_DAY";
                   const isPunctual = ev.eventType === "PUNCTUAL";
                   const timeStr =
-                    !isAllDay && !isPunctual
-                      ? `${String(ev.startAt.getHours()).padStart(2, "0")}:${String(ev.startAt.getMinutes()).padStart(2, "0")}`
-                      : null;
+                    !isAllDay && !isPunctual ? formatClockTime(ev.startAt, timeFormat) : null;
                   return (
                     <div
                       key={ev.id}
@@ -253,7 +320,7 @@ export function CalendarSidebar({
           <Calendar
             mode="range"
             locale={locale}
-            weekStartsOn={0}
+            weekStartsOn={weekStartsOn}
             selected={weekRange}
             month={displayMonth}
             onMonthChange={setDisplayMonth}
@@ -264,7 +331,7 @@ export function CalendarSidebar({
           <Calendar
             mode="single"
             locale={locale}
-            weekStartsOn={0}
+            weekStartsOn={weekStartsOn}
             selected={selectedDate}
             month={displayMonth}
             onMonthChange={setDisplayMonth}
@@ -286,6 +353,8 @@ export function CalendarSidebar({
                 onToggle={() => onToggleCalendar(cal.id)}
                 onEdit={() => onEditCalendar(cal)}
                 onArchive={() => setPendingDelete(cal)}
+                onExport={() => handleExportCalendar(cal.id)}
+                onImport={() => handleImportCalendar(cal.id)}
                 canDelete={!!canDelete}
                 labels={chipLabels}
                 fullWidth
@@ -362,6 +431,8 @@ export function CalendarSidebar({
             onToggle={() => onToggleCalendar(cal.id)}
             onEdit={() => onEditCalendar(cal)}
             onArchive={() => setPendingDelete(cal)}
+            onExport={() => handleExportCalendar(cal.id)}
+            onImport={() => handleImportCalendar(cal.id)}
             canDelete={!!canDelete}
             labels={chipLabels}
           />
@@ -379,6 +450,14 @@ export function CalendarSidebar({
           </button>
         )}
       </div>
+
+      <input
+        ref={importFileInputRef}
+        type="file"
+        accept=".ics,text/calendar"
+        className="hidden"
+        onChange={handleImportFileSelected}
+      />
 
       <AlertDialog
         open={pendingDelete != null}

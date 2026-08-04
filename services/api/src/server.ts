@@ -2,7 +2,7 @@ import { fileURLToPath } from "node:url";
 import express from "express";
 import cors from "cors";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
-import { logger } from "@monark/common";
+import { installDevEventTap, logger } from "@monark/common";
 import {
   processExpiredDeletions,
   registerAuthEventTypes,
@@ -40,6 +40,7 @@ import {
   hydrateDataModelRegistrations,
   registerDataModelRecordWatchSubscriber,
   registerDataModelsEventTypes,
+  registerDataModelsFeatureFlags,
   registerDataModelsNotificationKinds,
   registerDataModelsPermissions,
   registerDataModelVisibilityResolvers,
@@ -69,6 +70,8 @@ import {
 } from "@monark/files/server";
 import { registerRbacEventTypes, registerRbacPermissions } from "@monark/rbac/server";
 import { registerSecretsEventTypes, registerSecretsPermissions } from "@monark/secrets/server";
+import { registerApiKeysEventTypes, registerApiKeysPermissions } from "@monark/api-keys/server";
+import { registerPublicApiFeatureFlags } from "@monark/public-api/server";
 import { registerUsersEventTypes, registerUsersPermissions } from "@monark/users/server";
 import {
   makeEnvVarSecretResolver,
@@ -83,6 +86,7 @@ import { env } from "./lib/env";
 import { httpLogger } from "./lib/http-logger";
 import { appRouter } from "./trpc/router";
 import { createContext } from "./trpc/context";
+import { mountPublicApi } from "./public/mount";
 
 // ── Boot-time module registrations ───────────────────────────────────
 // Every module that owns flags or permissions registers them here, in
@@ -97,9 +101,11 @@ import { createContext } from "./trpc/context";
 // now the manifest is hand-maintained.
 registerAuthFeatureFlags();
 registerAutomationFeatureFlags();
+registerDataModelsFeatureFlags();
 registerFilesFeatureFlags();
 registerKanbanFeatureFlags();
 registerOrganizationsFeatureFlags();
+registerPublicApiFeatureFlags();
 
 registerAutomationPermissions();
 registerCalendarPermissions();
@@ -110,6 +116,7 @@ registerKanbanPermissions();
 registerOrganizationsPermissions();
 registerRbacPermissions();
 registerSecretsPermissions();
+registerApiKeysPermissions();
 registerUsersPermissions();
 registerWebhooksPermissions();
 
@@ -130,6 +137,7 @@ registerNotificationsEventTypes();
 registerOrganizationsEventTypes();
 registerRbacEventTypes();
 registerSecretsEventTypes();
+registerApiKeysEventTypes();
 registerUsersEventTypes();
 
 // Org-scoped visibility resolvers for per-Data-Model permissions + event
@@ -176,6 +184,13 @@ registerNotificationSubscribers();
 // subscriber (which must stay last) ; it ignores `automation.*` events itself.
 registerAutomationSubscribers();
 registerWebhookSubscribers();
+
+// Dev-only : record every emitted domain event into an in-memory ring buffer so
+// the dev-overlay "event bus" panel can show what just fired. Registered last so
+// it observes the fully-wired bus; never installed in production.
+if (process.env.NODE_ENV !== "production") {
+  installDevEventTap();
+}
 
 async function sweepCalendarReminders(): Promise<void> {
   const { notify } = await import("@monark/notifications/server");
@@ -402,6 +417,12 @@ app.use(express.json());
 app.get("/health", (_req, res) => {
   res.json({ status: "ok", service: "api" });
 });
+
+// Curated public REST API (/api/v1), authenticated by `@monark/api-keys` and
+// gated behind the `public-api.enabled` flag. Mounted before /trpc ; it has its
+// own API-key auth + rate-limit middleware and does not share the session
+// (Supabase bearer) auth the /trpc surface uses.
+mountPublicApi(app);
 
 // Cron endpoints. Auth is `Authorization: Bearer ${CRON_SECRET}` so any
 // scheduler that can hit an HTTPS URL works (Vercel Cron, GitHub Actions,

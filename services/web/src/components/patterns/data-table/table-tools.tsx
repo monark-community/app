@@ -67,6 +67,8 @@ export function TableTools<TData>({
   labels,
   className,
   include,
+  mode = "auto",
+  extraSections,
 }: {
   layout: DataTableLayout;
   primaryColumn: PrimaryColumnDef<TData>;
@@ -78,8 +80,22 @@ export function TableTools<TData>({
    *  the cluster — e.g. filters + sorting next to the search, and a separate
    *  `include={["columns"]}` instance over with the right-hand actions. */
   include?: ToolId[];
+  /**
+   * Render strategy, decoupled from the viewport so a responsive layout can
+   * mount both forms behind CSS `md:` wrappers :
+   * - `"auto"` (default) — inline on desktop, collapse to the full-screen sheet
+   *   on mobile (the original behaviour).
+   * - `"inline"` — always inline (desktop toolbar cluster), never the sheet.
+   * - `"sheet"` — always the single ⋯ trigger + full-screen options sheet
+   *   (the consolidated mobile list-options surface).
+   */
+  mode?: "auto" | "inline" | "sheet";
+  /** Extra rows appended below the columns section in the `sheet` view — e.g. a
+   *  "Follow this list" row — so per-list actions live in one options surface on
+   *  mobile. Ignored by the inline / desktop rendering. */
+  extraSections?: ReactNode;
 }) {
-  const isMobile = useIsMobile();
+  const autoMobile = useIsMobile();
   const budget = useFilterBarToolsBudget();
 
   const sortFields = [
@@ -115,10 +131,12 @@ export function TableTools<TData>({
 
   if (tools.length === 0) return null;
 
-  // A single-control instance (e.g. a `include={["columns"]}` split rendered
-  // over with the actions) renders its one control inline everywhere — the
-  // full-screen mobile dialog is only worth it when several controls collapse.
-  if (isMobile && tools.length > 1) {
+  // Sheet when explicitly asked, or (in `auto`) on mobile once several controls
+  // would otherwise crowd the row. A single-control `auto` instance (e.g. an
+  // `include={["columns"]}` split) stays inline — a full-screen sheet for one
+  // control isn't worth it. `inline` never uses the sheet.
+  const useSheet = mode === "sheet" || (mode === "auto" && autoMobile && tools.length > 1);
+  if (useSheet) {
     return (
       <MobileToolsDialog
         filters={hasFilters ? filters : undefined}
@@ -129,6 +147,7 @@ export function TableTools<TData>({
         labels={labels}
         badgeCount={activeFilters + sortCount}
         className={className}
+        extraSections={extraSections}
       />
     );
   }
@@ -433,6 +452,7 @@ function MobileToolsDialog({
   labels,
   badgeCount,
   className,
+  extraSections,
 }: {
   filters?: FilterConfig[];
   sortFields: { id: string; header: string }[];
@@ -442,6 +462,7 @@ function MobileToolsDialog({
   labels: TableToolsLabels;
   badgeCount: number;
   className?: string;
+  extraSections?: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
   // Local const so the narrowing survives into JSX callbacks below.
@@ -513,6 +534,7 @@ function MobileToolsDialog({
             />
             {layout.columnsModified && <ResetRow label={labels.reset} onClick={layout.reset} />}
           </div>
+          {extraSections}
         </div>
       </DialogContent>
     </Dialog>

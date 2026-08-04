@@ -1,5 +1,13 @@
 version: 2
+
+# Minor/patch bumps are grouped into a couple of PRs per week to keep the noise
+# down ; majors still open individually so a breaking bump gets a deliberate
+# review. Security fixes are raised immediately regardless of this schedule.
+# The `dependency-review` workflow is the complementary PR gate that blocks
+# known-vulnerable deps from merging.
 updates:
+  # JS deps across the pnpm workspace (Dependabot reads pnpm-lock.yaml under the
+  # npm ecosystem and covers every workspace package from the root).
   - package-ecosystem: "npm"
     directory: "/"
     schedule:
@@ -8,6 +16,13 @@ updates:
     open-pull-requests-limit: 10
     labels:
       - "dependencies"
+    groups:
+      production-minor-patch:
+        dependency-type: "production"
+        update-types: ["minor", "patch"]
+      dev-minor-patch:
+        dependency-type: "development"
+        update-types: ["minor", "patch"]
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
@@ -16,3 +31,6 @@ updates:
     open-pull-requests-limit: 5
     labels:
       - "dependencies"
+    groups:
+      github-actions:
+        patterns: ["*"]

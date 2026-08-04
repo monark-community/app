@@ -10,10 +10,18 @@ import {
   ChevronLeft,
   ChevronRight,
   LayoutGrid,
+  List,
+  SlidersHorizontal,
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Kbd } from "@/components/ui/kbd";
-import type { CalendarDef, CalendarEventType } from "@monark/calendar/contracts";
+import type {
+  CalendarDef,
+  CalendarEventType,
+  CalendarViewSettings,
+} from "@monark/calendar/contracts";
+import { DEFAULT_CALENDAR_VIEW_SETTINGS } from "@monark/calendar/contracts";
+import { addDays, getWeekStart } from "@monark/calendar/client";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -23,26 +31,24 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { fr as frLocale, enUS } from "react-day-picker/locale";
 import { useIsMobile } from "@/hooks/use-is-mobile";
+import { trpc } from "@/lib/trpc";
+import { AgendaView } from "./agenda-view";
 import { DayView } from "./day-view";
 import { MonthView } from "./month-view";
 import { WeekView } from "./week-view";
 
-type CalendarViewType = "day" | "week" | "month";
-
-function getWeekStart(date: Date): Date {
-  const d = new Date(date);
-  d.setDate(d.getDate() - d.getDay());
-  d.setHours(0, 0, 0, 0);
-  return d;
-}
-
-function addDays(date: Date, n: number): Date {
-  const d = new Date(date);
-  d.setDate(d.getDate() + n);
-  return d;
-}
+type CalendarViewType = "day" | "week" | "month" | "agenda";
 
 function addMonths(date: Date, n: number): Date {
   const d = new Date(date);
@@ -77,18 +83,34 @@ export function CalendarShell({
   initialCalendars,
   canManage,
   canDelete,
+  initialSettings,
 }: {
   initialDate: Date;
   initialCalendars: CalendarDef[];
   canManage: boolean;
   canDelete?: boolean;
+  initialSettings: CalendarViewSettings;
 }) {
   const router = useRouter();
   const pathname = usePathname();
   const rawParams = useSearchParams();
   const t = useTranslations("calendar.shell");
+  const tOptions = useTranslations("calendar.viewOptions");
   const locale = useLocale();
   const rdpLocale = locale === "fr" ? frLocale : enUS;
+
+  const utils = trpc.useUtils();
+  const settingsQuery = trpc.calendar.settings.get.useQuery(undefined, {
+    initialData: initialSettings,
+    refetchOnWindowFocus: false,
+  });
+  const settings = settingsQuery.data ?? DEFAULT_CALENDAR_VIEW_SETTINGS;
+  const setSettings = trpc.calendar.settings.set.useMutation({
+    onSuccess: () => void utils.calendar.settings.get.invalidate(),
+  });
+  function updateSettings(patch: Partial<CalendarViewSettings>) {
+    setSettings.mutate(patch);
+  }
 
   // ── URL-driven state ───────────────────────────────────────────────────────
   // Keep a ref so keyboard-shortcut closures always read the latest params
@@ -97,7 +119,10 @@ export function CalendarShell({
   rawParamsRef.current = rawParams;
 
   const viewParam = rawParams.get("view");
-  const view: CalendarViewType = viewParam === "week" || viewParam === "month" ? viewParam : "day";
+  const view: CalendarViewType =
+    viewParam === "week" || viewParam === "month" || viewParam === "day" || viewParam === "agenda"
+      ? viewParam
+      : settings.defaultView;
   const selectedDate = parseDateParam(rawParams.get("date"), initialDate);
   const focusEventId = rawParams.get("event");
 
@@ -112,7 +137,7 @@ export function CalendarShell({
   );
   const [datePickerOpen, setDatePickerOpen] = useState(false);
 
-  const weekStart = getWeekStart(selectedDate);
+  const weekStart = getWeekStart(selectedDate, settings.weekStartsOn);
   const weekEnd = addDays(weekStart, 6);
 
   const viewRef = useRef(effectiveView);
@@ -146,18 +171,24 @@ export function CalendarShell({
       if (e.key === "d" || e.key === "D") navigateTo({ view: "day" });
       if (e.key === "w" || e.key === "W") navigateTo({ view: "week" });
       if (e.key === "m" || e.key === "M") navigateTo({ view: "month" });
+      if (e.key === "a" || e.key === "A") navigateTo({ view: "agenda" });
       if (e.key === "t" || e.key === "T") navigateTo({ date: new Date() });
       if (e.key === "ArrowLeft") {
         e.preventDefault();
         const v = viewRef.current;
         const d = selectedDateRef.current;
-        navigateTo({ date: v === "month" ? addMonths(d, -1) : addDays(d, v === "day" ? -1 : -7) });
+        navigateTo({
+          date:
+            v === "month" ? addMonths(d, -1) : addDays(d, v === "day" || v === "agenda" ? -1 : -7),
+        });
       }
       if (e.key === "ArrowRight") {
         e.preventDefault();
         const v = viewRef.current;
         const d = selectedDateRef.current;
-        navigateTo({ date: v === "month" ? addMonths(d, 1) : addDays(d, v === "day" ? 1 : 7) });
+        navigateTo({
+          date: v === "month" ? addMonths(d, 1) : addDays(d, v === "day" || v === "agenda" ? 1 : 7),
+        });
       }
     }
     document.addEventListener("keydown", onKey);
@@ -170,7 +201,7 @@ export function CalendarShell({
       date:
         effectiveView === "month"
           ? addMonths(selectedDate, -1)
-          : addDays(selectedDate, effectiveView === "day" ? -1 : -7),
+          : addDays(selectedDate, effectiveView === "day" || effectiveView === "agenda" ? -1 : -7),
     });
   }
   function next() {
@@ -178,7 +209,7 @@ export function CalendarShell({
       date:
         effectiveView === "month"
           ? addMonths(selectedDate, 1)
-          : addDays(selectedDate, effectiveView === "day" ? 1 : 7),
+          : addDays(selectedDate, effectiveView === "day" || effectiveView === "agenda" ? 1 : 7),
     });
   }
   function goToday() {
@@ -186,26 +217,28 @@ export function CalendarShell({
   }
 
   // ── Date label ─────────────────────────────────────────────────────────────
+  const longDateLabel = new Intl.DateTimeFormat(locale, {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  }).format(selectedDate);
+
   const dateLabel =
     effectiveView === "month"
       ? new Intl.DateTimeFormat(locale, { month: "long", year: "numeric" }).format(selectedDate)
-      : effectiveView === "day"
-        ? new Intl.DateTimeFormat(locale, {
-            weekday: "long",
-            year: "numeric",
-            month: "long",
-            day: "numeric",
-          }).format(selectedDate)
+      : effectiveView === "day" || effectiveView === "agenda"
+        ? longDateLabel
         : `${new Intl.DateTimeFormat(locale, { month: "short", day: "numeric" }).format(weekStart)} – ${new Intl.DateTimeFormat(locale, { month: "short", day: "numeric", year: "numeric" }).format(weekEnd)}`;
 
   const prevLabel =
-    effectiveView === "day"
+    effectiveView === "day" || effectiveView === "agenda"
       ? t("prevDay")
       : effectiveView === "week"
         ? t("prevWeek")
         : t("prevMonth");
   const nextLabel =
-    effectiveView === "day"
+    effectiveView === "day" || effectiveView === "agenda"
       ? t("nextDay")
       : effectiveView === "week"
         ? t("nextWeek")
@@ -216,12 +249,20 @@ export function CalendarShell({
       <CalendarDays className="h-3.5 w-3.5" />
     ) : effectiveView === "week" ? (
       <CalendarRange className="h-3.5 w-3.5" />
+    ) : effectiveView === "agenda" ? (
+      <List className="h-3.5 w-3.5" />
     ) : (
       <LayoutGrid className="h-3.5 w-3.5" />
     );
 
   const viewLabel =
-    effectiveView === "day" ? t("day") : effectiveView === "week" ? t("week") : t("month");
+    effectiveView === "day"
+      ? t("day")
+      : effectiveView === "week"
+        ? t("week")
+        : effectiveView === "agenda"
+          ? t("agenda")
+          : t("month");
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
@@ -287,7 +328,7 @@ export function CalendarShell({
                 <Calendar
                   mode="single"
                   locale={rdpLocale}
-                  weekStartsOn={0}
+                  weekStartsOn={settings.weekStartsOn}
                   selected={selectedDate}
                   defaultMonth={selectedDate}
                   onSelect={(date) => {
@@ -305,34 +346,179 @@ export function CalendarShell({
             </span>
           )}
 
-          {/* Only Day view is available on mobile, so the switcher is hidden there. */}
+          {/* Only Day view is available on mobile, so the switcher and view
+              options are hidden there. */}
           {!isMobile && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="order-5 gap-1.5">
-                  {viewIcon}
-                  {viewLabel}
-                  <ChevronDown className="h-3.5 w-3.5 opacity-60" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-36">
-                <DropdownMenuItem onClick={() => navigateTo({ view: "day" })}>
-                  <CalendarDays className="mr-2 h-4 w-4" />
-                  {t("day")}
-                  <Kbd className="ml-auto">D</Kbd>
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigateTo({ view: "week" })}>
-                  <CalendarRange className="mr-2 h-4 w-4" />
-                  {t("week")}
-                  <Kbd className="ml-auto">W</Kbd>
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigateTo({ view: "month" })}>
-                  <LayoutGrid className="mr-2 h-4 w-4" />
-                  {t("month")}
-                  <Kbd className="ml-auto">M</Kbd>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="order-5 gap-1.5">
+                    {viewIcon}
+                    {viewLabel}
+                    <ChevronDown className="h-3.5 w-3.5 opacity-60" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-36">
+                  <DropdownMenuItem onClick={() => navigateTo({ view: "day" })}>
+                    <CalendarDays className="mr-2 h-4 w-4" />
+                    {t("day")}
+                    <Kbd className="ml-auto">D</Kbd>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigateTo({ view: "week" })}>
+                    <CalendarRange className="mr-2 h-4 w-4" />
+                    {t("week")}
+                    <Kbd className="ml-auto">W</Kbd>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigateTo({ view: "month" })}>
+                    <LayoutGrid className="mr-2 h-4 w-4" />
+                    {t("month")}
+                    <Kbd className="ml-auto">M</Kbd>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigateTo({ view: "agenda" })}>
+                    <List className="mr-2 h-4 w-4" />
+                    {t("agenda")}
+                    <Kbd className="ml-auto">A</Kbd>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="order-6"
+                    aria-label={tOptions("trigger")}
+                  >
+                    <SlidersHorizontal className="h-4 w-4" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent align="end" className="w-72 space-y-4">
+                  <div className="flex items-center justify-between gap-4">
+                    <Label htmlFor="calendar-hide-weekends">{tOptions("hideWeekends")}</Label>
+                    <Switch
+                      id="calendar-hide-weekends"
+                      checked={settings.hideWeekends}
+                      onCheckedChange={(checked) => updateSettings({ hideWeekends: checked })}
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label>{tOptions("weekStartsOn")}</Label>
+                    <Select
+                      value={String(settings.weekStartsOn)}
+                      onValueChange={(v) => updateSettings({ weekStartsOn: v === "1" ? 1 : 0 })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="0">{tOptions("weekStartsOnSunday")}</SelectItem>
+                        <SelectItem value="1">{tOptions("weekStartsOnMonday")}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label>{tOptions("defaultView")}</Label>
+                    <Select
+                      value={settings.defaultView}
+                      onValueChange={(v) =>
+                        updateSettings({ defaultView: v as CalendarViewSettings["defaultView"] })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="day">{t("day")}</SelectItem>
+                        <SelectItem value="week">{t("week")}</SelectItem>
+                        <SelectItem value="month">{t("month")}</SelectItem>
+                        <SelectItem value="agenda">{t("agenda")}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label>{tOptions("timeFormat")}</Label>
+                    <Select
+                      value={settings.timeFormat}
+                      onValueChange={(v) =>
+                        updateSettings({ timeFormat: v as CalendarViewSettings["timeFormat"] })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="24h">{tOptions("timeFormat24h")}</SelectItem>
+                        <SelectItem value="12h">{tOptions("timeFormat12h")}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between gap-4">
+                      <Label htmlFor="calendar-working-hours">{tOptions("workingHours")}</Label>
+                      <Switch
+                        id="calendar-working-hours"
+                        checked={settings.workingHours.enabled}
+                        onCheckedChange={(checked) =>
+                          updateSettings({
+                            workingHours: { ...settings.workingHours, enabled: checked },
+                          })
+                        }
+                      />
+                    </div>
+                    {settings.workingHours.enabled && (
+                      <div className="flex items-center gap-2">
+                        <Select
+                          value={String(settings.workingHours.startHour)}
+                          onValueChange={(v) =>
+                            updateSettings({
+                              workingHours: { ...settings.workingHours, startHour: Number(v) },
+                            })
+                          }
+                        >
+                          <SelectTrigger className="w-24">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {Array.from({ length: 24 }, (_, h) => (
+                              <SelectItem key={h} value={String(h)}>
+                                {String(h).padStart(2, "0")}:00
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <span className="text-sm text-muted-foreground">
+                          {tOptions("workingHoursTo")}
+                        </span>
+                        <Select
+                          value={String(settings.workingHours.endHour)}
+                          onValueChange={(v) =>
+                            updateSettings({
+                              workingHours: { ...settings.workingHours, endHour: Number(v) },
+                            })
+                          }
+                        >
+                          <SelectTrigger className="w-24">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {Array.from({ length: 24 }, (_, h) => h + 1).map((h) => (
+                              <SelectItem key={h} value={String(h)}>
+                                {String(h % 24).padStart(2, "0")}:00
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                  </div>
+                </PopoverContent>
+              </Popover>
+            </>
           )}
         </div>
       </TooltipProvider>
@@ -350,6 +536,7 @@ export function CalendarShell({
             onEventFocused={() => navigateTo({ event: null })}
             pendingCreateDefaults={pendingCreateDefaults}
             onPendingCreateConsumed={() => setPendingCreateDefaults(null)}
+            settings={settings}
           />
         ) : effectiveView === "week" ? (
           <WeekView
@@ -360,14 +547,25 @@ export function CalendarShell({
             initialCalendars={initialCalendars}
             canManage={canManage}
             canDelete={canDelete}
+            settings={settings}
           />
-        ) : (
+        ) : effectiveView === "month" ? (
           <MonthView
             selectedDate={selectedDate}
             onDayClick={(date) => navigateTo({ view: "day", date })}
             initialCalendars={initialCalendars}
             canManage={canManage}
             canDelete={canDelete}
+            settings={settings}
+          />
+        ) : (
+          <AgendaView
+            fromDate={selectedDate}
+            onDateChange={(date) => navigateTo({ date })}
+            initialCalendars={initialCalendars}
+            canManage={canManage}
+            canDelete={canDelete}
+            settings={settings}
           />
         )}
       </div>

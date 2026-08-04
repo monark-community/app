@@ -288,7 +288,7 @@ function SortFieldRow({
       <button
         type="button"
         aria-label={label}
-        className="flex h-7 w-5 shrink-0 cursor-grab touch-none items-center justify-center text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="flex h-7 w-5 shrink-0 cursor-grab touch-none items-center justify-center text-muted-foreground pointer-coarse:min-h-11 pointer-coarse:min-w-11 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         {...attributes}
         {...listeners}
       >
@@ -299,7 +299,7 @@ function SortFieldRow({
         type="button"
         onClick={onToggleDirection}
         aria-label={desc ? descendingLabel : ascendingLabel}
-        className="flex h-6 items-center gap-1 rounded-sm border border-input px-1.5 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+        className="flex h-6 items-center gap-1 rounded-sm border border-input px-1.5 text-xs text-muted-foreground transition-colors pointer-coarse:min-h-11 hover:bg-accent hover:text-foreground"
       >
         {desc ? (
           <ArrowDown className="h-3 w-3" aria-hidden />
@@ -311,7 +311,7 @@ function SortFieldRow({
         type="button"
         onClick={onRemove}
         aria-label={removeLabel}
-        className="flex h-6 w-6 shrink-0 items-center justify-center rounded-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+        className="flex h-6 w-6 shrink-0 items-center justify-center rounded-sm text-muted-foreground transition-colors pointer-coarse:min-h-11 pointer-coarse:min-w-11 hover:bg-accent hover:text-foreground"
       >
         <X className="h-3.5 w-3.5" aria-hidden />
       </button>
@@ -362,7 +362,7 @@ function ColumnPropertyRow({
       <button
         type="button"
         aria-label={label}
-        className="flex h-7 w-6 shrink-0 cursor-grab touch-none items-center justify-center text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="flex h-7 w-6 shrink-0 cursor-grab touch-none items-center justify-center text-muted-foreground pointer-coarse:min-h-11 pointer-coarse:min-w-11 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         {...attributes}
         {...listeners}
       >

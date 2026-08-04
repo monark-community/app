@@ -22,6 +22,7 @@ export const transformNode = defineNode({
     // consumes its output. Reference upstream values with {{ }} in the formula.
     inputs: [],
     outputs: [{ id: "out" }],
+    outputFields: [{ key: "value", type: "string", description: "The formula's computed result." }],
     configFields: [
       {
         key: "expression",

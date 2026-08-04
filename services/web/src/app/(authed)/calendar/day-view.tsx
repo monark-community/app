@@ -7,6 +7,7 @@ import type {
   CalendarEvent,
   CalendarEventTime,
   CalendarEventType,
+  CalendarViewSettings,
 } from "@monark/calendar/contracts";
 import {
   CurrentTimeIndicator,
@@ -82,6 +83,7 @@ export function DayView({
   onEventFocused,
   pendingCreateDefaults,
   onPendingCreateConsumed,
+  settings,
 }: {
   initialDate: Date;
   selectedDate?: Date;
@@ -98,6 +100,7 @@ export function DayView({
     eventType?: CalendarEventType;
   } | null;
   onPendingCreateConsumed?: () => void;
+  settings: CalendarViewSettings;
 }) {
   const [selectedDateState, setSelectedDateState] = useState<Date>(initialDate);
   const selectedDate = selectedDateProp ?? selectedDateState;
@@ -925,6 +928,7 @@ export function DayView({
     <div className="flex h-full flex-col overflow-hidden md:flex-row">
       <CalendarSidebar
         selectedDate={selectedDate}
+        weekStartsOn={settings.weekStartsOn}
         onDateChange={setSelectedDate}
         calendars={calendars}
         hiddenCalendarIds={hiddenCalendarIds}
@@ -981,8 +985,29 @@ export function DayView({
 
         {/* Scrollable body: hour labels + one merged, color-coded schedule */}
         <div className="flex">
-          <DayTimeline date={selectedDate} hideHeader />
+          <DayTimeline
+            date={selectedDate}
+            hideHeader
+            timeFormat={settings.timeFormat}
+            workingHours={settings.workingHours}
+          />
           <div className="relative flex-1" style={{ height: TOTAL_HEIGHT_PX }}>
+            {settings.workingHours.enabled && (
+              <>
+                <div
+                  className="pointer-events-none absolute inset-x-0 top-0 bg-muted/40"
+                  style={{ height: settings.workingHours.startHour * HOUR_HEIGHT_PX }}
+                  aria-hidden
+                />
+                <div
+                  className="pointer-events-none absolute inset-x-0 bottom-0 bg-muted/40"
+                  style={{
+                    height: TOTAL_HEIGHT_PX - settings.workingHours.endHour * HOUR_HEIGHT_PX,
+                  }}
+                  aria-hidden
+                />
+              </>
+            )}
             {Array.from({ length: 24 }, (_, h) => (
               <div
                 key={h}
@@ -997,6 +1022,7 @@ export function DayView({
               events={timedEvents}
               selectedEventId={selectedEventId}
               pendingEditEventId={pendingEditEventId}
+              timeFormat={settings.timeFormat}
               onSlotClick={handleSlotClick}
               onEventClick={handleEventClick}
               onDragStart={(event, _columnId, type, clientY) =>

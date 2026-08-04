@@ -18,18 +18,25 @@ import {
   getSingletonOrganization,
 } from "../../src/server/bootstrap";
 
-beforeEach(() => {
-  isEnabledMock.mockReset();
-  isEnabledMock.mockResolvedValue(false);
-});
-
-afterEach(async () => {
+// Clean the org tables BEFORE each test (not only after) so this file is
+// independently runnable regardless of what a prior spec file left behind —
+// the "no orgs exist" case asserts on entry state. `afterEach` repeats the
+// cleanup so the next spec file also starts clean.
+async function resetOrgTables(): Promise<void> {
   const db = getDb();
   await db.organizationMembership.deleteMany({});
   await db.invite.deleteMany({});
   await db.orgSlugRedirect.deleteMany({});
   await db.organization.deleteMany({});
+}
+
+beforeEach(async () => {
+  isEnabledMock.mockReset();
+  isEnabledMock.mockResolvedValue(false);
+  await resetOrgTables();
 });
+
+afterEach(resetOrgTables);
 
 describe("getBootstrapStatus", () => {
   it("reports single-tenant + not bootstrapped when no orgs exist", async () => {

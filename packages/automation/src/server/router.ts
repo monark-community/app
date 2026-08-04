@@ -5,6 +5,7 @@ import {
   listEventTypesByModule,
   NotFoundError,
   orgVisibleEventTypes,
+  recentDevEvents,
   UnauthorizedError,
   ValidationError,
 } from "@monark/common";
@@ -24,6 +25,7 @@ import {
   SCHEDULE_TRIGGER_TYPE,
 } from "../contracts/triggers";
 import { generateHttpSecret } from "./http-trigger";
+import { isPickerTriggerEventType } from "./subscriber";
 import type {
   AutomationCreatedEvent,
   AutomationDeletedEvent,
@@ -99,6 +101,8 @@ function describeIssue(graph: AutomationGraph, issue: GraphIssue): string {
       return `${nodeLabel}: unknown node type.`;
     case "cycle":
       return "The graph has a loop, which can't be run.";
+    case "duplicate-slug":
+      return `${nodeLabel}: reference name "${node?.slug ?? ""}" is used by more than one node — make it unique.`;
     default:
       return `${nodeLabel}: invalid configuration.`;
   }
@@ -425,6 +429,10 @@ const eventTypesRouter = router({
       groups: listEventTypesByModule().map((g) => ({
         module: g.module,
         events: g.events
+          // Only offer events worth triggering on : `isPickerTriggerEventType`
+          // drops the ones that can't fire (`automation.*` loop avoidance,
+          // `feature-flag.flipped` unroutable) plus low-value / noisy events.
+          .filter((e) => isPickerTriggerEventType(e.type))
           .filter((e) => (e.orgScoped ? visible.has(e.type) : true))
           // `fields` (payload fields + common base) drive the trigger node's
           // discoverable outputs in the editor, so authors see what each event
@@ -469,6 +477,19 @@ const secretsRouter = router({
   }),
 });
 
+// Dev-only surface for the dev overlay. Handlers 404 in production so the tRPC
+// client shape stays stable across environments (mirrors notifications.dev).
+const devRouter = router({
+  // The recent-domain-events ring buffer (see @monark/common's installDevEventTap,
+  // registered at API boot in dev). Global, not org-scoped — it's a dev firehose
+  // of everything the bus saw. Homed here alongside the automation runs feed.
+  recentEvents: publicProcedure.query(({ ctx }) => {
+    if (process.env.NODE_ENV === "production") return { events: [] };
+    if (!ctx.userId) throw new UnauthorizedError();
+    return { events: recentDevEvents(50) };
+  }),
+});
+
 export const automationRouter = router({
   automations: automationsRouter,
   runs: runsRouter,
@@ -476,4 +497,5 @@ export const automationRouter = router({
   eventTypes: eventTypesRouter,
   members: membersRouter,
   secrets: secretsRouter,
+  dev: devRouter,
 });

@@ -108,6 +108,38 @@ describe("validateGraph", () => {
     expect(validateGraph(g, descriptorFor).some((i) => i.code === "cycle")).toBe(true);
   });
 
+  it("flags nodes sharing a slug (ambiguous {{ steps.<slug> }} address)", () => {
+    const g = graph(
+      [
+        { id: "t", type: "trigger", position: at, config: { eventType: "x" } },
+        { id: "a", type: "noop", position: at, config: {}, slug: "dup" },
+        { id: "b", type: "noop", position: at, config: {}, slug: "dup" },
+      ],
+      [
+        { id: "1", source: "t", target: "a", sourceHandle: "out", targetHandle: "in" },
+        { id: "2", source: "a", target: "b", sourceHandle: "out", targetHandle: "in" },
+      ],
+    );
+    const issues = validateGraph(g, descriptorFor);
+    expect(issues).toContainEqual({ code: "duplicate-slug", severity: "error", nodeId: "a" });
+    expect(issues).toContainEqual({ code: "duplicate-slug", severity: "error", nodeId: "b" });
+  });
+
+  it("does not flag unique slugs", () => {
+    const g = graph(
+      [
+        { id: "t", type: "trigger", position: at, config: { eventType: "x" } },
+        { id: "a", type: "noop", position: at, config: {}, slug: "one" },
+        { id: "b", type: "noop", position: at, config: {}, slug: "two" },
+      ],
+      [
+        { id: "1", source: "t", target: "a", sourceHandle: "out", targetHandle: "in" },
+        { id: "2", source: "a", target: "b", sourceHandle: "out", targetHandle: "in" },
+      ],
+    );
+    expect(validateGraph(g, descriptorFor).some((i) => i.code === "duplicate-slug")).toBe(false);
+  });
+
   it("flags an unknown node type", () => {
     const g = graph([{ id: "x", type: "mystery", position: at, config: {} }]);
     const issues = validateGraph(g, descriptorFor);

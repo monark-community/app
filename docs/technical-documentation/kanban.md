@@ -111,6 +111,21 @@ inline (the old `ColumnManager` dialog was removed). The board primitives
 (`BoardArea`, `BoardColumn`, `KanbanCard`) live in the package as framework-pure
 React ; dnd-kit and shadcn stay in the web layer.
 
+## Filtering (MonarkQL)
+
+Behind the `kanban.query` flag, the board toolbar shows the shared `QueryBar`
+(`services/web/src/components/query/query-bar.tsx`, over the generic
+[`@monark/query`](../../packages/query) language). The tree compiles to a typed
+`Prisma.KanbanCardWhereInput` in [`server/query-compiler.ts`](../../packages/kanban/src/server/query-compiler.ts)
+(`compileKanbanFilter`, via `walkFilter`) and loads through the `cards.list`
+procedure ; `@variables` (`@me`, `@today`) resolve server-side. Queryable fields
+
+- their kinds live in [`contracts/query-fields.ts`](../../packages/kanban/src/contracts/query-fields.ts)
+  (`priority` is an **orderedSelect** — `priority:>=HIGH` expands to a value set).
+  The web builds the field list (labels + per-board options) client-side from the
+  board's columns + org members. Saved views + a list view are the planned
+  follow-ups.
+
 ## Extending
 
 - A new card field: add it to `KanbanCard` (schema + migration), the `cards`

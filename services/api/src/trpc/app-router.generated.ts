@@ -3,6 +3,7 @@
 
 import { router } from "@monark/common/trpc"
 
+import { apiKeysRouter } from "@monark/api-keys/server"
 import { authRouter } from "@monark/auth/server"
 import { automationRouter } from "@monark/automation/server"
 import { calendarRouter } from "@monark/calendar/server"
@@ -18,6 +19,7 @@ import { usersRouter } from "@monark/users/server"
 import { webhooksRouter } from "@monark/webhooks/server"
 
 export const appRouter = router({
+  apiKeys      : apiKeysRouter,
   auth         : authRouter,
   automation   : automationRouter,
   calendar     : calendarRouter,

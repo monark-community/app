@@ -27,7 +27,9 @@ import {
 } from "@/components/patterns";
 import { DangerCard, DangerRow } from "@/components/danger-card";
 import { DirtyFormBar } from "@/components/dirty-form-bar";
+import { DragHandle } from "@monark/components/ui/drag-handle";
 import { usePanelIsMobile, useScreenWidth } from "@/hooks/use-panel-is-mobile";
+import { useResizablePanel } from "@/hooks/use-resizable-panel";
 import { cn } from "@/lib/utils";
 import {
   KANBAN_PRIORITIES,
@@ -137,6 +139,9 @@ export function CardEditor(props: CardEditorProps) {
   // Mobile : a full-screen, transform-free `full` sheet (see use-panel-is-mobile).
   const screenWidth = useScreenWidth();
   const isMobile = usePanelIsMobile(screenWidth);
+  // Left-edge resize on desktop, persisted per screen (shared with the data
+  // record panel — `TableDetailLayout` uses the same hook behaviour).
+  const resize = useResizablePanel({ storageKey: "kanban-card", enabled: !isMobile });
   const isEdit = state.mode === "edit";
   const title = isEdit ? t("card.editTitle") : t("card.createTitle");
   const formKey = state.mode === "edit" ? state.card.id : `create-${state.columnId}`;
@@ -153,14 +158,27 @@ export function CardEditor(props: CardEditorProps) {
         hideClose
         aria-describedby={undefined}
         className={cn("flex flex-col gap-0 overflow-hidden p-0", !isMobile && "w-full sm:max-w-lg")}
-        // Mobile : clamp the full-bleed panel to the real screen width so it
-        // can't exceed the phone even if the layout viewport blows out.
-        style={isMobile && screenWidth != null ? { maxWidth: screenWidth } : undefined}
+        // Mobile : clamp the full-bleed panel to the real screen width. Desktop :
+        // an explicit resized width overrides the class default (`maxWidth: none`
+        // lifts the `sm:max-w-lg` cap).
+        style={
+          isMobile ? (screenWidth != null ? { maxWidth: screenWidth } : undefined) : resize.style
+        }
         // Desktop : keep the panel open on any outside interaction (clicking the
         // board, a portaled select/menu, or the delete confirm) — close is via
         // the header X, Cancel, or Escape, so a stray click can't drop the form.
         onInteractOutside={isMobile ? undefined : (e) => e.preventDefault()}
       >
+        {!isMobile && (
+          // Left-edge resize grip (pointer-only), matching the data record panel.
+          <DragHandle
+            orientation="vertical"
+            active={resize.dragging}
+            highlight
+            {...resize.handleProps}
+            className="absolute left-0 top-0 z-20 h-full w-1.5"
+          />
+        )}
         {/* Accessible dialog name (visually the PanelHeader title below). */}
         <SheetTitle className="sr-only">{title}</SheetTitle>
         <PanelHeader title={title} onClose={onClose} />

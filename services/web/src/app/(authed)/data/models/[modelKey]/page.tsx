@@ -19,6 +19,13 @@ export default async function DataModelRecordsPage({
   const model = await resolveDataModelByKey(api, modelKey);
   if (!model) notFound();
 
+  // The structured query bar (MonarkQL) is flag-gated ; off falls back to the
+  // classic filter menu.
+  const flags = await api.featureFlags.getAllForSession
+    .query()
+    .catch(() => ({}) as Record<string, boolean>);
+  const queryLanguageEnabled = flags["data-models.query-language"] === true;
+
   return (
     // Desktop (`xl+`) : a full-height flex column — the header keeps its natural
     // height and the records list (its table wrapper marked `xl:flex-1`) fills
@@ -33,7 +40,7 @@ export default async function DataModelRecordsPage({
         )}
       </header>
       <Suspense fallback={<Skeleton className="h-96 w-full xl:h-auto xl:min-h-0 xl:flex-1" />}>
-        <RecordsList model={model} />
+        <RecordsList model={model} queryLanguageEnabled={queryLanguageEnabled} />
       </Suspense>
     </section>
   );

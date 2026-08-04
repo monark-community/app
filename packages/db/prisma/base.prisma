@@ -22,7 +22,19 @@ datasource db {
 // Keep the banner comments in sync with the module manifest.
 
 // ── MODULE: users ─────────────────────────────────────────
-// The User.id is owned externally (Supabase Auth UUID); we never generate it.
+// Human users vs. org-owned machine principals. A SERVICE user backs public-API
+// service-account keys (docs/features-planning/phase-3/public-api-service-accounts.md) :
+// it never signs in, is never emailed, and never appears in member / assignee
+// pickers. The default is HUMAN so every existing row + every real signup is
+// unaffected.
+enum UserKind {
+  HUMAN
+  SERVICE
+}
+
+// The User.id is owned externally (Supabase Auth UUID) for HUMAN users ; we
+// never generate it. SERVICE users are the deliberate exception — their id is
+// minted with a `svc_` prefix (never a valid Supabase auth subject).
 // See docs/features-planning/phase-1/user-management.md.
 model User {
   id                   String    @id
@@ -45,6 +57,13 @@ model User {
   updatedAt            DateTime  @updatedAt
   deletedAt            DateTime? // self-initiated, grace period applies
   disabledAt           DateTime? // admin-initiated, indefinite
+  // HUMAN (default) or SERVICE (an org-owned machine principal backing
+  // public-API service-account keys). Load-bearing : every human-only path
+  // (sign-in, email, member pickers) excludes SERVICE.
+  kind                 UserKind  @default(HUMAN)
+  // For a SERVICE user, the admin who created it (attribution in the admin
+  // list). Null for humans.
+  createdBy            String?
 
   pendingEmailChange  PendingEmailChange?
   emailResendAttempts EmailResendAttempt[]
@@ -61,6 +80,7 @@ model User {
   metadata            UserMetadata[]
   dataRecordWatches   DataRecordWatcher[]
   dataModelWatches    DataModelWatcher[]
+  apiKeys             ApiKey[]
 }
 
 // Generic key/value sidecar for non-core modules to attach data to a
@@ -336,10 +356,13 @@ model Organization {
   kanbanBoards           KanbanBoard[]
   kanbanColumns          KanbanColumn[]
   kanbanCards            KanbanCard[]
+  kanbanViews            KanbanView[]
   automations            Automation[]
   automationRuns         AutomationRun[]
   storedFiles            StoredFile[]
   secrets                Secret[]
+  apiKeys                ApiKey[]
+  dataRecordViews        DataRecordView[]
 }
 
 // Same shape as UserMetadata, scoped to an organization. Powers
@@ -761,6 +784,7 @@ model DataModel {
   records      DataRecord[]
   integrations DataModelIntegration[]
   watchers     DataModelWatcher[]
+  views        DataRecordView[]
 
   // Per-org key uniqueness among LIVE models is enforced by the hand-
   // written partial index `DataModel_org_key_active_unique`
@@ -919,6 +943,30 @@ model DataFieldIndex {
   status      String
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+// A saved MonarkQL query for a Data Model — a named filter tree a user can
+// reload, GitHub saved-searches / Notion-views style. `query` is the
+// `FilterNode` JSON (validated on write). Personal by default (`createdBy` is
+// the owner) ; `shared = true` makes it visible to everyone with read access to
+// the model. organizationId is denormalized (like DataRecord) so an org delete
+// cascades and listing never has to join DataModel.
+model DataRecordView {
+  id             String       @id @default(cuid())
+  dataModelId    String
+  dataModel      DataModel    @relation(fields: [dataModelId], references: [id], onDelete: Cascade)
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String
+  query          Json
+  shared         Boolean      @default(false)
+  createdBy      String
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([dataModelId])
+  @@index([organizationId])
+  @@index([createdBy])
 }
 
 
@@ -1139,4 +1187,16 @@ model Secret {
 
   @@unique([organizationId, key])
   @@index([organizationId])
+}
+
+// Storage for the shared Postgres token-bucket rate limiter
+// (@monark/common/rate-limit). One row per limiter key (e.g. an API key id) ;
+// `tokens` is the current fractional token count refilled lazily on read, and
+// `updatedAt` is the wall-clock of the last refill. Not tied to any org / user
+// (a key can be any opaque string), so no FKs. Rows are self-healing : a
+// missing row is treated as a full bucket, and stale rows can be swept.
+model RateLimitBucket {
+  key       String   @id
+  tokens    Float
+  updatedAt DateTime
 }

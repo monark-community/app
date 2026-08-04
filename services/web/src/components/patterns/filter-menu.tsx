@@ -18,6 +18,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { PanelTitle } from "./panel-title";
 
@@ -112,6 +113,9 @@ export interface FilterMenuLabels {
   /** Label for the per-field "reset this filter" action (shown inside a field's
    *  control once it has a value). Omit to hide it. */
   resetField?: string;
+  /** Placeholder shown on a `date` filter's picker when empty (falls back to the
+   *  field's own label). */
+  pickDate?: string;
 }
 
 /** A filter counts as active when its value differs from its neutral state. */
@@ -413,6 +417,49 @@ function DesktopOptionSearch({
   );
 }
 
+// A date filter stores its day as an ISO `yyyy-mm-dd` string (the native input's
+// format, preserved so the server contract is unchanged). Parse into a *local*
+// Date (not `new Date("yyyy-mm-dd")`, which is UTC midnight and can shift the day
+// a timezone back) and format back the same way.
+function parseIsoDay(value: string): Date | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value.trim());
+  if (!m) return null;
+  return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+}
+function formatIsoDay(date: Date): string {
+  const y = date.getFullYear();
+  const mo = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${mo}-${d}`;
+}
+
+/**
+ * Styled single-day picker for a `date` filter — the {@link DatePicker} calendar
+ * popover, so a filter's date control matches the form date fields instead of a
+ * native OS `<input type="date">`. Adapts the filter's ISO string ↔ `Date`.
+ * The calendar opens as a nested Radix popover; that composition is layer-safe
+ * inside the filter dropdown / mobile modal (Radix branch-tracks the layers).
+ */
+function FilterDatePicker({
+  filter,
+  labels,
+  align = "start",
+}: {
+  filter: Extract<FilterConfig, { type: "date" }>;
+  labels: FilterMenuLabels;
+  align?: "start" | "end";
+}) {
+  return (
+    <DatePicker
+      value={parseIsoDay(filter.value)}
+      onChange={(date) => filter.onValueChange(date ? formatIsoDay(date) : "")}
+      placeholder={labels.pickDate ?? filter.label}
+      clearLabel={labels.resetField ?? filter.label}
+      align={align}
+    />
+  );
+}
+
 /** Value input rendered inside a field's desktop submenu. */
 function DesktopFilterControl({
   filter,
@@ -443,13 +490,7 @@ function DesktopFilterControl({
     case "date":
       control = (
         <div className="p-1">
-          <Input
-            type="date"
-            value={filter.value}
-            onChange={(e) => filter.onValueChange(e.target.value)}
-            onKeyDown={(e) => e.stopPropagation()}
-            className="h-8"
-          />
+          <FilterDatePicker filter={filter} labels={labels} />
         </div>
       );
       break;
@@ -665,11 +706,7 @@ export function FilterFieldControl({
     case "date":
       control = (
         <div className="px-1">
-          <Input
-            type="date"
-            value={filter.value}
-            onChange={(e) => filter.onValueChange(e.target.value)}
-          />
+          <FilterDatePicker filter={filter} labels={labels} />
         </div>
       );
       break;

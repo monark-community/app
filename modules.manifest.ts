@@ -13,6 +13,8 @@ export const MODULES = {
   "@monark/kanban": { tier: "extended" },
   "@monark/automation": { tier: "core" },
   "@monark/secrets": { tier: "core" },
+  "@monark/api-keys": { tier: "core" },
+  "@monark/public-api": { tier: "core" },
 } as const satisfies Record<string, { tier: "core" | "extended" }>;
 
 export type ModuleName = keyof typeof MODULES;

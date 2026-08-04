@@ -59,9 +59,13 @@ export function DirtyFormBar({
     <div
       className={cn(
         "pointer-events-none z-40 flex justify-center transition-transform duration-200",
+        // `env(safe-area-inset-bottom)` is added to the bottom padding so the
+        // bar clears the iOS home indicator — both when fixed to the screen and
+        // when anchored to the bottom of a full-screen mobile detail panel. The
+        // inset is 0 on non-notched devices, so nothing changes elsewhere.
         containment === "viewport"
-          ? "fixed inset-x-0 bottom-0 px-4 pb-4 sm:px-6 sm:pb-6"
-          : "absolute inset-x-0 bottom-0 p-3",
+          ? "fixed inset-x-0 bottom-0 px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:px-6 sm:pb-[calc(1.5rem+env(safe-area-inset-bottom))]"
+          : "absolute inset-x-0 bottom-0 px-3 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]",
         open ? "translate-y-0" : "translate-y-full",
       )}
       aria-hidden={!open}

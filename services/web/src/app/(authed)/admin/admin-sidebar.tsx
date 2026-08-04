@@ -36,6 +36,15 @@ export function AdminSidebar({
   });
   const isSingleTenant = status.data?.mode !== "multi";
 
+  // Flag-gated tabs (e.g. service accounts) are hidden until their flag
+  // resolves on for the viewer. Until flags load, gated tabs stay hidden so
+  // they never flash in for a deploy that has them off.
+  const flags = trpc.featureFlags.getAllForSession.useQuery(undefined, {
+    refetchOnWindowFocus: false,
+    staleTime: 5 * 60 * 1000,
+  });
+  const visibleTabs = ADMIN_TABS.filter((tab) => !tab.flag || flags.data?.[tab.flag] === true);
+
   // In single-tenant mode the redirect at `/admin/organizations` lands
   // on the singleton's edit page, but stopping there briefly is still
   // a stop. Re-target the tab href directly at the singleton's URL
@@ -43,7 +52,7 @@ export function AdminSidebar({
   // so the highlight works regardless of which form of the href the
   // operator clicked.
   const singletonId = status.data?.singletonOrganizationId ?? null;
-  const items: SidebarItem[] = ADMIN_TABS.map((tab) => {
+  const items: SidebarItem[] = visibleTabs.map((tab) => {
     const isOrgTab = tab.id === "organizations";
     const href: `/admin/${string}` =
       isOrgTab && isSingleTenant && singletonId ? `/admin/organizations/${singletonId}` : tab.href;

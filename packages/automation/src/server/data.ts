@@ -237,7 +237,8 @@ export type OrgMember = {
 /** Active members of an org (for a user-picker config field). */
 export async function listOrgMembers(organizationId: string): Promise<OrgMember[]> {
   const memberships = await getDb().organizationMembership.findMany({
-    where: { organizationId, leftAt: null },
+    // Exclude machine principals (service accounts) from the member picker.
+    where: { organizationId, leftAt: null, user: { is: { kind: "HUMAN" } } },
     select: { user: { select: { id: true, displayName: true, email: true, avatarUrl: true } } },
     orderBy: { user: { displayName: "asc" } },
   });

@@ -1,21 +1,23 @@
 # Phase 3 — Implementation order
 
+> **Status: not built.** Voting and contribution-estimation are still _proposed_ specs (now under [`../proposed/`](../proposed/)) ; this doc is the original sequencing plan for that unbuilt work. What actually shipped in this phase was Data Model file-fields, the calendar/kanban visualization verdict, and the public API (see [`../README.md`](../README.md)).
+
 ## Goal
 
 Ship the two value-capture extended modules. Voting lets the community make decisions that affect them; contribution estimation turns ambient activity into a quantifiable signal for reward distribution. Phase 3 is done when both modules are live, emitting and consuming events cleanly, and the executive team trusts the contribution scores enough to actually distribute rewards from them.
 
 ## Order
 
-1. **[`voting-system.md`](voting-system.md)**
+1. **[`voting-system.md`](../proposed/voting-system.md)**
    Ship first. Ballot participation is one of the activity signals that contribution-estimation weighs, so voting needs to be live and emitting `ballot.cast` (and related) events before estimation can be tested against real data. Voting has the cleaner dependency profile (users + rbac only) and can be validated end-to-end without waiting on anything else.
 
-2. **[`contribution-estimation.md`](contribution-estimation.md)**
+2. **[`contribution-estimation.md`](../proposed/contribution-estimation.md)**
    Ship second. It consumes events from onboarding (progress milestones), voting (participation), and external systems (GitHub activity, code review, etc.). The scoring model lands last because it needs real event volume to calibrate against, which only exists after Phase 2 has been live for a while and voting (step 1) is emitting.
 
 ## Exit criteria
 
 - Admins can open a vote; eligible users (per rbac scope) cast ballots; results tabulate correctly and visibly.
-- Contribution scores update from the event stream within the documented lag target (see [`contribution-estimation.md`](contribution-estimation.md)).
+- Contribution scores update from the event stream within the documented lag target (see [`contribution-estimation.md`](../proposed/contribution-estimation.md)).
 - Scores are reproducible: replaying the event log yields the same score within a documented tolerance.
 - No cross-module imports between voting and contribution-estimation; only events + core read interfaces. `pnpm check:tiers` passes.
 - Both modules are flag-gated; rollbacks are a flag flip.

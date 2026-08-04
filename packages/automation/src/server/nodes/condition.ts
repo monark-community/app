@@ -45,6 +45,9 @@ export const conditionNode = defineNode({
       { id: "true", label: "True" },
       { id: "false", label: "False" },
     ],
+    outputFields: [
+      { key: "result", type: "boolean", description: "Whether the condition matched." },
+    ],
     configFields: [
       {
         key: "left",

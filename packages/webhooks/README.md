@@ -104,17 +104,17 @@ Org-scoped endpoints check the permission against the endpoint's `organizationId
 
 tRPC procedures under `webhooks.*` :
 
-| Procedure                 | Input                                                    | Output                                            |
-| ------------------------- | -------------------------------------------------------- | ------------------------------------------------- |
-| `webhooks.list`           | `{ organizationId: string \| null }`                     | `EndpointWithSubs[]`                              |
-| `webhooks.get`            | `{ id }`                                                 | `EndpointWithSubs`                                |
-| `webhooks.create`         | `{ organizationId, url, description?, subscriptions[] }` | `{ endpoint, secret }` (secret returned **once**) |
-| `webhooks.update`         | partial of the create payload + `status`                 | updated endpoint                                  |
-| `webhooks.rotateSecret`   | `{ id }`                                                 | `{ secret }` (new plaintext)                      |
-| `webhooks.delete`         | `{ id }`                                                 | —                                                 |
-| `webhooks.listDeliveries` | `{ endpointId, limit?, cursor? }`                        | `DeliveryRow[]`                                   |
-| `webhooks.getDelivery`    | `{ id }`                                                 | `{ delivery, attempts }`                          |
-| `webhooks.retryDelivery`  | `{ id }`                                                 | —                                                 |
+| Procedure                 | Input                                                          | Output                                            |
+| ------------------------- | -------------------------------------------------------------- | ------------------------------------------------- |
+| `webhooks.list`           | `{ organizationId: string \| null }`                           | `EndpointWithSubs[]`                              |
+| `webhooks.get`            | `{ id }`                                                       | `EndpointWithSubs`                                |
+| `webhooks.create`         | `{ organizationId, name, url, description?, subscriptions[] }` | `{ endpoint, secret }` (secret returned **once**) |
+| `webhooks.update`         | partial of the create payload + `status`                       | updated endpoint                                  |
+| `webhooks.rotateSecret`   | `{ id }`                                                       | `{ secret }` (new plaintext)                      |
+| `webhooks.delete`         | `{ id }`                                                       | —                                                 |
+| `webhooks.listDeliveries` | `{ endpointId, limit?, cursor? }`                              | `DeliveryRow[]`                                   |
+| `webhooks.getDelivery`    | `{ id }`                                                       | `{ delivery, attempts }`                          |
+| `webhooks.retryDelivery`  | `{ id }`                                                       | —                                                 |
 
 ## Boot wiring
 
@@ -193,7 +193,7 @@ The e2e suite uses the receiver via [services/web/tests/e2e/helpers/webhook-rece
 
 ## Deferred follow-ups
 
-- **Plaintext-secret resolver shipped by default.** A sane starter — `WEBHOOK_SECRETS` env var keyed by endpoint id — would let single-tenant deploys work without integrating an external secret store.
+- **Managed-secret-store adapters.** The env-var resolver (`makeEnvVarSecretResolver`, reading `WEBHOOK_SECRETS_JSON` + per-endpoint `WEBHOOK_SECRET_<id>`) and the dev file-backed store already ship ; adapters for AWS Secrets Manager / Vault / GCP / Azure behind `setWebhookSecretStore()` are the remaining follow-up.
 - **Per-endpoint rate limiting.** A receiver under load returning 429 today retries with backoff but doesn't pause sibling deliveries to the same endpoint. A token bucket per endpoint would be kinder.
 - **Receiver-side verification helper package.** A tiny `@monark/webhooks/verifier` that wraps the HMAC compare + timestamp tolerance for hand-rolled receivers.
 - **Persisted event bus.** The in-memory bus loses events on a process crash _between_ `emit()` and the wildcard subscriber's outbox write. Today the window is the same Prisma transaction so the source-mutation rollback covers it ; if subscribers ever go async-after-commit we'd want a real outbox at the bus level.

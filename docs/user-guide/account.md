@@ -36,16 +36,17 @@ If you have two-factor enrollment, the reset gate also asks for a TOTP code (or 
 
 ## The account section (`/account/...`)
 
-Your avatar in the top-right corner of any page opens the user-menu drawer. The "About you" links there take you into the four account tabs :
+Your avatar in the top-right corner of any page opens the user-menu drawer. The "About you" links there take you into the account tabs :
 
-| URL                      | What it holds                                                |
-| ------------------------ | ------------------------------------------------------------ |
-| `/account/profile`       | Display name, bio, avatar, banner, language, theme.          |
-| `/account/security`      | Email, password, two-factor authentication, trusted devices. |
-| `/account/notifications` | Per-category × per-channel preferences.                      |
-| `/account/danger`        | Schedule (or cancel) account deletion.                       |
+| URL                      | What it holds                                                                     |
+| ------------------------ | --------------------------------------------------------------------------------- |
+| `/account/profile`       | Display name, bio, avatar, banner, language, theme.                               |
+| `/account/security`      | Email, password, two-factor authentication, trusted devices.                      |
+| `/account/notifications` | Per-category × per-channel preferences.                                           |
+| `/account/api-keys`      | Personal API keys for the public API (see the [public API guide](public-api.md)). |
+| `/account/danger`        | Schedule (or cancel) account deletion.                                            |
 
-The account sidebar pinned to the left shows the same four entries on wide viewports ; on narrow viewports it collapses to a horizontal strip above the content.
+The account sidebar pinned to the left shows the same entries on wide viewports ; on narrow viewports it collapses to a horizontal strip above the content.
 
 ### Profile
 

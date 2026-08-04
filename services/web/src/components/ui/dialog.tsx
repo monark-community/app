@@ -56,14 +56,17 @@ const DialogContent = React.forwardRef<
         // the normal centered, padded, grid dialog.
         mobileFullScreen
           ? "inset-0 flex h-full w-full max-w-none flex-col overflow-hidden rounded-none md:inset-auto md:left-1/2 md:top-1/2 md:grid md:h-auto md:max-h-[85vh] md:w-full md:max-w-lg md:-translate-x-1/2 md:-translate-y-1/2 md:gap-4 md:overflow-y-auto md:rounded-lg md:p-6"
-          : "left-[50%] top-[50%] grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 p-6 sm:rounded-lg",
+          : // Centered card. `w-[calc(100%-2rem)]` keeps a 1rem gutter each side
+            // on a phone (was edge-to-edge `w-full`), and it's rounded at every
+            // width now that it never touches the screen edge.
+            "left-[50%] top-[50%] grid w-[calc(100%-2rem)] max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg p-6",
         className,
       )}
       {...props}
     >
       {children}
       {!hideClose && (
-        <DialogPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
+        <DialogPrimitive.Close className="absolute right-2 top-2 flex h-9 w-9 items-center justify-center rounded-sm opacity-70 ring-offset-background transition-opacity pointer-coarse:min-h-11 pointer-coarse:min-w-11 hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
           <X className="h-4 w-4" />
           <span className="sr-only">Close</span>
         </DialogPrimitive.Close>

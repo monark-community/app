@@ -19,7 +19,10 @@ import { CollapsibleSection } from "../collapsible-section";
  */
 export function NotificationsPanel() {
   const t = useTranslations("devOverlay");
-  const tKinds = useTranslations("account.notifications.kinds");
+  // Reuses the flat per-kind labels the prefs UI maintains (dot→underscore
+  // key), so kind labels live in one place instead of a dev-only nested map
+  // that drifts every time a module registers a kind.
+  const tKinds = useTranslations("account.notifications.prefs.kinds");
   const locale = useLocale();
   const utils = trpc.useUtils();
 
@@ -112,7 +115,7 @@ export function NotificationsPanel() {
                     title={`${entry.kind} · ${entry.category} · ${entry.channels.join(" + ")}`}
                     className="h-6 px-2 text-[11px] text-muted-foreground hover:text-foreground"
                   >
-                    {tKinds(entry.kind)}
+                    {tKinds(entry.kind.replaceAll(".", "_"))}
                   </Button>
                 ))}
               </div>
