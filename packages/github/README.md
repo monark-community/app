@@ -1,6 +1,6 @@
 # @monark/github
 
-**Extended module.** A GitHub integration built on top of the core `@monark/automation` engine: it adds GitHub **trigger events** (an issue opened, a PR merged, a push, …) that fire your automations, and GitHub **action nodes** (create issue, comment, add labels, open PR, request review, search, …) that read from and write to GitHub inside a flow. Flag-gated (`github.enabled`, default off).
+**Extended module — an _automation integration_** (`integrates: "@monark/automation"` in the manifest; `check:tiers` enforces the dependency). Built on `@monark/automation` (the node registry + event bus) and `@monark/integration-kit` (the shared inbound-webhook / connection-secret / REST-client plumbing), it adds GitHub **trigger events** (an issue opened, a PR merged, a push, …) that fire your automations, and GitHub **action nodes** (create issue, comment, add labels, open PR, request review, search, …) that read from and write to GitHub inside a flow. Flag-gated (`github.enabled`, default off). It's the reference integration — a new one (Slack/Jira/…) supplies only its events, its `mapEvent`, and its nodes on top of the kit.
 
 **Status:** MVP shipped end-to-end — inbound webhook → domain events → automation triggers, plus 11 action nodes calling the GitHub REST API. Auth is a **token stored in the secrets substrate** (a fine-grained PAT); a GitHub App is a future upgrade that wouldn't change the nodes.
 

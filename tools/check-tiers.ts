@@ -79,7 +79,9 @@ async function scanImports(
 
 async function main() {
   const violations: Violation[] = [];
-  const moduleEntries = Object.entries(MODULES) as Array<[string, { tier: ModuleTier }]>;
+  const moduleEntries = Object.entries(MODULES) as Array<
+    [string, { tier: ModuleTier; integrates?: string }]
+  >;
 
   for (const [moduleName, meta] of moduleEntries) {
     if (meta.tier !== "extended") continue;
@@ -102,6 +104,16 @@ async function main() {
             reason: "extended module declares a dependency on another extended module",
           });
         }
+      }
+
+      // 1b) An integration (`integrates: X` in the manifest) must actually
+      // depend on X — else the metadata is stale / the module is mislabeled.
+      if (meta.integrates && !(pkg.dependencies ?? {})[meta.integrates]) {
+        violations.push({
+          module: moduleName,
+          dep: meta.integrates,
+          reason: `declares integrates: "${meta.integrates}" but doesn't depend on it`,
+        });
       }
     }
 

@@ -1,0 +1,23 @@
+{
+  "name": "@monark/integration-kit",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./server": "./src/server/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@monark/common": "workspace:*",
+    "@monark/organizations": "workspace:*",
+    "@monark/rbac": "workspace:*",
+    "@monark/secrets": "workspace:*"
+  },
+  "devDependencies": {
+    "vitest": "^3.0.0"
+  }
+}

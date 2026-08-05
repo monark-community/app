@@ -168,6 +168,16 @@ These are the boundaries an extended module must not cross. Crossing them means 
 - **Safe defaults.** A flag's `defaultOn` should be `false` for new behavior, `true` only for kill-switches over already-shipped behavior. A permission's category should match a category the /admin/rbac surface already renders, or introduce a new one consistently.
 - **Module name = package name.** When an extended module is `@monark/posts`, register flags / permissions / kinds under module `posts`. Keeps the DB rows readable and the dotted-key form aligned with the package layout.
 
+## Automation integrations
+
+A common kind of extended module is an **automation integration** — a third-party service (GitHub, and future Slack/Jira/Linear/…) plugged into the core `@monark/automation` engine via its extension APIs: inbound webhooks whose deliveries `emit` `svc.*` domain events (which trigger flows), and action nodes registered with `registerAutomationNodes` (which read/write the service). It's still an ordinary extended module (core deps only) ; the "integration" is metadata + shared plumbing, **not a folder or a new tier**:
+
+- **Declared, not nested.** Mark it in [modules.manifest.ts](../../modules.manifest.ts) with `integrates: "@monark/automation"` alongside `tier: "extended"`. The package stays flat under `packages/*` (the glob-derived tsconfig paths + gen tooling assume that). `check:tiers` enforces that an integration actually depends on the module it declares — so the metadata can't go stale — on top of the usual extended→core-only rule.
+- **Shared plumbing lives in `@monark/integration-kit`** (a library, not a tiered module). It provides `defineInboundWebhook({ secretKey, verify, map, label })` (resolve the org's signing secret from `@monark/secrets` → verify → map → emit ; 404 unconfigured / 401 bad-signature / 202 ack-unmodeled), `verifyHmacSha256`, `makeConnectionSecretRouter({ secretKey, permission, webhookPathPrefix, secretDescription })` (the `status` / `generateWebhookSecret` / `disconnect` connection surface), and `createRestClient` + `pickString` / `pickNumber`. An integration supplies only what's provider-specific: its events, its `mapEvent`, its nodes.
+- **Auth** is a token in the `@monark/secrets` substrate (nodes resolve it with `ctx.getSecret`), and the per-org webhook signing secret is another substrate entry — so an integration typically owns **no tables**. Mount its inbound route as `POST /hooks/<svc>/:org` next to `/hooks/automation/:id` (with the raw body captured for signature verification).
+
+`@monark/github` is the reference implementation.
+
 ## Boot order
 
 [services/api/src/server.ts](../../services/api/src/server.ts) is the canonical sequence :

@@ -1,6 +1,4 @@
-import { createHmac, timingSafeEqual } from "node:crypto";
-import { emit, logger } from "@monark/common";
-import { getSecretValue } from "@monark/secrets/server";
+import { defineInboundWebhook, verifyHmacSha256 } from "@monark/integration-kit/server";
 import { GITHUB_WEBHOOK_SECRET_KEY } from "../contracts/github";
 import type { GithubEvents } from "../contracts/events";
 
@@ -138,45 +136,17 @@ export function mapGithubEvent(
   }
 }
 
-/** Constant-time check of GitHub's `X-Hub-Signature-256: sha256=<hex>` header. */
-function verifySignature(rawBody: Buffer, secret: string, signature: string | null): boolean {
-  if (!signature) return false;
-  const expected = `sha256=${createHmac("sha256", secret).update(rawBody).digest("hex")}`;
-  const a = Buffer.from(expected);
-  const b = Buffer.from(signature);
-  return a.length === b.length && timingSafeEqual(a, b);
-}
-
-export type GithubWebhookResult =
-  | { status: 202; emitted: boolean }
-  | { status: 401 | 404; error: string };
-
 /**
- * Handle one inbound GitHub webhook for an org: verify the signature against the
- * org's stored webhook secret, translate the delivery, and emit it onto the bus
- * (where the automation subscriber picks it up). An event type we don't model
- * still returns 202 (GitHub retries on non-2xx, so we ack unhandled deliveries).
+ * Handle one inbound GitHub webhook: the integration-kit helper resolves the
+ * org's stored secret, verifies GitHub's `X-Hub-Signature-256` (HMAC-SHA256 over
+ * the raw body, `sha256=` prefix), maps the delivery via {@link mapGithubEvent},
+ * and emits it (the automation subscriber fires matching flows). Unmodeled
+ * deliveries ack with 202 so GitHub doesn't retry.
  */
-export async function handleGithubWebhook(params: {
-  organizationId: string;
-  eventName: string;
-  signature: string | null;
-  rawBody: Buffer;
-  payload: unknown;
-}): Promise<GithubWebhookResult> {
-  const secret = await getSecretValue(params.organizationId, GITHUB_WEBHOOK_SECRET_KEY);
-  if (!secret) return { status: 404, error: "github-not-configured" };
-  if (!verifySignature(params.rawBody, secret, params.signature)) {
-    return { status: 401, error: "invalid-signature" };
-  }
-
-  const event = mapGithubEvent(params.eventName, params.payload, params.organizationId);
-  if (!event) return { status: 202, emitted: false };
-
-  try {
-    await emit(event);
-  } catch (err) {
-    logger.error({ err, type: event.type }, "failed to emit GitHub domain event");
-  }
-  return { status: 202, emitted: true };
-}
+export const handleGithubWebhook = defineInboundWebhook<GithubEvents>({
+  secretKey: GITHUB_WEBHOOK_SECRET_KEY,
+  verify: (rawBody, secret, signature) =>
+    verifyHmacSha256(rawBody, secret, signature, { prefix: "sha256=" }),
+  map: mapGithubEvent,
+  label: "github",
+});
