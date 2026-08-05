@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, develop]
   pull_request:
-    branches: [main]
+    branches: [main, develop]
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -83,6 +83,9 @@ jobs:
 
       - name: Check i18n key parity
         run: pnpm check:i18n
+
+      - name: Check public-API MCP visibility
+        run: pnpm check:mcp
 
   # Migration ↔ schema drift. Replays every committed migration into a throwaway
   # Postgres and diffs the result against schema.prisma (modulo an allowlist of

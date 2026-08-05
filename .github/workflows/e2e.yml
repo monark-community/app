@@ -47,8 +47,9 @@ jobs:
       SMTP_FROM: "Monark <noreply@monark.io>"
       # Deterministic test value ; never used outside the e2e job.
       TOTP_ENCRYPTION_KEY: d371e31288d4f5e19dd6e192ad7ab8edb3b2143695b23c70afba4d59ad8584c7
-      # Single-tenant bootstrap so `/setup` finishes provisioning the
-      # singleton org before any e2e spec hits a protected route.
+      # Single-tenant bootstrap so the api provisions the singleton org at
+      # boot (and the seed step below) before any e2e spec hits a protected
+      # route.
       INITIAL_ORG_SLUG: monark
       INITIAL_ORG_NAME: Monark
       # Opt every gated e2e spec into running.
