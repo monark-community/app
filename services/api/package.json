@@ -19,6 +19,7 @@
     "@monark/auth": "workspace:*",
     "@monark/automation": "workspace:*",
     "@monark/calendar": "workspace:*",
+    "@monark/chat": "workspace:*",
     "@monark/common": "workspace:*",
     "@monark/data-models": "workspace:*",
     "@monark/db": "workspace:*",

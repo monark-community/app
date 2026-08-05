@@ -10,17 +10,17 @@ On a desktop-width screen a slim vertical **navigation rail** is pinned to the l
 2. **Destination icons** — one per top-level product surface you have access to (Calendar, Kanban, Automation, Data). Each is icon-only with a tooltip on hover ; the icon for the section you're in is highlighted. A destination only appears when its feature is enabled for you, so the rail shows exactly what you can reach.
 3. **Admin pin** at the bottom — a shield icon, only visible when you hold an admin or sysadmin role. Clicking it enters the admin section.
 
-On narrow (phone / small tablet) viewports the rail is hidden ; a **hamburger** in the app bar opens the same destinations as a slide-in drawer from the left (brand header at the top, the admin pin as a filled button at the bottom). Close it with the X, the dimmed overlay, or Escape.
+On narrow (phone / small tablet) viewports the rail is hidden ; tapping the **brand mark** in the app bar (it carries a small menu badge) opens the same destinations as a slide-in drawer from the left. The drawer lists **Home** first, then the module destinations, with the admin pin as a filled button at the bottom. Close it with the X, the dimmed overlay, or Escape.
 
 ## The app bar
 
-A sticky bar across the top of every authenticated page (`h-14`). On desktop the rail owns the brand + navigation, so the app bar carries only the breadcrumb on the left and a cluster of controls on the right ; on mobile it also shows the hamburger + logo on the left.
+A sticky bar across the top of every authenticated page (`h-14`). On desktop the rail owns the brand + navigation, so the app bar carries only the breadcrumb on the left and a cluster of controls on the right ; on mobile the left shows the merged **brand + menu** mark (it opens the drawer) instead.
 
 Right-side cluster, left to right :
 
+- **Assistant** (✨) — opens the AI assistant panel (where enabled) ; also **⌘J** / **Ctrl-J**. See [The assistant](assistant.md).
 - **Search** (magnifier) — opens the global command palette. You can also open it any time with **⌘K** (macOS) / **Ctrl-K** (Windows/Linux).
-- **Notifications bell** — opens the notifications drawer (right side) ; a small badge shows the unread count when there is one.
-- **Avatar** — opens the user menu drawer (right side).
+- **Avatar** — opens the user menu drawer (right side). Your **notifications now live here** (a badge on the avatar shows the unread count).
 
 ## Breadcrumb
 
@@ -38,19 +38,21 @@ The command palette searches across the app — jump to a section, find a user o
 
 Sections that have sub-pages (your account, the admin area, a data model) show a **secondary navigation** for their own tabs : a rail beside the content on wide screens, collapsing to a horizontal tab strip on narrower ones. For example `/account` shows Profile / Account & Security / Notifications / Danger zone ; the admin area shows its tabs the same way.
 
-## Notifications drawer (bell)
+## User menu drawer (avatar)
 
-Slides in from the right when you click the bell. Documented in detail under [Notifications](account.md#notifications) ; the chrome :
+Slides in from the right when you click your avatar. It's split into two tabs at
+the top — **Notifications** (shown first) and **Account**.
 
-- Header with the title, two filter tabs (**Unread** / **All**), and a **Mark all as read** button when there are unread items.
+**Notifications** tab — your in-app inbox (documented in detail under
+[Notifications](account.md#notifications)) :
+
+- Two filter tabs (**Unread** / **All**) and a **Mark all as read** button when there are unread items.
 - Scrollable list, each row with a category icon, the subject + body, the relative time, and a per-row **⋯** menu (Mark / Unmark / Dismiss).
 - A **Load more** button once you've paged past the first batch.
 
-The bell badge shows your unread count ; it refreshes every 15 seconds and on window focus.
+The unread badge on the avatar refreshes every 15 seconds and on window focus.
 
-## User menu drawer (avatar)
-
-Slides in from the right when you click your avatar. Top to bottom :
+**Account** tab, top to bottom :
 
 - **Identity header** — your profile banner (or a brand-gradient fallback) fills the top, with your avatar and display name over it and the X close at the top-right.
 - **Coming-soon cards** — placeholders reserved for community surfaces (rank, achievements) that aren't built yet ; they read "Coming soon".

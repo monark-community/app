@@ -5,6 +5,7 @@ import type { ApiKeysEvents } from "@monark/api-keys/contracts"
 import type { AuthEvents } from "@monark/auth/contracts"
 import type { AutomationEvents } from "@monark/automation/contracts"
 import type { CalendarEvents } from "@monark/calendar/contracts"
+import type { ChatEvents } from "@monark/chat/contracts"
 import type { DataModelsEvents } from "@monark/data-models/contracts"
 import type { FeatureFlagsEvents } from "@monark/feature-flags/contracts"
 import type { FilesEvents } from "@monark/files/contracts"
@@ -22,6 +23,7 @@ export type DomainEvent =
   | AuthEvents
   | AutomationEvents
   | CalendarEvents
+  | ChatEvents
   | DataModelsEvents
   | FeatureFlagsEvents
   | FilesEvents

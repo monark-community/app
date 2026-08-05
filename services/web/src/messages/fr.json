@@ -1,4 +1,22 @@
 {
+  "chat": {
+    "launcherAria": "Ouvrir {name}",
+    "conversationsTitle": "Conversations",
+    "newConversation": "Nouvelle discussion",
+    "back": "Retour aux conversations",
+    "untitled": "Nouvelle conversation",
+    "emptyHint": "Posez à {name} toute question sur vos données.",
+    "threadEmptyHint": "Demandez-moi ce que vous voulez sur vos données, ou dites-moi quoi modifier.",
+    "composerPlaceholder": "Écrire à l'assistant…",
+    "send": "Envoyer",
+    "thinking": "Réflexion…",
+    "errorSend": "Impossible d'envoyer votre message. Veuillez réessayer.",
+    "toolWantsTo": "Souhaite {action}",
+    "toolConfirm": "Confirmer",
+    "toolReject": "Refuser",
+    "toolSucceeded": "Effectué",
+    "toolRejected": "Refusé"
+  },
   "fields": {
     "noResults": "Aucun résultat.",
     "searchPlaceholder": "Rechercher…",
@@ -149,6 +167,7 @@
       "brandWordmark": "{appName}",
       "empty": "Aucun module enregistré.",
       "items": {
+        "home": "Accueil",
         "calendar": "Calendrier",
         "kanban": "Kanban",
         "data": "Données",
@@ -158,6 +177,10 @@
     "userMenu": {
       "triggerAria": "Ouvrir le menu utilisateur",
       "aria": "Menu utilisateur",
+      "tabs": {
+        "notifications": "Notifications",
+        "account": "Compte"
+      },
       "forYou": "Pour vous",
       "comingSoon": "Bientôt disponible",
       "links": {

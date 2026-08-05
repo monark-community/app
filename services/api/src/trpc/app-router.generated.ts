@@ -7,6 +7,7 @@ import { apiKeysRouter } from "@monark/api-keys/server"
 import { authRouter } from "@monark/auth/server"
 import { automationRouter } from "@monark/automation/server"
 import { calendarRouter } from "@monark/calendar/server"
+import { chatRouter } from "@monark/chat/server"
 import { dataModelsRouter } from "@monark/data-models/server"
 import { featureFlagsRouter } from "@monark/feature-flags/server"
 import { filesRouter } from "@monark/files/server"
@@ -23,6 +24,7 @@ export const appRouter = router({
   auth         : authRouter,
   automation   : automationRouter,
   calendar     : calendarRouter,
+  chat         : chatRouter,
   dataModels   : dataModelsRouter,
   featureFlags : featureFlagsRouter,
   files        : filesRouter,

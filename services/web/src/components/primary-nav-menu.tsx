@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { Menu, ShieldCheck } from "lucide-react";
+import { Home, Menu, ShieldCheck } from "lucide-react";
 import { BrandedAppLogoView, type BrandedAppLogoData } from "@/components/branded-app-logo-view";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -37,6 +38,8 @@ export function PrimaryNavMenu({
 }) {
   const t = useTranslations("appBar.primaryNav");
   const [open, setOpen] = useState(false);
+  const pathname = usePathname();
+  const homeActive = pathname === "/";
   // Resolved entries + admin pin, shared with the desktop NavRail via
   // `usePrimaryNav` so the two surfaces can never drift.
   const { items, admin } = usePrimaryNav();
@@ -44,12 +47,21 @@ export function PrimaryNavMenu({
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
+        {/* Merged brand + drawer trigger (mobile only). The brand mark IS the
+            hamburger: tapping it opens the drawer; a small menu badge on the
+            corner signals that. "Home" moved into the drawer (first item), so
+            the brand no longer needs to be a separate home link. */}
         <button
           type="button"
           aria-label={t("triggerAria")}
-          className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background md:hidden"
+          className="relative inline-flex items-center justify-center rounded-md p-1.5 text-muted-foreground hover:bg-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background md:hidden"
         >
-          <Menu className="h-4 w-4" aria-hidden />
+          <span className="relative block">
+            <BrandedAppLogoView data={brandedLogoData} size={28} />
+            <span className="absolute -bottom-1 -right-1 inline-flex size-4 items-center justify-center rounded-full border border-border bg-background text-foreground">
+              <Menu className="h-2.5 w-2.5" aria-hidden />
+            </span>
+          </span>
         </button>
       </SheetTrigger>
       <SheetContent
@@ -70,15 +82,12 @@ export function PrimaryNavMenu({
           chrome.
         */}
         <SheetTitle className="sr-only">{t("aria")}</SheetTitle>
-        <Link
-          href="/"
-          onClick={() => setOpen(false)}
-          aria-label={t("brandHomeAria")}
-          className="flex h-14 shrink-0 items-center gap-2 border-b border-border px-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary"
-        >
+        {/* Brand header : branding only now (not a home link). "Home" is the
+            first nav item below, so the drawer has one clear home affordance. */}
+        <div className="flex h-14 shrink-0 items-center gap-2 border-b border-border px-4">
           <BrandedAppLogoView data={brandedLogoData} size={28} />
           <span className="text-base font-semibold tracking-tight">{t("brandWordmark")}</span>
-        </Link>
+        </div>
         {/*
           Middle region : the registered module entries. `flex-1` claims
           the space between the brand header and the admin pin ;
@@ -86,6 +95,21 @@ export function PrimaryNavMenu({
           the admin pin off-screen.
         */}
         <nav className="flex flex-1 flex-col gap-1 overflow-y-auto p-4">
+          {/* Home : moved into the drawer now that the brand mark opens it. */}
+          <Link
+            href="/"
+            onClick={() => setOpen(false)}
+            aria-current={homeActive ? "page" : undefined}
+            className={cn(
+              "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+              homeActive
+                ? "bg-muted text-foreground"
+                : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
+            )}
+          >
+            <Home className="h-4 w-4" aria-hidden />
+            <span>{t("items.home")}</span>
+          </Link>
           {items.length === 0 ? (
             <p className="rounded-md border border-dashed border-border px-3 py-6 text-center text-xs text-muted-foreground">
               {t("empty")}

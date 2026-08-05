@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 import { AppBar } from "@/components/app-bar";
 import type { BrandedAppLogoData } from "@/components/branded-app-logo-view";
+import { ChatProvider } from "@/components/chat";
 import { GlobalSearchProvider } from "@/components/global-search";
 import { NavRail } from "@/components/nav-rail";
 import { RecoveryCodeReminder } from "@/components/recovery-code-reminder";
@@ -142,24 +143,30 @@ export default async function AuthedLayout({ children }: { children: ReactNode }
     // GlobalSearchProvider wraps the whole authed tree so the ⌘K palette
     // works on every route and the sidebar trigger can open it via context.
     <GlobalSearchProvider>
-      {/* App shell, mounted once here : the persistent primary-nav rail on
-          md+ (left), and the AppBar + page body offset past the rail width.
-          Below md the rail is hidden and the AppBar's hamburger drawer takes
-          over. Full-height sections (calendar / kanban / data-at-xl) size
-          themselves to `100dvh - 57px` (the bar's 56px row + 1px hairline ;
-          `dvh` tracks the mobile URL-bar so bottom-anchored chrome stays in
-          view) since the bar now sits above them rather than inside their
-          shell. */}
-      <NavRail brandedLogoData={brandedLogoData} />
-      <div className="md:pl-14">
-        <AppBar brandedLogoData={brandedLogoData} />
-        {children}
-      </div>
-      {/* Global post-sign-in modal that nudges (or forces) the user to
-          handle a recently-spent recovery code or a low remaining
-          count. State lives server-side so closing the tab without
-          handling it re-prompts on the next sign-in. */}
-      <RecoveryCodeReminder />
+      {/* ChatProvider mounts the always-there AI companion once (like
+          GlobalSearchProvider): it owns the open state + Cmd/Ctrl+J shortcut
+          and renders the docked panel as its last child, so the conversation
+          persists across route navigation. Gated by the `chat.enabled` flag. */}
+      <ChatProvider>
+        {/* App shell, mounted once here : the persistent primary-nav rail on
+            md+ (left), and the AppBar + page body offset past the rail width.
+            Below md the rail is hidden and the AppBar's hamburger drawer takes
+            over. Full-height sections (calendar / kanban / data-at-xl) size
+            themselves to `100dvh - 57px` (the bar's 56px row + 1px hairline ;
+            `dvh` tracks the mobile URL-bar so bottom-anchored chrome stays in
+            view) since the bar now sits above them rather than inside their
+            shell. */}
+        <NavRail brandedLogoData={brandedLogoData} />
+        <div className="md:pl-14">
+          <AppBar brandedLogoData={brandedLogoData} />
+          {children}
+        </div>
+        {/* Global post-sign-in modal that nudges (or forces) the user to
+            handle a recently-spent recovery code or a low remaining
+            count. State lives server-side so closing the tab without
+            handling it re-prompts on the next sign-in. */}
+        <RecoveryCodeReminder />
+      </ChatProvider>
     </GlobalSearchProvider>
   );
 }

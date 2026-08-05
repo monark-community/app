@@ -1,4 +1,22 @@
 {
+  "chat": {
+    "launcherAria": "Open {name}",
+    "conversationsTitle": "Conversations",
+    "newConversation": "New chat",
+    "back": "Back to conversations",
+    "untitled": "New conversation",
+    "emptyHint": "Ask {name} anything about your data.",
+    "threadEmptyHint": "Ask me anything about your data, or tell me what to change.",
+    "composerPlaceholder": "Message the assistant…",
+    "send": "Send",
+    "thinking": "Thinking…",
+    "errorSend": "Couldn't send your message. Please try again.",
+    "toolWantsTo": "Wants to {action}",
+    "toolConfirm": "Confirm",
+    "toolReject": "Reject",
+    "toolSucceeded": "Done",
+    "toolRejected": "Declined"
+  },
   "fields": {
     "noResults": "No results.",
     "searchPlaceholder": "Search…",
@@ -149,6 +167,7 @@
       "brandWordmark": "{appName}",
       "empty": "No module registered.",
       "items": {
+        "home": "Home",
         "calendar": "Calendar",
         "kanban": "Kanban",
         "data": "Data",
@@ -158,6 +177,10 @@
     "userMenu": {
       "triggerAria": "Open user menu",
       "aria": "User menu",
+      "tabs": {
+        "notifications": "Notifications",
+        "account": "Account"
+      },
       "forYou": "For you",
       "comingSoon": "Coming soon",
       "links": {

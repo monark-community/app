@@ -1,0 +1,132 @@
+// @monark/chat — Prisma schema fragment (core module).
+// Assembled into packages/db/prisma/schema.prisma by `pnpm gen:schema`.
+// Edit HERE, never the generated schema.prisma. Relations to core models
+// (Organization, User) resolve at assembly time; the matching back-relations
+// live on those models in base.prisma.
+
+// ── MODULE: chat ──────────────────────────────────────────
+// A generic conversation substrate. v1 ships the user <-> AI-agent case, but
+// the model is deliberately multi-participant (an AI agent is one participant
+// type alongside humans) so user <-> user chat can ride the same tables later
+// without a migration.
+
+enum ConversationKind {
+  AI_ASSISTANT
+  DIRECT
+  GROUP
+}
+
+enum ChatParticipantType {
+  USER
+  AI_AGENT
+}
+
+enum ChatMessageAuthorType {
+  USER
+  AI_AGENT
+  TOOL
+}
+
+// Lifecycle of an agent-requested tool call. A read-only tool runs straight
+// through (EXECUTING -> SUCCEEDED/FAILED). A mutating tool pauses at PROPOSED
+// until the user confirms (-> EXECUTING) or rejects (-> REJECTED); this is the
+// confirm-each-write gate for v1.
+enum ChatToolCallStatus {
+  PROPOSED
+  EXECUTING
+  SUCCEEDED
+  FAILED
+  REJECTED
+}
+
+model Conversation {
+  id             String           @id @default(cuid())
+  organizationId String
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  kind           ConversationKind @default(AI_ASSISTANT)
+  title          String?
+  createdById    String
+  createdBy      User             @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  deletedAt      DateTime?
+  // Denormalized last-activity stamp so "recent conversations" orders without
+  // a join/aggregate over messages. Written on each new message.
+  lastMessageAt  DateTime?
+
+  participants ConversationParticipant[]
+  messages     Message[]
+
+  @@index([organizationId, kind])
+  @@index([organizationId, lastMessageAt])
+}
+
+model ConversationParticipant {
+  id              String              @id @default(cuid())
+  conversationId  String
+  conversation    Conversation        @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  participantType ChatParticipantType
+  // Set for a USER participant; null for the AI_AGENT participant. The app
+  // enforces a single AI participant per conversation (a partial-null unique
+  // can't express it cleanly).
+  userId          String?
+  user            User?               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  joinedAt        DateTime            @default(now())
+  leftAt          DateTime?
+
+  @@unique([conversationId, userId])
+  @@index([conversationId])
+  @@index([userId])
+}
+
+model Message {
+  id             String                @id @default(cuid())
+  conversationId String
+  conversation   Conversation          @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  // Denormalized from Conversation so message reads/writes scope by org without
+  // a join (the house pattern; see DataRecord / CalendarEvent).
+  organizationId String
+  organization   Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  authorType     ChatMessageAuthorType
+  // Set for a USER-authored message; null for AI_AGENT / TOOL messages. SetNull
+  // (not Cascade) so a user's self-deletion doesn't erase conversation history
+  // authored under an assistant thread.
+  authorUserId   String?
+  authorUser     User?                 @relation(fields: [authorUserId], references: [id], onDelete: SetNull)
+  // Rendered text of the message. May be empty on a turn that only issued tool
+  // calls (the assistant "spoke" only by acting).
+  content        String                @default("")
+  createdAt      DateTime              @default(now())
+
+  toolCalls MessageToolCall[]
+
+  @@index([conversationId, createdAt])
+  @@index([organizationId])
+}
+
+model MessageToolCall {
+  id             String             @id @default(cuid())
+  messageId      String
+  message        Message            @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  organizationId String
+  organization   Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  // The provider-issued tool-call id, used to correlate the tool result back to
+  // the model on the following turn.
+  toolCallRef    String
+  toolName       String
+  // The arguments the model produced for the tool (validated against the tool's
+  // zod schema before execution).
+  input          Json
+  status         ChatToolCallStatus @default(PROPOSED)
+  // Whether this tool mutates state (drives the confirm-each-write gate).
+  mutates        Boolean            @default(false)
+  // Populated after execution. `result` is the (already RBAC-scoped) tool
+  // output the model sees next turn; `errorMessage` is set on FAILED.
+  result         Json?
+  errorMessage   String?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  @@index([messageId])
+  @@index([organizationId])
+}

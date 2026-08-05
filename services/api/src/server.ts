@@ -2,7 +2,7 @@ import { fileURLToPath } from "node:url";
 import express from "express";
 import cors from "cors";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
-import { installDevEventTap, logger } from "@monark/common";
+import { AppError, installDevEventTap, logger } from "@monark/common";
 import {
   processExpiredDeletions,
   registerAuthEventTypes,
@@ -70,6 +70,15 @@ import {
 } from "@monark/files/server";
 import { registerRbacEventTypes, registerRbacPermissions } from "@monark/rbac/server";
 import { registerSecretsEventTypes, registerSecretsPermissions } from "@monark/secrets/server";
+import {
+  registerChatEventTypes,
+  registerChatFeatureFlags,
+  registerChatPermissions,
+  sendMessage as sendChatMessage,
+  setChatToolExecutor,
+} from "@monark/chat/server";
+import type { ChatMessageContext } from "@monark/chat/contracts";
+import { buildChatToolset } from "./chat/tools";
 import { registerApiKeysEventTypes, registerApiKeysPermissions } from "@monark/api-keys/server";
 import { registerPublicApiFeatureFlags } from "@monark/public-api/server";
 import { registerUsersEventTypes, registerUsersPermissions } from "@monark/users/server";
@@ -101,6 +110,7 @@ import { mountPublicApi } from "./public/mount";
 // now the manifest is hand-maintained.
 registerAuthFeatureFlags();
 registerAutomationFeatureFlags();
+registerChatFeatureFlags();
 registerDataModelsFeatureFlags();
 registerFilesFeatureFlags();
 registerKanbanFeatureFlags();
@@ -109,6 +119,7 @@ registerPublicApiFeatureFlags();
 
 registerAutomationPermissions();
 registerCalendarPermissions();
+registerChatPermissions();
 registerDataModelsPermissions();
 registerFeatureFlagsPermissions();
 registerFilesPermissions();
@@ -129,6 +140,7 @@ registerWebhooksPermissions();
 registerAuthEventTypes();
 registerAutomationEventTypes();
 registerCalendarEventTypes();
+registerChatEventTypes();
 registerDataModelsEventTypes();
 registerFeatureFlagsEventTypes();
 registerFilesEventTypes();
@@ -160,6 +172,13 @@ registerKanbanNotificationKinds();
 // the editor palette can enumerate them. Extended modules add their own nodes
 // via registerAutomationNodes() alongside this.
 registerBuiltinAutomationNodes();
+
+// Wire the in-app AI chat agent's tool executor over the SAME public-API route
+// registry (`V1_ROUTES`) the MCP server uses, but executed in-process through
+// the tRPC caller so each tool runs as the logged-in user with their RBAC. Pure
+// in-memory wiring, like registerBuiltinAutomationNodes above ; must run before
+// any chat message is processed.
+setChatToolExecutor(buildChatToolset());
 
 // Model-integration registrations declare a module's "slots" to the
 // polymorphic Data Models engine (@monark/data-models's
@@ -531,6 +550,71 @@ app.post("/hooks/automation/:id", async (req, res) => {
   } catch (error) {
     logger.error({ err: error }, "http-trigger handling failed");
     res.status(500).json({ ok: false, error: "internal" });
+  }
+});
+
+// AI chat streaming (Server-Sent Events). The web companion POSTs a message
+// here and receives the assistant's reply token-by-token. Auth is the same
+// Supabase bearer the /trpc surface uses (via `createContext`); the RBAC + flag
+// gates, persistence, and the agent loop all live in `sendMessage`, shared with
+// the tRPC `chat.messages.send` mutation — this endpoint only layers on the token
+// stream via its `onTextDelta` hook. Kept a dedicated endpoint so the app-wide
+// tRPC client (httpBatch-only) doesn't need a subscription link.
+function sanitizeChatContext(raw: unknown): ChatMessageContext | undefined {
+  if (!raw || typeof raw !== "object") return undefined;
+  const r = raw as Record<string, unknown>;
+  const route = typeof r.route === "string" ? r.route.slice(0, 200) : undefined;
+  const focusRaw =
+    r.focus && typeof r.focus === "object" ? (r.focus as Record<string, unknown>) : undefined;
+  const focus = focusRaw
+    ? {
+        model: typeof focusRaw.model === "string" ? focusRaw.model.slice(0, 100) : undefined,
+        recordId:
+          typeof focusRaw.recordId === "string" ? focusRaw.recordId.slice(0, 100) : undefined,
+      }
+    : undefined;
+  if (!route && !focus?.model && !focus?.recordId) return undefined;
+  return { route, focus };
+}
+
+app.post("/chat/stream", async (req, res) => {
+  const ctx = await createContext({ req, res });
+  if (!ctx.userId) {
+    res.status(401).json({ error: "unauthorized" });
+    return;
+  }
+  const body = (req.body ?? {}) as Record<string, unknown>;
+  const content = typeof body.content === "string" ? body.content.trim().slice(0, 8000) : "";
+  if (!content) {
+    res.status(400).json({ error: "content required" });
+    return;
+  }
+  const input = {
+    conversationId: typeof body.conversationId === "string" ? body.conversationId : undefined,
+    content,
+    context: sanitizeChatContext(body.context),
+  };
+
+  res.status(200);
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache, no-transform");
+  res.setHeader("Connection", "keep-alive");
+  res.flushHeaders?.();
+  const emitEvent = (event: string, data: unknown) => {
+    res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+  };
+
+  try {
+    const result = await sendChatMessage(ctx, input, {
+      onTextDelta: (text) => emitEvent("token", { text }),
+    });
+    emitEvent("done", result);
+  } catch (err) {
+    const message = err instanceof AppError ? err.message : "internal";
+    logger.warn({ err }, "chat stream failed");
+    emitEvent("error", { message });
+  } finally {
+    res.end();
   }
 });
 

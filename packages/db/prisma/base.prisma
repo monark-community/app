@@ -81,6 +81,9 @@ model User {
   dataRecordWatches   DataRecordWatcher[]
   dataModelWatches    DataModelWatcher[]
   apiKeys             ApiKey[]
+  createdConversations        Conversation[]
+  conversationParticipations  ConversationParticipant[]
+  authoredMessages            Message[]
 }
 
 // Generic key/value sidecar for non-core modules to attach data to a
@@ -363,6 +366,9 @@ model Organization {
   secrets                Secret[]
   apiKeys                ApiKey[]
   dataRecordViews        DataRecordView[]
+  conversations          Conversation[]
+  chatMessages           Message[]
+  chatMessageToolCalls   MessageToolCall[]
 }
 
 // Same shape as UserMetadata, scoped to an organization. Powers

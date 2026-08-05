@@ -9,6 +9,8 @@
  *   - `data-models.query-language`   — MonarkQL query bar on the record list
  *   - `public-api.enabled`           — the /api/v1 public REST surface
  *   - `public-api.service-accounts`  — org service accounts + their API keys
+ *   - `chat.enabled`                 — the Chat module (conversations UI + substrate)
+ *   - `chat.ai-agent`                — the app-owned AI assistant inside chat
  *
  * Idempotent : re-running upserts the same global overrides. Refuses to run with
  * `NODE_ENV=production` (flip production flags via the admin UI, deliberately).
@@ -23,6 +25,7 @@
  */
 
 import { getDb } from "@monark/db";
+import { registerChatFeatureFlags } from "@monark/chat/server";
 import { registerDataModelsFeatureFlags } from "@monark/data-models/server";
 import { registerPublicApiFeatureFlags } from "@monark/public-api/server";
 import { setOverride, syncFlagsToDatabase } from "@monark/feature-flags/server";
@@ -31,6 +34,8 @@ const DEV_FLAGS = [
   "data-models.query-language",
   "public-api.enabled",
   "public-api.service-accounts",
+  "chat.enabled",
+  "chat.ai-agent",
 ] as const;
 
 // Audit-trail marker on the override row. `FeatureFlagOverride.setById` is a
@@ -54,6 +59,7 @@ async function main(): Promise<void> {
   // Populate the in-memory flag registry for the two owning modules, then sync
   // the definitions to the DB so each override's FK (module,flagKey →
   // FeatureFlag) resolves even on a freshly-migrated database.
+  registerChatFeatureFlags();
   registerDataModelsFeatureFlags();
   registerPublicApiFeatureFlags();
   await syncFlagsToDatabase();

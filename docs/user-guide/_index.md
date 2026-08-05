@@ -7,7 +7,8 @@ The guide is grouped below ; each page is structured top-to-bottom in the order 
 ## Using the app
 
 - **[Signing in and your account](account.md)** — anyone with a Monark account. Covers the sign-up + sign-in flows, password resets, two-factor authentication, profile editing, notification preferences, personal API keys, and how to delete (or rescue) your account.
-- **[Navigating the app](navigation.md)** — anyone, again. Covers the navigation rail, the app bar (breadcrumb, global search, notifications bell, your avatar), the drawers, and the keyboard / touch affordances around them.
+- **[Navigating the app](navigation.md)** — anyone, again. Covers the navigation rail, the app bar (breadcrumb, global search, the assistant launcher, and your avatar — which now holds your notifications), the drawers, and the keyboard / touch affordances around them.
+- **[The assistant](assistant.md)** — the built-in AI assistant (where enabled) : opening it, chatting about your data, and confirming the changes it proposes.
 - **[Working with data (records)](data.md)** — the custom record databases (Data Models) your admins set up : finding a model, the records table, filtering + saved views, creating / editing records, and following changes.
 - **[Automations](automations.md)** — building a flow (triggers, actions, wiring), running and testing it, run history + logs, and what a flow is allowed to do.
 - **[Using values in an automation](automation-variables.md)** — the companion to the above : how a step reuses values from the trigger, earlier steps, and workflow variables (the variable picker, the value/variable toggle, reference names, the Set Variable step).

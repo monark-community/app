@@ -47,6 +47,7 @@
   },
   "dependencies": {
     "@monark/auth": "workspace:*",
+    "@monark/chat": "workspace:*",
     "@monark/data-models": "workspace:*",
     "@monark/db": "workspace:*",
     "@monark/feature-flags": "workspace:*",
