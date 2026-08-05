@@ -76,7 +76,10 @@ async function main() {
 
   if (checkMode) {
     const current = (await exists(OUTPUT_PATH)) ? await readFile(OUTPUT_PATH, "utf8") : "";
-    if (current !== rendered) {
+    // EOL-insensitive : CRLF from a Windows checkout vs CI's LF render is not real
+    // drift (the repo has no .gitattributes normalization).
+    const eol = (s: string) => s.replace(/\r\n/g, "\n");
+    if (eol(current) !== eol(rendered)) {
       console.error(
         "gen:events --check FAILED: events.generated.ts is out of date. Run `pnpm gen:events` and commit.",
       );

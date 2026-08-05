@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { BRANDING } from "@monark/branding";
 
 type MailArgs = {
   from: string;
@@ -89,7 +90,7 @@ describe("notifications/email.sendMail (SMTP configured)", () => {
 
     await sendMail({ to: "u@example.com", subject: "S", text: "T" });
 
-    expect(sendMailMock.mock.calls[0]?.[0]?.from).toBe("Monark <noreply@monark.io>");
+    expect(sendMailMock.mock.calls[0]?.[0]?.from).toBe(BRANDING.fromEmail);
   });
 
   it("caches the transport across calls (createTransport invoked once)", async () => {
