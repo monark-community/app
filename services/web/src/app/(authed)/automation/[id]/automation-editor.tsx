@@ -43,6 +43,7 @@ import {
   Eraser,
   FlaskConical,
   GitBranch,
+  GitPullRequest,
   History,
   Mail,
   Pencil,
@@ -977,22 +978,30 @@ function EditorInner({
     [],
   );
 
-  const addNode = useCallback((desc: NodeDescriptor) => {
-    const id = genId("n");
-    setNodes((nds) => {
-      const slug = uniqueNodeSlug(slugifyLabel(desc.label), new Set(nds.map((n) => n.data.slug)));
-      return [
-        ...nds,
-        {
-          id,
-          type: "automationNode",
-          position: { x: 120 + nds.length * 40, y: 80 + nds.length * 30 },
-          data: descriptorToNodeData(desc, slug),
-        },
-      ];
-    });
-    setSelectedId(id);
-  }, []);
+  const addNode = useCallback(
+    (desc: NodeDescriptor) => {
+      const id = genId("n");
+      setNodes((nds) => {
+        const slug = uniqueNodeSlug(slugifyLabel(desc.label), new Set(nds.map((n) => n.data.slug)));
+        return [
+          ...nds,
+          {
+            id,
+            type: "automationNode",
+            position: { x: 120 + nds.length * 40, y: 80 + nds.length * 30 },
+            data: descriptorToNodeData(desc, slug),
+          },
+        ];
+      });
+      // On mobile, selecting a node opens a full-screen config sheet that covers
+      // the canvas — so don't auto-select on add ; leave the new node on the
+      // canvas to wire up first, and tap it to configure when ready. On desktop
+      // the config lives in a side rail that doesn't block the canvas, so keep
+      // the quick-select for immediate editing.
+      if (!isMobile) setSelectedId(id);
+    },
+    [isMobile],
+  );
 
   // Rename a node by id (from the right-click "Rename" dialog) : the display name
   // (empty clears the custom label) and the reference slug. When the slug
@@ -1808,6 +1817,7 @@ const NODE_ICON_BY_NAME: Record<string, LucideIcon> = {
   Database,
   Shield,
   User,
+  Github: GitPullRequest,
   FunctionSquare: Sigma,
   DatabasePlus: Database,
   DatabasePen: Database,
@@ -1827,6 +1837,7 @@ const CATEGORY_ICON: Record<string, LucideIcon> = {
   data: Database,
   rbac: Shield,
   user: User,
+  github: GitPullRequest,
   test: FlaskConical,
 };
 function categoryIcon(category: string): LucideIcon {

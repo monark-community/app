@@ -173,7 +173,8 @@
         "calendar": "Calendrier",
         "kanban": "Kanban",
         "data": "Données",
-        "automation": "Automatisation"
+        "automation": "Automatisation",
+        "github": "GitHub"
       }
     },
     "userMenu": {
@@ -2157,6 +2158,30 @@
       "scopeNote": "Résolu pour votre session (votre utilisateur + organisation active)."
     },
     "errorPrefix": "erreur :"
+  },
+  "github": {
+    "title": "GitHub",
+    "subtitle": "Connectez un dépôt pour que les événements GitHub déclenchent des automatisations, et utilisez les nœuds GitHub pour lire et écrire.",
+    "noPermission": "Vous n'avez pas la permission de gérer la connexion GitHub.",
+    "webhookHeading": "Webhook entrant",
+    "webhookHint": "Pointez le webhook GitHub d'un dépôt (ou d'une organisation) ici pour que ses événements atteignent vos automatisations.",
+    "webhookUrl": "URL du webhook",
+    "webhookSecret": "Secret du webhook",
+    "connected": "Connecté",
+    "notConnected": "Non connecté",
+    "generate": "Générer le secret du webhook",
+    "regenerate": "Régénérer le secret",
+    "disconnect": "Déconnecter",
+    "secretOnce": "Copiez ce secret maintenant — il ne sera plus affiché.",
+    "secretGenerated": "Secret du webhook généré.",
+    "disconnected": "GitHub déconnecté.",
+    "copy": "Copier",
+    "copied": "Copié dans le presse-papiers.",
+    "setupHeading": "Configurer dans GitHub",
+    "step1": "Dans votre dépôt : Settings → Webhooks → Add webhook.",
+    "step2": "Définissez le Payload URL sur l'URL du webhook ci-dessus, le Content type sur application/json, et le Secret sur le secret généré.",
+    "step3": "Choisissez les événements à envoyer (issues, commentaires, pull requests, pushes, releases).",
+    "step4": "Ajoutez un secret nommé pour votre jeton GitHub (un PAT à portée fine) sous Admin → Secrets, puis référencez-le dans le champ jeton de vos nœuds d'automatisation GitHub."
   },
   "calendar": {
     "title": "Calendrier",

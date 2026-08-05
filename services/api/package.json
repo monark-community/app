@@ -25,6 +25,7 @@
     "@monark/db": "workspace:*",
     "@monark/feature-flags": "workspace:*",
     "@monark/files": "workspace:*",
+    "@monark/github": "workspace:*",
     "@monark/kanban": "workspace:*",
     "@monark/notifications": "workspace:*",
     "@monark/organizations": "workspace:*",

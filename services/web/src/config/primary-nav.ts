@@ -1,4 +1,4 @@
-import { CalendarDays, Database, SquareKanban, Workflow } from "lucide-react";
+import { CalendarDays, Database, GitPullRequest, SquareKanban, Workflow } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 /**
@@ -61,6 +61,7 @@ export const PRIMARY_NAV: PrimaryNavEntry[] = [
   { id: "calendar", href: "/calendar", icon: CalendarDays },
   { id: "kanban", href: "/kanban", icon: SquareKanban, flag: "kanban.board" },
   { id: "automation", href: "/automation", icon: Workflow, flag: "automation.enabled" },
+  { id: "github", href: "/github", icon: GitPullRequest, flag: "github.enabled" },
   // Custom data models (projects, industries, …) are grouped under the
   // Data section ; its own secondary nav (DataSidebar) lists the models.
   // `/data` server-redirects to the first model.

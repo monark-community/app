@@ -173,7 +173,8 @@
         "calendar": "Calendar",
         "kanban": "Kanban",
         "data": "Data",
-        "automation": "Automation"
+        "automation": "Automation",
+        "github": "GitHub"
       }
     },
     "userMenu": {
@@ -2157,6 +2158,30 @@
       "scopeNote": "Resolved for your session (your user + active org)."
     },
     "errorPrefix": "error:"
+  },
+  "github": {
+    "title": "GitHub",
+    "subtitle": "Connect a repository so GitHub events can trigger automations, and use GitHub nodes to read + write.",
+    "noPermission": "You don't have permission to manage the GitHub connection.",
+    "webhookHeading": "Inbound webhook",
+    "webhookHint": "Point a repository's (or org's) GitHub webhook here so its events reach your automations.",
+    "webhookUrl": "Webhook URL",
+    "webhookSecret": "Webhook secret",
+    "connected": "Connected",
+    "notConnected": "Not connected",
+    "generate": "Generate webhook secret",
+    "regenerate": "Regenerate secret",
+    "disconnect": "Disconnect",
+    "secretOnce": "Copy this secret now — it won't be shown again.",
+    "secretGenerated": "Webhook secret generated.",
+    "disconnected": "GitHub disconnected.",
+    "copy": "Copy",
+    "copied": "Copied to clipboard.",
+    "setupHeading": "Set up in GitHub",
+    "step1": "In your repository: Settings → Webhooks → Add webhook.",
+    "step2": "Set the Payload URL to the Webhook URL above, Content type to application/json, and the Secret to the generated secret.",
+    "step3": "Choose the events to send (issues, issue comments, pull requests, pushes, releases).",
+    "step4": "Add a secret named for your GitHub token (a fine-grained PAT) under Admin → Secrets, then reference it in the token field of your GitHub automation nodes."
   },
   "calendar": {
     "title": "Calendar",

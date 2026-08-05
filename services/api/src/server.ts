@@ -64,6 +64,13 @@ import {
   registerKanbanPermissions,
 } from "@monark/kanban/server";
 import {
+  registerGithubAutomationNodes,
+  registerGithubEventTypes,
+  registerGithubFeatureFlags,
+  registerGithubPermissions,
+  handleGithubWebhook,
+} from "@monark/github/server";
+import {
   registerFilesEventTypes,
   registerFilesFeatureFlags,
   registerFilesPermissions,
@@ -114,6 +121,7 @@ registerChatFeatureFlags();
 registerDataModelsFeatureFlags();
 registerFilesFeatureFlags();
 registerKanbanFeatureFlags();
+registerGithubFeatureFlags();
 registerOrganizationsFeatureFlags();
 registerPublicApiFeatureFlags();
 
@@ -124,6 +132,7 @@ registerDataModelsPermissions();
 registerFeatureFlagsPermissions();
 registerFilesPermissions();
 registerKanbanPermissions();
+registerGithubPermissions();
 registerOrganizationsPermissions();
 registerRbacPermissions();
 registerSecretsPermissions();
@@ -145,6 +154,7 @@ registerDataModelsEventTypes();
 registerFeatureFlagsEventTypes();
 registerFilesEventTypes();
 registerKanbanEventTypes();
+registerGithubEventTypes();
 registerNotificationsEventTypes();
 registerOrganizationsEventTypes();
 registerRbacEventTypes();
@@ -172,6 +182,8 @@ registerKanbanNotificationKinds();
 // the editor palette can enumerate them. Extended modules add their own nodes
 // via registerAutomationNodes() alongside this.
 registerBuiltinAutomationNodes();
+// Extended modules contribute their automation nodes the same way.
+registerGithubAutomationNodes();
 
 // Wire the in-app AI chat agent's tool executor over the SAME public-API route
 // registry (`V1_ROUTES`) the MCP server uses, but executed in-process through
@@ -431,7 +443,15 @@ app.use(
     credentials: true,
   }),
 );
-app.use(express.json());
+app.use(
+  express.json({
+    // Keep the raw bytes so signed-webhook routes (GitHub `X-Hub-Signature-256`)
+    // can verify the HMAC over exactly what was sent, not a re-serialization.
+    verify: (req, _res, buf) => {
+      (req as express.Request & { rawBody?: Buffer }).rawBody = buf;
+    },
+  }),
+);
 
 app.get("/health", (_req, res) => {
   res.json({ status: "ok", service: "api" });
@@ -549,6 +569,32 @@ app.post("/hooks/automation/:id", async (req, res) => {
     }
   } catch (error) {
     logger.error({ err: error }, "http-trigger handling failed");
+    res.status(500).json({ ok: false, error: "internal" });
+  }
+});
+
+// Inbound GitHub webhooks. Point a repo's webhook (or an org webhook) at
+// POST /hooks/github/:org with the secret generated on the /github settings
+// page ; the handler verifies `X-Hub-Signature-256` against it, maps the
+// delivery to a `github.*` domain event, and emits it (triggering matching
+// automations). Unmodeled event types are acked (202) so GitHub doesn't retry.
+app.post("/hooks/github/:org", async (req, res) => {
+  const rawBody = (req as express.Request & { rawBody?: Buffer }).rawBody ?? Buffer.from("");
+  try {
+    const result = await handleGithubWebhook({
+      organizationId: req.params.org,
+      eventName: req.header("x-github-event") ?? "",
+      signature: req.header("x-hub-signature-256") ?? null,
+      rawBody,
+      payload: req.body ?? null,
+    });
+    if (result.status === 202) {
+      res.status(202).json({ ok: true, emitted: result.emitted });
+    } else {
+      res.status(result.status).json({ ok: false, error: result.error });
+    }
+  } catch (error) {
+    logger.error({ err: error }, "github webhook handling failed");
     res.status(500).json({ ok: false, error: "internal" });
   }
 });

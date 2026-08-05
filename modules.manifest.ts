@@ -16,6 +16,7 @@ export const MODULES = {
   "@monark/api-keys": { tier: "core" },
   "@monark/public-api": { tier: "core" },
   "@monark/chat": { tier: "core" },
+  "@monark/github": { tier: "extended" },
 } as const satisfies Record<string, { tier: "core" | "extended" }>;
 
 export type ModuleName = keyof typeof MODULES;

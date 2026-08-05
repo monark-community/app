@@ -11,6 +11,7 @@ import { chatRouter } from "@monark/chat/server"
 import { dataModelsRouter } from "@monark/data-models/server"
 import { featureFlagsRouter } from "@monark/feature-flags/server"
 import { filesRouter } from "@monark/files/server"
+import { githubRouter } from "@monark/github/server"
 import { kanbanRouter } from "@monark/kanban/server"
 import { notificationsRouter } from "@monark/notifications/server"
 import { organizationsRouter } from "@monark/organizations/server"
@@ -28,6 +29,7 @@ export const appRouter = router({
   dataModels   : dataModelsRouter,
   featureFlags : featureFlagsRouter,
   files        : filesRouter,
+  github       : githubRouter,
   kanban       : kanbanRouter,
   notifications: notificationsRouter,
   organizations: organizationsRouter,

@@ -9,6 +9,7 @@ import type { ChatEvents } from "@monark/chat/contracts"
 import type { DataModelsEvents } from "@monark/data-models/contracts"
 import type { FeatureFlagsEvents } from "@monark/feature-flags/contracts"
 import type { FilesEvents } from "@monark/files/contracts"
+import type { GithubEvents } from "@monark/github/contracts"
 import type { KanbanEvents } from "@monark/kanban/contracts"
 import type { NotificationsEvents } from "@monark/notifications/contracts"
 import type { OrganizationsEvents } from "@monark/organizations/contracts"
@@ -27,6 +28,7 @@ export type DomainEvent =
   | DataModelsEvents
   | FeatureFlagsEvents
   | FilesEvents
+  | GithubEvents
   | KanbanEvents
   | NotificationsEvents
   | OrganizationsEvents
