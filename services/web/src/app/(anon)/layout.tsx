@@ -1,7 +1,6 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
-import { isSystemBootstrapped } from "@/lib/bootstrap-gate";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { TOTP_PENDING_COOKIE } from "@/lib/totp-pending-cookie";
 
@@ -21,12 +20,6 @@ import { TOTP_PENDING_COOKIE } from "@/lib/totp-pending-cookie";
  * mid-flow and let the page render.
  */
 export default async function AnonLayout({ children }: { children: ReactNode }) {
-  // Bootstrap gate runs *before* the session check : when the system
-  // isn't yet ready (single-tenant deploy without an initial org), even
-  // sign-in / sign-up surfaces would be misleading — there's no app to
-  // sign into yet — so everyone gets bounced to /setup.
-  if (!(await isSystemBootstrapped())) redirect("/setup");
-
   const supabase = await createSupabaseServerClient();
   // `getUser()` round-trips to Supabase Auth and validates the JWT
   // against the auth server's signing key ; `getSession()` only parses

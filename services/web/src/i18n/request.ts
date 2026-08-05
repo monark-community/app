@@ -10,6 +10,7 @@ import { DEFAULT_LOCALE, isLocale } from "./config";
 const BRAND_PLACEHOLDERS: Record<string, string> = {
   "{appName}": BRANDING.appName,
   "{supportEmail}": BRANDING.supportEmail,
+  "{tagline}": BRANDING.tagline,
 };
 
 /**

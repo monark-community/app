@@ -15,7 +15,27 @@
     "toolConfirm": "Confirm",
     "toolReject": "Reject",
     "toolSucceeded": "Done",
-    "toolRejected": "Declined"
+    "toolRejected": "Declined",
+    "toolActions": {
+      "monark_whoami": "check who you are",
+      "monark_list_models": "list your data models",
+      "monark_get_model": "look up a data model",
+      "monark_list_model_fields": "look up a model's fields",
+      "monark_list_records": "list records",
+      "monark_get_record": "look up a record",
+      "monark_create_record": "create a record",
+      "monark_update_record": "update a record",
+      "monark_delete_record": "delete a record",
+      "automation_list": "list your automations",
+      "automation_get": "look up an automation",
+      "automation_list_node_types": "look up automation building blocks",
+      "automation_list_trigger_events": "look up automation triggers",
+      "automation_create": "create an automation",
+      "automation_update": "update an automation",
+      "automation_enable": "turn an automation on or off",
+      "automation_test": "test-run an automation",
+      "automation_get_run": "check an automation run"
+    }
   },
   "fields": {
     "noResults": "No results.",
@@ -67,7 +87,7 @@
   },
   "common": {
     "appName": "{appName}",
-    "tagline": "Fostering collaboration within the Web3 community.",
+    "tagline": "{tagline}",
     "done": "Done",
     "cancel": "Cancel",
     "save": "Save",
@@ -100,24 +120,6 @@
       "sample2Body": "Agreed. I left a couple of notes on the attributes above ; nothing blocking."
     }
   },
-  "setup": {
-    "eyebrow": "{appName} setup",
-    "title": "Booting up your deployment",
-    "subtitle": "The app waits here until the deployment is fully configured. The status below refreshes every few seconds ; you can leave the tab open while the missing pieces land.",
-    "checks": {
-      "services": "Services online",
-      "auth": "Authentication configured",
-      "tenancySingle": "Organization configured",
-      "tenancyMulti": "Multi-tenant mode ; ready to accept new organizations",
-      "orgCount": "{count, plural, =0 {0 organizations} one {1 organization} other {{count} organizations}}"
-    },
-    "stuck": {
-      "title": "Waiting for organization data",
-      "subtitle": "Single-tenant mode expects exactly one organization. Set the environment variables below on the API service and restart the deployment ; the boot hook will provision the row, this page will detect it on the next poll, and the rest of the app will unlock.",
-      "envHeading": "API service environment variables :",
-      "restartHint": "After setting these, restart the API service so the boot hook re-runs against the new values."
-    }
-  },
   "imageCrop": {
     "cancel": "Cancel",
     "confirm": "Save",
@@ -148,15 +150,15 @@
     },
     "apps": {
       "triggerAria": "Switch app",
-      "aria": "Monark apps",
-      "title": "Monark apps",
-      "subtitle": "Switch between Monark products.",
+      "aria": "{appName} apps",
+      "title": "{appName} apps",
+      "subtitle": "Switch between {appName} products.",
       "currentBadge": "Current",
       "emptySlot": "No app registered",
       "items": {
         "core": {
-          "name": "Monark Core",
-          "tagline": "Community, governance, and rewards."
+          "name": "{appName} Core",
+          "tagline": "The core application."
         }
       }
     },
@@ -356,7 +358,7 @@
   },
   "home": {
     "heading": "{appName}",
-    "subheading": "Fostering collaboration within the Web3 community."
+    "subheading": "{tagline}"
   },
   "notFound": {
     "eyebrow": "Error 404",

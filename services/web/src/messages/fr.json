@@ -15,7 +15,27 @@
     "toolConfirm": "Confirmer",
     "toolReject": "Refuser",
     "toolSucceeded": "Effectué",
-    "toolRejected": "Refusé"
+    "toolRejected": "Refusé",
+    "toolActions": {
+      "monark_whoami": "vérifier votre identité",
+      "monark_list_models": "lister vos modèles de données",
+      "monark_get_model": "consulter un modèle de données",
+      "monark_list_model_fields": "consulter les champs d'un modèle",
+      "monark_list_records": "lister des fiches",
+      "monark_get_record": "consulter une fiche",
+      "monark_create_record": "créer une fiche",
+      "monark_update_record": "modifier une fiche",
+      "monark_delete_record": "supprimer une fiche",
+      "automation_list": "lister vos automatisations",
+      "automation_get": "consulter une automatisation",
+      "automation_list_node_types": "consulter les blocs d'automatisation",
+      "automation_list_trigger_events": "consulter les déclencheurs d'automatisation",
+      "automation_create": "créer une automatisation",
+      "automation_update": "modifier une automatisation",
+      "automation_enable": "activer ou désactiver une automatisation",
+      "automation_test": "tester une automatisation",
+      "automation_get_run": "consulter une exécution d'automatisation"
+    }
   },
   "fields": {
     "noResults": "Aucun résultat.",
@@ -65,27 +85,9 @@
       "linkApply": "Appliquer"
     }
   },
-  "setup": {
-    "eyebrow": "Configuration de {appName}",
-    "title": "Démarrage du déploiement",
-    "subtitle": "L'application attend ici jusqu'à ce que le déploiement soit entièrement configuré. Le statut ci-dessous est rafraîchi toutes les quelques secondes ; vous pouvez laisser l'onglet ouvert pendant que les éléments manquants sont mis en place.",
-    "checks": {
-      "services": "Services en ligne",
-      "auth": "Authentification configurée",
-      "tenancySingle": "Organisation configurée",
-      "tenancyMulti": "Mode multi-tenant ; prêt à accueillir de nouvelles organisations",
-      "orgCount": "{count, plural, =0 {0 organisation} one {1 organisation} other {{count} organisations}}"
-    },
-    "stuck": {
-      "title": "En attente des données d'organisation",
-      "subtitle": "Le mode single-tenant exige exactement une organisation. Définissez les variables d'environnement ci-dessous sur le service API et redémarrez le déploiement ; le hook de démarrage créera la ligne, cette page la détectera au prochain sondage, et le reste de l'application sera débloqué.",
-      "envHeading": "Variables d'environnement du service API :",
-      "restartHint": "Après les avoir définies, redémarrez le service API pour que le hook de démarrage soit ré-exécuté avec les nouvelles valeurs."
-    }
-  },
   "common": {
     "appName": "{appName}",
-    "tagline": "Au service de la collaboration au sein de la communauté Web3.",
+    "tagline": "{tagline}",
     "done": "Terminé",
     "cancel": "Annuler",
     "save": "Enregistrer",
@@ -148,15 +150,15 @@
     },
     "apps": {
       "triggerAria": "Changer d'application",
-      "aria": "Applications Monark",
-      "title": "Applications Monark",
-      "subtitle": "Naviguez entre les produits Monark.",
+      "aria": "Applications {appName}",
+      "title": "Applications {appName}",
+      "subtitle": "Naviguez entre les produits {appName}.",
       "currentBadge": "Actuel",
       "emptySlot": "Aucune application enregistrée",
       "items": {
         "core": {
-          "name": "Monark Core",
-          "tagline": "Communauté, gouvernance et récompenses."
+          "name": "{appName} Core",
+          "tagline": "L'application principale."
         }
       }
     },
@@ -356,7 +358,7 @@
   },
   "home": {
     "heading": "{appName}",
-    "subheading": "Au service de la collaboration au sein de la communauté Web3."
+    "subheading": "{tagline}"
   },
   "notFound": {
     "eyebrow": "Erreur 404",

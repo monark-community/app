@@ -1,6 +1,6 @@
 # @monark/branding
 
-Single source of truth for app brand identity. Every other package reads `BRANDING` from here ; downstream teams retarget the starter to a new product by editing one file (or setting the `BRANDING_*` env vars per deployment).
+Single source of truth for app brand identity. Every other package reads `BRANDING` from here ; downstream teams retarget the starter to a new product by setting the `BRANDING_*` env vars per deployment (the shipped defaults are neutral placeholders — do not hardcode a business into them). Full guide: [white-label.md](../../docs/technical-documentation/white-label.md).
 
 ## What's inside
 
@@ -24,7 +24,7 @@ Single source of truth for app brand identity. Every other package reads `BRANDI
 // Server, client, email templates, anywhere:
 import { BRANDING, brandingTemplateVars } from "@monark/branding";
 
-console.log(BRANDING.appName); // "Monark" by default
+console.log(BRANDING.appName); // "App" by default (neutral placeholder ; set BRANDING_APP_NAME)
 const vars = brandingTemplateVars(); // safe-to-interpolate subset
 ```
 
@@ -36,12 +36,13 @@ Both `BRANDING_*` and `NEXT_PUBLIC_BRANDING_*` are honoured. Next.js only inline
 
 ## White-label retargeting checklist
 
-1. Edit `DEFAULT_BRANDING` in [src/index.ts](src/index.ts) to your product values.
-2. Drop your logo at `services/web/public/<logoFileName>` and update `logoSrc` to match. Email shells render the logo at the top via `${appUrl}${logoSrc}` ; SVG works locally but consider also exporting a 80×80 PNG for legacy mail clients (Outlook desktop has spotty SVG support).
-3. Pick `brandPrimary` + `brandAccent` ; everything brand-coloured in the app + (notifications-rendered) emails reads from these.
-4. **Choose `totpIssuer` carefully**: it's what users see in their authenticator app, and changing it later requires every TOTP-enrolled user to re-enroll.
-5. **Edit the three Supabase templates by hand** ([supabase/templates/{confirmation,recovery,email-change}.html](../../supabase/templates/)). Supabase renders these server-side and can't reach `@monark/branding` at render time, so the brand name (`Monark`) and primary colour (`#F0870C`) are literal strings. Logo asset src uses `{{ .SiteURL }}/<logo-filename>` so it auto-tracks per-deployment URLs ; just rename the asset to match `logoSrc` in step 2.
-6. (Optional) For per-deployment staging overrides without a rebuild, set `BRANDING_*` + `NEXT_PUBLIC_BRANDING_*` env vars.
+The shipped `DEFAULT_BRANDING` is intentionally generic — **do not edit it to a specific business**. Retarget per deployment via env vars:
+
+1. Set the `BRANDING_*` env vars (and their `NEXT_PUBLIC_BRANDING_*` duplicates) to your product values — see the field table above and [white-label.md](../../docs/technical-documentation/white-label.md).
+2. Drop your logo at `services/web/public/<logoFileName>` and point `BRANDING_LOGO_SRC` at it. Email shells render the logo at the top via `${appUrl}${logoSrc}` ; SVG works locally but consider also exporting an 80×80 PNG for legacy mail clients (Outlook desktop has spotty SVG support).
+3. Set `BRANDING_PRIMARY` + `BRANDING_ACCENT` ; everything brand-coloured in the app + (notifications-rendered) emails reads from these.
+4. **Choose `BRANDING_TOTP_ISSUER` carefully**: it's what users see in their authenticator app, and changing it later requires every TOTP-enrolled user to re-enroll.
+5. **Edit the three Supabase templates by hand** ([supabase/templates/{confirmation,recovery,email-change}.html](../../supabase/templates/)). Supabase renders these server-side and can't reach `@monark/branding` at render time, so the brand name + primary colour are literal strings in that HTML (the committed copies carry the operator's own values) ; the logo asset src uses `{{ .SiteURL }}/<logo-filename>` so it auto-tracks per-deployment URLs ; rename the asset to match your `BRANDING_LOGO_SRC`.
 
 ## Tier
 

@@ -7,7 +7,6 @@ import { ChatProvider } from "@/components/chat";
 import { GlobalSearchProvider } from "@/components/global-search";
 import { NavRail } from "@/components/nav-rail";
 import { RecoveryCodeReminder } from "@/components/recovery-code-reminder";
-import { isSystemBootstrapped } from "@/lib/bootstrap-gate";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createServerTrpcClient } from "@/lib/trpc-server";
 import { isCurrentDeviceTrusted } from "@/lib/trusted-device-cookie";
@@ -53,14 +52,6 @@ function debugRedirect(reason: string, extra?: Record<string, unknown>): void {
  * guaranteed-present session.
  */
 export default async function AuthedLayout({ children }: { children: ReactNode }) {
-  // Bootstrap gate runs first — before any auth check — so a deploy
-  // sitting on /setup doesn't briefly hit Supabase for a user who
-  // can't actually do anything yet. Mirrors the (anon) layout's gate.
-  if (!(await isSystemBootstrapped())) {
-    debugRedirect("not-bootstrapped → /setup");
-    redirect("/setup");
-  }
-
   const supabase = await createSupabaseServerClient();
   // `getUser()` round-trips to the Supabase Auth server to validate the
   // JWT before returning the user record ; `getSession()` reads the

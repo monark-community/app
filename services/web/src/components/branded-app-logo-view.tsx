@@ -28,8 +28,8 @@ import { cn } from "@/lib/utils";
  *      but no logo has been uploaded yet — admins fix this from
  *      `/admin/organizations/<id>`.
  *   3. The starter-template's `BRANDING.logoSrc` if no singleton org
- *      is configured (multi-tenant, fresh deploy that hasn't run
- *      /setup yet, transient api hiccup).
+ *      is configured (multi-tenant, a fresh deploy before the singleton
+ *      org is provisioned, transient api hiccup).
  */
 
 export type BrandedAppLogoData = {

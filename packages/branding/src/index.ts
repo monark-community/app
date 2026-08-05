@@ -10,19 +10,24 @@
  * server-only (API keys, signing secrets) belongs in `process.env`, not
  * here.
  *
- * White-label retargeting:
+ * White-label retargeting (per deployment — do NOT edit the generic defaults
+ * below ; keeping them business-agnostic is what makes the app reusable) :
  *
- *   1. Edit the defaults in `BRANDING` to your product (`appName`,
- *      `tagline`, etc.). For one-off staging deployments you can override
- *      via env vars without rebuilding.
- *   2. Drop your logo SVG into `services/web/public/<logoFileName>` and
- *      point `logoSrc` at it.
- *   3. Adjust `brandPrimary` / `brandAccent` ; the NProgress gradient,
- *      every email CTA button, and the TOTP/security accent all read
- *      from these tokens.
- *   4. The TOTP `issuer` is what users see in their authenticator app
- *      next to their account label ; choose it before launch because
- *      changing it later requires every user to re-enroll.
+ *   1. Set the `BRANDING_*` env vars for your product : `BRANDING_APP_NAME`,
+ *      `BRANDING_TAGLINE`, `BRANDING_SUPPORT_EMAIL`, `BRANDING_PRIMARY`,
+ *      `BRANDING_ACCENT`, `BRANDING_FROM_EMAIL`, `BRANDING_TOTP_ISSUER`,
+ *      `BRANDING_LOGO_SRC` (+ the `NEXT_PUBLIC_*` duplicates so the browser
+ *      bundle picks them up). See `.env.example` and white-label.md.
+ *   2. Drop your logo SVG into `services/web/public/` and point
+ *      `BRANDING_LOGO_SRC` at it (e.g. `/logo.svg`) ; replace
+ *      `services/web/src/app/favicon.ico` with yours.
+ *   3. `brandPrimary` / `brandAccent` feed the NProgress gradient, every
+ *      email CTA button, and the TOTP/security accent. A single-tenant
+ *      deploy can ALSO set the org's `primaryColor` in-app, which themes
+ *      the whole running UI on top of these.
+ *   4. The TOTP `issuer` is what users see in their authenticator app next
+ *      to their account label ; choose it before launch — changing it later
+ *      requires every user to re-enroll.
  *
  * Reading from a TS module rather than `.env` keeps the values in the
  * type system (autocomplete, refactor-safe, no runtime "string env was
@@ -53,16 +58,21 @@ export type Branding = {
   logoSrc: string;
 };
 
+// Neutral, business-agnostic defaults. This is a white-label starter : the
+// shipped values are generic placeholders, and a real deployment sets its own
+// identity via the `BRANDING_*` env vars below (see `.env.example` +
+// docs/technical-documentation/white-label.md). Do NOT hardcode a specific
+// business's name/colors/logo here — that's what the env overrides are for.
 const DEFAULT_BRANDING: Branding = {
-  appName: "Monark",
-  tagline: "Fostering collaboration within the Web3 community.",
-  supportEmail: "support@monark.io",
-  totpIssuer: "Monark",
-  fromEmail: "Monark <noreply@monark.io>",
+  appName: "App",
+  tagline: "A starter application.",
+  supportEmail: "support@example.com",
+  totpIssuer: "App",
+  fromEmail: "App <noreply@example.com>",
   appUrl: "http://localhost:3000",
-  brandPrimary: "#F0870C",
-  brandAccent: "#EF3620",
-  logoSrc: "/monark-logo.svg",
+  brandPrimary: "#2563EB",
+  brandAccent: "#4F46E5",
+  logoSrc: "/logo.svg",
 };
 
 /**
