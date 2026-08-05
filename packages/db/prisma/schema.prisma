@@ -1351,7 +1351,6 @@ model CalendarEventReminder {
   @@index([organizationId])
 }
 
-
 // @monark/chat — Prisma schema fragment (core module).
 // Assembled into packages/db/prisma/schema.prisma by `pnpm gen:schema`.
 // Edit HERE, never the generated schema.prisma. Relations to core models
@@ -1610,4 +1609,3 @@ model KanbanCard {
   @@index([boardId])
   @@index([organizationId])
 }
-

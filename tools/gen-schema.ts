@@ -45,10 +45,16 @@ function moduleFragments(): string[] {
 }
 
 const stripTrailing = (s: string) => s.replace(/\n+$/, "");
+// Normalize source EOL to LF on read so the assembled output is byte-identical
+// on every platform. Without this, a Windows checkout (CRLF sources) produced a
+// different-EOL schema.prisma than a Linux CI checkout (LF), and `stripTrailing`
+// even left lone CRs at fragment boundaries — so the committed artifact drifted
+// from what CI re-assembled. Generated files stay LF everywhere.
+const readLf = (p: string) => readFileSync(p, "utf8").replace(/\r\n/g, "\n");
 
-const base = stripTrailing(readFileSync(BASE, "utf8"));
+const base = stripTrailing(readLf(BASE));
 const fragmentPaths = moduleFragments();
-const fragments = fragmentPaths.map((f) => stripTrailing(readFileSync(f, "utf8")));
+const fragments = fragmentPaths.map((f) => stripTrailing(readLf(f)));
 
 const assembled = `${HEADER}\n${[base, ...fragments].join("\n\n")}\n`;
 const rel = fragmentPaths.map((f) => f.replace(ROOT, "").replace(/\\/g, "/").replace(/^\//, ""));
