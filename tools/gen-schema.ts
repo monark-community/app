@@ -63,7 +63,7 @@ if (process.argv.includes("--check")) {
   // Compare EOL-insensitively : the committed file may carry CRLF from a Windows
   // checkout while CI assembles with LF (the repo has no .gitattributes
   // normalization), and an EOL-only difference is not real codegen drift.
-  const eol = (s: string) => s.replace(/\r\n/g, "\n");
+  const eol = (s: string) => s.replace(/\r/g, "");
   if (eol(current) !== eol(assembled)) {
     console.error(
       "gen:schema — DRIFT: packages/db/prisma/schema.prisma is out of date with base.prisma + the module fragments.\n" +
