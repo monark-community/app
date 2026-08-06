@@ -63,6 +63,10 @@ const THRESHOLDS: Record<string, Thresholds> = {
   "package/chat": { lines: 65, statements: 65, functions: 65, branches: 70 },
   "package/common": { lines: 70, statements: 70, functions: 70, branches: 80 },
   "package/data-models": { lines: 60, statements: 60, functions: 60, branches: 70 },
+  // discord : unit-only (router-less integration). Every action-node executor +
+  // config helper is covered by tests/nodes.test.ts (~91 % lines, 100 % on the
+  // node files ; the mocked bot REST client sits under the module average).
+  "package/discord": { lines: 85, statements: 85, functions: 60, branches: 55 },
   "package/feature-flags": { lines: 80, statements: 80, functions: 75, branches: 85 },
   "package/files": { lines: 60, statements: 60, functions: 60, branches: 80 },
   // github : event mapping + connection (integration) plus every action-node
@@ -81,6 +85,12 @@ const THRESHOLDS: Record<string, Thresholds> = {
   "package/query": { lines: 88, statements: 88, functions: 90, branches: 78 },
   "package/rbac": { lines: 80, statements: 80, functions: 70, branches: 90 },
   "package/secrets": { lines: 90, statements: 90, functions: 75, branches: 85 },
+  // telegram : action-node executors + helpers covered by unit
+  // (tests/nodes.test.ts) ; the inbound webhook + connection router are
+  // integration-covered, so the MERGED number runs well above these floors.
+  // Set conservatively off the unit lower bound for now — ratchet up once a
+  // merged CI run publishes the real number.
+  "package/telegram": { lines: 50, statements: 50, functions: 60, branches: 65 },
   "package/users": { lines: 65, statements: 65, functions: 80, branches: 85 },
   "package/webhooks": { lines: 85, statements: 85, functions: 80, branches: 80 },
   // Ratcheted up 2026-08-03 : the public-api service now has an integration
