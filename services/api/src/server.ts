@@ -1,3 +1,7 @@
+// Sentry must initialise before express / http are imported so its
+// auto-instrumentation can wrap them ; this side-effect import runs first.
+import "./instrument";
+import * as Sentry from "@sentry/node";
 import { fileURLToPath } from "node:url";
 import express from "express";
 import cors from "cors";
@@ -752,9 +756,23 @@ app.use(
         },
         `trpc ${type} ${path} ${code}: ${error.message}`,
       );
+      // Report only unhandled / server failures to Sentry (no-op without a
+      // DSN) ; expected client errors stay out of the error tracker.
+      if (!isExpected) {
+        Sentry.captureException(error.cause ?? error, {
+          tags: { procedure: path ?? "unknown", procedureType: type, code },
+          extra: { requestId: ctx?.requestId, userId: ctx?.userId ?? null },
+        });
+      }
     },
   }),
 );
+
+// Capture unhandled errors from the non-tRPC Express routes (/cron, /hooks,
+// /chat/stream, …). No-op unless SENTRY_DSN is set. tRPC errors never reach
+// Express (the adapter handles them), so they're captured in its onError hook
+// above instead.
+Sentry.setupExpressErrorHandler(app);
 
 // Entrypoint guard : `pnpm dev` / `pnpm start` runs this file as the
 // process entrypoint and lights up the listen + background work ;

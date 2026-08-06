@@ -36,6 +36,7 @@
     "@monark/telegram": "workspace:*",
     "@monark/users": "workspace:*",
     "@monark/webhooks": "workspace:*",
+    "@sentry/node": "^10.69.0",
     "@supabase/supabase-js": "^2.105.3",
     "@trpc/server": "^11.18.0",
     "cors": "^2.8.5",

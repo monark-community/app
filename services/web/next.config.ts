@@ -1,5 +1,6 @@
 import type { NextConfig } from "next";
 import createNextIntlPlugin from "next-intl/plugin";
+import { withSentryConfig } from "@sentry/nextjs";
 
 const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
@@ -128,4 +129,18 @@ const config: NextConfig = {
   headers: buildHeaders,
 };
 
-export default withNextIntl(config);
+// Sentry wraps the build to inject the SDK + (optionally) upload source maps.
+// The runtime SDK stays inert unless NEXT_PUBLIC_SENTRY_DSN is set (see
+// src/instrumentation*.ts), so this is a no-op for deployments that don't opt
+// in. Source-map upload only runs when SENTRY_AUTH_TOKEN is present, so local
+// builds and token-less deploys still succeed.
+export default withSentryConfig(withNextIntl(config), {
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+  silent: !process.env.CI,
+  // Proxy browser events through a same-origin route so the app's CSP
+  // (connect-src 'self') covers them and ad-blockers don't drop them.
+  tunnelRoute: "/monitoring",
+  widenClientFileUpload: true,
+});
