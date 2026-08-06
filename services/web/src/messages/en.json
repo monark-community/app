@@ -174,7 +174,8 @@
         "kanban": "Kanban",
         "data": "Data",
         "automation": "Automation",
-        "github": "GitHub"
+        "github": "GitHub",
+        "telegram": "Telegram"
       }
     },
     "userMenu": {
@@ -2182,6 +2183,29 @@
     "step2": "Set the Payload URL to the Webhook URL above, Content type to application/json, and the Secret to the generated secret.",
     "step3": "Choose the events to send (issues, issue comments, pull requests, pushes, releases).",
     "step4": "Add a secret named for your GitHub token (a fine-grained PAT) under Admin → Secrets, then reference it in the token field of your GitHub automation nodes."
+  },
+  "telegram": {
+    "title": "Telegram",
+    "subtitle": "Connect a Telegram bot so its messages can trigger automations, and use Telegram nodes to send messages back.",
+    "noPermission": "You don't have permission to manage the Telegram connection.",
+    "connectionHeading": "Bot connection",
+    "connected": "Connected",
+    "notConnected": "Not connected",
+    "connectHint": "Paste your bot token to connect. We'll register the webhook with Telegram so its messages reach your automations.",
+    "connectedHint": "Telegram is connected. Its messages reach your automations at the webhook URL below.",
+    "botTokenLabel": "Bot token",
+    "webhookUrl": "Webhook URL",
+    "connect": "Connect",
+    "disconnect": "Disconnect",
+    "connectedToast": "Telegram connected.",
+    "disconnected": "Telegram disconnected.",
+    "copy": "Copy",
+    "copied": "Copied to clipboard.",
+    "setupHeading": "Set up in Telegram",
+    "step1": "In Telegram, message @BotFather and send /newbot to create a bot (or /token for an existing one).",
+    "step2": "Copy the HTTP API token BotFather gives you and paste it above, then Connect.",
+    "step3": "Requires a public HTTPS URL Telegram can reach — connecting from localhost won't work (Telegram rejects non-public webhooks).",
+    "step4": "Add your bot to a group or start a chat with it, then use the Telegram trigger events + nodes in your automations."
   },
   "calendar": {
     "title": "Calendar",

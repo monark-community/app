@@ -12,9 +12,16 @@ export function createRestClient(config: {
   baseUrl: string;
   /** Headers sent on every request (Accept, API version, User-Agent, …). */
   defaultHeaders?: Record<string, string>;
+  /**
+   * How to turn a token into the `Authorization` header. Defaults to a bearer
+   * token (`Bearer <token>`) ; e.g. Discord's bot auth passes
+   * `(t) => \`Bot ${t}\``. Return `null` to send no auth header.
+   */
+  authHeader?: (token: string) => string | null;
   timeoutMs?: number;
   maxBytes?: number;
 }) {
+  const authHeaderFor = config.authHeader ?? ((token: string) => `Bearer ${token}`);
   return {
     request: async (params: {
       token: string;
@@ -25,10 +32,11 @@ export function createRestClient(config: {
       headers?: Record<string, string>;
     }): Promise<unknown> => {
       const hasBody = params.body !== undefined && params.body !== null;
+      const auth = authHeaderFor(params.token);
       const res = await safeFetch(`${config.baseUrl}${params.path}`, {
         method: params.method,
         headers: {
-          Authorization: `Bearer ${params.token}`,
+          ...(auth != null ? { Authorization: auth } : {}),
           ...(config.defaultHeaders ?? {}),
           ...(params.headers ?? {}),
           ...(hasBody ? { "Content-Type": "application/json" } : {}),

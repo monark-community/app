@@ -174,7 +174,8 @@
         "kanban": "Kanban",
         "data": "Données",
         "automation": "Automatisation",
-        "github": "GitHub"
+        "github": "GitHub",
+        "telegram": "Telegram"
       }
     },
     "userMenu": {
@@ -2182,6 +2183,29 @@
     "step2": "Définissez le Payload URL sur l'URL du webhook ci-dessus, le Content type sur application/json, et le Secret sur le secret généré.",
     "step3": "Choisissez les événements à envoyer (issues, commentaires, pull requests, pushes, releases).",
     "step4": "Ajoutez un secret nommé pour votre jeton GitHub (un PAT à portée fine) sous Admin → Secrets, puis référencez-le dans le champ jeton de vos nœuds d'automatisation GitHub."
+  },
+  "telegram": {
+    "title": "Telegram",
+    "subtitle": "Connectez un bot Telegram pour que ses messages déclenchent des automatisations, et utilisez les nœuds Telegram pour répondre.",
+    "noPermission": "Vous n'avez pas la permission de gérer la connexion Telegram.",
+    "connectionHeading": "Connexion du bot",
+    "connected": "Connecté",
+    "notConnected": "Non connecté",
+    "connectHint": "Collez le jeton de votre bot pour le connecter. Nous enregistrerons le webhook auprès de Telegram pour que ses messages atteignent vos automatisations.",
+    "connectedHint": "Telegram est connecté. Ses messages atteignent vos automatisations à l'URL de webhook ci-dessous.",
+    "botTokenLabel": "Jeton du bot",
+    "webhookUrl": "URL du webhook",
+    "connect": "Connecter",
+    "disconnect": "Déconnecter",
+    "connectedToast": "Telegram connecté.",
+    "disconnected": "Telegram déconnecté.",
+    "copy": "Copier",
+    "copied": "Copié dans le presse-papiers.",
+    "setupHeading": "Configurer dans Telegram",
+    "step1": "Dans Telegram, écrivez à @BotFather et envoyez /newbot pour créer un bot (ou /token pour un bot existant).",
+    "step2": "Copiez le jeton d'API HTTP fourni par BotFather, collez-le ci-dessus, puis Connecter.",
+    "step3": "Nécessite une URL HTTPS publique que Telegram peut joindre — se connecter depuis localhost ne fonctionnera pas (Telegram refuse les webhooks non publics).",
+    "step4": "Ajoutez votre bot à un groupe ou démarrez une conversation avec lui, puis utilisez les événements déclencheurs et les nœuds Telegram dans vos automatisations."
   },
   "calendar": {
     "title": "Calendrier",

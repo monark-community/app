@@ -22,6 +22,17 @@ export function verifyHmacSha256(
   return a.length === b.length && timingSafeEqual(a, b);
 }
 
+/**
+ * Constant-time string equality — for providers that authenticate a webhook by
+ * echoing a shared secret in a header (e.g. Telegram's
+ * `X-Telegram-Bot-Api-Secret-Token`) rather than signing the body.
+ */
+export function constantTimeEquals(a: string, b: string): boolean {
+  const ba = Buffer.from(a);
+  const bb = Buffer.from(b);
+  return ba.length === bb.length && timingSafeEqual(ba, bb);
+}
+
 export type InboundWebhookResult =
   | { status: 202; emitted: boolean }
   | { status: 401 | 404; error: string };

@@ -427,6 +427,28 @@ importers:
         specifier: ^4.21.0
         version: 4.21.0
 
+  packages/discord:
+    dependencies:
+      '@monark/automation':
+        specifier: workspace:*
+        version: link:../automation
+      '@monark/common':
+        specifier: workspace:*
+        version: link:../common
+      '@monark/feature-flags':
+        specifier: workspace:*
+        version: link:../feature-flags
+      '@monark/integration-kit':
+        specifier: workspace:*
+        version: link:../integration-kit
+      zod:
+        specifier: ^3.23.0
+        version: 3.25.76
+    devDependencies:
+      vitest:
+        specifier: ^3.2.6
+        version: 3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(tsx@4.21.0)(yaml@2.8.4)
+
   packages/feature-flags:
     dependencies:
       '@monark/common':
@@ -777,6 +799,46 @@ importers:
         specifier: ^3.2.6
         version: 3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(tsx@4.21.0)(yaml@2.8.4)
 
+  packages/telegram:
+    dependencies:
+      '@monark/automation':
+        specifier: workspace:*
+        version: link:../automation
+      '@monark/common':
+        specifier: workspace:*
+        version: link:../common
+      '@monark/feature-flags':
+        specifier: workspace:*
+        version: link:../feature-flags
+      '@monark/integration-kit':
+        specifier: workspace:*
+        version: link:../integration-kit
+      '@monark/organizations':
+        specifier: workspace:*
+        version: link:../organizations
+      '@monark/rbac':
+        specifier: workspace:*
+        version: link:../rbac
+      '@monark/secrets':
+        specifier: workspace:*
+        version: link:../secrets
+      zod:
+        specifier: ^3.23.0
+        version: 3.25.76
+    devDependencies:
+      '@monark/db':
+        specifier: workspace:*
+        version: link:../db
+      '@monark/test-utils':
+        specifier: workspace:*
+        version: link:../test-utils
+      '@vitest/coverage-v8':
+        specifier: ^3.2.7
+        version: 3.2.7(vitest@3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(tsx@4.21.0)(yaml@2.8.4))
+      vitest:
+        specifier: ^3.2.6
+        version: 3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(tsx@4.21.0)(yaml@2.8.4)
+
   packages/test-utils:
     dependencies:
       '@monark/db':
@@ -878,6 +940,9 @@ importers:
       '@monark/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@monark/discord':
+        specifier: workspace:*
+        version: link:../../packages/discord
       '@monark/feature-flags':
         specifier: workspace:*
         version: link:../../packages/feature-flags
@@ -905,6 +970,9 @@ importers:
       '@monark/secrets':
         specifier: workspace:*
         version: link:../../packages/secrets
+      '@monark/telegram':
+        specifier: workspace:*
+        version: link:../../packages/telegram
       '@monark/users':
         specifier: workspace:*
         version: link:../../packages/users

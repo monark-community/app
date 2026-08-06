@@ -22,6 +22,8 @@ export const MODULES = {
   // must actually depend on its target) live on this metadata, not the folder
   // tree — see docs/technical-documentation/extensibility-contract.md.
   "@monark/github": { tier: "extended", integrates: "@monark/automation" },
+  "@monark/discord": { tier: "extended", integrates: "@monark/automation" },
+  "@monark/telegram": { tier: "extended", integrates: "@monark/automation" },
 } as const satisfies Record<string, ModuleMeta>;
 
 export type ModuleName = keyof typeof MODULES;

@@ -7,6 +7,7 @@ import type { AutomationEvents } from "@monark/automation/contracts"
 import type { CalendarEvents } from "@monark/calendar/contracts"
 import type { ChatEvents } from "@monark/chat/contracts"
 import type { DataModelsEvents } from "@monark/data-models/contracts"
+import type { DiscordEvents } from "@monark/discord/contracts"
 import type { FeatureFlagsEvents } from "@monark/feature-flags/contracts"
 import type { FilesEvents } from "@monark/files/contracts"
 import type { GithubEvents } from "@monark/github/contracts"
@@ -16,6 +17,7 @@ import type { OrganizationsEvents } from "@monark/organizations/contracts"
 import type { PublicApiEvents } from "@monark/public-api/contracts"
 import type { RbacEvents } from "@monark/rbac/contracts"
 import type { SecretsEvents } from "@monark/secrets/contracts"
+import type { TelegramEvents } from "@monark/telegram/contracts"
 import type { UsersEvents } from "@monark/users/contracts"
 import type { WebhooksEvents } from "@monark/webhooks/contracts"
 
@@ -26,6 +28,7 @@ export type DomainEvent =
   | CalendarEvents
   | ChatEvents
   | DataModelsEvents
+  | DiscordEvents
   | FeatureFlagsEvents
   | FilesEvents
   | GithubEvents
@@ -35,5 +38,6 @@ export type DomainEvent =
   | PublicApiEvents
   | RbacEvents
   | SecretsEvents
+  | TelegramEvents
   | UsersEvents
   | WebhooksEvents

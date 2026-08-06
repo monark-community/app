@@ -71,6 +71,17 @@ import {
   handleGithubWebhook,
 } from "@monark/github/server";
 import {
+  registerDiscordAutomationNodes,
+  registerDiscordFeatureFlags,
+} from "@monark/discord/server";
+import {
+  registerTelegramAutomationNodes,
+  registerTelegramEventTypes,
+  registerTelegramFeatureFlags,
+  registerTelegramPermissions,
+  handleTelegramWebhook,
+} from "@monark/telegram/server";
+import {
   registerFilesEventTypes,
   registerFilesFeatureFlags,
   registerFilesPermissions,
@@ -122,6 +133,8 @@ registerDataModelsFeatureFlags();
 registerFilesFeatureFlags();
 registerKanbanFeatureFlags();
 registerGithubFeatureFlags();
+registerDiscordFeatureFlags();
+registerTelegramFeatureFlags();
 registerOrganizationsFeatureFlags();
 registerPublicApiFeatureFlags();
 
@@ -133,6 +146,7 @@ registerFeatureFlagsPermissions();
 registerFilesPermissions();
 registerKanbanPermissions();
 registerGithubPermissions();
+registerTelegramPermissions();
 registerOrganizationsPermissions();
 registerRbacPermissions();
 registerSecretsPermissions();
@@ -155,6 +169,7 @@ registerFeatureFlagsEventTypes();
 registerFilesEventTypes();
 registerKanbanEventTypes();
 registerGithubEventTypes();
+registerTelegramEventTypes();
 registerNotificationsEventTypes();
 registerOrganizationsEventTypes();
 registerRbacEventTypes();
@@ -184,6 +199,8 @@ registerKanbanNotificationKinds();
 registerBuiltinAutomationNodes();
 // Extended modules contribute their automation nodes the same way.
 registerGithubAutomationNodes();
+registerDiscordAutomationNodes();
+registerTelegramAutomationNodes();
 
 // Wire the in-app AI chat agent's tool executor over the SAME public-API route
 // registry (`V1_ROUTES`) the MCP server uses, but executed in-process through
@@ -595,6 +612,35 @@ app.post("/hooks/github/:org", async (req, res) => {
     }
   } catch (error) {
     logger.error({ err: error }, "github webhook handling failed");
+    res.status(500).json({ ok: false, error: "internal" });
+  }
+});
+
+// Inbound Telegram updates. The /telegram settings page's Connect registers this
+// endpoint with Telegram (`setWebhook`) + a per-org secret ; Telegram echoes that
+// secret in `X-Telegram-Bot-Api-Secret-Token` on every update. The handler
+// verifies it (constant-time — Telegram signs nothing over the body), maps a
+// `message` update to a `telegram.*` domain event, and emits it (triggering
+// matching automations). Unmodeled updates are acked (202) so Telegram doesn't
+// retry. Telegram doesn't send an event-name header ; the update type is read
+// from the payload.
+app.post("/hooks/telegram/:org", async (req, res) => {
+  const rawBody = (req as express.Request & { rawBody?: Buffer }).rawBody ?? Buffer.from("");
+  try {
+    const result = await handleTelegramWebhook({
+      organizationId: req.params.org,
+      eventName: "",
+      signature: req.header("x-telegram-bot-api-secret-token") ?? null,
+      rawBody,
+      payload: req.body ?? null,
+    });
+    if (result.status === 202) {
+      res.status(202).json({ ok: true, emitted: result.emitted });
+    } else {
+      res.status(result.status).json({ ok: false, error: result.error });
+    }
+  } catch (error) {
+    logger.error({ err: error }, "telegram webhook handling failed");
     res.status(500).json({ ok: false, error: "internal" });
   }
 });

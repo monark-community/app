@@ -46,6 +46,7 @@ import {
   GitPullRequest,
   History,
   Mail,
+  MessagesSquare,
   Pencil,
   Play,
   Plus,
@@ -1818,6 +1819,8 @@ const NODE_ICON_BY_NAME: Record<string, LucideIcon> = {
   Shield,
   User,
   Github: GitPullRequest,
+  Discord: MessagesSquare,
+  Telegram: Send,
   FunctionSquare: Sigma,
   DatabasePlus: Database,
   DatabasePen: Database,
@@ -1838,6 +1841,8 @@ const CATEGORY_ICON: Record<string, LucideIcon> = {
   rbac: Shield,
   user: User,
   github: GitPullRequest,
+  discord: MessagesSquare,
+  telegram: Send,
   test: FlaskConical,
 };
 function categoryIcon(category: string): LucideIcon {
