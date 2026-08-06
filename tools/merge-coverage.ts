@@ -65,11 +65,11 @@ const THRESHOLDS: Record<string, Thresholds> = {
   "package/data-models": { lines: 60, statements: 60, functions: 60, branches: 70 },
   "package/feature-flags": { lines: 80, statements: 80, functions: 75, branches: 85 },
   "package/files": { lines: 60, statements: 60, functions: 60, branches: 80 },
-  // github : event-mapping + connection are tested (73 % lines), but the 11 REST
-  // action nodes + client run only under the thin integration suite today, so
-  // functions sits at ~21 %. Floored honestly ; add node-level unit tests to
-  // ratchet functions up.
-  "package/github": { lines: 65, statements: 65, functions: 15, branches: 60 },
+  // github : event mapping + connection (integration) plus every action-node
+  // executor + config helper (unit, tests/nodes.test.ts) are now covered —
+  // ~82 % lines / 76 %+ functions on the unit run alone. Floors sit below the
+  // measured merged baseline as a regression guard.
+  "package/github": { lines: 75, statements: 75, functions: 70, branches: 60 },
   // kanban : the query-compiler unit suite (every field × operator × error
   // branch of compileKanbanFilter) took branches 65 %→97 %, recovering the dip
   // the in-flight board work had caused and then some.
