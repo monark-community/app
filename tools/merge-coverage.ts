@@ -58,10 +58,18 @@ const THRESHOLDS: Record<string, Thresholds> = {
   "package/auth": { lines: 60, statements: 60, functions: 75, branches: 80 },
   "package/automation": { lines: 75, statements: 75, functions: 75, branches: 70 },
   "package/calendar": { lines: 80, statements: 80, functions: 85, branches: 75 },
+  // chat : the AI-assistant substrate (agent loop, provider abstraction, tool
+  // registry). Floors ~5pts below the measured ~69 % lines / 70 % funcs.
+  "package/chat": { lines: 65, statements: 65, functions: 65, branches: 70 },
   "package/common": { lines: 70, statements: 70, functions: 70, branches: 80 },
   "package/data-models": { lines: 60, statements: 60, functions: 60, branches: 70 },
   "package/feature-flags": { lines: 80, statements: 80, functions: 75, branches: 85 },
   "package/files": { lines: 60, statements: 60, functions: 60, branches: 80 },
+  // github : event-mapping + connection are tested (73 % lines), but the 11 REST
+  // action nodes + client run only under the thin integration suite today, so
+  // functions sits at ~21 %. Floored honestly ; add node-level unit tests to
+  // ratchet functions up.
+  "package/github": { lines: 65, statements: 65, functions: 15, branches: 60 },
   // kanban : the query-compiler unit suite (every field × operator × error
   // branch of compileKanbanFilter) took branches 65 %→97 %, recovering the dip
   // the in-flight board work had caused and then some.
@@ -79,6 +87,9 @@ const THRESHOLDS: Record<string, Thresholds> = {
   // suite (public-api.test.ts), so api jumped 57 % → 75 % lines / 41 % → 79 %
   // functions once those procedures are exercised.
   "service/api": { lines: 70, statements: 70, functions: 70, branches: 55 },
+  // mcp : the stdio MCP server (tool generation from V1_ROUTES). Well-covered
+  // unit suite ~95 % lines / 91 % funcs ; floors ~5pts below.
+  "service/mcp": { lines: 90, statements: 90, functions: 85, branches: 80 },
   "service/web": { lines: 5, statements: 5, functions: 40, branches: 80 },
 };
 
