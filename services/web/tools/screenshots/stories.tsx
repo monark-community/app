@@ -21,11 +21,8 @@ import {
   Download,
   GripVertical,
   ListFilter,
-  Menu,
   MoreHorizontal,
-  Search,
   Share2,
-  Sparkles,
   SquareKanban,
   Star,
   Trash2,
@@ -1670,208 +1667,6 @@ const NavRailShellStory: FC = () => (
   </div>
 );
 
-// Mobile AppBar busyness check: mirrors the real AppBar's mobile layout
-// (hamburger + logo + breadcrumb left; search + bell + avatar right — see
-// components/app-bar.tsx) at phone widths, comparing the current bar against one
-// with a chat `✨` launcher added to the right cluster. Touch-target sizing is
-// real (the harness emulates a coarse pointer on the mobile viewport), so this
-// shows the true crowding, including breadcrumb truncation when it gets tight.
-const ChatAppBarStory: FC = () => {
-  const Avatar = () => (
-    <button className="inline-flex size-8 items-center justify-center rounded-full bg-muted text-xs font-medium text-muted-foreground">
-      DF
-    </button>
-  );
-  const BellBtn = () => (
-    <button
-      aria-label="Notifications"
-      className="relative inline-flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:bg-muted"
-    >
-      <Bell className="h-4 w-4" aria-hidden />
-      <span className="absolute -right-0.5 -top-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold leading-none text-primary-foreground">
-        3
-      </span>
-    </button>
-  );
-  const Launcher = () => (
-    <div className="relative">
-      <Button variant="ghost" size="icon" aria-label="Assistant" className="text-muted-foreground">
-        <Sparkles className="h-4 w-4" aria-hidden />
-      </Button>
-      <span className="pointer-events-none absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-primary" />
-    </div>
-  );
-  const Bar = ({
-    crumb,
-    withLauncher,
-    width,
-  }: {
-    crumb: string;
-    withLauncher?: boolean;
-    width: number;
-  }) => (
-    <div
-      style={{ width }}
-      className="overflow-hidden rounded-xl border border-border bg-background shadow-sm"
-    >
-      <header className="border-b border-border bg-background/95">
-        <div className="flex h-14 w-full items-center justify-between gap-4 px-4">
-          <div className="flex min-w-0 items-center gap-2">
-            <Button variant="ghost" size="icon" aria-label="Menu" className="text-muted-foreground">
-              <Menu className="h-5 w-5" aria-hidden />
-            </Button>
-            <div className="size-7 shrink-0 rounded-md bg-primary/15" />
-            <span className="truncate text-sm text-muted-foreground">{crumb}</span>
-          </div>
-          <div className="flex shrink-0 items-center gap-4">
-            <div className="flex items-center gap-1">
-              {withLauncher ? <Launcher /> : null}
-              <Button
-                variant="ghost"
-                size="icon"
-                aria-label="Search"
-                className="text-muted-foreground"
-              >
-                <Search className="h-4 w-4" aria-hidden />
-              </Button>
-              <BellBtn />
-            </div>
-            <Avatar />
-          </div>
-        </div>
-      </header>
-      <div className="px-4 py-3 text-xs text-muted-foreground">content…</div>
-    </div>
-  );
-  const Label = ({ text }: { text: string }) => (
-    <div className="w-[390px] text-xs font-medium text-foreground">{text}</div>
-  );
-  return (
-    <div className="flex flex-col items-center gap-3 bg-muted/30 p-4">
-      <Label text="Current — 390px (search · bell · avatar)" />
-      <Bar crumb="Projects" width={390} />
-      <Label text="With ✨ launcher — 390px" />
-      <Bar crumb="Projects" withLauncher width={390} />
-      <Label text="With ✨ launcher + long breadcrumb — 390px" />
-      <Bar crumb="Data / Projects / Q3 Roadmap Planning" withLauncher width={390} />
-      <Label text="With ✨ launcher + long breadcrumb — 360px (tight phone)" />
-      <Bar crumb="Data / Projects / Q3 Roadmap Planning" withLauncher width={360} />
-    </div>
-  );
-};
-
-// Proposed AppBar redesign that makes room for the agent launcher at zero net
-// icon count: (1) brand + hamburger merged into one mark (logo with a small menu
-// badge) — frees the separate hamburger slot; (2) notifications move INTO the
-// user avatar (unread badge on the avatar; the bell's slot becomes the ✨ agent
-// launcher). Right cluster goes from [search · bell · avatar] to
-// [search · ✨ · avatar], so the breadcrumb keeps today's width. Also mocks the
-// tabbed avatar menu (Notifications | Account).
-const ChatAppBarV2Story: FC = () => {
-  const BrandMenu = () => (
-    <button
-      aria-label="Open menu"
-      className="relative inline-flex items-center justify-center rounded-md p-1.5 hover:bg-muted"
-    >
-      <span className="relative block size-7 rounded-md bg-primary/15">
-        <span className="absolute -bottom-1 -right-1 inline-flex size-4 items-center justify-center rounded-full border border-border bg-background">
-          <Menu className="h-2.5 w-2.5 text-foreground" aria-hidden />
-        </span>
-      </span>
-    </button>
-  );
-  const AvatarWithBadge = () => (
-    <button className="relative inline-flex size-8 items-center justify-center rounded-full bg-muted text-xs font-medium text-muted-foreground">
-      DF
-      <span className="absolute -right-0.5 -top-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold leading-none text-primary-foreground">
-        3
-      </span>
-    </button>
-  );
-  const Launcher = () => (
-    <div className="relative">
-      <Button variant="ghost" size="icon" aria-label="Assistant" className="text-muted-foreground">
-        <Sparkles className="h-4 w-4" aria-hidden />
-      </Button>
-      <span className="pointer-events-none absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-primary" />
-    </div>
-  );
-  const Bar = ({ crumb, width }: { crumb: string; width: number }) => (
-    <div
-      style={{ width }}
-      className="overflow-hidden rounded-xl border border-border bg-background shadow-sm"
-    >
-      <header className="border-b border-border bg-background/95">
-        <div className="flex h-14 w-full items-center justify-between gap-4 px-4">
-          <div className="flex min-w-0 items-center gap-2">
-            <BrandMenu />
-            <span className="truncate text-sm text-muted-foreground">{crumb}</span>
-          </div>
-          <div className="flex shrink-0 items-center gap-1">
-            <Button
-              variant="ghost"
-              size="icon"
-              aria-label="Search"
-              className="text-muted-foreground"
-            >
-              <Search className="h-4 w-4" aria-hidden />
-            </Button>
-            <Launcher />
-            <span className="ml-2">
-              <AvatarWithBadge />
-            </span>
-          </div>
-        </div>
-      </header>
-      <div className="px-4 py-3 text-xs text-muted-foreground">content…</div>
-    </div>
-  );
-  const Label = ({ text }: { text: string }) => (
-    <div className="w-[390px] text-xs font-medium text-foreground">{text}</div>
-  );
-  const TabbedMenu = () => (
-    <div className="w-[320px] overflow-hidden rounded-lg border border-border bg-background shadow-lg">
-      <div className="flex border-b border-border">
-        <button className="flex-1 border-b-2 border-primary px-4 py-2.5 text-sm font-medium text-foreground">
-          Notifications
-        </button>
-        <button className="flex-1 border-b-2 border-transparent px-4 py-2.5 text-sm text-muted-foreground">
-          Account
-        </button>
-      </div>
-      <ul className="divide-y divide-border">
-        {["Task assigned to you", "New comment on Q3 Roadmap", "Automation run failed"].map(
-          (n, i) => (
-            <li key={n} className="flex items-start gap-3 px-4 py-3">
-              <span className="mt-0.5 inline-flex size-8 shrink-0 items-center justify-center rounded-full bg-muted">
-                <Bell className="h-4 w-4 text-muted-foreground" aria-hidden />
-              </span>
-              <div className="min-w-0">
-                <p className="truncate text-sm text-foreground">{n}</p>
-                <p className="text-xs text-muted-foreground">{i + 1}h ago</p>
-              </div>
-            </li>
-          ),
-        )}
-      </ul>
-    </div>
-  );
-  return (
-    <div className="flex flex-col items-center gap-3 bg-muted/30 p-4">
-      <Label text="Proposed — 390px (brand+menu · crumb | search · ✨ · avatar-badge)" />
-      <Bar crumb="Projects" width={390} />
-      <Label text="Proposed — long breadcrumb 390px (fits: only 3 right icons)" />
-      <Bar crumb="Data / Projects / Q3 Roadmap Planning" width={390} />
-      <Label text="Proposed — 360px (tight phone)" />
-      <Bar crumb="Data / Projects / Q3 Roadmap Planning" width={360} />
-      <Label text="Avatar menu — tabbed (Notifications default · Account)" />
-      <div className="flex w-[390px] justify-end pr-2">
-        <TabbedMenu />
-      </div>
-    </div>
-  );
-};
-
 // The /admin/secrets create panel: a write-only value field (masked), the
 // env-var-name field, and the dirty save bar pinned to the panel bottom. Mirrors
 // the real SecretForm layout (which is tRPC-coupled, so can't render here).
@@ -2460,8 +2255,6 @@ export const STORIES: Record<string, FC> = {
   "list-options-sheet": MobileListOptionsSheetStory,
   "nav-rail": NavRailShellStory,
   "admin-secret-panel": SecretPanelStory,
-  "chat-appbar": ChatAppBarStory,
-  "chat-appbar-v2": ChatAppBarV2Story,
   "date-picker": DatePickerStory,
   "table-empty-state": TableEmptyStateStory,
   "kanban-board": KanbanBoardStory,

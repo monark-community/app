@@ -72,6 +72,19 @@ function hasUnresolvedToolCalls(history: MessageView[]): boolean {
   );
 }
 
+// Attach the page-context as a text block on the CURRENT user turn rather than in
+// the system prompt, so the system prompt + tool schemas stay byte-identical
+// across turns and can be prompt-cached. Only injected on a real user message
+// (not a tool-result turn), so it doesn't disturb the tool_use/tool_result pairing.
+function injectContext(messages: LlmMessage[], contextText: string): void {
+  const text = contextText.trim();
+  if (!text) return;
+  const last = messages[messages.length - 1];
+  if (!last || last.role !== "user") return;
+  if (last.content.some((c) => c.kind === "tool_result")) return;
+  last.content.unshift({ kind: "text", text });
+}
+
 // Replay stored messages into the provider-agnostic message list. An assistant
 // message with tool calls is followed by a synthetic user message carrying the
 // matching tool_result blocks (Anthropic's required shape).
@@ -87,7 +100,12 @@ function buildLlmMessages(history: MessageView[]): LlmMessage[] {
     const assistantContent: LlmContent[] = [];
     if (msg.content) assistantContent.push({ kind: "text", text: msg.content });
     for (const tc of msg.toolCalls) {
-      assistantContent.push({ kind: "tool_use", id: tc.toolCallRef, name: tc.toolName, input: tc.input });
+      assistantContent.push({
+        kind: "tool_use",
+        id: tc.toolCallRef,
+        name: tc.toolName,
+        input: tc.input,
+      });
     }
     if (assistantContent.length > 0) out.push({ role: "assistant", content: assistantContent });
 
@@ -136,7 +154,10 @@ export async function advanceConversation(
   const executor = getChatToolExecutor();
   const provider = getLlmProvider();
   const toolSpecs = executor.listSpecs();
-  const system = systemPrompt(getAssistantName()) + contextPrompt(context);
+  // Static (cacheable) system prompt; the per-turn page context rides the user
+  // message instead (see injectContext) so it never busts the prompt cache.
+  const system = systemPrompt(getAssistantName());
+  const contextText = contextPrompt(context);
 
   for (let step = 0; step < MAX_STEPS; step++) {
     const history = await loadAgentHistory(ctx.organizationId, conversationId);
@@ -146,6 +167,7 @@ export async function advanceConversation(
     if (hasUnresolvedToolCalls(history)) return { status: "awaiting_confirmation" };
 
     const messages = buildLlmMessages(history);
+    injectContext(messages, contextText);
 
     let text = "";
     const calls: Array<{ id: string; name: string; input: unknown }> = [];
@@ -252,7 +274,11 @@ export async function confirmToolCall(
     // Already handled; just try to advance in case the model can continue.
     return advanceConversation(ctx, tc.conversationId, { hooks });
   }
-  await updateToolCallStatus({ organizationId: ctx.organizationId, id: toolCallId, status: "EXECUTING" });
+  await updateToolCallStatus({
+    organizationId: ctx.organizationId,
+    id: toolCallId,
+    status: "EXECUTING",
+  });
   await executeAndRecord(ctx, toolCallId, tc.toolName, tc.input);
   return advanceConversation(ctx, tc.conversationId, { hooks });
 }

@@ -6,13 +6,13 @@ per-export reference lives in the [module README](../../packages/chat/README.md)
 
 ## Why in-process tools, not our own MCP server
 
-We already expose Monark to *external* AI agents (Claude Desktop, Cursor) via
+We already expose Monark to _external_ AI agents (Claude Desktop, Cursor) via
 `@monark/mcp`, a stdio MCP server that authenticates with a static `mrk_` API key
 and calls the public `/api/v1` surface. It is tempting to point the in-app agent
 at the same server — but that is the wrong fit on every axis:
 
 - **Identity.** MCP acts as one fixed key principal. An in-app assistant must act
-  as the *logged-in user*, so RBAC, per-record access, and audit reflect the real
+  as the _logged-in user_, so RBAC, per-record access, and audit reflect the real
   actor. Routing through MCP would lose that (or force per-user key minting).
 - **Transport + latency.** MCP is stdio-only; using it would mean spawning a
   process (or building an HTTP transport that doesn't exist) to call ourselves.
@@ -41,7 +41,7 @@ route into an LLM tool spec (flattening path params + query + body into one inpu
 schema) and, on invocation, re-splits the model's arguments, validates them with
 the route's own zod schemas, and calls `route.handler({ caller, principal, … })`.
 A route is thus the single source of truth for both external and in-app tools.
-`method !== "get"` marks a tool as *mutating* (drives the confirm gate).
+`method !== "get"` marks a tool as _mutating_ (drives the confirm gate).
 
 ## In-app-only tools (beyond the public API)
 
@@ -64,7 +64,7 @@ one-shot create/update tool fits better than incremental node/edge mutations.
 ## Layering: injection, not a dependency
 
 The tool executor needs `appRouter`, which lives in `services/api`. Packages must
-not import the api service, so `@monark/chat` defines the *contract* (`tools.ts`:
+not import the api service, so `@monark/chat` defines the _contract_ (`tools.ts`:
 `ChatToolExecutor`) and the api host injects the concrete executor at boot:
 
 ```ts
@@ -105,6 +105,15 @@ SDK. Resolution is lazy + cached (`getLlmProvider`) and overridable
 (`setLlmProvider`) for tests / alternate hosts. Config: `ANTHROPIC_API_KEY`,
 `CHAT_LLM_PROVIDER`, `CHAT_LLM_MODEL`, `CHAT_LLM_MAX_TOKENS`.
 
+**Prompt caching.** The agent is input-heavy (the system prompt + all tool
+schemas are resent every turn), so the Anthropic provider sets three ephemeral
+`cache_control` breakpoints: the static system prompt, the tool set, and the
+growing conversation prefix. For the cached prefix to stay byte-identical across
+turns, the per-turn page context is injected into the **current user message**
+(`injectContext`), never the system prompt. Cache reads bill at ~10% of input
+after the first turn (default 5-min TTL); a prefix below the model's minimum
+cacheable size just isn't cached (no error).
+
 ## Web companion
 
 Mounted once in `(authed)/layout.tsx` via `ChatProvider` (like
@@ -128,8 +137,9 @@ hook that writes `event: token` frames; it ends with `event: done`
 (`components/chat/stream.ts`) POSTs with the bearer and reads the body stream,
 appending tokens to a live bubble, then refetches the persisted messages on
 `done`. `confirmToolCall` / `rejectToolCall` remain non-streamed (tRPC mutations
-+ refetch), so the assistant's *post-confirmation* reply appears on refetch
-rather than streaming — a reasonable v1 seam.
+
+- refetch), so the assistant's _post-confirmation_ reply appears on refetch
+  rather than streaming — a reasonable v1 seam.
 
 ## Not yet / deferred
 

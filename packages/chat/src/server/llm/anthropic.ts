@@ -21,8 +21,16 @@ const DEFAULT_MAX_TOKENS = 4096;
 // to SDK-internal type names across versions. The SDK's stream also yields other
 // event types (message_start, ping, ...) which fall through the switch default.
 type RawStreamEvent =
-  | { type: "content_block_start"; index: number; content_block: { type: string; id?: string; name?: string } }
-  | { type: "content_block_delta"; index: number; delta: { type: string; text?: string; partial_json?: string } }
+  | {
+      type: "content_block_start";
+      index: number;
+      content_block: { type: string; id?: string; name?: string };
+    }
+  | {
+      type: "content_block_delta";
+      index: number;
+      delta: { type: string; text?: string; partial_json?: string };
+    }
   | { type: "content_block_stop"; index: number }
   | { type: "message_delta"; delta: { stop_reason?: string | null } }
   | { type: "message_stop" };
@@ -43,9 +51,12 @@ function mapStopReason(reason: string | null | undefined): LlmStopReason {
   }
 }
 
+// A mutable JSON block (so we can attach cache_control after building).
+type Block = Record<string, unknown>;
+
 // Translate our provider-agnostic content blocks into the SDK's block shapes.
-function toAnthropicContent(content: LlmContent[]): unknown[] {
-  return content.map((block) => {
+function toAnthropicContent(content: LlmContent[]): Block[] {
+  return content.map((block): Block => {
     switch (block.kind) {
       case "text":
         return { type: "text", text: block.text };
@@ -62,9 +73,13 @@ function toAnthropicContent(content: LlmContent[]): unknown[] {
   });
 }
 
-function toAnthropicMessages(messages: LlmMessage[]): unknown[] {
+function toAnthropicMessages(
+  messages: LlmMessage[],
+): Array<{ role: LlmMessage["role"]; content: Block[] }> {
   return messages.map((m) => ({ role: m.role, content: toAnthropicContent(m.content) }));
 }
+
+const CACHE: { type: "ephemeral" } = { type: "ephemeral" };
 
 class AnthropicProvider implements LlmProvider {
   readonly id = "anthropic";
@@ -79,16 +94,33 @@ class AnthropicProvider implements LlmProvider {
   }
 
   async *streamChat(params: LlmStreamParams): AsyncIterable<LlmStreamEvent> {
-    const body = {
-      model: this.model,
-      max_tokens: params.maxTokens ?? this.#maxTokens,
-      system: params.system,
-      messages: toAnthropicMessages(params.messages),
-      tools: params.tools.map((t) => ({
+    // ── Prompt caching ──────────────────────────────────────────────────────
+    // Three ephemeral cache breakpoints (≤ 4 allowed): the static system prompt,
+    // the (static) tool set, and the growing conversation prefix. The system +
+    // tools are byte-identical every turn (page context rides the user message,
+    // not the system), so they cache-read at ~10% of input cost after the first
+    // turn; the last-message breakpoint extends the cached prefix each turn.
+    const messages = toAnthropicMessages(params.messages);
+    const lastMsg = messages[messages.length - 1];
+    const lastBlock = lastMsg?.content[lastMsg.content.length - 1];
+    if (lastBlock) lastBlock.cache_control = CACHE;
+
+    const tools = params.tools.map(
+      (t, i): Block => ({
         name: t.name,
         description: t.description,
         input_schema: t.inputSchema,
-      })),
+        ...(i === params.tools.length - 1 ? { cache_control: CACHE } : {}),
+      }),
+    );
+
+    const body = {
+      model: this.model,
+      max_tokens: params.maxTokens ?? this.#maxTokens,
+      // Array form so the static system prompt carries a cache breakpoint.
+      system: [{ type: "text", text: params.system, cache_control: CACHE }],
+      messages,
+      tools,
     } as unknown as StreamParam;
 
     const stream = this.#client.messages.stream(body, { signal: params.signal });

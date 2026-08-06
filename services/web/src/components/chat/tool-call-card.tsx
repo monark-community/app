@@ -6,8 +6,31 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { ToolCallView } from "./types";
 
-// Turn a tool name (e.g. "monark_create_record") into a human phrase
-// ("create record") for the "wants to …" line.
+// Tools with a curated, localized action phrase (`chat.toolActions.<name>`).
+// Anything not listed falls back to `humanizeTool`. Keep in sync with the tool
+// names in services/api/src/chat/{tools,automation-tools}.ts.
+const LABELLED_TOOLS = new Set<string>([
+  "monark_whoami",
+  "monark_list_models",
+  "monark_get_model",
+  "monark_list_model_fields",
+  "monark_list_records",
+  "monark_get_record",
+  "monark_create_record",
+  "monark_update_record",
+  "monark_delete_record",
+  "automation_list",
+  "automation_get",
+  "automation_list_node_types",
+  "automation_list_trigger_events",
+  "automation_create",
+  "automation_update",
+  "automation_enable",
+  "automation_test",
+  "automation_get_run",
+]);
+
+// Fallback for an unmapped tool: "monark_create_record" → "create record".
 function humanizeTool(name: string): string {
   return name.replace(/^monark_/, "").replace(/_/g, " ");
 }
@@ -27,7 +50,9 @@ export function ToolCallCard({
   pending: boolean;
 }) {
   const t = useTranslations("chat");
-  const action = humanizeTool(toolCall.toolName);
+  const action = LABELLED_TOOLS.has(toolCall.toolName)
+    ? t(`toolActions.${toolCall.toolName}`)
+    : humanizeTool(toolCall.toolName);
   const isProposed = toolCall.status === "PROPOSED";
   const isRunning = toolCall.status === "EXECUTING" || pending;
   const isError = toolCall.status === "FAILED";
