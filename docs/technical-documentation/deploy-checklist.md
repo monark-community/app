@@ -97,6 +97,11 @@ Most are operator-set (`sync: false` in [render.yaml](../../render.yaml)). Rende
 | `INITIAL_ORG_NAME`         | `Monark` (or your display name)                               |
 | `WEBHOOK_SECRETS_JSON`     | leave blank for now — fill once you create webhook endpoints  |
 
+Optional, depending on your setup :
+
+- **Error tracking** — set `SENTRY_DSN` to turn on server-side Sentry (a complete no-op if unset). See [observability.md](./observability.md).
+- **White-label branding** — set the `BRANDING_*` vars (`BRANDING_APP_NAME`, `BRANDING_TAGLINE`, `BRANDING_SUPPORT_EMAIL`, `BRANDING_PRIMARY`, `BRANDING_FROM_EMAIL`, `BRANDING_TOTP_ISSUER`, …) to your product's identity ; each is optional and falls back to the neutral starter default. See [white-label.md](./white-label.md).
+
 ### 1.4 Click "Apply"
 
 Render runs the build (`pnpm install` + `prisma generate`), the `preDeployCommand` (`prisma migrate deploy` against Supabase Postgres), then starts the api. Watch the logs in the dashboard.
@@ -110,6 +115,8 @@ Expected milestones in the api log :
 The `/health` endpoint should respond 200 ; Render's health check runs every 60 s.
 
 If `prisma migrate deploy` fails, the deploy aborts cleanly — fix the schema / DB credentials and push again.
+
+The singleton org is provisioned at api boot from `INITIAL_ORG_*` (idempotent — a restart on a healthy install is a no-op). To (re)provision without a restart — e.g. from a Render Shell with `DATABASE_URL` set — run `pnpm provision:org` (reads the same `INITIAL_ORG_*` env, or takes `--slug` / `--name` / `--color` flags).
 
 ### 1.5 Copy the api URL
 
@@ -143,6 +150,11 @@ Add these in the import dialog before clicking Deploy :
 | `NEXT_PUBLIC_APP_URL`                  | placeholder for now ; we'll update in Phase 3 once we know the real Vercel URL |
 
 Don't add `SUPABASE_SECRET_KEY` here — the web service must NEVER read the service-role key.
+
+Optional :
+
+- **Error tracking** — `NEXT_PUBLIC_SENTRY_DSN` turns on browser + web-server Sentry. For readable production stack traces, also set `SENTRY_ORG`, `SENTRY_PROJECT`, and `SENTRY_AUTH_TOKEN` (source-map upload at build time ; a build without the token still succeeds). See [observability.md](./observability.md).
+- **White-label branding** — mirror the api's `BRANDING_*` vars with the `NEXT_PUBLIC_BRANDING_*` duplicates (`NEXT_PUBLIC_BRANDING_APP_NAME`, `NEXT_PUBLIC_BRANDING_PRIMARY`, …) so the browser bundle picks them up. See [white-label.md](./white-label.md).
 
 ### 2.3 Pin the region
 
@@ -276,5 +288,5 @@ Run Phase 4 again against the custom domain to confirm everything still works en
 - **Multi-tenant mode.** The `tenancy.multi-tenant` feature flag is OFF by default. Flip it on only after the org-selector UI is wired (currently incomplete — see backlog).
 - **Backups.** Supabase auto-snapshots production projects daily ; verify the schedule in Supabase → Database → Backups. Render Postgres (if you ever swap off Supabase) needs explicit backup config.
 - **Log retention.** Render's free tier retains ~7 days of logs ; Vercel keeps ~3 days. For longer retention, ship to Logtail / Datadog / etc.
-- **Monitoring.** No external uptime / latency monitoring is wired here. Add UptimeRobot / Better Uptime / Pingdom against `https://api.yourdomain.com/health` and the web URL.
+- **Error tracking IS wired** — Sentry, opt-in per deployment via `SENTRY_DSN` (api) / `NEXT_PUBLIC_SENTRY_DSN` (web) ; see [observability.md](./observability.md). **Uptime / latency monitoring is NOT** — add UptimeRobot / Better Uptime / Pingdom against `https://api.yourdomain.com/health` and the web URL.
 - **CDN / caching.** Vercel's edge handles the web ; the api has no caching layer yet (every request hits the api process). Add a CDN (Cloudflare, etc.) only if you start serving heavy public-asset endpoints.
