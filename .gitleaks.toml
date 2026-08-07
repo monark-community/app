@@ -19,6 +19,11 @@ paths = [
   '''\.github/workflows/lighthouse\.yml$''',
   # e2e specs use fake test passwords (e.g. rotate/signup flows).
   '''services/web/tests/e2e/.*\.spec\.ts$''',
+  # The OAuth 1.0a signer test pins X's own *published* "Creating a signature"
+  # example credentials (a public documentation vector, not a real account) to
+  # verify the HMAC-SHA1 base string + signature ; `generic-api-key` flags the
+  # high-entropy example strings.
+  '''packages/twitter/tests/oauth1\.test\.ts$''',
 ]
 regexes = [
   # Documentation placeholder for a public-API key (the `mrk_` prefix) in the
