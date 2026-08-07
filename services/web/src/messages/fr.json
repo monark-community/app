@@ -175,7 +175,8 @@
         "data": "Données",
         "automation": "Automatisation",
         "github": "GitHub",
-        "telegram": "Telegram"
+        "telegram": "Telegram",
+        "twitter": "X"
       }
     },
     "userMenu": {
@@ -2206,6 +2207,31 @@
     "step2": "Copiez le jeton d'API HTTP fourni par BotFather, collez-le ci-dessus, puis Connecter.",
     "step3": "Nécessite une URL HTTPS publique que Telegram peut joindre — se connecter depuis localhost ne fonctionnera pas (Telegram refuse les webhooks non publics).",
     "step4": "Ajoutez votre bot à un groupe ou démarrez une conversation avec lui, puis utilisez les événements déclencheurs et les nœuds Telegram dans vos automatisations."
+  },
+  "twitter": {
+    "title": "X (Twitter)",
+    "subtitle": "Connectez un compte X pour que les automatisations puissent publier, répondre et supprimer des tweets. En écriture seule — X n'a pas d'événements déclencheurs.",
+    "noPermission": "Vous n'avez pas la permission de gérer la connexion X.",
+    "connectionHeading": "Connexion du compte",
+    "connected": "Connecté",
+    "notConnected": "Non connecté",
+    "connectHint": "Collez les identifiants OAuth 1.0a de votre application depuis le portail développeur X. Ils sont stockés en écriture seule et servent à signer les requêtes.",
+    "connectedHint": "X est connecté. Vos automatisations peuvent publier avec les nœuds d'action X.",
+    "fields": {
+      "consumerKey": "Clé API (consumer key)",
+      "consumerSecret": "Secret API (consumer secret)",
+      "accessToken": "Jeton d'accès (access token)",
+      "accessTokenSecret": "Secret du jeton d'accès (access token secret)"
+    },
+    "connect": "Connecter",
+    "disconnect": "Déconnecter",
+    "connectedToast": "X connecté.",
+    "disconnected": "X déconnecté.",
+    "setupHeading": "Configurer dans le portail développeur X",
+    "step1": "Sur developer.x.com, créez un projet + une application (un niveau payant est requis pour la plupart des accès ; le niveau gratuit permet de publier).",
+    "step2": "Dans les paramètres d'authentification de l'application, activez OAuth 1.0a avec les permissions Read and write.",
+    "step3": "Sous Keys and tokens, copiez la clé/le secret API et générez un jeton d'accès/secret pour votre compte.",
+    "step4": "Collez les quatre valeurs ci-dessus et Connecter. Les identifiants sont stockés chiffrés et ne seront plus affichés."
   },
   "calendar": {
     "title": "Calendrier",

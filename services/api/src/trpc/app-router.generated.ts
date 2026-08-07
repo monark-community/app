@@ -18,6 +18,7 @@ import { organizationsRouter } from "@monark/organizations/server"
 import { rbacRouter } from "@monark/rbac/server"
 import { secretsRouter } from "@monark/secrets/server"
 import { telegramRouter } from "@monark/telegram/server"
+import { twitterRouter } from "@monark/twitter/server"
 import { usersRouter } from "@monark/users/server"
 import { webhooksRouter } from "@monark/webhooks/server"
 
@@ -37,6 +38,7 @@ export const appRouter = router({
   rbac         : rbacRouter,
   secrets      : secretsRouter,
   telegram     : telegramRouter,
+  twitter      : twitterRouter,
   users        : usersRouter,
   webhooks     : webhooksRouter,
 })

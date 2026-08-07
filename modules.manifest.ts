@@ -24,6 +24,7 @@ export const MODULES = {
   "@monark/github": { tier: "extended", integrates: "@monark/automation" },
   "@monark/discord": { tier: "extended", integrates: "@monark/automation" },
   "@monark/telegram": { tier: "extended", integrates: "@monark/automation" },
+  "@monark/twitter": { tier: "extended", integrates: "@monark/automation" },
 } as const satisfies Record<string, ModuleMeta>;
 
 export type ModuleName = keyof typeof MODULES;

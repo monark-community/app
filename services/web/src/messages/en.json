@@ -175,7 +175,8 @@
         "data": "Data",
         "automation": "Automation",
         "github": "GitHub",
-        "telegram": "Telegram"
+        "telegram": "Telegram",
+        "twitter": "X"
       }
     },
     "userMenu": {
@@ -2206,6 +2207,31 @@
     "step2": "Copy the HTTP API token BotFather gives you and paste it above, then Connect.",
     "step3": "Requires a public HTTPS URL Telegram can reach — connecting from localhost won't work (Telegram rejects non-public webhooks).",
     "step4": "Add your bot to a group or start a chat with it, then use the Telegram trigger events + nodes in your automations."
+  },
+  "twitter": {
+    "title": "X (Twitter)",
+    "subtitle": "Connect an X account so automations can post, reply, and delete tweets. Write-only — X has no trigger events.",
+    "noPermission": "You don't have permission to manage the X connection.",
+    "connectionHeading": "Account connection",
+    "connected": "Connected",
+    "notConnected": "Not connected",
+    "connectHint": "Paste your app's OAuth 1.0a credentials from the X developer portal. They're stored write-only and used to sign requests.",
+    "connectedHint": "X is connected. Your automations can post with the X action nodes.",
+    "fields": {
+      "consumerKey": "API key (consumer key)",
+      "consumerSecret": "API secret (consumer secret)",
+      "accessToken": "Access token",
+      "accessTokenSecret": "Access token secret"
+    },
+    "connect": "Connect",
+    "disconnect": "Disconnect",
+    "connectedToast": "X connected.",
+    "disconnected": "X disconnected.",
+    "setupHeading": "Set up in the X developer portal",
+    "step1": "At developer.x.com, create a Project + App (a paid tier is required for most access; the free tier allows posting).",
+    "step2": "In the app's User authentication settings, enable OAuth 1.0a with Read and write permissions.",
+    "step3": "Under Keys and tokens, copy the API key/secret and generate an Access token/secret for your account.",
+    "step4": "Paste all four above and Connect. The credentials are stored encrypted and never shown again."
   },
   "calendar": {
     "title": "Calendar",

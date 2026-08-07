@@ -37,6 +37,7 @@ import {
   Box,
   Braces,
   ChevronDown,
+  AtSign,
   Clock,
   Copy,
   Database,
@@ -1821,6 +1822,7 @@ const NODE_ICON_BY_NAME: Record<string, LucideIcon> = {
   Github: GitPullRequest,
   Discord: MessagesSquare,
   Telegram: Send,
+  Twitter: AtSign,
   FunctionSquare: Sigma,
   DatabasePlus: Database,
   DatabasePen: Database,
@@ -1843,6 +1845,7 @@ const CATEGORY_ICON: Record<string, LucideIcon> = {
   github: GitPullRequest,
   discord: MessagesSquare,
   telegram: Send,
+  twitter: AtSign,
   test: FlaskConical,
 };
 function categoryIcon(category: string): LucideIcon {

@@ -86,6 +86,11 @@ import {
   handleTelegramWebhook,
 } from "@monark/telegram/server";
 import {
+  registerTwitterAutomationNodes,
+  registerTwitterFeatureFlags,
+  registerTwitterPermissions,
+} from "@monark/twitter/server";
+import {
   registerFilesEventTypes,
   registerFilesFeatureFlags,
   registerFilesPermissions,
@@ -139,6 +144,7 @@ registerKanbanFeatureFlags();
 registerGithubFeatureFlags();
 registerDiscordFeatureFlags();
 registerTelegramFeatureFlags();
+registerTwitterFeatureFlags();
 registerOrganizationsFeatureFlags();
 registerPublicApiFeatureFlags();
 
@@ -151,6 +157,7 @@ registerFilesPermissions();
 registerKanbanPermissions();
 registerGithubPermissions();
 registerTelegramPermissions();
+registerTwitterPermissions();
 registerOrganizationsPermissions();
 registerRbacPermissions();
 registerSecretsPermissions();
@@ -205,6 +212,7 @@ registerBuiltinAutomationNodes();
 registerGithubAutomationNodes();
 registerDiscordAutomationNodes();
 registerTelegramAutomationNodes();
+registerTwitterAutomationNodes();
 
 // Wire the in-app AI chat agent's tool executor over the SAME public-API route
 // registry (`V1_ROUTES`) the MCP server uses, but executed in-process through

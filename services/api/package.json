@@ -34,6 +34,7 @@
     "@monark/rbac": "workspace:*",
     "@monark/secrets": "workspace:*",
     "@monark/telegram": "workspace:*",
+    "@monark/twitter": "workspace:*",
     "@monark/users": "workspace:*",
     "@monark/webhooks": "workspace:*",
     "@sentry/node": "^10.69.0",

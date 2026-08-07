@@ -18,6 +18,7 @@ import type { PublicApiEvents } from "@monark/public-api/contracts"
 import type { RbacEvents } from "@monark/rbac/contracts"
 import type { SecretsEvents } from "@monark/secrets/contracts"
 import type { TelegramEvents } from "@monark/telegram/contracts"
+import type { TwitterEvents } from "@monark/twitter/contracts"
 import type { UsersEvents } from "@monark/users/contracts"
 import type { WebhooksEvents } from "@monark/webhooks/contracts"
 
@@ -39,5 +40,6 @@ export type DomainEvent =
   | RbacEvents
   | SecretsEvents
   | TelegramEvents
+  | TwitterEvents
   | UsersEvents
   | WebhooksEvents
