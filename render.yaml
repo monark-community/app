@@ -1,36 +1,57 @@
-# Render Blueprint for the Monark API + scheduled jobs.
+# Render Blueprint for the Monark API + scheduled jobs — BOTH environments.
 #
 # Deploy : push this branch, then in the Render dashboard go to
 # "New" → "Blueprint" → pick this repo. Render reads `render.yaml`
 # at the repo root, provisions every service below, and prompts for
 # any env var marked `sync: false`. Subsequent pushes auto-deploy.
 #
-# Architecture :
-#   - One Web Service runs the api (Express + tRPC) on port 4000.
-#   - Two Cron Job services hit the api's `/cron/*` endpoints with
-#     the shared CRON_SECRET. They don't need DB access ; the api
-#     stays the only service that talks to Postgres.
+# Environments (branch → env) :
+#   - PRODUCTION : services on `branch: main`    → `monark-api`, `monark-cron-*`
+#   - STAGING    : services on `branch: develop` → `monark-api-staging`, `monark-cron-*-staging`
 #
-# Migrations run via `preDeployCommand` on the api service (Prisma
-# `migrate deploy`). That fires once per deploy, after the build,
-# before the new instance becomes live, so a failing migration
-# rolls back the deploy without corrupting the running version.
+# A push to `main` redeploys production ; a push to `develop` redeploys
+# staging. The two sets are independent Render services with independent
+# env-var values, so staging must point at a SEPARATE Supabase project —
+# never share the production database. Full setup + the matching Vercel /
+# Supabase steps live in
+# docs/technical-documentation/environments.md.
+#
+# Architecture (per environment) :
+#   - One Web Service runs the api (Express + tRPC) on port 4000.
+#   - Two Cron Job services hit the api's `/cron/*` endpoints with the
+#     shared CRON_SECRET. They don't need DB access ; the api stays the
+#     only service that talks to Postgres.
+#
+# Migrations run via `preDeployCommand` on each api service (Prisma
+# `migrate deploy`) — once per deploy, after the build, before the new
+# instance goes live, so a failing migration rolls back the deploy
+# without corrupting the running version. Staging migrates its own DB ;
+# production migrates its own.
 #
 # Env-var conventions :
 #   - `value: ...` — committed, safe to publish.
-#   - `sync: false` — operator-set in the dashboard ; Render prompts
-#     on first deploy and remembers thereafter.
-#   - `fromGroup: ...` — shared across services via env-var groups.
-#     We keep CRON_SECRET in a group so the api + both cron jobs
-#     read the same value without pasting it three times.
+#   - `sync: false` — operator-set in the dashboard ; Render prompts on
+#     first deploy and remembers thereafter. Staging + production each
+#     hold their OWN value for every `sync: false` key.
+#   - `fromGroup: ...` — shared across the services of ONE environment
+#     via env-var groups (prod uses `monark-cron-shared`, staging uses
+#     `monark-cron-shared-staging`).
+#
+# The build / migrate / cron commands are identical across environments,
+# so they're defined once as YAML anchors (`&name`) on the production
+# services and referenced (`*name`) on the staging ones.
 
-# Shared env-var group : carries CRON_SECRET + API_URL so the api
-# and both cron jobs read identical values. Edit once in the
-# dashboard's "Env Groups" panel ; every linked service picks it up
-# on next deploy. Marked `sync: false` so the operator sets the
-# real values in the dashboard.
 envVarGroups:
+  # Production : CRON_SECRET + API_URL shared by the prod api + prod crons.
   - name: monark-cron-shared
+    envVars:
+      - key: CRON_SECRET
+        sync: false
+      - key: API_URL
+        sync: false
+  # Staging : a separate group so the staging crons hit the staging api
+  # with the staging secret. Never reuse the production values here.
+  - name: monark-cron-shared-staging
     envVars:
       - key: CRON_SECRET
         sync: false
@@ -38,13 +59,16 @@ envVarGroups:
         sync: false
 
 services:
-  # ----- API ----------------------------------------------------------------
+  # ══════════════════════════════════════════════════════════════════════
+  # PRODUCTION — deploys on push to `main`
+  # ══════════════════════════════════════════════════════════════════════
+
+  # ----- API (production) ---------------------------------------------------
   # Long-running Web Service for the api. Runs `tsx src/server.ts`
-  # directly ; we deliberately don't ship a build step yet because
-  # the source-only path keeps the deploy story minimal and the
-  # ~200ms tsx boot overhead is fine for a backend service. When
-  # cold-start matters we'll compile to dist/ and switch to native
-  # node, but that's a follow-up.
+  # directly ; we deliberately don't ship a build step yet because the
+  # source-only path keeps the deploy story minimal and the ~200ms tsx
+  # boot overhead is fine for a backend service. When cold-start matters
+  # we'll compile to dist/ and switch to native node — a follow-up.
   - type: web
     name: monark-api
     runtime: node
@@ -52,44 +76,37 @@ services:
     region: oregon
     branch: main
     rootDir: .
-    # Render runs builds on shared infrastructure ; corepack is
-    # already installed but not enabled by default. Enabling it
-    # picks up the pnpm version pinned in the root package.json's
-    # `packageManager` field. The Prisma generate step has to run
-    # at build time so the @prisma/client output lands in
-    # node_modules before the api imports it.
-    buildCommand: |
+    # Render runs builds on shared infra ; corepack is installed but not
+    # enabled by default. Enabling it picks up the pnpm version pinned in
+    # the root package.json's `packageManager`. Prisma generate runs at
+    # build time so @prisma/client lands in node_modules before the api
+    # imports it.
+    buildCommand: &api-build |
       corepack enable
       pnpm install --frozen-lockfile
       pnpm --filter @monark/db exec prisma generate
-    # `migrate deploy` is the prod-style runner — applies any
-    # pending migrations without prompting + never resets the
-    # database. Runs after build, before traffic flips to the new
-    # instance. A failing migration aborts the deploy.
-    preDeployCommand: pnpm --filter @monark/db exec prisma migrate deploy
-    startCommand: pnpm --filter api start:prod
+    # `migrate deploy` — applies pending migrations without prompting and
+    # never resets the DB. Runs after build, before traffic flips. A
+    # failing migration aborts the deploy.
+    preDeployCommand: &api-migrate pnpm --filter @monark/db exec prisma migrate deploy
+    startCommand: &api-start pnpm --filter api start:prod
     healthCheckPath: /health
     autoDeploy: true
     envVars:
       - key: NODE_ENV
         value: production
       # Render injects PORT for Web Services ; the api reads it via
-      # `process.env.PORT ?? 4000`. Listing it here so the contract
-      # is explicit.
+      # `process.env.PORT ?? 4000`. Listed so the contract is explicit.
       - key: PORT
         value: 4000
-      # Database — point at the production Supabase project's pooler
-      # URL for DATABASE_URL (transaction mode, used by Prisma at
-      # runtime) and the direct connection for DIRECT_URL (used by
-      # `migrate deploy` since migrations need a direct session).
+      # Database — the PRODUCTION Supabase project's pooler URL for
+      # DATABASE_URL (transaction mode, runtime) and the direct
+      # connection for DIRECT_URL (migrate deploy needs a direct session).
       - key: DATABASE_URL
         sync: false
       - key: DIRECT_URL
         sync: false
-      # Supabase Auth + admin keys. `SUPABASE_PUBLISHABLE_KEY` is
-      # the new name for what older docs call the anon key ;
-      # `SUPABASE_SECRET_KEY` is the service-role key (never
-      # expose to clients).
+      # Supabase Auth + admin keys (production project).
       - key: SUPABASE_URL
         sync: false
       - key: SUPABASE_PUBLISHABLE_KEY
@@ -97,47 +114,51 @@ services:
       - key: SUPABASE_SECRET_KEY
         sync: false
       # CORS + cookie origin = the production web URL (e.g.
-      # https://app.monark.io). The api gates cross-origin requests
-      # on this and the trusted-device cookie reads it for SameSite.
+      # https://app.monark.io).
       - key: WEB_ORIGIN
         sync: false
       - key: APP_URL
         sync: false
-      # Outbound mail. SMTP_URL = `smtps://user:pass@host:port` ; in
-      # production this should target a transactional provider
-      # (Resend / Postmark / SES). SMTP_FROM is the From: header.
+      # Outbound mail (production transactional provider).
       - key: SMTP_URL
         sync: false
       - key: SMTP_FROM
         sync: false
-      # AES-256-GCM key for encrypting TOTP secrets at rest. 32
-      # bytes hex-encoded ; rotating this invalidates every existing
-      # TOTP secret and forces re-enrollment.
+      # AES-256-GCM key for TOTP secrets at rest (32 bytes hex). Rotating
+      # invalidates every enrollment.
       - key: TOTP_ENCRYPTION_KEY
         sync: false
-      # Single-tenant bootstrap : the api's boot path will
-      # auto-create one organization with this slug + display name
-      # if none exists. Skip / leave blank in multi-tenant mode.
+      # AES-256-GCM key for the org-secrets store (@monark/secrets), used
+      # by every module that reads an org secret (github / discord /
+      # telegram / …). Separate key from TOTP so their blast radius stays
+      # independent. Required once any secret-using module is enabled.
+      - key: SECRETS_ENCRYPTION_KEY
+        sync: false
+      # Single-tenant bootstrap : the api auto-creates one org with this
+      # slug + name at boot if none exists. Blank in multi-tenant mode.
       - key: INITIAL_ORG_SLUG
         sync: false
       - key: INITIAL_ORG_NAME
         sync: false
-      # Webhook signing secrets. The env-var resolver reads either
-      # WEBHOOK_SECRETS_JSON (a JSON map of `{ endpointId: secret }`)
-      # or WEBHOOK_SECRET_<endpointId> per-endpoint vars. Single-
-      # tenant deploys can ship without an external secret store
-      # this way ; multi-tenant should swap in AWS Secrets Manager
-      # / Vault via `setWebhookSecretStore()` at api boot.
+      # Error tracking (Sentry). Optional — unset = a complete no-op.
+      # SENTRY_ENVIRONMENT tags events so prod + staging are
+      # distinguishable in the Sentry UI. See observability.md.
+      - key: SENTRY_DSN
+        sync: false
+      - key: SENTRY_ENVIRONMENT
+        value: production
+      # Webhook signing secrets (JSON map or per-endpoint vars). See
+      # webhook-secret-resolver.md.
       - key: WEBHOOK_SECRETS_JSON
         sync: false
-      # Shared with cron jobs.
+      # White-label branding is optional and set per deployment via the
+      # BRANDING_* vars — add them here as `sync: false` if this deploy
+      # is not "Monark". See white-label.md.
       - fromGroup: monark-cron-shared
 
-  # ----- CRON : account-deletion sweep --------------------------------------
-  # Hard-deletes Users whose 14-day deletion grace has elapsed.
-  # Without this, deletion-pending rows accumulate forever — a
-  # GDPR-class problem. Daily at 03:00 UTC ; idempotent so a missed
-  # run just gets cleaned up the next day.
+  # ----- CRON : account-deletion sweep (production) -------------------------
+  # Hard-deletes Users whose 14-day deletion grace has elapsed. Daily at
+  # 03:00 UTC ; idempotent so a missed run just gets cleaned up next day.
   - type: cron
     name: monark-cron-deletions
     runtime: node
@@ -146,16 +167,12 @@ services:
     branch: main
     rootDir: .
     schedule: "0 3 * * *"
-    # Render requires a buildCommand for cron services. The
-    # one-liner crons below only need Node's built-in fetch so no
-    # workspace install is required ; an empty `:` keeps the build
-    # near-instant.
+    # Render requires a buildCommand for cron services ; these one-liners
+    # only need Node's built-in fetch, so `:` keeps the build instant.
     buildCommand: ":"
-    # Inline `node -e` posts to the api with the shared CRON_SECRET.
-    # Exit non-zero on any 4xx/5xx so Render flags the run as
-    # failed in the dashboard ; otherwise log + exit 0 so the
-    # success metric is honest. node:fetch is stable on Node 22.
-    startCommand: |
+    # Inline `node -e` posts to the api with the shared CRON_SECRET. Exit
+    # non-zero on any 4xx/5xx so Render flags the run as failed.
+    startCommand: &cron-deletions |
       node -e "
         const url = process.env.API_URL + '/cron/process-account-deletions';
         const secret = process.env.CRON_SECRET;
@@ -171,12 +188,9 @@ services:
     envVars:
       - fromGroup: monark-cron-shared
 
-  # ----- CRON : webhook delivery sweep --------------------------------------
-  # In-process worker on the api ticks every 5s, but a single api
-  # crash mid-tick could strand the outbox. This external sweep
-  # runs every 5 min as a backstop — `tickOnce` is idempotent so
-  # the overlap is harmless, and the cron ensures a 5-min upper
-  # bound on stuck deliveries even if the api is asleep.
+  # ----- CRON : webhook delivery sweep (production) -------------------------
+  # Backstop for the in-process outbox worker : every 5 min, `tickOnce`
+  # (idempotent) so a mid-tick api crash can't strand a delivery > 5 min.
   - type: cron
     name: monark-cron-webhook-sweep
     runtime: node
@@ -186,7 +200,7 @@ services:
     rootDir: .
     schedule: "*/5 * * * *"
     buildCommand: ":"
-    startCommand: |
+    startCommand: &cron-webhook |
       node -e "
         const url = process.env.API_URL + '/cron/sweep-webhook-deliveries';
         const secret = process.env.CRON_SECRET;
@@ -201,3 +215,98 @@ services:
       "
     envVars:
       - fromGroup: monark-cron-shared
+
+  # ══════════════════════════════════════════════════════════════════════
+  # STAGING — deploys on push to `develop`
+  #
+  # Mirror of production on the `develop` branch, pointing at a SEPARATE
+  # Supabase project. Same build / migrate / start / cron commands (shared
+  # via the anchors above) ; independent `sync: false` values. A cheaper
+  # plan is fine here — bump `plan:` down if you want.
+  # ══════════════════════════════════════════════════════════════════════
+
+  # ----- API (staging) ------------------------------------------------------
+  - type: web
+    name: monark-api-staging
+    runtime: node
+    plan: starter
+    region: oregon
+    branch: develop
+    rootDir: .
+    buildCommand: *api-build
+    preDeployCommand: *api-migrate
+    startCommand: *api-start
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      # NODE_ENV stays `production` so staging behaves like prod (strict
+      # CORS, prod Next runtime) ; SENTRY_ENVIRONMENT is what separates
+      # the two in dashboards.
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 4000
+      # STAGING Supabase project — a different project from production.
+      - key: DATABASE_URL
+        sync: false
+      - key: DIRECT_URL
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_PUBLISHABLE_KEY
+        sync: false
+      - key: SUPABASE_SECRET_KEY
+        sync: false
+      # The staging web URL (e.g. https://staging.monark.io or the Vercel
+      # `develop` branch domain).
+      - key: WEB_ORIGIN
+        sync: false
+      - key: APP_URL
+        sync: false
+      - key: SMTP_URL
+        sync: false
+      - key: SMTP_FROM
+        sync: false
+      - key: TOTP_ENCRYPTION_KEY
+        sync: false
+      - key: SECRETS_ENCRYPTION_KEY
+        sync: false
+      - key: INITIAL_ORG_SLUG
+        sync: false
+      - key: INITIAL_ORG_NAME
+        sync: false
+      - key: SENTRY_DSN
+        sync: false
+      - key: SENTRY_ENVIRONMENT
+        value: staging
+      - key: WEBHOOK_SECRETS_JSON
+        sync: false
+      - fromGroup: monark-cron-shared-staging
+
+  # ----- CRON : account-deletion sweep (staging) ---------------------------
+  - type: cron
+    name: monark-cron-deletions-staging
+    runtime: node
+    plan: starter
+    region: oregon
+    branch: develop
+    rootDir: .
+    schedule: "0 3 * * *"
+    buildCommand: ":"
+    startCommand: *cron-deletions
+    envVars:
+      - fromGroup: monark-cron-shared-staging
+
+  # ----- CRON : webhook delivery sweep (staging) ---------------------------
+  - type: cron
+    name: monark-cron-webhook-sweep-staging
+    runtime: node
+    plan: starter
+    region: oregon
+    branch: develop
+    rootDir: .
+    schedule: "*/5 * * * *"
+    buildCommand: ":"
+    startCommand: *cron-webhook
+    envVars:
+      - fromGroup: monark-cron-shared-staging

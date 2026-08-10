@@ -2,6 +2,8 @@
 
 Step-by-step walkthrough for a fresh production deploy. Assumes a single-tenant launch ; multi-tenant has additional setup not covered here.
 
+> This walkthrough sets up **production** (branch `main`). For the full two-environment model — a **staging** environment that auto-deploys from `develop` alongside production — see [environments.md](environments.md) ; it reuses these same steps against a separate Supabase project + the `*-staging` Render services.
+
 The dependency graph forces this order :
 
 1. **Supabase production project** — Auth + Postgres. Both web and api read its keys.
@@ -20,15 +22,16 @@ Allow ~60 min the first time. Re-deploys after this take ~5 min each.
 
 ### 0.1 Generate the deploy-time secrets
 
-Two values you'll paste into Render. Generate them once, store in your password manager :
+Three values you'll paste into Render. Generate them once, store in your password manager :
 
 ```sh
 # Linux / macOS / Git Bash on Windows
 openssl rand -hex 32   # → TOTP_ENCRYPTION_KEY (32 bytes hex = 64 chars)
+openssl rand -hex 32   # → SECRETS_ENCRYPTION_KEY (org-secrets store ; separate key from TOTP)
 openssl rand -hex 32   # → CRON_SECRET
 ```
 
-Both are operator secrets — never commit, never share over chat. Rotating `TOTP_ENCRYPTION_KEY` invalidates every existing TOTP enrollment ; rotating `CRON_SECRET` is harmless mid-month.
+These are operator secrets — never commit, never share over chat. Rotating `TOTP_ENCRYPTION_KEY` invalidates every existing TOTP enrollment ; rotating `SECRETS_ENCRYPTION_KEY` invalidates every stored org secret (webhook + integration credentials must be re-entered) ; rotating `CRON_SECRET` is harmless mid-month.
 
 ### 0.2 Create a production Supabase project
 
@@ -57,16 +60,14 @@ Postmark / SES / Brevo / Mailgun all work the same way — `smtps://username:pas
 
 ### 1.1 Connect the GitHub repo to Render
 
-[render.com](https://render.com) → New → Blueprint. Pick this repo + the branch you want to deploy from (`main` recommended).
+[render.com](https://render.com) → New → Blueprint. Pick this repo.
 
-Render reads [`render.yaml`](../../render.yaml) at the repo root and lists three services + one env-var group :
+Render reads [`render.yaml`](../../render.yaml) at the repo root, which defines **both** environments — production services on `branch: main` and mirror `*-staging` services on `branch: develop`. It lists six services + two env-var groups :
 
-- `monark-api` (Web Service)
-- `monark-cron-deletions` (Cron Job)
-- `monark-cron-webhook-sweep` (Cron Job)
-- `monark-cron-shared` (env-var group)
+- **Production** (`main`) : `monark-api`, `monark-cron-deletions`, `monark-cron-webhook-sweep`, and the `monark-cron-shared` group.
+- **Staging** (`develop`) : `monark-api-staging`, `monark-cron-deletions-staging`, `monark-cron-webhook-sweep-staging`, and the `monark-cron-shared-staging` group.
 
-Don't click "Apply" yet. Open the env-var prompts first.
+For this production walkthrough, fill only the **production** services + `monark-cron-shared` below ; leave the `*-staging` ones for when you stand up staging (see [environments.md](environments.md)). Don't click "Apply" yet — open the env-var prompts first.
 
 ### 1.2 Fill the `monark-cron-shared` env-var group
 
@@ -93,6 +94,7 @@ Most are operator-set (`sync: false` in [render.yaml](../../render.yaml)). Rende
 | `SMTP_URL`                 | from 0.3                                                      |
 | `SMTP_FROM`                | `Monark <noreply@yourdomain.com>`                             |
 | `TOTP_ENCRYPTION_KEY`      | from 0.1                                                      |
+| `SECRETS_ENCRYPTION_KEY`   | from 0.1 (org-secrets store — required once any secret-using module is on) |
 | `INITIAL_ORG_SLUG`         | `monark` (or whatever slug your singleton org should have)    |
 | `INITIAL_ORG_NAME`         | `Monark` (or your display name)                               |
 | `WEBHOOK_SECRETS_JSON`     | leave blank for now — fill once you create webhook endpoints  |
