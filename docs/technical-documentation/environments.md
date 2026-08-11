@@ -19,6 +19,11 @@ points at its own Supabase project so you can seed, migrate, and break it withou
 touching production data. Every `sync: false` env var in
 [`render.yaml`](../../render.yaml) holds a *separate* value per environment.
 
+> This guide covers the two environments of **one** instance. To run **many**
+> isolated single-tenant instances — one per business, each with its own
+> database + domain via containers + Cloudflare — see
+> [multi-instance.md](multi-instance.md).
+
 ## Promotion flow
 
 ```

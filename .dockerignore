@@ -1,0 +1,30 @@
+# Build context trimming for the api Docker image (context = repo root).
+# node_modules is reinstalled inside the image ; build outputs + caches are
+# regenerated ; and env files with secrets must NEVER be baked into an image.
+
+# Dependencies — reinstalled in the image
+**/node_modules
+
+# Build outputs + caches
+**/.next
+**/dist
+**/.turbo
+**/coverage
+**/.cache
+**/playwright-report
+
+# VCS + CI (no .git ⇒ the prepare/simple-git-hooks step is skipped via env)
+.git
+.gitignore
+.github
+
+# Secrets — never copy real env files into the image (keep the .example ones)
+**/.env
+**/.env.*
+!**/.env.example
+
+# Editor / OS / logs
+**/*.log
+**/.DS_Store
+.vscode
+.idea
