@@ -87,6 +87,11 @@ const statements = (result.stdout ?? "")
 // Extend this list (with a comment) only for another genuine raw-SQL divergence.
 const ALLOWLIST: RegExp[] = [
   /^DROP INDEX "DataRecord_data_gin"$/,
+  // pg_trgm trigram indexes (fuzzy / full-text search across modules —
+  // Automation, CalendarEvent, DataRecord, KanbanCard, WikiPage, …) are created
+  // in raw-SQL migrations ; Prisma's schema has no trigram index type, so the
+  // datamodel doesn't know about them and migrate diff always "drops" them.
+  /^DROP INDEX ".*_trgm"$/,
   /^ALTER TABLE "TrustedDevice" ALTER COLUMN "expiresAt" SET DEFAULT /,
 ];
 
