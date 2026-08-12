@@ -37,6 +37,10 @@
     "./rate-limit": {
       "types": "./src/rate-limit.ts",
       "default": "./src/rate-limit.ts"
+    },
+    "./blocks": {
+      "types": "./src/blocks.ts",
+      "default": "./src/blocks.ts"
     }
   },
   "scripts": {

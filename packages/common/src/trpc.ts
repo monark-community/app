@@ -5,6 +5,10 @@ export interface TrpcContext {
   userId: string | null;
   activeOrganizationId: string | null;
   requestId: string;
+  /** Best-effort client IP, used to rate-limit anonymous surfaces (e.g. public
+   *  form submissions). Optional so in-process callers (tests, workers) that
+   *  build a context by hand don't have to supply it. */
+  clientIp?: string | null;
 }
 
 const t = initTRPC.context<TrpcContext>().create();
