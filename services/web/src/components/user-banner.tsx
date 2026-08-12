@@ -69,7 +69,7 @@ export type UserBannerEditConfig = {
  *   └──────────────────────────────────────────────┘
  *
  * Bleeds full-width via negative horizontal margins so the banner
- * stretches to the page-layout's content edges (offset by the
+ * stretches to the section shell's content edges (offset by the
  * caller's wrapper padding). Pass `className` on the wrapper if a
  * specific layout needs different bleed offsets.
  *
@@ -323,16 +323,16 @@ export function UserBanner({
   return (
     <section
       className={cn(
-        // Full-bleed hero. Below `xl` there are no PageLayout rails, so the
+        // Full-bleed hero. Below `xl` there are no SectionShell rails, so the
         // `w-screen` + `ml-[calc(50%-50vw)]` trick pulls the section to the
         // *viewport* edges regardless of how deeply it's nested in the
-        // centered content column. At `xl+` PageLayout docks its content into
-        // the region to the right of the fixed `w-72` (18rem) sidebar, so the
-        // bleed must match : span from the sidebar's right edge to the
+        // centered content column. At `xl+` SectionShell docks its content
+        // into the region to the right of the fixed `w-72` (18rem) sidebar,
+        // so the bleed must match : span from the sidebar's right edge to the
         // viewport's right edge (`w-[calc(100vw-18rem)]`, offset so its left
         // edge lands at 18rem). This keeps the hero — and its centered hover
         // pen — aligned with the docked content instead of spilling under the
-        // sidebar. (Assumes the standard PageLayout dock ; the two full-page
+        // sidebar. (Assumes the standard SectionShell dock ; the two full-page
         // banner surfaces both render under a sidebar.) The avatar / headline
         // row below re-constrains itself to the content gutter so it stays
         // anchored where the form fields sit. `-mt-8` flushes the top edge

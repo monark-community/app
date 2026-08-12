@@ -1,3 +1,4 @@
+import type { DocumentBlock } from "@monark/common/blocks";
 import type { BadgeProps } from "@/components/ui/badge";
 
 /**
@@ -115,6 +116,12 @@ export interface RichTextFieldDef extends BaseFieldDef {
   minHeight?: number;
 }
 
+export interface DocumentFieldDef extends BaseFieldDef {
+  type: "document";
+  /** Grow the editor to fill the parent's height (flex column parent). */
+  fill?: boolean;
+}
+
 export interface NumberFieldDef extends BaseFieldDef {
   type: "number";
   min?: number;
@@ -220,6 +227,7 @@ export type FieldDef =
   | TextFieldDef
   | LongTextFieldDef
   | RichTextFieldDef
+  | DocumentFieldDef
   | NumberFieldDef
   | BooleanFieldDef
   | DateFieldDef
@@ -239,7 +247,7 @@ export type FieldType = FieldDef["type"];
  * loose (the registry's zod schema is the real contract) ; callers get
  * precise types from their own zod-inferred payload.
  */
-export type FieldValue = string | string[] | number | boolean | Date | null;
+export type FieldValue = string | string[] | number | boolean | Date | DocumentBlock[] | null;
 
 /** The empty / initial value for a field, used to seed `defaultValues`. */
 export function defaultValueFor(def: FieldDef): FieldValue {
@@ -250,6 +258,8 @@ export function defaultValueFor(def: FieldDef): FieldValue {
     case "url":
     case "email":
       return "";
+    case "document":
+      return [];
     case "number":
       return null;
     case "boolean":

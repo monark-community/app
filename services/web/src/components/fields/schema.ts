@@ -27,6 +27,8 @@ function toValueShape(def: FieldDef): DataFieldValueShape {
       };
     case "richText":
       return { type: "RICH_TEXT", required: def.required };
+    case "document":
+      return { type: "DOCUMENT", required: def.required };
     case "url":
       return { type: "URL", required: def.required, maxLength: def.maxLength };
     case "email":

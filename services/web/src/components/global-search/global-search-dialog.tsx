@@ -1,8 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { keepPreviousData } from "@tanstack/react-query";
+import {
+  BookText,
+  CalendarDays,
+  Database,
+  Search,
+  SquareKanban,
+  Workflow,
+  type LucideIcon,
+} from "lucide-react";
 import {
   CommandDialog,
   CommandEmpty,
@@ -13,7 +23,6 @@ import {
 } from "@/components/ui/command";
 import { trpc } from "@/lib/trpc";
 import { SEARCH_ROUTES } from "./routes";
-import { SEARCH_PROVIDERS } from "./search-providers";
 import { SEARCH_MIN_QUERY } from "./search-contract";
 
 function useDebounced<T>(value: T, ms: number): T {
@@ -25,17 +34,26 @@ function useDebounced<T>(value: T, ms: number): T {
   return debounced;
 }
 
+// Fallback icon per source group (a hit's own glyph, e.g. a wiki page's emoji,
+// wins when present). A new module's source adds its `groupId` here + a
+// `globalSearch.groups.<groupId>` heading ; unknown groups get the search glyph.
+const GROUP_ICON: Record<string, LucideIcon> = {
+  wiki: BookText,
+  kanban: SquareKanban,
+  calendar: CalendarDays,
+  data: Database,
+  automation: Workflow,
+};
+
 /**
- * The global command palette body. Two kinds of result:
- *   1. Contextual content — the current section's entities, contributed by the
- *      registered {@link SEARCH_PROVIDERS} active on this path (calendar events,
- *      kanban cards, data records, …). Each provider owns its own fetch + group.
- *   2. Navigation — a "Go to" list of app destinations (derived from the drawer
- *      nav) filtered by the query.
+ * The global command palette body. One aggregating query (`search.global`) fans
+ * out across every registered search source (server-side, RBAC-scoped per
+ * source) and returns results grouped by module — so search is **global**, not
+ * tied to the current section. Below the content groups sits a "Go to" list of
+ * app destinations (from the drawer nav) filtered here.
  *
- * cmdk's built-in filtering is disabled (`shouldFilter={false}`) : content
- * results are filtered server-side and nav results are filtered here, so we
- * render exactly what should show.
+ * cmdk's built-in filtering is off (`shouldFilter={false}`) : content is filtered
+ * server-side and nav is filtered here, so we render exactly what should show.
  */
 export function GlobalSearchDialog({
   open,
@@ -47,7 +65,6 @@ export function GlobalSearchDialog({
   const t = useTranslations("globalSearch");
   const tRoot = useTranslations();
   const router = useRouter();
-  const pathname = usePathname();
 
   const [query, setQuery] = useState("");
   const debounced = useDebounced(query.trim(), 250);
@@ -65,6 +82,12 @@ export function GlobalSearchDialog({
   });
   const isAdmin = isAdminQuery.data === true;
 
+  const searchQuery = trpc.search.global.useQuery(
+    { query: debounced },
+    { enabled: open && canSearch, placeholderData: keepPreviousData, refetchOnWindowFocus: false },
+  );
+  const groups = canSearch ? (searchQuery.data ?? []) : [];
+
   function go(href: string) {
     onOpenChange(false);
     router.push(href);
@@ -77,19 +100,40 @@ export function GlobalSearchDialog({
       ? routes
       : routes.filter((r) => tRoot(r.labelKey).toLowerCase().includes(navNeedle));
 
-  const activeProviders = SEARCH_PROVIDERS.filter((p) => p.isActive(pathname));
-
   return (
     <CommandDialog open={open} onOpenChange={onOpenChange} shouldFilter={false} label={t("label")}>
       <CommandInput value={query} onValueChange={setQuery} placeholder={t("placeholder")} />
       <CommandList>
-        <CommandEmpty>{t("empty")}</CommandEmpty>
+        <CommandEmpty>
+          {canSearch && searchQuery.isFetching ? t("searching") : t("empty")}
+        </CommandEmpty>
 
-        {open &&
-          canSearch &&
-          activeProviders.map((provider) => (
-            <provider.Results key={provider.id} query={debounced} onNavigate={go} />
-          ))}
+        {groups.map((group) => {
+          const GroupIcon = GROUP_ICON[group.groupId] ?? Search;
+          return (
+            <CommandGroup key={group.groupId} heading={t(`groups.${group.groupId}`)}>
+              {group.hits.map((hit) => (
+                <CommandItem
+                  key={`${group.groupId}-${hit.id}`}
+                  value={`${group.groupId}-${hit.id}`}
+                  onSelect={() => go(hit.href)}
+                >
+                  {hit.icon ? (
+                    <span aria-hidden>{hit.icon}</span>
+                  ) : (
+                    <GroupIcon className="text-muted-foreground" />
+                  )}
+                  <span className="min-w-0 flex-1 truncate">{hit.title}</span>
+                  {hit.subtitle && (
+                    <span className="ml-2 shrink-0 truncate text-xs text-muted-foreground">
+                      {hit.subtitle}
+                    </span>
+                  )}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          );
+        })}
 
         {navMatches.length > 0 && (
           <CommandGroup heading={t("groups.navigation")}>

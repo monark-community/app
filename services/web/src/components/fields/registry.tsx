@@ -8,6 +8,7 @@ import { NumberField } from "./inputs/number-field";
 import { FileField } from "./inputs/file-field";
 import { RelationField } from "./inputs/relation-field";
 import { RichTextField } from "./inputs/rich-text-field";
+import { BlockField } from "./inputs/block-field";
 import { SingleSelectField } from "./inputs/single-select-field";
 import { EmailField, LongTextField, TextField, UrlField } from "./inputs/text-fields";
 import type { FieldDef, FieldLabels, FieldType } from "./types";
@@ -27,6 +28,8 @@ export function FieldInput({ def, labels }: { def: FieldDef; labels: FieldLabels
       return <LongTextField def={def} labels={labels} />;
     case "richText":
       return <RichTextField def={def} labels={labels} />;
+    case "document":
+      return <BlockField def={def} labels={labels} />;
     case "number":
       return <NumberField def={def} labels={labels} />;
     case "boolean":
@@ -62,6 +65,7 @@ export const FIELD_TYPE_META: Record<FieldType, FieldTypeMeta> = {
   text: { align: "left" },
   longText: { align: "left" },
   richText: { align: "left" },
+  document: { align: "left" },
   number: { align: "right" },
   boolean: { align: "left" },
   date: { align: "left" },

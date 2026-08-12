@@ -24,7 +24,7 @@ type SidebarProps = {
   ariaLabel?: string;
   /**
    * `vertical` (default) renders a stacked column ; intended for the
-   * left rail on `xl+` viewports, slot inside `<PageLayout sidebar>`.
+   * left rail on `xl+` viewports, slot inside `<SectionShell sidebar>`.
    *
    * `horizontal` renders a scrollable row that expands to the page edge
    * via negative margins ; intended for the mobile fallback when the
@@ -42,7 +42,7 @@ type SidebarProps = {
  * floats from the AppBar).
  *
  * Sized intrinsically by its parent slot — the `xl+` slot in
- * `<PageLayout sidebar>` is `18rem`, matching the popover's `w-72`. On
+ * `<SectionShell sidebar>` is `18rem`, matching the popover's `w-72`. On
  * mobile (horizontal orientation) the bar takes 100% of its row and
  * scrolls.
  *

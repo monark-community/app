@@ -12,6 +12,7 @@ import { NotificationsList, useUnreadNotificationCount } from "@/components/noti
 import { signOutAction } from "@/app/(anon)/signin/actions";
 import { rewriteForCurrentHost } from "@/lib/dev-host-rewrite";
 import { trpc } from "@/lib/trpc";
+import { useShellWidgets } from "@/config/shell-widgets";
 import { cn } from "@/lib/utils";
 
 // "About you" links land on the account-shell sub-routes.
@@ -56,6 +57,7 @@ export function UserMenu() {
   const [isSigningOut, startSignOut] = useTransition();
   const unreadCount = useUnreadNotificationCount();
   const badgeLabel = unreadCount > 9 ? "9+" : String(unreadCount);
+  const accountWidgets = useShellWidgets("account-menu");
 
   const avatarUrl = me.data?.avatarUrl ? rewriteForCurrentHost(me.data.avatarUrl) : null;
   const bannerUrl = me.data?.bannerUrl ? rewriteForCurrentHost(me.data.bannerUrl) : null;
@@ -175,11 +177,26 @@ export function UserMenu() {
               </div>
 
               <div className="mt-4 flex flex-col gap-4 px-4">
-                <div className="grid grid-cols-2 gap-3">
-                  <ComingSoonCard />
-                  <ComingSoonCard />
-                </div>
-                <ComingSoonCard className="h-20" />
+                {/* Account-menu widget slot : modules (e.g. achievements) drop
+                    cards here via config/shell-widgets ; falls back to the
+                    placeholders until a widget is registered + flagged on. */}
+                {accountWidgets.length > 0 ? (
+                  <div className="grid grid-cols-2 gap-3">
+                    {accountWidgets.map((w) => (
+                      <div key={w.id} className={w.span === 2 ? "col-span-2" : undefined}>
+                        <w.Component onNavigate={() => setOpen(false)} />
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-2 gap-3">
+                      <ComingSoonCard />
+                      <ComingSoonCard />
+                    </div>
+                    <ComingSoonCard className="h-20" />
+                  </>
+                )}
 
                 <div className="mt-2 space-y-2">
                   <p className="text-xs font-medium text-muted-foreground">{t("forYou")}</p>

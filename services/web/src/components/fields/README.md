@@ -35,20 +35,21 @@ Import from the barrel : `import { AutoForm, fieldColumn, … } from "@/componen
 
 ## Field types
 
-| Type           | Form control                | Cell                      | Notes                                                                                             |
-| -------------- | --------------------------- | ------------------------- | ------------------------------------------------------------------------------------------------- |
-| `text`         | `Input`                     | truncated text            | `maxLength` caps input ; shown as an error only if exceeded (no persistent counter)               |
-| `longText`     | `Textarea` (auto-grow)      | muted truncated           | `maxLength` caps input ; shown as an error only if exceeded (no persistent counter)               |
-| `richText`     | Tiptap WYSIWYG + toolbar    | plain-text preview        | stores sanitized HTML ; render read-only with `RichTextView`                                      |
-| `number`       | affixed `Input`             | right-aligned, formatted  | `min`/`max`/`step`/`integer`/`prefix`/`suffix`                                                    |
-| `boolean`      | `Switch` (or `checkbox`)    | check / dash icon         | settings-style row                                                                                |
-| `date`         | `Popover` + `Calendar`      | `Intl` date, muted        | clear button                                                                                      |
-| `datetime`     | `Calendar` + `TimePicker`   | `Intl` date-time          |                                                                                                   |
-| `singleSelect` | `Select` / combobox / radio | `Badge` (optional `tone`) | combobox above 8 options or `searchable` ; `badges` renders colored option badges                 |
-| `multiSelect`  | chips + `Command`           | chips + `+N` overflow     | `allowCustom` adds a create row ; `max` ; `badges` colors option/chip badges                      |
-| `relation`     | async `Command` combobox    | resolved chips + `+N`     | `source.loadOptions` / `loadByIds` ; `multiple`/`max` ; `avatars` shows image-or-initials avatars |
-| `url`          | icon `Input`                | link with icon            | http(s) validated                                                                                 |
-| `email`        | icon `Input`                | `mailto:` link            | format validated                                                                                  |
+| Type           | Form control                | Cell                      | Notes                                                                                                                                                                                   |
+| -------------- | --------------------------- | ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `text`         | `Input`                     | truncated text            | `maxLength` caps input ; shown as an error only if exceeded (no persistent counter)                                                                                                     |
+| `longText`     | `Textarea` (auto-grow)      | muted truncated           | `maxLength` caps input ; shown as an error only if exceeded (no persistent counter)                                                                                                     |
+| `richText`     | Tiptap WYSIWYG + toolbar    | plain-text preview        | stores sanitized HTML ; render read-only with `RichTextView`. Compact / inline sibling of `document`                                                                                    |
+| `document`     | BlockNote block editor      | plain-text preview        | Notion-style blocks (slash menu, drag handles, nesting) ; stores a **block-array JSON** ; `BlockEditor` / `BlockView` (client-only) ; text via `blocksToText` (`@monark/common/blocks`) |
+| `number`       | affixed `Input`             | right-aligned, formatted  | `min`/`max`/`step`/`integer`/`prefix`/`suffix`                                                                                                                                          |
+| `boolean`      | `Switch` (or `checkbox`)    | check / dash icon         | settings-style row                                                                                                                                                                      |
+| `date`         | `Popover` + `Calendar`      | `Intl` date, muted        | clear button                                                                                                                                                                            |
+| `datetime`     | `Calendar` + `TimePicker`   | `Intl` date-time          |                                                                                                                                                                                         |
+| `singleSelect` | `Select` / combobox / radio | `Badge` (optional `tone`) | combobox above 8 options or `searchable` ; `badges` renders colored option badges                                                                                                       |
+| `multiSelect`  | chips + `Command`           | chips + `+N` overflow     | `allowCustom` adds a create row ; `max` ; `badges` colors option/chip badges                                                                                                            |
+| `relation`     | async `Command` combobox    | resolved chips + `+N`     | `source.loadOptions` / `loadByIds` ; `multiple`/`max` ; `avatars` shows image-or-initials avatars                                                                                       |
+| `url`          | icon `Input`                | link with icon            | http(s) validated                                                                                                                                                                       |
+| `email`        | icon `Input`                | `mailto:` link            | format validated                                                                                                                                                                        |
 
 ## Usage
 

@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Check, Link2, Mail, Minus, Paperclip } from "lucide-react";
+import { blocksToText } from "@monark/common/blocks";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { FieldAvatar } from "./field-avatar";
@@ -102,6 +103,15 @@ export function renderFieldValue(def: FieldDef, value: unknown, labels: CellLabe
 
     case "richText": {
       const text = htmlToText((value as string | null) ?? "");
+      return text ? (
+        <span className="block max-w-md truncate text-muted-foreground">{text}</span>
+      ) : (
+        <Empty labels={labels} />
+      );
+    }
+
+    case "document": {
+      const text = blocksToText(value).replace(/\n/g, " ");
       return text ? (
         <span className="block max-w-md truncate text-muted-foreground">{text}</span>
       ) : (

@@ -6,11 +6,12 @@ import { cn } from "@/lib/utils";
  * the viewport edge under the AppBar (`top-14`), on `xl+` only. The left
  * variant sits just right of the persistent primary {@link NavRail}
  * (`left-14`) ; the right variant mirrors on the opposite edge (a future
- * contextual rail). Shared by {@link PageLayout} (centered-content
- * sections) and the Data layout (full-width table sections) so the rail
- * geometry lives in one place. Below `xl` it's hidden and each section
- * renders its horizontal {@link SecondaryTabsBar} instead. The `Sidebar`
- * dropped in as `children` carries its own labelled `<nav>` landmark.
+ * contextual rail). Rendered by {@link "@/components/section-shell" |
+ * SectionShell}'s `sidebar` slot, shared by every section (centered or
+ * full-width content) so the rail geometry lives in one place. Below `xl`
+ * it's hidden and the shell renders its horizontal secondary-nav strip
+ * instead. The `Sidebar` dropped in as `children` carries its own
+ * labelled `<nav>` landmark.
  */
 export function SidebarRail({
   children,

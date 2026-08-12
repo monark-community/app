@@ -5,6 +5,7 @@ import {
   Calendar,
   CalendarClock,
   CircleDot,
+  FileText,
   FunctionSquare,
   Hash,
   Link,
@@ -31,6 +32,7 @@ export const FIELD_TYPE_ICON: Record<FieldType, FieldIcon> = {
   text: Type, // short text
   longText: AlignLeft, // multi-line text
   richText: Pilcrow, // WYSIWYG
+  document: FileText, // block editor (Notion-style)
   number: Hash,
   boolean: ToggleLeft, // switch / checkbox
   date: Calendar,

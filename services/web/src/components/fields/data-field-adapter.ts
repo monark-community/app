@@ -27,7 +27,8 @@ export type DataFieldServerType =
   | "EMAIL"
   | "FORMULA"
   | "FILE"
-  | "ATTACHMENTS";
+  | "ATTACHMENTS"
+  | "DOCUMENT";
 
 /** The subset of a `DataField` row this adapter needs. */
 export interface DataFieldForAdapter {
@@ -152,6 +153,8 @@ export function dataFieldToFieldDef(
     }
     case "RICH_TEXT":
       return { ...base, type: "richText" };
+    case "DOCUMENT":
+      return { ...base, type: "document" };
     case "NUMBER": {
       const c = field.config as NumberConfig;
       return { ...base, type: "number", min: c.min, max: c.max, integer: c.integer };
