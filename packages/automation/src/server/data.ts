@@ -1,4 +1,4 @@
-import { getDb, type Prisma } from "@monark/db";
+import { getDb, Prisma, trigramMatch, trigramOrder } from "@monark/db";
 import {
   cursorFindArgs,
   resolveLimit,
@@ -77,6 +77,28 @@ export async function listAutomations(
 
 export async function findAutomationById(id: string): Promise<AutomationRow | null> {
   return getDb().automation.findUnique({ where: { id } });
+}
+
+/**
+ * Fuzzy automation search by name (trigram `pg_trgm`, typo-tolerant) for the
+ * global palette — a light `{ id, name }` ranked by similarity. Separate from
+ * `listAutomations` (whose `search` stays an exact substring filter for the
+ * automations list page). Raw SQL (no similarity in Prisma).
+ */
+export async function searchAutomations(input: {
+  organizationId: string;
+  query: string;
+  limit: number;
+}): Promise<Array<{ id: string; name: string }>> {
+  return getDb().$queryRaw<Array<{ id: string; name: string }>>(Prisma.sql`
+    SELECT id, name
+    FROM "Automation"
+    WHERE "organizationId" = ${input.organizationId}
+      AND "deletedAt" IS NULL
+      AND ${trigramMatch(["name"], input.query)}
+    ORDER BY ${trigramOrder(["name"], input.query)}, "updatedAt" DESC
+    LIMIT ${input.limit}
+  `);
 }
 
 export type CreateAutomationInput = {

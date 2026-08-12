@@ -155,6 +155,19 @@ beforeAll(async () => {
         return Promise.resolve({ ok: true });
       },
     }),
+    // Emits a fixed array output — the source list for a For-Each loop test.
+    list: defineNode({
+      descriptor: {
+        kind: "action",
+        category: "test",
+        label: "List",
+        inputs: [{ id: "in" }],
+        outputs: [{ id: "out" }],
+        configFields: [],
+      },
+      configSchema: z.object({}),
+      execute: () => Promise.resolve({ items: ["alpha", "beta", "gamma"] }),
+    }),
   });
 
   // One automation handler on the bus for the emit-based specs. The bus is
@@ -234,6 +247,80 @@ describe("automation — manual run", () => {
     expect(logs?.map((l) => l.message)).toEqual(["first line", "second line"]);
     expect(logs?.[1]?.level).toBe("warn");
     expect(typeof logs?.[0]?.ts).toBe("string");
+  });
+
+  it("For-Each runs the body once per item, then continues on `done`", async () => {
+    const admin = callerFor(U_ADMIN, ORG);
+    const created = await admin.automations.create({
+      name: "For-each flow",
+      triggerEventType: "data-models.record-created",
+      graph: {
+        nodes: [
+          {
+            id: "t",
+            type: "automation.event-trigger",
+            position: { x: 0, y: 0 },
+            config: { eventType: "data-models.record-created" },
+            slug: "trigger",
+          },
+          { id: "lst", type: "test.list", position: { x: 200, y: 0 }, config: {}, slug: "list" },
+          {
+            id: "fe",
+            type: "automation.for-each",
+            position: { x: 400, y: 0 },
+            config: { items: "{{ steps.list.items }}" },
+            slug: "fe",
+          },
+          {
+            id: "body",
+            type: "test.echo",
+            position: { x: 600, y: 0 },
+            config: { message: "item {{ steps.fe.item }} @ {{ steps.fe.index }}" },
+            slug: "body",
+          },
+          {
+            id: "after",
+            type: "test.echo",
+            position: { x: 600, y: 200 },
+            config: { message: "done {{ steps.fe.count }}" },
+            slug: "after",
+          },
+        ],
+        edges: [
+          { id: "e1", source: "t", target: "lst", sourceHandle: "out", targetHandle: "in" },
+          { id: "e2", source: "lst", target: "fe", sourceHandle: "out", targetHandle: "in" },
+          { id: "e3", source: "fe", target: "body", sourceHandle: "each", targetHandle: "in" },
+          { id: "e4", source: "fe", target: "after", sourceHandle: "done", targetHandle: "in" },
+        ],
+      },
+    });
+    await admin.automations.setEnabled({ id: created.id, enabled: true });
+
+    const { runId } = await admin.automations.runNow({ id: created.id });
+    await drain();
+
+    const run = await admin.runs.getById({ id: runId });
+    expect(run.status).toBe("SUCCEEDED");
+
+    // Body ran once per item, in order, with the current item + index in scope.
+    const bodySteps = run.steps
+      .filter((s) => s.nodeId === "body")
+      .sort((a, b) => a.sequence - b.sequence);
+    expect(bodySteps.map((s) => (s.output as { echoed: string }).echoed)).toEqual([
+      "item alpha @ 0",
+      "item beta @ 1",
+      "item gamma @ 2",
+    ]);
+
+    // The For-Each node's output carries the item count + a result per iteration.
+    const feStep = run.steps.find((s) => s.nodeId === "fe");
+    const feOut = feStep?.output as { count: number; results: unknown[] };
+    expect(feOut.count).toBe(3);
+    expect(feOut.results).toHaveLength(3);
+
+    // The `done` branch runs after the loop, with the count available.
+    const afterStep = run.steps.find((s) => s.nodeId === "after");
+    expect((afterStep?.output as { echoed: string }).echoed).toBe("done 3");
   });
 
   it("resolves an org secret via ctx.getSecret, stamps lastUsedAt, and never persists the value", async () => {

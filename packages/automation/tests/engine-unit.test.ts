@@ -12,6 +12,7 @@ const TRIGGER = "automation.event-trigger";
 const EMAIL = "automation.send-email";
 const NOTIFY = "automation.notification";
 const CONST = "automation.constant";
+const FOR_EACH = "automation.for-each";
 
 function node(id: string, type: string) {
   return { id, type, position: at, config: {} };
@@ -105,6 +106,23 @@ describe("executionOrder", () => {
     const order = ids(g);
     expect(order).toContain("c");
     expect(order.indexOf("c")).toBeLessThan(order.indexOf("a"));
+  });
+
+  it("excludes For-Each loop-body nodes from the top-level order", () => {
+    // t -> fe ; fe --each--> body (runs inside the loop) ; fe --done--> after.
+    const g = graph(
+      [node("t", TRIGGER), node("fe", FOR_EACH), node("body", EMAIL), node("after", NOTIFY)],
+      [
+        edge("1", "t", "fe"),
+        { id: "2", source: "fe", target: "body", sourceHandle: "each", targetHandle: "in" },
+        { id: "3", source: "fe", target: "after", sourceHandle: "done", targetHandle: "in" },
+      ],
+    );
+    const order = ids(g);
+    expect(order).toContain("fe");
+    expect(order).toContain("after");
+    expect(order).not.toContain("body"); // the body runs inside the loop
+    expect(order.indexOf("fe")).toBeLessThan(order.indexOf("after"));
   });
 });
 

@@ -9,6 +9,7 @@ import {
 import { addRunStep, finishRunStep, listRunSteps } from "./data";
 import { getSecretValue } from "@monark/secrets/server";
 import { getAutomationNode, type AnyAutomationNode, type NodeExecutionContext } from "./registry";
+import { FOR_EACH_TYPE } from "./nodes/for-each";
 
 /** Outcome of executing (or resuming) a graph. */
 export type GraphResult =
@@ -23,6 +24,13 @@ export type GraphResult =
  */
 const ERROR_HANDLE = "error";
 
+// For-Each loop handles + guardrails. The `each` output enters the loop body
+// (run once per item); the `done` output continues after. See executeGraph.
+const LOOP_EACH_HANDLE = "each";
+const LOOP_DONE_HANDLE = "done";
+const MAX_LOOP_ITEMS = 1000;
+const LOOP_SUSPEND_MSG = "Delay / suspend is not supported inside a For Each loop (yet).";
+
 // The first one or two path segments of a `{{ token }}` — either `{{ <nodeId>… }}`
 // (the node id, hyphenated e.g. `n-a1b2`) or `{{ steps.<slug>… }}` (the stable
 // slug), plus the non-node roots `trigger` / `vars` / `steps`. Used to derive a
@@ -32,6 +40,12 @@ const REFERENCE_RE = /\{\{\s*([\w-]+)(?:\.([\w-]+))?/g;
 /** A legacy per-field data edge (into a `field:<key>` port) vs. a control edge. */
 function isFieldEdge(targetHandle: string | null | undefined): boolean {
   return typeof targetHandle === "string" && targetHandle.startsWith("field:");
+}
+
+function addTo<T>(map: Map<string, T[]>, key: string, value: T): void {
+  const list = map.get(key);
+  if (list) list.push(value);
+  else map.set(key, [value]);
 }
 
 /** slug -> node id, for resolving `{{ steps.<slug> }}` references to their node. */
@@ -91,10 +105,144 @@ function dataDependencies(
   return edges;
 }
 
+// ── Loop bodies ──────────────────────────────────────────────────────────────
+
+/** A For-Each node's loop body: the sub-graph run once per item. */
+interface LoopBody {
+  foreachId: string;
+  bodyIds: Set<string>;
+  /** Body nodes in execution order (topological within the body). */
+  order: NodeInstance[];
+  /** Control incoming edges *within* the body, for branch gating. */
+  incoming: Map<string, Array<{ source: string; handle: string }>>;
+}
+
+/** Control adjacency (source -> [{ target, handle }]) over non-`field:` edges. */
+function controlAdjacency(
+  graph: AutomationGraph,
+  byId: Map<string, NodeInstance>,
+): Map<string, Array<{ target: string; handle: string }>> {
+  const adj = new Map<string, Array<{ target: string; handle: string }>>();
+  for (const e of graph.edges) {
+    if (!byId.has(e.source) || !byId.has(e.target) || isFieldEdge(e.targetHandle)) continue;
+    const src = byId.get(e.source);
+    const defaultHandle =
+      getAutomationNode(src?.type ?? "")?.node.descriptor.outputs[0]?.id ?? "out";
+    addTo(adj, e.source, { target: e.target, handle: e.sourceHandle ?? defaultHandle });
+  }
+  return adj;
+}
+
+/** Control-reachable node ids from a set of starts. */
+function reachFrom(
+  starts: string[],
+  adj: Map<string, Array<{ target: string; handle: string }>>,
+): Set<string> {
+  const seen = new Set<string>();
+  const stack = [...starts];
+  while (stack.length > 0) {
+    const id = stack.pop();
+    if (id === undefined || seen.has(id)) continue;
+    seen.add(id);
+    for (const { target } of adj.get(id) ?? []) stack.push(target);
+  }
+  return seen;
+}
+
+/** Topologically sort a subset of node ids over its internal control + data edges. */
+function topoSubset(
+  ids: Set<string>,
+  byId: Map<string, NodeInstance>,
+  adj: Map<string, Array<{ target: string; handle: string }>>,
+  depEdges: Array<{ source: string; target: string }>,
+): NodeInstance[] {
+  const out = new Map<string, string[]>();
+  const indegree = new Map<string, number>();
+  for (const id of ids) indegree.set(id, 0);
+  const seen = new Set<string>();
+  const push = (source: string, target: string) => {
+    if (!ids.has(source) || !ids.has(target)) return;
+    const pair = `${source}->${target}`;
+    if (seen.has(pair)) return;
+    seen.add(pair);
+    addTo(out, source, target);
+    indegree.set(target, (indegree.get(target) ?? 0) + 1);
+  };
+  for (const [source, list] of adj) for (const { target } of list) push(source, target);
+  for (const { source, target } of depEdges) push(source, target);
+  const queue = [...ids].filter((id) => (indegree.get(id) ?? 0) === 0);
+  const order: NodeInstance[] = [];
+  while (queue.length > 0) {
+    const id = queue.shift();
+    if (id === undefined) continue;
+    const node = byId.get(id);
+    if (node) order.push(node);
+    for (const next of out.get(id) ?? []) {
+      const d = (indegree.get(next) ?? 0) - 1;
+      indegree.set(next, d);
+      if (d === 0) queue.push(next);
+    }
+  }
+  if (order.length !== ids.size) throw new Error("Automation loop body has a cycle.");
+  return order;
+}
+
+/** Control incoming edges *within* a node subset (target -> [{ source, handle }]). */
+function incomingWithin(
+  ids: Set<string>,
+  adj: Map<string, Array<{ target: string; handle: string }>>,
+): Map<string, Array<{ source: string; handle: string }>> {
+  const inc = new Map<string, Array<{ source: string; handle: string }>>();
+  for (const [source, list] of adj) {
+    if (!ids.has(source)) continue;
+    for (const { target, handle } of list) {
+      if (!ids.has(target)) continue;
+      addTo(inc, target, { source, handle });
+    }
+  }
+  return inc;
+}
+
+/**
+ * Every For-Each node's loop body. The body is the sub-graph reachable from the
+ * `each` output, minus anything also reachable from `done` (that's after the
+ * loop) and minus the For-Each itself — so a body that reconverges with the
+ * post-loop flow stays out of the body. Body nodes are excluded from the
+ * top-level walk and run internally by the loop (once per item).
+ */
+function computeLoopBodies(
+  graph: AutomationGraph,
+  byId: Map<string, NodeInstance>,
+  adj: Map<string, Array<{ target: string; handle: string }>>,
+): Map<string, LoopBody> {
+  const bodies = new Map<string, LoopBody>();
+  const deps = dataDependencies(graph, byId);
+  for (const f of graph.nodes) {
+    if (f.type !== FOR_EACH_TYPE) continue;
+    const outs = adj.get(f.id) ?? [];
+    const eachTargets = outs.filter((e) => e.handle === LOOP_EACH_HANDLE).map((e) => e.target);
+    const doneTargets = outs.filter((e) => e.handle === LOOP_DONE_HANDLE).map((e) => e.target);
+    const doneReach = reachFrom(doneTargets, adj);
+    const bodyIds = new Set(
+      [...reachFrom(eachTargets, adj)].filter((id) => id !== f.id && !doneReach.has(id)),
+    );
+    const bodyDeps = deps.filter((e) => bodyIds.has(e.source) && bodyIds.has(e.target));
+    bodies.set(f.id, {
+      foreachId: f.id,
+      bodyIds,
+      order: topoSubset(bodyIds, byId, adj, bodyDeps),
+      incoming: incomingWithin(bodyIds, adj),
+    });
+  }
+  return bodies;
+}
+
 /**
  * Resolve the execution order: the sub-graph reachable from the trigger node,
- * topologically sorted (Kahn's algorithm). Nodes not reachable from a trigger
- * are ignored (dangling palette drops). Throws on a cycle or a missing trigger.
+ * topologically sorted (Kahn's algorithm). **Loop-body nodes are excluded** —
+ * they run inside their For-Each, not in the top-level walk. Nodes not reachable
+ * from a trigger are ignored (dangling palette drops). Throws on a cycle or a
+ * missing trigger.
  */
 export function executionOrder(graph: AutomationGraph): NodeInstance[] {
   const byId = new Map(graph.nodes.map((n) => [n.id, n]));
@@ -103,18 +251,25 @@ export function executionOrder(graph: AutomationGraph): NodeInstance[] {
   );
   if (!trigger) throw new Error("Automation graph has no trigger node.");
 
-  // Control-flow adjacency (source -> target), excluding legacy `field:` data
-  // edges — those are data dependencies, folded in below.
-  const controlOut = new Map<string, string[]>();
-  for (const e of graph.edges) {
-    if (!byId.has(e.source) || !byId.has(e.target) || isFieldEdge(e.targetHandle)) continue;
-    const list = controlOut.get(e.source);
-    if (list) list.push(e.target);
-    else controlOut.set(e.source, [e.target]);
+  const adj = controlAdjacency(graph, byId);
+  const bodyIds = new Set<string>();
+  for (const body of computeLoopBodies(graph, byId, adj).values()) {
+    for (const id of body.bodyIds) bodyIds.add(id);
   }
 
-  // Data dependencies from `{{ }}` references + legacy field edges.
-  const depEdges = dataDependencies(graph, byId);
+  // Top-level control adjacency: edges between non-body nodes. A For-Each `each`
+  // edge has a body target, so it drops out here (the body runs internally).
+  const controlOut = new Map<string, string[]>();
+  for (const [source, list] of adj) {
+    if (bodyIds.has(source)) continue;
+    for (const { target } of list) {
+      if (!bodyIds.has(target)) addTo(controlOut, source, target);
+    }
+  }
+
+  const depEdges = dataDependencies(graph, byId).filter(
+    (e) => !bodyIds.has(e.source) && !bodyIds.has(e.target),
+  );
 
   // Reachable = control-flow-reachable from the trigger, then transitively pull
   // in every data source a reachable node depends on (a Constant / Transform
@@ -138,9 +293,7 @@ export function executionOrder(graph: AutomationGraph): NodeInstance[] {
     }
   }
 
-  // Kahn's over control + data-dependency edges within the reachable set. Edges
-  // are de-duped by `source->target` so a pair present as both a control edge
-  // and a reference doesn't inflate the indegree and deadlock the sort.
+  // Kahn's over control + data-dependency edges within the reachable set.
   const orderOut = new Map<string, string[]>();
   const indegree = new Map<string, number>();
   for (const id of reachable) indegree.set(id, 0);
@@ -154,9 +307,7 @@ export function executionOrder(graph: AutomationGraph): NodeInstance[] {
     const pair = `${source}->${target}`;
     if (seen.has(pair)) continue;
     seen.add(pair);
-    const list = orderOut.get(source);
-    if (list) list.push(target);
-    else orderOut.set(source, [target]);
+    addTo(orderOut, source, target);
     indegree.set(target, (indegree.get(target) ?? 0) + 1);
   }
   const queue = [...reachable].filter((id) => (indegree.get(id) ?? 0) === 0);
@@ -242,6 +393,36 @@ function interpolateString(value: string, scope: Record<string, unknown>): unkno
   });
 }
 
+/** Build the per-step log buffer + a snapshot accessor (shared by top-level + loop). */
+function makeLogBuffer() {
+  const logs: AutomationRunStepLog[] = [];
+  let truncated = false;
+  const append = (message: string, level: AutomationRunStepLogLevel = "info") => {
+    if (logs.length >= MAX_STEP_LOGS) {
+      truncated = true;
+      return;
+    }
+    logs.push({
+      ts: new Date().toISOString(),
+      level,
+      message:
+        message.length > MAX_STEP_LOG_MESSAGE ? message.slice(0, MAX_STEP_LOG_MESSAGE) : message,
+    });
+  };
+  const snapshot = (): AutomationRunStepLog[] =>
+    truncated
+      ? [
+          ...logs,
+          {
+            ts: new Date().toISOString(),
+            level: "warn",
+            message: `… log truncated at ${MAX_STEP_LOGS} lines`,
+          },
+        ]
+      : logs;
+  return { append, snapshot };
+}
+
 /**
  * Execute a graph for a claimed run: walk the nodes in execution order,
  * recording an `AutomationRunStep` per node, interpolating each node's config
@@ -257,36 +438,28 @@ export async function executeGraph(params: {
   triggerEvent: DomainEvent;
   graph: AutomationGraph;
 }): Promise<GraphResult> {
+  const byIdAll = new Map(params.graph.nodes.map((n) => [n.id, n]));
+  const adj = controlAdjacency(params.graph, byIdAll);
+  const bodies = computeLoopBodies(params.graph, byIdAll, adj);
   const order = executionOrder(params.graph);
   const inReach = new Set(order.map((n) => n.id));
-  // node id -> stable slug, for building the `{{ steps.<slug> }}` scope. A node
-  // without a slug (a graph saved before slugs existed) is simply absent from
-  // `steps` ; its output stays addressable by the legacy `{{ <nodeId> }}` key.
+  // node id -> stable slug, for building the `{{ steps.<slug> }}` scope.
   const slugById = new Map<string, string>();
   for (const n of params.graph.nodes) if (n.slug) slugById.set(n.id, n.slug);
 
-  // Control-flow incoming edges per node (within the reachable set), each
-  // normalized to the source's effective output handle (an edge with no
-  // sourceHandle uses the source node's first declared output). Edges into a
-  // `field:<key>` target handle are DATA links, not control flow, so they're
-  // excluded here and handled separately when resolving config.
+  // Control-flow incoming edges per (top-level) node, normalized to the source's
+  // effective output handle. Body nodes aren't in `inReach`, so their edges (a
+  // For-Each `each` edge) are excluded here and handled by the loop.
   const incoming = new Map<string, Array<{ source: string; handle: string }>>();
   for (const e of params.graph.edges) {
     if (!inReach.has(e.source) || !inReach.has(e.target)) continue;
     if (typeof e.targetHandle === "string" && e.targetHandle.startsWith("field:")) continue;
     const srcNode = getAutomationNode(order.find((n) => n.id === e.source)?.type ?? "");
     const defaultHandle = srcNode?.node.descriptor.outputs[0]?.id ?? "out";
-    const handle = e.sourceHandle ?? defaultHandle;
-    const list = incoming.get(e.target);
-    if (list) list.push({ source: e.source, handle });
-    else incoming.set(e.target, [{ source: e.source, handle }]);
+    addTo(incoming, e.target, { source: e.source, handle: e.sourceHandle ?? defaultHandle });
   }
 
   const upstream: Record<string, unknown> = {};
-  // Workflow-level variables (`{{ vars.<name> }}`), a run-global bag distinct
-  // from per-step outputs. A node that sets vars declares `collectVars` ; its
-  // writes are merged here after it runs and replayed from persisted outputs on
-  // resume (see below), so a var set before a Delay survives the suspend.
   const vars: Record<string, unknown> = {};
   const applyVars = (node: AnyAutomationNode, output: unknown) => {
     const written = node.collectVars?.(output);
@@ -296,14 +469,15 @@ export async function executeGraph(params: {
   const executed = new Set<string>();
   const processed = new Set<string>(); // executed OR skipped (don't re-run)
   let last: unknown = undefined;
+  let seq = 0; // monotonic step sequence (top-level + loop-body steps share it)
 
   // Resume support: rebuild state from steps already recorded for this run (a
-  // prior pass that suspended at a Delay). A SUCCEEDED node's output feeds
-  // `upstream` and its outputs re-activate ; a SKIPPED node stays pruned. Both
-  // are marked `processed` so they aren't re-run. A caught failure (a FAILED
-  // step that recorded active handles — its error output) is treated the same
-  // as a success for resume: its `{ error }` output and error handle re-activate
-  // so the error branch continues after a delay.
+  // prior pass that suspended at a Delay). Only top-level steps matter here —
+  // loop-body node ids aren't in `inReach`, so their steps are ignored, and a
+  // completed loop is captured by its For-Each step (whose output holds the
+  // collected results). A SUCCEEDED node's output feeds `upstream` + re-activates
+  // its handles ; a caught failure (FAILED with active handles) is treated the
+  // same so its error branch resumes.
   const priorSteps = await listRunSteps(params.runId);
   for (const step of priorSteps) {
     if (!inReach.has(step.nodeId)) continue;
@@ -313,17 +487,127 @@ export async function executeGraph(params: {
       executed.add(step.nodeId);
       upstream[step.nodeId] = step.output as unknown;
       last = step.output as unknown;
-      // Replay any workflow variables this node set, from its persisted output,
-      // in sequence order (listRunSteps is ordered by `sequence`) — so a var set
-      // before the suspend is back in scope for the resumed downstream nodes.
       const priorNode = getAutomationNode(step.nodeType);
       if (priorNode) applyVars(priorNode.node, step.output as unknown);
-      // Re-activate exactly the handles the node chose on its first pass (a
-      // branch's taken output, not all of them), persisted on the step — so a
-      // branch immediately before a Delay resumes only the taken path.
       for (const h of step.activeHandles) activeHandles.add(`${step.nodeId}:${h}`);
     }
+    seq = Math.max(seq, step.sequence + 1);
   }
+
+  // Build the `{{ steps.<slug> }}` mirror + full scope from a given upstream map.
+  const buildScope = (up: Record<string, unknown>): Record<string, unknown> => {
+    const steps: Record<string, unknown> = {};
+    for (const [nid, out] of Object.entries(up)) {
+      const slug = slugById.get(nid);
+      if (slug) steps[slug] = out;
+    }
+    return { trigger: params.triggerEvent, vars, steps, ...up };
+  };
+
+  // Run a For-Each loop body once, for one item. The current item is exposed to
+  // the body as the For-Each node's output (`{{ steps.<foreach>.item/.index }}`).
+  // Returns the last-executed body node's output (this iteration's result).
+  // Suspend inside a body is rejected (v1) ; an uncaught body failure throws
+  // (aborting the whole run, which then retries the loop from the first item).
+  const runLoopBody = async (body: LoopBody, iterationOutput: Record<string, unknown>) => {
+    const bodyUpstream: Record<string, unknown> = {
+      ...upstream,
+      [body.foreachId]: iterationOutput,
+    };
+    const bodyActive = new Set<string>();
+    const bodyExecuted = new Set<string>();
+    let terminal: unknown = undefined;
+    for (const bn of body.order) {
+      const stored = getAutomationNode(bn.type);
+      if (!stored) throw new Error(`Unknown node type "${bn.type}" in loop body.`);
+      if (stored.node.descriptor.kind === "trigger" || bn.type === FOR_EACH_TYPE) {
+        throw new Error(
+          bn.type === FOR_EACH_TYPE
+            ? "A For Each body can't contain a nested loop (yet)."
+            : "A For Each body can't contain a trigger.",
+        );
+      }
+      const edgesIn = body.incoming.get(bn.id) ?? [];
+      const shouldRun =
+        edgesIn.length === 0 ||
+        edgesIn.some(
+          (e) => bodyExecuted.has(e.source) && bodyActive.has(`${e.source}:${e.handle}`),
+        );
+      if (!shouldRun) {
+        await addRunStep({
+          runId: params.runId,
+          nodeId: bn.id,
+          nodeType: bn.type,
+          sequence: seq++,
+        }).then((s) => finishRunStep(s.id, { status: "SKIPPED" }));
+        continue;
+      }
+      const resolvedConfig = interpolateConfig(bn.config, buildScope(bodyUpstream));
+      const step = await addRunStep({
+        runId: params.runId,
+        nodeId: bn.id,
+        nodeType: bn.type,
+        sequence: seq++,
+        input: resolvedConfig,
+      });
+      const { append, snapshot } = makeLogBuffer();
+      let declaredHandles: string[] | null = null;
+      let suspended = false;
+      const ctx: NodeExecutionContext = {
+        organizationId: params.organizationId,
+        actorUserId: params.actorUserId,
+        triggerEvent: params.triggerEvent,
+        runId: params.runId,
+        automationId: params.automationId,
+        upstream: bodyUpstream,
+        log: append,
+        activateOutputs: (handles) => {
+          declaredHandles = handles;
+        },
+        suspend: () => {
+          suspended = true;
+        },
+        getSecret: (name) => getSecretValue(params.organizationId, name),
+      };
+      try {
+        const output = await stored.node.run(ctx, resolvedConfig);
+        if (suspended) throw new Error(LOOP_SUSPEND_MSG);
+        bodyUpstream[bn.id] = output;
+        bodyExecuted.add(bn.id);
+        terminal = output;
+        applyVars(stored.node, output);
+        const outs = declaredHandles ?? stored.node.descriptor.outputs.map((o) => o.id);
+        const active = outs.length > 0 ? outs : ["out"];
+        for (const h of active) bodyActive.add(`${bn.id}:${h}`);
+        await finishRunStep(step.id, {
+          status: "SUCCEEDED",
+          output,
+          activeHandles: active,
+          logs: snapshot(),
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        if (bn.errorOutput && !suspended) {
+          const output = { error: message };
+          bodyUpstream[bn.id] = output;
+          bodyExecuted.add(bn.id);
+          terminal = output;
+          bodyActive.add(`${bn.id}:${ERROR_HANDLE}`);
+          await finishRunStep(step.id, {
+            status: "FAILED",
+            error: message,
+            output,
+            activeHandles: [ERROR_HANDLE],
+            logs: snapshot(),
+          });
+        } else {
+          await finishRunStep(step.id, { status: "FAILED", error: message, logs: snapshot() });
+          throw err;
+        }
+      }
+    }
+    return terminal;
+  };
 
   for (let i = 0; i < order.length; i++) {
     const instance = order[i];
@@ -336,7 +620,6 @@ export async function executeGraph(params: {
 
     // A node runs iff it's a root (no incoming edges — the trigger) or at least
     // one incoming edge comes from an already-executed node's ACTIVE handle.
-    // Otherwise every path into it was pruned by a branch, so it's skipped.
     const edgesIn = incoming.get(instance.id) ?? [];
     const shouldRun =
       edgesIn.length === 0 ||
@@ -347,31 +630,14 @@ export async function executeGraph(params: {
         runId: params.runId,
         nodeId: instance.id,
         nodeType: instance.type,
-        sequence: i,
+        sequence: seq++,
       }).then((step) => finishRunStep(step.id, { status: "SKIPPED" }));
       continue;
     }
 
-    // `steps.<slug>` mirrors each upstream output under its stable slug, the
-    // readable address the editor writes ; the raw node-id keys stay spread in
-    // for backward-compat with graphs saved before slugs (and un-migrated refs).
-    const steps: Record<string, unknown> = {};
-    for (const [nid, out] of Object.entries(upstream)) {
-      const slug = slugById.get(nid);
-      if (slug) steps[slug] = out;
-    }
-    const scope: Record<string, unknown> = {
-      trigger: params.triggerEvent,
-      vars,
-      steps,
-      ...upstream,
-    };
-    const resolvedConfig = interpolateConfig(instance.config, scope);
+    const resolvedConfig = interpolateConfig(instance.config, buildScope(upstream));
 
-    // Data links: any config variable wired from an upstream node's output
-    // (an edge into its `field:<key>` port) takes that output as its value,
-    // overriding the typed/interpolated config. Every config field renders a
-    // port in the editor, so any of them can be fed this way.
+    // Data links: any config variable wired from an upstream node's output.
     for (const field of stored.node.descriptor.configFields) {
       const linkEdge = params.graph.edges.find(
         (e) =>
@@ -382,46 +648,62 @@ export async function executeGraph(params: {
       if (linkEdge) resolvedConfig[field.key] = unwrapLinkedValue(upstream[linkEdge.source]);
     }
 
+    // ── For-Each: run the loop body once per item, then continue on `done`. ──
+    if (instance.type === FOR_EACH_TYPE) {
+      const body = bodies.get(instance.id);
+      const itemsRaw = resolvedConfig.items;
+      const items = Array.isArray(itemsRaw) ? itemsRaw : [];
+      const step = await addRunStep({
+        runId: params.runId,
+        nodeId: instance.id,
+        nodeType: instance.type,
+        sequence: seq++,
+        input: { count: items.length },
+      });
+      try {
+        if (!Array.isArray(itemsRaw)) {
+          throw new Error("For Each: the List did not resolve to an array.");
+        }
+        if (items.length > MAX_LOOP_ITEMS) {
+          throw new Error(`For Each: too many items (${items.length}; max ${MAX_LOOP_ITEMS}).`);
+        }
+        const results: unknown[] = [];
+        if (body) {
+          for (let idx = 0; idx < items.length; idx++) {
+            results.push(
+              await runLoopBody(body, { item: items[idx], index: idx, count: items.length }),
+            );
+          }
+        }
+        const output = { items, count: items.length, results };
+        upstream[instance.id] = output;
+        last = output;
+        executed.add(instance.id);
+        activeHandles.add(`${instance.id}:${LOOP_DONE_HANDLE}`);
+        await finishRunStep(step.id, {
+          status: "SUCCEEDED",
+          output,
+          activeHandles: [LOOP_DONE_HANDLE],
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        await finishRunStep(step.id, { status: "FAILED", error: message });
+        throw err;
+      }
+      continue;
+    }
+
     const step = await addRunStep({
       runId: params.runId,
       nodeId: instance.id,
       nodeType: instance.type,
-      sequence: i,
+      sequence: seq++,
       input: resolvedConfig,
     });
 
+    const { append, snapshot } = makeLogBuffer();
     let declaredHandles: string[] | null = null;
     let suspendMs: number | null = null;
-    // Per-step log buffer. `ctx.log(...)` appends here (capped) ; the lines are
-    // persisted with the step on every finish path (success / error-branch /
-    // hard-fail) so a node's narration survives however its step ended.
-    const logs: AutomationRunStepLog[] = [];
-    let logsTruncated = false;
-    const appendLog = (message: string, level: AutomationRunStepLogLevel = "info") => {
-      if (logs.length >= MAX_STEP_LOGS) {
-        logsTruncated = true;
-        return;
-      }
-      logs.push({
-        ts: new Date().toISOString(),
-        level,
-        message:
-          message.length > MAX_STEP_LOG_MESSAGE ? message.slice(0, MAX_STEP_LOG_MESSAGE) : message,
-      });
-    };
-    // A stable reference for `finishRunStep` : snapshots the buffer and adds the
-    // truncation notice once, so callers pass `stepLogs()` not the live array.
-    const stepLogs = (): AutomationRunStepLog[] =>
-      logsTruncated
-        ? [
-            ...logs,
-            {
-              ts: new Date().toISOString(),
-              level: "warn",
-              message: `… log truncated at ${MAX_STEP_LOGS} lines`,
-            },
-          ]
-        : logs;
     const ctx: NodeExecutionContext = {
       organizationId: params.organizationId,
       actorUserId: params.actorUserId,
@@ -429,7 +711,7 @@ export async function executeGraph(params: {
       runId: params.runId,
       automationId: params.automationId,
       upstream,
-      log: appendLog,
+      log: append,
       activateOutputs: (handles) => {
         declaredHandles = handles;
       },
@@ -444,27 +726,18 @@ export async function executeGraph(params: {
       upstream[instance.id] = output;
       last = output;
       executed.add(instance.id);
-      // Merge any workflow variables this node set into the run-global `vars`.
       applyVars(stored.node, output);
-      // Activate the handles the node declared, or all of its outputs by default.
       const outs: string[] = declaredHandles ?? stored.node.descriptor.outputs.map((o) => o.id);
       const active = outs.length > 0 ? outs : ["out"];
       for (const h of active) activeHandles.add(`${instance.id}:${h}`);
-      // Persist the chosen handles so a resume (after a delay) re-activates the
-      // same branch rather than all outputs.
       await finishRunStep(step.id, {
         status: "SUCCEEDED",
         output,
         activeHandles: active,
-        logs: stepLogs(),
+        logs: snapshot(),
       });
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      // Error output enabled: catch the failure. The step is recorded FAILED
-      // (still visible in history), but instead of aborting the run we expose
-      // `{ error }` as the node's output, activate its `error` handle, and let
-      // execution continue down the error branch. A node without the error
-      // output aborts the run as before.
       if (instance.errorOutput) {
         const output = { error: message };
         upstream[instance.id] = output;
@@ -476,16 +749,14 @@ export async function executeGraph(params: {
           error: message,
           output,
           activeHandles: [ERROR_HANDLE],
-          logs: stepLogs(),
+          logs: snapshot(),
         });
       } else {
-        await finishRunStep(step.id, { status: "FAILED", error: message, logs: stepLogs() });
+        await finishRunStep(step.id, { status: "FAILED", error: message, logs: snapshot() });
         throw err;
       }
     }
 
-    // The node asked to suspend (Delay): its step is recorded SUCCEEDED and its
-    // outputs are active, so on resume it's skipped and downstream continues.
     if (suspendMs !== null) {
       return { status: "suspended", resumeAt: new Date(Date.now() + (suspendMs as number)) };
     }

@@ -21,6 +21,7 @@ import { constantNode } from "./constant";
 import { transformNode } from "./transform";
 import { setVariableNode } from "./set-variable";
 import { delayNode } from "./delay";
+import { forEachNode } from "./for-each";
 
 let registered = false;
 
@@ -45,6 +46,7 @@ export function registerBuiltinAutomationNodes(): void {
     transform: transformNode,
     "set-variable": setVariableNode,
     delay: delayNode,
+    "for-each": forEachNode,
     // Communication
     notification: notificationNode,
     webhook: webhookNode,

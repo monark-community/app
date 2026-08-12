@@ -8,6 +8,7 @@ export { registerAutomationEventTypes } from "./event-types";
 export { registerAutomationFeatureFlags } from "./feature-flags";
 export { registerAutomationNotificationKinds } from "./notification-kinds";
 export { registerBuiltinAutomationNodes } from "./nodes";
+export { registerAutomationSearchSource } from "./search-source";
 export { registerAutomationSubscribers, _resetAutomationSubscribersForTesting } from "./subscriber";
 export {
   startAutomationWorker,
