@@ -1,10 +1,9 @@
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
-import { PageLayout } from "@/components/page-layout";
+import { SectionShell } from "@/components/section-shell";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createServerTrpcClient } from "@/lib/trpc-server";
 import { AdminSidebar } from "./admin-sidebar";
-import { AdminTabsBar } from "./admin-tabs-bar";
 
 // Nested under `app/(authed)/admin/`, so the parent (authed) layout has
 // already guaranteed a session before this runs. Two additional gates:
@@ -13,10 +12,10 @@ import { AdminTabsBar } from "./admin-tabs-bar";
 //  2. Admins missing TOTP are bounced to /account?totpRequired=1 where
 //     the enforcement banner explains the soft/hard wall.
 //
-// After the gates we mount the shared admin shell : AppBar + PageLayout
-// with the AdminSidebar, so every `/admin/*` sub-route inherits the
-// same chrome without each page re-implementing it. Pages just export
-// their content.
+// After the gates we mount the shared admin shell : the AppBar (from the
+// parent layout) + SectionShell with the AdminSidebar, so every `/admin/*`
+// sub-route inherits the same chrome without each page re-implementing it.
+// Pages just export their content.
 export default async function AdminLayout({ children }: { children: ReactNode }) {
   const supabase = await createSupabaseServerClient();
   const { data: sessionData } = await supabase.auth.getSession();
@@ -41,11 +40,11 @@ export default async function AdminLayout({ children }: { children: ReactNode })
   }
 
   return (
-    <>
-      <AdminTabsBar />
-      <main className="w-full px-4 pb-20 pt-8 sm:px-6">
-        <PageLayout sidebar={<AdminSidebar />}>{children}</PageLayout>
-      </main>
-    </>
+    <SectionShell
+      sidebar={<AdminSidebar />}
+      secondaryNav={<AdminSidebar orientation="horizontal" />}
+    >
+      {children}
+    </SectionShell>
   );
 }

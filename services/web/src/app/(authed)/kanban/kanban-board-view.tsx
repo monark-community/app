@@ -28,12 +28,12 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { GripVertical, MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react";
+import { checklistProgress } from "@monark/common/blocks";
 import {
   BoardArea,
   BoardColumn,
   COLUMN_WIDTH_PX,
   KanbanCard,
-  parseSubtasks,
   type CardPriority,
   type KanbanCardPriority,
 } from "@monark/kanban/client";
@@ -65,25 +65,17 @@ type CardRow = {
   boardId: string;
   columnId: string;
   title: string;
-  description: string | null;
+  // Block-array card body (JSON) from the API. Read here only to derive the
+  // face's checklist progress (via `checklistProgress`) ; the editor owns edits.
+  // Optional : an `unknown` field serializes as optional through tRPC.
+  description?: unknown;
   assigneeIds: string[];
   reviewerIds: string[];
   dueAt: Date | string | null;
   priority: KanbanCardPriority | null;
   estimate: number | null;
-  // Opaque JSON from the API (a `KanbanSubtask[]`) ; parsed via `parseSubtasks`
-  // rather than retyped, which would spread the large tRPC card type and blow
-  // tsc's instantiation-depth limit. Optional : `unknown` serializes as optional.
-  subtasks?: unknown;
   position: number;
 };
-
-/** Card checklist progress for the face chip (undefined when there are none). */
-function subtaskProgress(card: CardRow): { done: number; total: number } | undefined {
-  const list = parseSubtasks(card.subtasks);
-  if (list.length === 0) return undefined;
-  return { done: list.filter((s) => s.done).length, total: list.length };
-}
 
 type Member = { id: string; displayName: string | null; email: string; avatarUrl: string | null };
 type Assignee = { name: string; avatarUrl?: string };
@@ -402,7 +394,7 @@ export function KanbanBoardView({
                   assignees={assigneesOf(card)}
                   priority={cardPriority(card)}
                   estimate={card.estimate ?? undefined}
-                  subtasks={subtaskProgress(card)}
+                  checklist={checklistProgress(card.description)}
                   {...dueProps(card, format)}
                 />
               ))}
@@ -414,7 +406,7 @@ export function KanbanBoardView({
             assignees={assigneesOf(activeCard)}
             priority={cardPriority(activeCard)}
             estimate={activeCard.estimate ?? undefined}
-            subtasks={subtaskProgress(activeCard)}
+            checklist={checklistProgress(activeCard.description)}
             isOverlay
             {...dueProps(activeCard, format)}
           />
@@ -721,7 +713,7 @@ function SortableCard({
       assignees={assignees}
       priority={priority}
       estimate={card.estimate ?? undefined}
-      subtasks={subtaskProgress(card)}
+      checklist={checklistProgress(card.description)}
       isDragging={isDragging}
       cardRef={setNodeRef}
       style={{ transform: CSS.Translate.toString(transform), transition }}

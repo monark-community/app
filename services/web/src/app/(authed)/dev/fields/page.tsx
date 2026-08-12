@@ -77,6 +77,13 @@ const FIELDS: FieldDef[] = [
     description: "WYSIWYG rich-text editor (Tiptap).",
   },
   {
+    type: "document",
+    name: "body",
+    label: "Body",
+    placeholder: "Type '/' for commands…",
+    description: "Notion-style block editor (BlockNote ; stores block JSON).",
+  },
+  {
     type: "number",
     name: "budget",
     label: "Budget",

@@ -255,6 +255,29 @@ h6 {
   }
 }
 
+/* BlockNote block editor : blend into the page by overriding its opaque "card"
+ * background token to transparent. Leave the editor's default `padding-inline`
+ * (54px) alone — that left gutter is where the drag handle + add-block ("+")
+ * controls render, so zeroing it hides them (badly on mobile). */
+.block-editor {
+  --bn-colors-editor-background: transparent;
+}
+.block-editor .bn-editor {
+  background-color: transparent;
+  /* `--bn-min-h` is set inline by the `minHeight` prop ; applying it to the
+   * editable itself (not just the wrapper) makes the whole area a click target
+   * so an empty editor is easy to focus. Defaults to auto when unset. */
+  min-height: var(--bn-min-h, auto);
+}
+/* On phones the default 54px gutters on both sides squeeze the text column ;
+ * trim them to ~36px — still enough room for the drag handle + "+" controls —
+ * so the content gets more width. */
+@media (max-width: 767px) {
+  .block-editor .bn-editor {
+    padding-inline: 36px;
+  }
+}
+
 /* Rich-text field content (Tiptap editor + read-only RichTextView).
  * No Tailwind typography plugin is installed ; these scoped rules give
  * the WYSIWYG output its headings / lists / links / quote styling using

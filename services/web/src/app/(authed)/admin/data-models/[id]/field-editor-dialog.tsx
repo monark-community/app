@@ -34,6 +34,7 @@ const FIELD_TYPES: DataFieldServerType[] = [
   "TEXT",
   "LONG_TEXT",
   "RICH_TEXT",
+  "DOCUMENT",
   "NUMBER",
   "BOOLEAN",
   "DATE",
@@ -269,6 +270,7 @@ export function FieldEditorDialog({
         };
       }
       case "RICH_TEXT":
+      case "DOCUMENT":
       case "BOOLEAN":
       case "DATE":
       case "DATETIME":

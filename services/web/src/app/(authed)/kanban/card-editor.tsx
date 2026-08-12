@@ -1,12 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
+import type { Block } from "@blocknote/core";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { Plus, X } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
@@ -18,7 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { RichTextEditor, useFieldStrings } from "@/components/fields";
+import { BlockEditor } from "@/components/fields/inputs/block-editor";
 import {
   ConfirmDialog,
   MultiSelect,
@@ -34,10 +33,7 @@ import { cn } from "@/lib/utils";
 import {
   KANBAN_PRIORITIES,
   KANBAN_PRIORITY_COLOR,
-  KANBAN_SUBTASK_MAX,
-  parseSubtasks,
   type KanbanCardPriority,
-  type KanbanSubtask,
 } from "@monark/kanban/client";
 import { trpc } from "@/lib/trpc";
 
@@ -45,23 +41,16 @@ export type EditableCard = {
   id: string;
   title: string;
   columnId: string;
-  description: string | null;
+  /** Block-array card body (JSON) ; coerced to `Block[]` by the editor. Optional:
+   *  an `unknown` field serializes as optional through tRPC. The card's checklist
+   *  now lives in this body (BlockNote check-list blocks), not a separate field. */
+  description?: unknown;
   assigneeIds: string[];
   reviewerIds: string[];
   dueAt: Date | string | null;
   priority: KanbanCardPriority | null;
   estimate: number | null;
-  // Opaque JSON from the API (a `KanbanSubtask[]`) ; parsed with `parseSubtasks`
-  // when the form seeds its state (retyping through the pass-through card would
-  // spread the large tRPC card type and blow tsc's instantiation-depth limit).
-  subtasks?: unknown;
 };
-
-/** Client id for a new subtask row — Math.random (never crypto.randomUUID,
- *  which throws on LAN-http mobile dev). */
-function newSubtaskId(): string {
-  return `st_${Math.random().toString(36).slice(2, 10)}`;
-}
 
 type Member = { id: string; displayName: string | null; email: string; avatarUrl?: string | null };
 /** Board columns, for the status selector (a status is a column). */
@@ -188,12 +177,15 @@ export function CardEditor(props: CardEditorProps) {
   );
 }
 
+function asBlocks(value: unknown): Block[] {
+  return Array.isArray(value) ? (value as Block[]) : [];
+}
+
 /** The card form itself — remounted per card by `CardEditor` so its field state
  *  re-seeds without re-animating the surrounding panel. */
 function CardForm({ boardId, state, members, columns, canDelete, onSaved }: CardEditorProps) {
   const t = useTranslations("kanban");
   const tCommon = useTranslations("common");
-  const { labels: fieldLabels } = useFieldStrings();
   const isEdit = state.mode === "edit";
 
   // The loaded baseline the form seeds from (the card's values, or the empty
@@ -206,81 +198,77 @@ function CardForm({ boardId, state, members, columns, canDelete, onSaved }: Card
         ? {
             status: state.card.columnId,
             title: state.card.title,
-            description: state.card.description ?? "",
+            description: asBlocks(state.card.description),
             assignees: state.card.assigneeIds,
             reviewers: state.card.reviewerIds,
             priority: (state.card.priority ?? NO_PRIORITY) as string,
             estimate: state.card.estimate != null ? String(state.card.estimate) : "",
             due: toDateInput(state.card.dueAt),
-            subtasks: parseSubtasks(state.card.subtasks),
           }
         : {
             status: state.columnId,
             title: "",
-            description: "",
+            description: [] as Block[],
             assignees: [] as string[],
             reviewers: [] as string[],
             priority: NO_PRIORITY as string,
             estimate: "",
             due: "",
-            subtasks: [] as KanbanSubtask[],
           },
     [state],
   );
 
   const [status, setStatus] = useState(initial.status);
   const [title, setTitle] = useState(initial.title);
-  const [description, setDescription] = useState(initial.description);
+  // The description block editor is UNCONTROLLED : edits stream into a ref so
+  // typing never re-renders the form (which on mobile would abort IME
+  // composition and swallow Enter). Its dirtiness is a one-shot flag flipped on
+  // the first edit, so there's exactly one re-render, not one per keystroke.
+  const descriptionRef = useRef<Block[]>(initial.description);
+  const descriptionDirtyRef = useRef(false);
+  const [descriptionDirty, setDescriptionDirty] = useState(false);
+  // Bumped on Cancel/revert to remount the (uncontrolled) editor so it re-seeds
+  // from the baseline ; typing never touches this, so it never re-renders mid-edit.
+  const [editorKey, setEditorKey] = useState(0);
+  const onBodyChange = useCallback((blocks: Block[]) => {
+    descriptionRef.current = blocks;
+    if (!descriptionDirtyRef.current) {
+      descriptionDirtyRef.current = true;
+      setDescriptionDirty(true);
+    }
+  }, []);
   const [assignees, setAssignees] = useState<string[]>(initial.assignees);
   const [reviewers, setReviewers] = useState<string[]>(initial.reviewers);
   const [priority, setPriority] = useState<string>(initial.priority);
   const [estimate, setEstimate] = useState(initial.estimate);
   const [due, setDue] = useState(initial.due);
-  const [subtasks, setSubtasks] = useState<KanbanSubtask[]>(initial.subtasks);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   // Dirty vs the loaded baseline, for the `DirtyFormBar` gate (JSON compare is
-  // enough — the fields are all plain values / small arrays).
-  const initialJson = useMemo(() => JSON.stringify(initial), [initial]);
+  // enough — the fields are all plain values / small arrays). Description is
+  // excluded from the diff (it lives in a ref) ; `descriptionDirty` covers it.
+  const initialJson = useMemo(() => {
+    const { description: _description, ...rest } = initial;
+    return JSON.stringify(rest);
+  }, [initial]);
   const dirty =
-    JSON.stringify({
-      status,
-      title,
-      description,
-      assignees,
-      reviewers,
-      priority,
-      estimate,
-      due,
-      subtasks,
-    }) !== initialJson;
+    descriptionDirty ||
+    JSON.stringify({ status, title, assignees, reviewers, priority, estimate, due }) !==
+      initialJson;
 
   // Cancel = revert to baseline (the panel's X / Escape is how you leave).
   function reset() {
     setStatus(initial.status);
     setTitle(initial.title);
-    setDescription(initial.description);
+    descriptionRef.current = initial.description;
+    descriptionDirtyRef.current = false;
+    setDescriptionDirty(false);
+    setEditorKey((k) => k + 1);
     setAssignees(initial.assignees);
     setReviewers(initial.reviewers);
     setPriority(initial.priority);
     setEstimate(initial.estimate);
     setDue(initial.due);
-    setSubtasks(initial.subtasks);
-  }
-
-  const doneCount = subtasks.filter((s) => s.done).length;
-  function addSubtask() {
-    setSubtasks((prev) =>
-      prev.length >= KANBAN_SUBTASK_MAX
-        ? prev
-        : [...prev, { id: newSubtaskId(), title: "", done: false }],
-    );
-  }
-  function patchSubtask(id: string, patch: Partial<KanbanSubtask>) {
-    setSubtasks((prev) => prev.map((s) => (s.id === id ? { ...s, ...patch } : s)));
-  }
-  function removeSubtask(id: string) {
-    setSubtasks((prev) => prev.filter((s) => s.id !== id));
   }
 
   const createMutation = trpc.kanban.cards.create.useMutation({
@@ -333,17 +321,12 @@ function CardForm({ boardId, state, members, columns, canDelete, onSaved }: Card
     const payload = {
       title: trimmed,
       columnId: status,
-      description: description.trim().length > 0 ? description : null,
+      description: descriptionRef.current,
       assigneeIds: assignees,
       reviewerIds: reviewers,
       priority: priority === NO_PRIORITY ? null : (priority as KanbanCardPriority),
       estimate: estimateValue,
       dueAt: due ? due : null,
-      // Drop blank rows, then send as a JSON string (the tRPC input takes a
-      // string to keep its inferred type flat — see the server's parseSubtasksInput).
-      subtasks: JSON.stringify(
-        subtasks.map((s) => ({ ...s, title: s.title.trim() })).filter((s) => s.title.length > 0),
-      ),
     };
     if (state.mode === "create") {
       createMutation.mutate({ boardId, ...payload });
@@ -374,8 +357,8 @@ function CardForm({ boardId, state, members, columns, canDelete, onSaved }: Card
               autoFocus
             />
           </div>
-          {/* Metadata rows first ; description + subtasks below them. Status +
-                estimate on one row, priority + due date beneath it. */}
+          {/* Metadata rows first ; the description body (with its checklist)
+                below them. Status + estimate on one row, priority + due beneath. */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label htmlFor="card-status">{t("card.statusLabel")}</Label>
@@ -484,62 +467,15 @@ function CardForm({ boardId, state, members, columns, canDelete, onSaved }: Card
             />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="card-description">{t("card.descriptionLabel")}</Label>
-            <RichTextEditor
-              id="card-description"
-              value={description}
-              onChange={setDescription}
-              labels={fieldLabels.richText}
-              ariaLabel={t("card.descriptionLabel")}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label>
-              {t("card.subtasksLabel")}
-              {subtasks.length > 0 && (
-                <span className="ml-1.5 text-xs font-normal text-muted-foreground tabular-nums">
-                  {doneCount}/{subtasks.length}
-                </span>
-              )}
-            </Label>
-            <div className="space-y-1.5">
-              {subtasks.map((st) => (
-                <div key={st.id} className="flex items-center gap-2">
-                  <Checkbox
-                    checked={st.done}
-                    onChange={(e) => patchSubtask(st.id, { done: e.target.checked })}
-                    aria-label={t("card.subtaskDone")}
-                  />
-                  <Input
-                    value={st.title}
-                    onChange={(e) => patchSubtask(st.id, { title: e.target.value })}
-                    placeholder={t("card.subtaskPlaceholder")}
-                    maxLength={200}
-                    className={cn("h-9", st.done && "text-muted-foreground line-through")}
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="h-9 w-9 shrink-0 text-muted-foreground hover:text-foreground"
-                    onClick={() => removeSubtask(st.id)}
-                    aria-label={t("card.subtaskRemove")}
-                  >
-                    <X className="h-4 w-4" aria-hidden />
-                  </Button>
-                </div>
-              ))}
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="w-full"
-                onClick={addSubtask}
-                disabled={subtasks.length >= KANBAN_SUBTASK_MAX}
-              >
-                <Plus className="mr-1 h-4 w-4" aria-hidden />
-                {t("card.subtaskAdd")}
-              </Button>
+            <Label>{t("card.descriptionLabel")}</Label>
+            <div className="rounded-md border">
+              <BlockEditor
+                key={editorKey}
+                value={initial.description}
+                onChange={onBodyChange}
+                minHeight={140}
+                ariaLabel={t("card.descriptionLabel")}
+              />
             </div>
           </div>
           {isEdit && canDelete && (

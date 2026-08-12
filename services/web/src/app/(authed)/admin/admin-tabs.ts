@@ -5,8 +5,10 @@ import {
   HardDrive,
   KeyRound,
   Lock,
+  Trophy,
   Users,
   Webhook,
+  Workflow,
   type LucideIcon,
 } from "lucide-react";
 
@@ -16,10 +18,12 @@ export type AdminTab = {
     | "users"
     | "rbac"
     | "webhooks"
+    | "automation"
     | "dataModels"
     | "files"
     | "secrets"
-    | "serviceAccounts";
+    | "serviceAccounts"
+    | "achievements";
   href: `/admin/${string}`;
   icon: LucideIcon;
   /**
@@ -48,6 +52,9 @@ export const ADMIN_TABS: ReadonlyArray<AdminTab> = [
   { id: "users", href: "/admin/users", icon: Users },
   { id: "rbac", href: "/admin/rbac", icon: KeyRound },
   { id: "webhooks", href: "/admin/webhooks", icon: Webhook },
+  // Automation integrations (GitHub / Telegram / X / Discord) — their per-org
+  // connection config, regrouped here instead of as top-level nav entries.
+  { id: "automation", href: "/admin/automation", icon: Workflow, flag: "automation.enabled" },
   { id: "dataModels", href: "/admin/data-models", icon: Database },
   { id: "files", href: "/admin/files", icon: HardDrive },
   { id: "secrets", href: "/admin/secrets", icon: Lock },
@@ -57,4 +64,5 @@ export const ADMIN_TABS: ReadonlyArray<AdminTab> = [
     icon: Braces,
     flag: "public-api.service-accounts",
   },
+  { id: "achievements", href: "/admin/achievements", icon: Trophy, flag: "achievements.enabled" },
 ];

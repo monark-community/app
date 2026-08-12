@@ -1,10 +1,10 @@
 // Icons are referenced by name, not by component, because the tabs built in
-// `layout.tsx` (a Server Component) end up passed as a prop into client
-// components (`DataSidebar` / `DataTabsBar`). A Lucide icon is a function
-// component ; functions can't cross the Server->Client serialization boundary
-// ("Functions cannot be passed directly to Client Components"), so the icon has
-// to travel as a plain string and get resolved back to a component client-side
-// (see `data-sidebar.tsx`'s `TAB_ICONS` map).
+// `layout.tsx` (a Server Component) end up passed as a prop into the client
+// `DataSidebar`. A Lucide icon is a function component ; functions can't
+// cross the Server->Client serialization boundary ("Functions cannot be
+// passed directly to Client Components"), so the icon has to travel as a
+// plain string and get resolved back to a component client-side (see
+// `data-sidebar.tsx`'s `TAB_ICONS` map).
 export type DataTabIcon = "database";
 
 export type DataTab = {

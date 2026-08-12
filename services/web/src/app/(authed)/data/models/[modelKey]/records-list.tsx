@@ -131,6 +131,10 @@ function filterTypeForField(def: FieldDef): RecordFilterType | null {
     case "file":
       // Not filterable in v1 (a file value is an opaque id) — mirrors relation.
       return null;
+    case "document":
+      // A block document is non-filterable (its value is a block-array JSON) ;
+      // mirrors relation / file.
+      return null;
   }
 }
 

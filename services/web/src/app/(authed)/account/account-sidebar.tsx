@@ -32,9 +32,9 @@ const GRACE_TABS: ReadonlySet<TabValue> = new Set(["profile", "danger"]);
  * Account-section sidebar. Same surface as before but each tab is a
  * real route segment now (`/account/profile`, `/account/security`, …)
  * instead of a `?tab=` query param ; the active item is derived from
- * `usePathname()`. The vertical rail mounts via `<PageLayout sidebar>`
- * on `xl+` ; the horizontal strip is rendered by `/account/layout.tsx`
- * inside the content slot for narrower viewports.
+ * `usePathname()`. The vertical rail mounts via `<SectionShell sidebar>`
+ * on `xl+` ; the horizontal strip is `/account/layout.tsx`'s
+ * `secondaryNav` for narrower viewports.
  */
 export function AccountSidebar({
   orientation = "vertical",

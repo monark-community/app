@@ -49,6 +49,7 @@ import { Separator } from "@/components/ui/separator";
 import { trpc } from "@/lib/trpc";
 import { TITLE_FIELD_KEY } from "@monark/data-models/contracts";
 import { FieldEditorDialog, type FieldEditorValue } from "./field-editor-dialog";
+import { SharingSection } from "./sharing-section";
 
 /** A module integration slot key (e.g. `startAt`) as a friendly label —
  *  camelCase / snake split into words, first letter capitalized. The exact key
@@ -357,6 +358,8 @@ export function ModelEditor({ initial }: { initial: DataModelInitial }) {
       <Separator />
 
       <IntegrationsSection dataModelId={initial.id} fields={fields} />
+
+      <SharingSection dataModelId={initial.id} fields={fields} />
 
       <FieldEditorDialog
         open={fieldDialogOpen}

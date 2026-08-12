@@ -89,7 +89,7 @@ export function GithubSettings({ canManage }: { canManage: boolean }) {
           <GitPullRequest className="h-5 w-5" aria-hidden />
         </span>
         <div>
-          <h1 className="text-lg font-semibold">{t("title")}</h1>
+          <h2 className="text-lg font-semibold">{t("title")}</h2>
           <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
         </div>
       </header>

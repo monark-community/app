@@ -1,18 +1,16 @@
 import type { ReactNode } from "react";
+import { SectionShell } from "@/components/section-shell";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createServerTrpcClient } from "@/lib/trpc-server";
-import { SidebarRail } from "@/components/sidebar-rail";
 import { DATA_TABS, type DataTab } from "./data-tabs";
 import { DataSidebar } from "./data-sidebar";
-import { DataTabsBar } from "./data-tabs-bar";
 
 /**
- * Shared shell for the Data section (`/data/*`). The AppBar comes from
- * the parent `(authed)/layout` ; this mounts the secondary nav — the
- * shared `SidebarRail` on `xl+`, the horizontal `DataTabsBar` below it —
- * so every data model inherits the same chrome. Content is full-width
- * (offset past the rail on `xl+`) because the data models render wide
- * tables, unlike the max-w-2xl PageLayout the admin forms use.
+ * Shared shell for the Data section (`/data/*`), via the common
+ * `SectionShell` (see its doc for the scroll / mobile-nav-collapse /
+ * detail-bar behavior — shared with Admin and Account). `variant="full"`
+ * because Data's tables render wide, unlike the max-w-2xl centered column
+ * Admin / Account forms use.
  *
  * Session is gated here ; per-model `<model>.read` permission checks
  * stay in each model's own route layout so a user with access to one
@@ -53,22 +51,13 @@ export default async function DataLayout({ children }: { children: ReactNode }) 
   const tabs: DataTab[] = [...DATA_TABS, ...dynamicTabs];
   const allowedIds = tabs.filter((tab) => permSet.has(tab.permission)).map((tab) => tab.id);
 
-  // Desktop (`xl+`) : a viewport-height flex shell where `<main>` is the single
-  // bounded scroll region — a list page fills it and its table scrolls
-  // internally (no page scroll), a taller detail/form page scrolls `<main>`
-  // itself. Below `xl` (phones / tablets, where the horizontal tab bar replaces
-  // the rail) : plain block flow, so the page scrolls naturally and the tab
-  // bar's hide-on-scroll + the mobile URL-bar collapse keep working. Nothing
-  // measures the viewport in JS ; the behavior switch is pure CSS.
   return (
-    <div className="xl:flex xl:h-[calc(100dvh-57px)] xl:flex-col xl:overflow-hidden">
-      <DataTabsBar tabs={tabs} allowedIds={allowedIds} />
-      <SidebarRail>
-        <DataSidebar tabs={tabs} allowedIds={allowedIds} />
-      </SidebarRail>
-      <main className="w-full px-4 pb-6 pt-8 sm:px-6 xl:min-h-0 xl:flex-1 xl:overflow-y-auto xl:pl-78">
-        {children}
-      </main>
-    </div>
+    <SectionShell
+      variant="full"
+      sidebar={<DataSidebar tabs={tabs} allowedIds={allowedIds} />}
+      secondaryNav={<DataSidebar orientation="horizontal" tabs={tabs} allowedIds={allowedIds} />}
+    >
+      {children}
+    </SectionShell>
   );
 }

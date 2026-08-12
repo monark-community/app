@@ -122,7 +122,8 @@ export function RecordFullPage({ model, recordId }: { model: ModelInfo; recordId
   // Full-width, relying on the Data section `<main>`'s own padding (`px` +
   // `pt-8`) rather than re-centering in a `max-w-2xl` column or adding a second
   // `py-8` — so this record page matches its full-width records-list sibling
-  // (the data section renders wide, unlike the centered admin PageLayout).
+  // (the Data section's SectionShell uses `variant="full"`, unlike the
+  // centered `variant="centered"` admin / account forms use).
   return (
     <div className="space-y-6">
       <PageHeader

@@ -15,11 +15,10 @@ const TAB_ICONS: Record<DataTabIcon, LucideIcon> = {
 
 /**
  * Secondary nav shared by every `/data/*` route — one entry per
- * dynamically-registered Data Model. Mirrors the AdminSidebar: the layout
- * renders this once on
- * `xl+` (vertical rail) and once inside the mobile DataTabsBar
- * (horizontal strip). Active item is derived from the pathname so the
- * shell stays decoupled from per-page state.
+ * dynamically-registered Data Model. Mirrors the AdminSidebar: the
+ * `SectionShell` renders this once on `xl+` (vertical rail) and once as
+ * the mobile horizontal strip. Active item is derived from the pathname
+ * so the shell stays decoupled from per-page state.
  */
 export function DataSidebar({
   tabs,
