@@ -1,0 +1,22 @@
+import { mergeConfig, defineConfig } from "vitest/config";
+import baseConfig from "../../vitest.shared";
+
+// Same shape as the other packages' integration configs. The search fan-out
+// itself needs no DB (it aggregates registered sources), but the module's tests
+// live here to satisfy the "router module ships tests/integration/" contract and
+// share the one integration runner.
+export default mergeConfig(
+  baseConfig,
+  defineConfig({
+    test: {
+      globalSetup: ["@monark/test-utils/global-setup"],
+      setupFiles: ["@monark/test-utils/assert-test-db"],
+      include: ["tests/integration/**/*.test.ts"],
+      testTimeout: 30_000,
+      hookTimeout: 60_000,
+      sequence: { concurrent: false },
+      fileParallelism: false,
+      coverage: { reportsDirectory: "coverage/integration", include: ["src/**/*.ts"] },
+    },
+  }),
+);
