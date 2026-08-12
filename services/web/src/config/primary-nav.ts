@@ -1,12 +1,4 @@
-import {
-  AtSign,
-  CalendarDays,
-  Database,
-  GitPullRequest,
-  Send,
-  SquareKanban,
-  Workflow,
-} from "lucide-react";
+import { BookText, CalendarDays, Database, SquareKanban, Workflow } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 /**
@@ -68,10 +60,15 @@ export type PrimaryNavEntry = {
 export const PRIMARY_NAV: PrimaryNavEntry[] = [
   { id: "calendar", href: "/calendar", icon: CalendarDays },
   { id: "kanban", href: "/kanban", icon: SquareKanban, flag: "kanban.board" },
+  { id: "wiki", href: "/wiki", icon: BookText, flag: "wiki.enabled" },
   { id: "automation", href: "/automation", icon: Workflow, flag: "automation.enabled" },
-  { id: "github", href: "/github", icon: GitPullRequest, flag: "github.enabled" },
-  { id: "telegram", href: "/telegram", icon: Send, flag: "telegram.enabled" },
-  { id: "twitter", href: "/x", icon: AtSign, flag: "twitter.enabled" },
+  // GitHub / Telegram / X (Twitter) / Discord are automation integrations, not
+  // top-level destinations — their connection config lives under Admin →
+  // Automation (see admin/automation), so they intentionally don't register here.
+  //
+  // Achievements has no top-level entry either — the gallery is reached from the
+  // account-menu widget (see config/shell-widgets) ; a nav link would be redundant.
+  //
   // Custom data models (projects, industries, …) are grouped under the
   // Data section ; its own secondary nav (DataSidebar) lists the models.
   // `/data` server-redirects to the first model.

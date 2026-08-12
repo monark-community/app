@@ -34,8 +34,18 @@
       "automation_update": "modifier une automatisation",
       "automation_enable": "activer ou désactiver une automatisation",
       "automation_test": "tester une automatisation",
-      "automation_get_run": "consulter une exécution d'automatisation"
-    }
+      "automation_get_run": "consulter une exécution d'automatisation",
+      "wiki_list_pages": "lister vos pages wiki",
+      "wiki_get_page": "ouvrir une page wiki",
+      "wiki_search": "rechercher dans le wiki",
+      "wiki_create_page": "créer une page wiki",
+      "wiki_update_page": "renommer une page wiki",
+      "wiki_move_page": "déplacer une page wiki",
+      "wiki_delete_page": "supprimer une page wiki",
+      "list_destinations": "consulter les sections de l'app",
+      "navigate": "vous emmener sur une page"
+    },
+    "navGo": "Aller à {label}"
   },
   "fields": {
     "noResults": "Aucun résultat.",
@@ -172,11 +182,9 @@
         "home": "Accueil",
         "calendar": "Calendrier",
         "kanban": "Kanban",
+        "wiki": "Wiki",
         "data": "Données",
-        "automation": "Automatisation",
-        "github": "GitHub",
-        "telegram": "Telegram",
-        "twitter": "X"
+        "automation": "Automatisation"
       }
     },
     "userMenu": {
@@ -480,6 +488,19 @@
       "chipMode": "Modifier en puces"
     }
   },
+  "achievements": {
+    "title": "Succès",
+    "subtitle": "Les badges que vous avez obtenus et ceux à débloquer.",
+    "empty": "Aucun succès n'a encore été configuré.",
+    "summary": "{earned} sur {total} obtenus",
+    "points": "{points} pts",
+    "earnedOn": "Obtenu le {date}",
+    "locked": "Verrouillé",
+    "menuWidget": {
+      "title": "Succès",
+      "count": "{count, plural, =0 {Aucun succès} one {# succès obtenu} other {# succès obtenus}}"
+    }
+  },
   "globalSearch": {
     "trigger": "Rechercher",
     "label": "Recherche globale",
@@ -489,6 +510,7 @@
     "groups": {
       "calendar": "Événements",
       "kanban": "Cartes",
+      "wiki": "Pages",
       "data": "Enregistrements",
       "automation": "Automatisations",
       "navigation": "Aller à"
@@ -623,10 +645,62 @@
       "organization": "Organisation",
       "rbac": "Rôles et permissions",
       "webhooks": "Webhooks",
+      "automation": "Automatisation",
       "dataModels": "Modèles de données",
       "files": "Fichiers",
       "secrets": "Secrets",
-      "serviceAccounts": "Comptes de service"
+      "serviceAccounts": "Comptes de service",
+      "achievements": "Succès"
+    },
+    "automation": {
+      "title": "Intégrations d'automatisation",
+      "subtitle": "Connectez les services tiers qui déclenchent vos automatisations et par lesquels elles agissent.",
+      "notEnabled": "Cette intégration est désactivée. Activez le drapeau de fonctionnalité {flag} pour la configurer."
+    },
+    "achievements": {
+      "title": "Succès",
+      "subtitle": "Définissez des succès et les conditions qui les attribuent.",
+      "new": "Nouveau succès",
+      "newTitle": "Nouveau succès",
+      "editTitle": "Modifier le succès",
+      "empty": "Aucun succès pour le moment. Créez-en un pour commencer.",
+      "points": "{points} pts",
+      "disabled": "Désactivé",
+      "enabledToggle": "Activé",
+      "noRules": "Aucune condition — ajoutez-en une pour que ce succès puisse être obtenu.",
+      "addRule": "Ajouter une condition",
+      "addRuleTitle": "Ajouter une condition",
+      "editRuleTitle": "Modifier la condition",
+      "ruleSummary": "{count, plural, one {une fois} other {# fois}} · pour {subject}",
+      "confirmTitle": "Supprimer le succès",
+      "confirmRuleTitle": "Supprimer la condition",
+      "confirmDescription": "Supprimer « {name} » ? Cette action est irréversible.",
+      "cancel": "Annuler",
+      "delete": "Supprimer",
+      "save": "Enregistrer",
+      "form": {
+        "name": "Nom",
+        "description": "Description",
+        "uploadIcon": "Téléverser une image",
+        "uploading": "Téléversement…",
+        "removeIcon": "Retirer l'image",
+        "uploadError": "Échec du téléversement",
+        "points": "Points",
+        "eventType": "Quand ceci se produit",
+        "eventTypePlaceholder": "Choisir un événement…",
+        "threshold": "Fois",
+        "subject": "Attribuer à",
+        "match": "Seulement quand (optionnel)",
+        "matchField": "Champ",
+        "matchValue": "égal à…",
+        "addMatch": "Ajouter un filtre"
+      },
+      "toast": {
+        "saved": "Succès enregistré",
+        "deleted": "Succès supprimé",
+        "ruleSaved": "Condition enregistrée",
+        "ruleDeleted": "Condition supprimée"
+      }
     },
     "serviceAccounts": {
       "title": "Comptes de service",
@@ -1397,6 +1471,7 @@
             "TEXT": "Texte",
             "LONG_TEXT": "Texte long",
             "RICH_TEXT": "Texte enrichi",
+            "DOCUMENT": "Document",
             "NUMBER": "Nombre",
             "BOOLEAN": "Booléen",
             "DATE": "Date",
@@ -1477,7 +1552,142 @@
           "success": "Intégration enregistrée.",
           "error": "Impossible d'enregistrer cette intégration.",
           "missingRequired": "Associez chaque emplacement obligatoire avant d'activer."
+        },
+        "sharing": {
+          "title": "Formulaires publics",
+          "subtitle": "Partagez un lien pour que des personnes qui ne sont pas des utilisateurs puissent soumettre des enregistrements à ce modèle. Choisissez les champs qu'elles remplissent ; le reste demeure privé.",
+          "createCta": "Nouveau formulaire",
+          "empty": "Aucun formulaire public pour le moment.",
+          "engagement": {
+            "title": "Participation",
+            "subtitle": "Permettez aux gens de voter et de discuter des entrées sur le tableau public.",
+            "voting": {
+              "label": "Votes",
+              "help": "Les personnes connectées ou invitées peuvent voter pour les entrées ; le tableau peut trier par popularité."
+            },
+            "discussions": {
+              "label": "Discussions",
+              "help": "Les personnes connectées peuvent commenter les entrées. Les commentaires sont publiés immédiatement ; les admins peuvent les masquer ou les supprimer."
+            }
+          },
+          "badge": {
+            "anonymous": "Toute personne ayant le lien",
+            "email": "Invitations par courriel"
+          },
+          "card": {
+            "activeLabel": "Actif",
+            "delete": "Supprimer le formulaire",
+            "deleteTitle": "Supprimer le formulaire public",
+            "deleteDescription": "Supprimer « {name} » ? Son lien et ses invitations cessent de fonctionner. Les enregistrements soumis sont conservés.",
+            "deleteConfirm": "Supprimer",
+            "deleteCancel": "Annuler",
+            "deleteSuccess": "Formulaire supprimé.",
+            "updateError": "Impossible de mettre à jour le formulaire.",
+            "fieldsCount": "{count} champs",
+            "copy": "Copier le lien",
+            "copied": "Copié",
+            "copyError": "Impossible de copier le lien."
+          },
+          "dialog": {
+            "title": "Nouveau formulaire public",
+            "nameLabel": "Nom du formulaire",
+            "namePlaceholder": "ex. Sondage des lecteurs",
+            "modeLabel": "Qui peut soumettre",
+            "modeAnonymous": "Toute personne ayant le lien",
+            "modeAnonymousHint": "Un lien partageable ; tout le monde peut soumettre (débit limité).",
+            "modeEmail": "Personnes invitées seulement",
+            "modeEmailHint": "Chaque destinataire reçoit un lien unique et peut soumettre une seule fois.",
+            "fieldsLabel": "Champs du formulaire",
+            "fieldsHint": "Seuls ces champs sont affichés et acceptés. Les champs obligatoires doivent être inclus.",
+            "noFields": "Ce modèle n'a pas encore de champs pouvant figurer sur un formulaire public.",
+            "introLabel": "Introduction (facultatif)",
+            "successLabel": "Message de remerciement (facultatif)",
+            "cancel": "Annuler",
+            "submit": "Créer le formulaire",
+            "success": "Formulaire public créé.",
+            "error": "Impossible de créer le formulaire.",
+            "boardLabel": "Tableau public",
+            "boardHint": "Publiez aussi une liste consultable, en lecture seule, des entrées approuvées (demandes de fonctionnalités, bogues, questions-réponses).",
+            "readAccessLabel": "Qui peut consulter le tableau",
+            "readPublic": "Toute personne ayant le lien",
+            "readInvited": "Personnes invitées seulement",
+            "readFieldsLabel": "Champs affichés publiquement",
+            "readFieldsHint": "Ces champs sont visibles sur le tableau (ex. un statut). Le titre de l'entrée est toujours affiché."
+          },
+          "invites": {
+            "emailPlaceholder": "nom@exemple.com",
+            "add": "Inviter",
+            "empty": "Aucun destinataire invité pour le moment.",
+            "submitted": "Soumis",
+            "pending": "En attente",
+            "remove": "Retirer le destinataire",
+            "addSuccess": "Invitation envoyée.",
+            "addError": "Impossible d'ajouter ce destinataire."
+          },
+          "board": {
+            "badge": "Tableau public activé",
+            "published": "Entrée publiée.",
+            "pending": "En attente de révision ({count})",
+            "pendingEmpty": "Rien à réviser.",
+            "reject": "Rejeter",
+            "approve": "Approuver"
+          }
         }
+      }
+    }
+  },
+  "public": {
+    "form": {
+      "submit": "Soumettre",
+      "clear": "Effacer",
+      "error": "Impossible de soumettre le formulaire.",
+      "submittingAs": "Soumission au nom de {email}",
+      "backToBoard": "Retour aux entrées",
+      "yes": "Oui",
+      "no": "Non",
+      "board": {
+        "searchPlaceholder": "Rechercher des entrées…",
+        "new": "Nouvelle entrée",
+        "empty": "Aucune entrée pour le moment.",
+        "noResults": "Aucune entrée ne correspond à votre recherche.",
+        "loadMore": "Charger plus",
+        "loading": "Chargement…",
+        "sort": {
+          "recent": "Récentes",
+          "top": "Populaires"
+        }
+      },
+      "vote": {
+        "label": "Voter",
+        "signInHint": "Connectez-vous ou ouvrez votre lien d'invitation pour voter.",
+        "error": "Impossible d'enregistrer votre vote."
+      },
+      "discussion": {
+        "title": "Discussion",
+        "empty": "Aucun commentaire pour le moment. Lancez la discussion.",
+        "placeholder": "Écrire un commentaire…",
+        "post": "Commenter",
+        "loading": "Chargement…",
+        "loadMore": "Charger plus",
+        "signInToComment": "Connectez-vous pour participer à la discussion.",
+        "someone": "Quelqu'un",
+        "delete": "Supprimer",
+        "hide": "Masquer",
+        "unhide": "Afficher",
+        "hiddenBadge": "Masqué",
+        "error": "Une erreur est survenue."
+      },
+      "done": {
+        "title": "Merci !",
+        "body": "Votre réponse a été enregistrée."
+      },
+      "closed": {
+        "title": "Ce formulaire est fermé",
+        "body": "Il n'accepte plus de soumissions."
+      },
+      "invalid": {
+        "title": "Lien invalide",
+        "body": "Ce formulaire nécessite un lien d'invitation personnel valide."
       }
     }
   },
@@ -2233,6 +2443,19 @@
     "step3": "Sous Keys and tokens, copiez la clé/le secret API et générez un jeton d'accès/secret pour votre compte.",
     "step4": "Collez les quatre valeurs ci-dessus et Connecter. Les identifiants sont stockés chiffrés et ne seront plus affichés."
   },
+  "discord": {
+    "title": "Discord",
+    "subtitle": "Publiez des messages sur Discord depuis vos automatisations. En écriture seule — Discord n'a pas d'événements déclencheurs.",
+    "writeOnlyHeading": "Fonctionnement",
+    "writeOnly": "Discord est en écriture seule : les nœuds d'automatisation envoient des messages à l'aide d'un jeton de bot ou d'une URL de webhook de salon. Aucune connexion à configurer ici.",
+    "secretsHeading": "Identifiants",
+    "secrets": "Ajoutez votre jeton de bot ou une URL de webhook de salon comme secret sous Admin → Secrets, puis référencez-le dans le champ jeton / webhook d'un nœud d'automatisation Discord.",
+    "secretsLink": "Aller aux secrets",
+    "setupHeading": "Configurer dans Discord",
+    "step1": "Pour un bot : créez une application sur discord.com/developers, ajoutez un bot, copiez son jeton et invitez le bot sur votre serveur avec la permission Envoyer des messages.",
+    "step2": "Pour un webhook (sans bot) : dans un salon, Modifier le salon → Intégrations → Webhooks → Nouveau webhook, puis copiez son URL.",
+    "step3": "Stockez le jeton ou l'URL du webhook comme secret, puis ajoutez un nœud Discord dans une automatisation et sélectionnez-le."
+  },
   "calendar": {
     "title": "Calendrier",
     "sidebar": {
@@ -2437,11 +2660,6 @@
       "reviewerPlaceholder": "Ajouter un relecteur…",
       "reviewerAdd": "Ajouter un relecteur",
       "reviewerRemove": "Retirer {name}",
-      "subtasksLabel": "Sous-tâches",
-      "subtaskPlaceholder": "Sous-tâche",
-      "subtaskAdd": "Ajouter une sous-tâche",
-      "subtaskRemove": "Retirer la sous-tâche",
-      "subtaskDone": "Marquer comme terminé",
       "priorityLabel": "Priorité",
       "priorityNone": "Aucune",
       "priority": {
@@ -2700,6 +2918,53 @@
       "SUCCEEDED": "Réussie",
       "FAILED": "Échouée",
       "CANCELED": "Annulée"
+    }
+  },
+  "wiki": {
+    "title": "Wiki",
+    "newPage": "Nouvelle page",
+    "untitled": "Sans titre",
+    "empty": {
+      "title": "Aucune page sélectionnée",
+      "description": "Choisissez une page dans la barre latérale, ou créez-en une nouvelle pour commencer."
+    },
+    "tree": {
+      "empty": "Aucune page pour l'instant.",
+      "pagesLabel": "Pages",
+      "expand": "Développer",
+      "collapse": "Réduire",
+      "addChild": "Ajouter une sous-page",
+      "actions": "Actions de la page",
+      "moveTo": "Déplacer vers…",
+      "duplicate": "Dupliquer",
+      "delete": "Supprimer"
+    },
+    "page": {
+      "breadcrumb": "Fil d'Ariane",
+      "notFound": "Cette page n'existe pas ou a été supprimée.",
+      "iconLabel": "Icône de la page",
+      "titleLabel": "Titre de la page",
+      "contentLabel": "Contenu de la page",
+      "contentPlaceholder": "Écrivez quelque chose…"
+    },
+    "move": {
+      "title": "Déplacer la page",
+      "description": "Choisissez où déplacer « {title} ».",
+      "root": "Niveau supérieur",
+      "cancel": "Annuler",
+      "confirm": "Déplacer"
+    },
+    "delete": {
+      "title": "Supprimer la page",
+      "description": "Supprimer « {title} » et toutes ses sous-pages ?",
+      "cancel": "Annuler",
+      "confirm": "Supprimer"
+    },
+    "toast": {
+      "moved": "Page déplacée.",
+      "duplicated": "Page dupliquée.",
+      "deleted": "Page supprimée.",
+      "error": "Une erreur s'est produite."
     }
   }
 }

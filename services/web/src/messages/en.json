@@ -34,8 +34,18 @@
       "automation_update": "update an automation",
       "automation_enable": "turn an automation on or off",
       "automation_test": "test-run an automation",
-      "automation_get_run": "check an automation run"
-    }
+      "automation_get_run": "check an automation run",
+      "wiki_list_pages": "list your wiki pages",
+      "wiki_get_page": "open a wiki page",
+      "wiki_search": "search the wiki",
+      "wiki_create_page": "create a wiki page",
+      "wiki_update_page": "rename a wiki page",
+      "wiki_move_page": "move a wiki page",
+      "wiki_delete_page": "delete a wiki page",
+      "list_destinations": "look up app sections",
+      "navigate": "take you to a page"
+    },
+    "navGo": "Go to {label}"
   },
   "fields": {
     "noResults": "No results.",
@@ -172,11 +182,9 @@
         "home": "Home",
         "calendar": "Calendar",
         "kanban": "Kanban",
+        "wiki": "Wiki",
         "data": "Data",
-        "automation": "Automation",
-        "github": "GitHub",
-        "telegram": "Telegram",
-        "twitter": "X"
+        "automation": "Automation"
       }
     },
     "userMenu": {
@@ -480,6 +488,19 @@
       "chipMode": "Edit as chips"
     }
   },
+  "achievements": {
+    "title": "Achievements",
+    "subtitle": "Badges you've earned and ones still to unlock.",
+    "empty": "No achievements have been set up yet.",
+    "summary": "{earned} of {total} earned",
+    "points": "{points} pts",
+    "earnedOn": "Earned {date}",
+    "locked": "Locked",
+    "menuWidget": {
+      "title": "Achievements",
+      "count": "{count, plural, =0 {No badges yet} one {# badge earned} other {# badges earned}}"
+    }
+  },
   "globalSearch": {
     "trigger": "Search",
     "label": "Global search",
@@ -489,6 +510,7 @@
     "groups": {
       "calendar": "Events",
       "kanban": "Cards",
+      "wiki": "Pages",
       "data": "Records",
       "automation": "Automations",
       "navigation": "Go to"
@@ -623,10 +645,62 @@
       "organization": "Organization",
       "rbac": "Roles & permissions",
       "webhooks": "Webhooks",
+      "automation": "Automation",
       "dataModels": "Data Models",
       "files": "Files",
       "secrets": "Secrets",
-      "serviceAccounts": "Service accounts"
+      "serviceAccounts": "Service accounts",
+      "achievements": "Achievements"
+    },
+    "automation": {
+      "title": "Automation integrations",
+      "subtitle": "Connect the third-party services your automations trigger on and act through.",
+      "notEnabled": "This integration is disabled. Enable the {flag} feature flag to configure it."
+    },
+    "achievements": {
+      "title": "Achievements",
+      "subtitle": "Define achievements and the conditions that award them.",
+      "new": "New achievement",
+      "newTitle": "New achievement",
+      "editTitle": "Edit achievement",
+      "empty": "No achievements yet. Create one to get started.",
+      "points": "{points} pts",
+      "disabled": "Disabled",
+      "enabledToggle": "Enabled",
+      "noRules": "No conditions yet — add one so this achievement can be earned.",
+      "addRule": "Add condition",
+      "addRuleTitle": "Add condition",
+      "editRuleTitle": "Edit condition",
+      "ruleSummary": "{count, plural, one {once} other {# times}} · by {subject}",
+      "confirmTitle": "Delete achievement",
+      "confirmRuleTitle": "Delete condition",
+      "confirmDescription": "Delete “{name}”? This can't be undone.",
+      "cancel": "Cancel",
+      "delete": "Delete",
+      "save": "Save",
+      "form": {
+        "name": "Name",
+        "description": "Description",
+        "uploadIcon": "Upload image",
+        "uploading": "Uploading…",
+        "removeIcon": "Remove image",
+        "uploadError": "Upload failed",
+        "points": "Points",
+        "eventType": "When this happens",
+        "eventTypePlaceholder": "Pick an event…",
+        "threshold": "Times",
+        "subject": "Award to",
+        "match": "Only when (optional)",
+        "matchField": "Field",
+        "matchValue": "equals…",
+        "addMatch": "Add filter"
+      },
+      "toast": {
+        "saved": "Achievement saved",
+        "deleted": "Achievement deleted",
+        "ruleSaved": "Condition saved",
+        "ruleDeleted": "Condition deleted"
+      }
     },
     "serviceAccounts": {
       "title": "Service accounts",
@@ -1397,6 +1471,7 @@
             "TEXT": "Text",
             "LONG_TEXT": "Long text",
             "RICH_TEXT": "Rich text",
+            "DOCUMENT": "Document",
             "NUMBER": "Number",
             "BOOLEAN": "Boolean",
             "DATE": "Date",
@@ -1477,7 +1552,142 @@
           "success": "Integration saved.",
           "error": "Could not save that integration.",
           "missingRequired": "Map every required slot before enabling."
+        },
+        "sharing": {
+          "title": "Public forms",
+          "subtitle": "Share a link so people who aren't users can submit records to this model. Pick which fields they fill in; everything else stays private.",
+          "createCta": "New form",
+          "empty": "No public forms yet.",
+          "engagement": {
+            "title": "Engagement",
+            "subtitle": "Let people vote on and discuss entries on the public board.",
+            "voting": {
+              "label": "Voting",
+              "help": "Signed-in users and invited people can upvote entries; the board can sort by top."
+            },
+            "discussions": {
+              "label": "Discussions",
+              "help": "Signed-in users can comment on entries. Comments post immediately; admins can hide or delete them."
+            }
+          },
+          "badge": {
+            "anonymous": "Anyone with the link",
+            "email": "Email invites"
+          },
+          "card": {
+            "activeLabel": "Active",
+            "delete": "Delete form",
+            "deleteTitle": "Delete public form",
+            "deleteDescription": "Delete “{name}”? Its link and any invites stop working. Submitted records are kept.",
+            "deleteConfirm": "Delete",
+            "deleteCancel": "Cancel",
+            "deleteSuccess": "Form deleted.",
+            "updateError": "Could not update the form.",
+            "fieldsCount": "{count} fields",
+            "copy": "Copy link",
+            "copied": "Copied",
+            "copyError": "Could not copy the link."
+          },
+          "dialog": {
+            "title": "New public form",
+            "nameLabel": "Form name",
+            "namePlaceholder": "e.g. Reader survey",
+            "modeLabel": "Who can submit",
+            "modeAnonymous": "Anyone with the link",
+            "modeAnonymousHint": "A shareable link; anyone can submit (rate-limited).",
+            "modeEmail": "Invited people only",
+            "modeEmailHint": "Each recipient gets a unique link and can submit once.",
+            "fieldsLabel": "Fields on the form",
+            "fieldsHint": "Only these fields are shown and accepted. Required fields must be included.",
+            "noFields": "This model has no fields that can go on a public form yet.",
+            "introLabel": "Intro (optional)",
+            "successLabel": "Thank-you message (optional)",
+            "cancel": "Cancel",
+            "submit": "Create form",
+            "success": "Public form created.",
+            "error": "Could not create the form.",
+            "boardLabel": "Public board",
+            "boardHint": "Also publish a searchable, read-only list of approved entries (feature requests, bug reports, Q&A).",
+            "readAccessLabel": "Who can browse the board",
+            "readPublic": "Anyone with the link",
+            "readInvited": "Only invited people",
+            "readFieldsLabel": "Fields shown publicly",
+            "readFieldsHint": "These fields are visible on the board (e.g. a status). The entry title is always shown."
+          },
+          "invites": {
+            "emailPlaceholder": "name@example.com",
+            "add": "Invite",
+            "empty": "No recipients invited yet.",
+            "submitted": "Submitted",
+            "pending": "Pending",
+            "remove": "Remove recipient",
+            "addSuccess": "Invite sent.",
+            "addError": "Could not add that recipient."
+          },
+          "board": {
+            "badge": "Public board on",
+            "published": "Entry published.",
+            "pending": "Pending review ({count})",
+            "pendingEmpty": "Nothing awaiting review.",
+            "reject": "Reject",
+            "approve": "Approve"
+          }
         }
+      }
+    }
+  },
+  "public": {
+    "form": {
+      "submit": "Submit",
+      "clear": "Clear",
+      "error": "Could not submit the form.",
+      "submittingAs": "Submitting as {email}",
+      "backToBoard": "Back to entries",
+      "yes": "Yes",
+      "no": "No",
+      "board": {
+        "searchPlaceholder": "Search entries…",
+        "new": "New entry",
+        "empty": "No entries yet.",
+        "noResults": "No entries match your search.",
+        "loadMore": "Load more",
+        "loading": "Loading…",
+        "sort": {
+          "recent": "Recent",
+          "top": "Top"
+        }
+      },
+      "vote": {
+        "label": "Upvote",
+        "signInHint": "Sign in or open your invite link to vote.",
+        "error": "Could not record your vote."
+      },
+      "discussion": {
+        "title": "Discussion",
+        "empty": "No comments yet. Start the discussion.",
+        "placeholder": "Write a comment…",
+        "post": "Comment",
+        "loading": "Loading…",
+        "loadMore": "Load more",
+        "signInToComment": "Sign in to join the discussion.",
+        "someone": "Someone",
+        "delete": "Delete",
+        "hide": "Hide",
+        "unhide": "Unhide",
+        "hiddenBadge": "Hidden",
+        "error": "Something went wrong."
+      },
+      "done": {
+        "title": "Thank you!",
+        "body": "Your response has been recorded."
+      },
+      "closed": {
+        "title": "This form is closed",
+        "body": "It's no longer accepting submissions."
+      },
+      "invalid": {
+        "title": "Invalid link",
+        "body": "This form requires a valid personal invite link."
       }
     }
   },
@@ -2233,6 +2443,19 @@
     "step3": "Under Keys and tokens, copy the API key/secret and generate an Access token/secret for your account.",
     "step4": "Paste all four above and Connect. The credentials are stored encrypted and never shown again."
   },
+  "discord": {
+    "title": "Discord",
+    "subtitle": "Post messages to Discord from your automations. Write-only — Discord has no trigger events.",
+    "writeOnlyHeading": "How it works",
+    "writeOnly": "Discord is write-only: automation nodes send messages using either a bot token or a channel webhook URL. There's no connection to set up here.",
+    "secretsHeading": "Credentials",
+    "secrets": "Add your bot token or a channel webhook URL as a secret under Admin → Secrets, then reference it in the token / webhook field of a Discord automation node.",
+    "secretsLink": "Go to Secrets",
+    "setupHeading": "Set up in Discord",
+    "step1": "For a bot: create an app at discord.com/developers, add a bot, copy its token, and invite the bot to your server with the Send Messages permission.",
+    "step2": "For a webhook (no bot): in a channel, Edit Channel → Integrations → Webhooks → New Webhook, then copy its URL.",
+    "step3": "Store the token or webhook URL as a secret, then add a Discord node in an automation and select it."
+  },
   "calendar": {
     "title": "Calendar",
     "sidebar": {
@@ -2437,11 +2660,6 @@
       "reviewerPlaceholder": "Add reviewer…",
       "reviewerAdd": "Add reviewer",
       "reviewerRemove": "Remove {name}",
-      "subtasksLabel": "Subtasks",
-      "subtaskPlaceholder": "Subtask",
-      "subtaskAdd": "Add subtask",
-      "subtaskRemove": "Remove subtask",
-      "subtaskDone": "Mark done",
       "priorityLabel": "Priority",
       "priorityNone": "None",
       "priority": {
@@ -2694,6 +2912,53 @@
       "SUCCEEDED": "Succeeded",
       "FAILED": "Failed",
       "CANCELED": "Canceled"
+    }
+  },
+  "wiki": {
+    "title": "Wiki",
+    "newPage": "New page",
+    "untitled": "Untitled",
+    "empty": {
+      "title": "No page selected",
+      "description": "Pick a page from the sidebar, or create a new one to get started."
+    },
+    "tree": {
+      "empty": "No pages yet.",
+      "pagesLabel": "Pages",
+      "expand": "Expand",
+      "collapse": "Collapse",
+      "addChild": "Add subpage",
+      "actions": "Page actions",
+      "moveTo": "Move to…",
+      "duplicate": "Duplicate",
+      "delete": "Delete"
+    },
+    "page": {
+      "breadcrumb": "Breadcrumb",
+      "notFound": "This page doesn't exist or was deleted.",
+      "iconLabel": "Page icon",
+      "titleLabel": "Page title",
+      "contentLabel": "Page content",
+      "contentPlaceholder": "Write something…"
+    },
+    "move": {
+      "title": "Move page",
+      "description": "Choose where to move “{title}”.",
+      "root": "Top level",
+      "cancel": "Cancel",
+      "confirm": "Move"
+    },
+    "delete": {
+      "title": "Delete page",
+      "description": "Delete “{title}” and all its subpages?",
+      "cancel": "Cancel",
+      "confirm": "Delete"
+    },
+    "toast": {
+      "moved": "Page moved.",
+      "duplicated": "Page duplicated.",
+      "deleted": "Page deleted.",
+      "error": "Something went wrong."
     }
   }
 }
