@@ -24,6 +24,7 @@ Optional modules — each keeps its user guide **with the module** (so removing 
 
 - **[Calendar](../../packages/calendar/docs/user-guide.md)** — Day / Week / Month / Agenda views, creating and moving events, reminders, conflict warnings, ICS import/export, and managing calendars.
 - **[Kanban](../../packages/kanban/docs/user-guide.md)** — boards, columns, and cards ; drag-and-drop, assignees / reviewers, priority / due / subtasks, and filtering + saved views.
+- **[Wiki](../../packages/wiki/docs/user-guide.md)** — a nested tree of pages, each with an icon, title, and rich-text content ; creating sub-pages, moving pages around the tree, duplicating, and search.
 
 ## What's _not_ documented here
 

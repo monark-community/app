@@ -12,32 +12,35 @@ owns its Prisma models directly in the shared `schema.prisma` under the
 `// ── MODULE: kanban ──` banner (`KanbanBoard`, `KanbanBoardRoleAccess`,
 `KanbanColumn`, `KanbanCard` — migrations `20260725200201_add_kanban`,
 `20260726023411_kanban_card_fields`, `20260726040000_kanban_card_multi_assignee`,
-`20260727150000_kanban_card_multi_reviewer`, `20260727170000_kanban_card_subtasks`).
+`20260727150000_kanban_card_multi_reviewer`, `20260727170000_kanban_card_subtasks`,
+`20260808020000_kanban_card_blocks`, `20260808030000_kanban_drop_subtasks`).
 Boards and cards soft-delete (`deletedAt`) ;
 columns hard-delete and cascade their cards.
 
-A **card** carries `title`, `description`, `assigneeIds` / `reviewerIds` (text
+A **card** carries `title`, `description` (a BlockNote **block array**, `Json`) +
+`descriptionText` (its plain-text projection via `blocksToText`, kept in sync on
+write so the query language filters on it), `assigneeIds` / `reviewerIds` (text
 arrays — a card can have **many** assignees and **many** reviewers ; org-member
 userIds, not FKs), `dueAt?`,
 `priority?` (`KanbanCardPriority` : LOW / MEDIUM /
 HIGH / CRITICAL — a severity-graded colour, `KANBAN_PRIORITY_COLOR` in
 `contracts/types.ts` driving a faded-tint badge on the card + in the editor
-picker, matching the Data-Models select badges), `estimate?`
-(Int), and `subtasks` — an inline **checklist** stored as a `Json` column
-(`KanbanSubtask[]` of `{ id, title, done }`). Estimate + priority render as chips
-on the card, and subtask progress renders as a thin **progress bar flush with the
-card's bottom edge** (blue while in progress, green when complete ; the card is
-`overflow-hidden` so the bar clips to the rounded corners, exact `done/total` on
-its title/aria). The whole card opens the editor on click.
+picker, matching the Data-Models select badges), and `estimate?` (Int). A card's
+**checklist lives in the block body** now (BlockNote `checkListItem` blocks) —
+the old dedicated `subtasks` column was dropped. Estimate + priority render as
+chips on the card, and **checklist progress** renders as a thin **progress bar
+flush with the card's bottom edge** (blue while in progress, green when complete ;
+the card is `overflow-hidden` so the bar clips to the rounded corners, exact
+`done/total` on its title/aria), derived from the description's checklist blocks
+via `checklistProgress` (`@monark/common/blocks`). The whole card opens the
+editor on click.
 
-> **Two `subtasks` gotchas.** (1) The `Json` column surfaces as the recursive
-> `Prisma.JsonValue` ; on the already-wide `KanbanCard` row that pushed tRPC's
-> **output** type inference past tsc's instantiation-depth limit (TS2589). Fix:
-> `KanbanCardRow` overrides `subtasks` to `unknown` (data.ts), and every reader
-> coerces it with `parseSubtasks`. (2) A typed `z.array(z.object(...))` in the
-> **input** hit the same wall, so `cards.create` / `update` take `subtasks` as a
-> **JSON string** (parsed server-side via `parseSubtasksInput`) to keep the
-> procedure input flat. Drag activation is input-aware : a `MouseSensor` starts on a 6px move
+> **`description` JSON gotcha + drag activation.** The `Json` column surfaces as
+> the recursive `Prisma.JsonValue` ; on the already-wide `KanbanCard` row that
+> pushed tRPC's **output** type inference past tsc's instantiation-depth limit
+> (TS2589). Fix: `KanbanCardRow` overrides `description` to `unknown` (data.ts),
+> and every reader coerces it (the block editor casts to `Block[]`, the card face
+> reads it through `checklistProgress`). Drag activation is input-aware : a `MouseSensor` starts on a 6px move
 > (so a click stays a click), while a `TouchSensor` needs a ~250ms **long-press**
 > before dragging — a quick touch swipe pans/scrolls the board instead (the card
 > sets no `touch-action: none`, so the browser owns the gesture until the press
@@ -137,18 +140,19 @@ procedure ; `@variables` (`@me`, `@today`) resolve server-side. Queryable fields
 
 Two suites :
 
-- **Unit** (`pnpm --filter @monark/kanban test`, no Docker) —
-  `tests/parse-subtasks.test.ts` covers `parseSubtasks`, the one place the
-  subtask JSON shape is trusted (non-array → `[]`, malformed items dropped,
-  strict `done` coercion, id/title caps, `KANBAN_SUBTASK_MAX` cap).
+- **Unit** (`pnpm --filter @monark/kanban test`, no Docker) — the MonarkQL
+  filter compiler (`tests/query-compiler.test.ts`, incl. the `description` filter
+  now targeting the `descriptionText` projection) and the query-fields kind map.
+  (The card's checklist derivation is unit-tested at its source, `checklistProgress`
+  in `@monark/common`.)
 - **Integration** (`pnpm --filter @monark/kanban test:integration`, needs Docker)
   — two files against a Postgres testcontainer :
   - `kanban-data.test.ts` (data layer) : default-column seeding (names,
     gaps-of-10 positions, colours), column reorder, cross-column `moveCard`
     reindex, `searchCards` scoping/soft-delete, multi-assignee + multi-reviewer
-    round-trips (replace / untouched-on-`undefined` / clear), subtask checklist
-    round-trip through the JSON column, and the status-change move
-    (`updateCard({ columnId })` appends to the target column).
+    round-trips (replace / untouched-on-`undefined` / clear), the block-array
+    `description` + its `descriptionText` projection round-trip, and the
+    status-change move (`updateCard({ columnId })` appends to the target column).
   - `kanban-router.test.ts` (tRPC procedures, via `t.createCallerFactory`) :
     RBAC guards (`kanban.view`/`edit` deny/allow), per-board **role access**
     (`requireAccessibleBoard` — restricted board hidden from a viewer, visible to

@@ -51,6 +51,9 @@ Live plans in [`proposed/`](proposed/):
 - [`proposed/community-activity-feed.md`](proposed/community-activity-feed.md) — subscription-driven public profiles + posts/comments/reactions.
 - [`proposed/network-trust-score.md`](proposed/network-trust-score.md) — invite-tree / delegation / trust ladder.
 - [`proposed/social-automation.md`](proposed/social-automation.md) — event-driven social posting pipeline (token storage now rides [`@monark/secrets`](../../packages/secrets/README.md)).
+- [`proposed/wiki.md`](proposed/wiki.md) — nested-page wiki (Notion-style tree + rich-text pages) as an extended `@monark/wiki` module ; **shipped** (live: [`@monark/wiki`](../../packages/wiki/README.md)).
+- [`proposed/block-editor.md`](proposed/block-editor.md) — Notion-style block editor (BlockNote, JSON block storage) alongside rich text ; new Data Models `DOCUMENT` field type + wiki / kanban migrated (calendar stays rich text) ; **shipped**.
+- [`proposed/global-search.md`](proposed/global-search.md) — extensible core search-source registry (`@monark/common`) + a `@monark/search` module (`search.global` fan-out) making the command palette truly global ; **shipped** (live: [`@monark/search`](../../packages/search/README.md)).
 
 Sequencing notes for the acquisition (onboarding/referral) and engagement (voting/contribution) tracks live in [`phase-2/phase-planning.md`](phase-2/phase-planning.md) and [`phase-3/phase-planning.md`](phase-3/phase-planning.md).
 
