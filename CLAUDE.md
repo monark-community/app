@@ -124,12 +124,12 @@ These are **app-local** on purpose (they encode routing, i18n, and RBAC-gated ac
 
 ## Navigation & global search
 
-A module with a user-facing surface must make itself **reachable and searchable** — treat this as a default part of shipping a module, not an afterthought. Two web-side registries, both single-source-of-truth arrays (no scattered `if (inX)` branches):
+A module with a user-facing surface must make itself **reachable and searchable** — treat this as a default part of shipping a module, not an afterthought. Two registries:
 
-- **Primary nav** — [config/primary-nav.ts](services/web/src/config/primary-nav.ts). Add a `PrimaryNavEntry` (id, href, icon) for the module's top-level surface, plus its `appBar.primaryNav.items.<id>` label in en + fr. This drives the drawer **and** the command palette's "Go to" group, which derives its module destinations from `PRIMARY_NAV` (see [global-search/routes.ts](services/web/src/components/global-search/routes.ts)) — so a drawer entry is automatically searchable-by-name with no second edit.
-- **Global-search content provider** — [global-search/search-providers.ts](services/web/src/components/global-search/search-providers.ts). If the module owns searchable **entities** (records, cards, events), add a `SearchProvider`: a small client component that runs the module's own search query and renders a `SearchResultsGroup`, plus an `isActive(pathname)` gate so it only contributes in its section. Back it with a gated tRPC search procedure that scopes to what the caller may see (mirror `kanban.cards.search` / `calendar.events.search` — resolve accessible ids, then title-match). Add its `globalSearch.groups.<id>` heading in en + fr. Providers own their own hooks, so the palette stays agnostic.
+- **Primary nav** (web) — [config/primary-nav.ts](services/web/src/config/primary-nav.ts). Add a `PrimaryNavEntry` (id, href, icon) for the module's top-level surface, plus its `appBar.primaryNav.items.<id>` label in en + fr. This drives the drawer **and** the command palette's "Go to" group, which derives its module destinations from `PRIMARY_NAV` (see [global-search/routes.ts](services/web/src/components/global-search/routes.ts)) — so a drawer entry is automatically searchable-by-name with no second edit.
+- **Global-search source** (server) — `registerSearchSource(...)` from [@monark/common](packages/common/src/search-registry.ts), the same "register at boot, list at query time" pattern as event types / automation nodes. If the module owns searchable **entities** (records, cards, events, pages), register a source in its `/server` (a `registerXxxSearchSource()` wired in [services/api/src/server.ts](services/api/src/server.ts)). Its `run(ctx, query, limit)` reuses the module's data-layer search, **scopes itself** (its own `requireOrg` + `requirePermission` / accessible-id resolution — mirror `kanban`/`calendar`), and returns `SearchHit { id, title, subtitle?, icon?, href }` with the **href built server-side**. Add a `globalSearch.groups.<groupId>` heading (en + fr) + a `groupId → lucide` entry in the palette's icon map. The core `search.global` fan-out ([@monark/search](packages/search/README.md)) aggregates every source — so the module joins the **global** command palette automatically, with no web edit. (The old per-section `SearchProvider` web components were retired for this ; see [global-search.md](docs/features-planning/proposed/global-search.md).)
 
-The nav entry costs one line and is effectively mandatory for any module with a page ; the content provider is optional but expected whenever the module has entities worth jumping to.
+The nav entry costs one line and is effectively mandatory for any module with a page ; the search source is optional but expected whenever the module has entities worth jumping to.
 
 ## Per-module documentation
 
@@ -182,7 +182,7 @@ pnpm gen && pnpm typecheck && pnpm lint && pnpm test && pnpm check:tiers && pnpm
 - [ ] Codegen fresh (`pnpm gen`) ; no generated file hand-edited
 - [ ] Strict TS holds ; `tsc --noEmit` passes ; input validated with zod
 - [ ] Every meaningful async component has a layout-accurate `Skeleton` loading state
-- [ ] A module with a page has a `PRIMARY_NAV` entry (auto-adds it to global-search "Go to") ; a module with searchable entities has a `SEARCH_PROVIDERS` provider + gated search procedure (or consciously N/A)
+- [ ] A module with a page has a `PRIMARY_NAV` entry (auto-adds it to global-search "Go to") ; a module with searchable entities registers a `registerSearchSource` at boot (self-scoped, server-built hrefs) + a `globalSearch.groups.<id>` heading (or consciously N/A)
 - [ ] Module README updated (API + data model) ; user + dev docs updated where they apply
 - [ ] i18n keys added for en + fr
 - [ ] CHANGELOG entry added, dated, under `[Unreleased]`

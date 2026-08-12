@@ -54,7 +54,8 @@
     "@monark/feature-flags": "workspace:*",
     "@monark/organizations": "workspace:*",
     "@monark/public-api": "workspace:*",
-    "@monark/rbac": "workspace:*"
+    "@monark/rbac": "workspace:*",
+    "@monark/wiki": "workspace:*"
   },
   "devDependencies": {
     "@types/istanbul-lib-coverage": "^2.0.6",
@@ -101,6 +102,9 @@
       "brace-expansion@>=2.0.0 <2.1.3": "2.1.3",
       "brace-expansion@>=4.0.0 <5.0.8": "5.0.9",
       "typescript": "5.9.3"
+    },
+    "patchedDependencies": {
+      "lib0@1.0.0-rc.22": "patches/lib0@1.0.0-rc.22.patch"
     }
   },
   "simple-git-hooks": {

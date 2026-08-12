@@ -1,0 +1,13 @@
+diff --git a/src/environment.js b/src/environment.js
+index 5497adae4da0f7967d4f7a0b876aaf1cd4fcc8d1..6a433d1c051430ba64ef691e482098800ea059d0 100644
+--- a/src/environment.js
++++ b/src/environment.js
+@@ -180,7 +180,7 @@ const forceColor = /* @__PURE__ */(() => isNode && f.isOneOf(process.env.FORCE_C
+ export const supportsColor = /* @__PURE__ */(() => forceColor || (
+   !hasParam('--no-colors') && // @todo deprecate --no-colors
+   !hasConf('no-color') &&
+-  (!isNode || process.stdout.isTTY) && (
++  (!isNode || (process.stdout && process.stdout.isTTY)) && (
+     !isNode ||
+     hasParam('--color') ||
+     getVariable('COLORTERM') !== null ||
