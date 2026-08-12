@@ -15,6 +15,7 @@
     "test:integration:coverage": "vitest run --config vitest.integration.config.ts --coverage --passWithNoTests"
   },
   "dependencies": {
+    "@monark/achievements": "workspace:*",
     "@monark/api-keys": "workspace:*",
     "@monark/auth": "workspace:*",
     "@monark/automation": "workspace:*",
@@ -32,11 +33,13 @@
     "@monark/organizations": "workspace:*",
     "@monark/public-api": "workspace:*",
     "@monark/rbac": "workspace:*",
+    "@monark/search": "workspace:*",
     "@monark/secrets": "workspace:*",
     "@monark/telegram": "workspace:*",
     "@monark/twitter": "workspace:*",
     "@monark/users": "workspace:*",
     "@monark/webhooks": "workspace:*",
+    "@monark/wiki": "workspace:*",
     "@sentry/node": "^10.69.0",
     "@supabase/supabase-js": "^2.105.3",
     "@trpc/server": "^11.18.0",

@@ -1,6 +1,10 @@
 import { z, ZodError, type ZodTypeAny } from "zod";
 import { AppError } from "@monark/common";
-import { zodToJsonSchema, type RouteDescriptor, type RoutePrincipal } from "@monark/public-api/server";
+import {
+  zodToJsonSchema,
+  type RouteDescriptor,
+  type RoutePrincipal,
+} from "@monark/public-api/server";
 import type {
   AgentToolSpec,
   ChatToolExecutor,
@@ -10,6 +14,8 @@ import type {
 import { makeCaller, type AppCaller } from "../public/caller";
 import { V1_ROUTES } from "../public/routes";
 import { automationTools } from "./automation-tools";
+import { wikiTools } from "./wiki-tools";
+import { navTools } from "./nav-tools";
 
 // An in-app-only agent tool: not derived from a public V1_ROUTE, it runs a
 // closure over the in-process caller (as the logged-in user). Used for surfaces
@@ -82,8 +88,11 @@ function toErrorMessage(err: unknown): string {
 
 export function buildChatToolset(): ChatToolExecutor {
   const exposed = V1_ROUTES.filter(
-    (r): r is RouteDescriptor<AppCaller> & { mcp: { expose: { name: string; description: string } } } =>
-      "expose" in r.mcp,
+    (
+      r,
+    ): r is RouteDescriptor<AppCaller> & {
+      mcp: { expose: { name: string; description: string } };
+    } => "expose" in r.mcp,
   );
 
   const routeSpecs: AgentToolSpec[] = exposed.map((route) => ({
@@ -95,9 +104,10 @@ export function buildChatToolset(): ChatToolExecutor {
   }));
   const routeByName = new Map(exposed.map((r) => [r.mcp.expose.name, r]));
 
-  // In-app-only tools (automation, …) merged alongside the route-derived ones.
-  const extraByName = new Map(automationTools.map((t) => [t.name, t]));
-  const extraSpecs: AgentToolSpec[] = automationTools.map((t) => ({
+  // In-app-only tools (automation, wiki, …) merged alongside the route-derived ones.
+  const inAppTools = [...automationTools, ...wikiTools, ...navTools];
+  const extraByName = new Map(inAppTools.map((t) => [t.name, t]));
+  const extraSpecs: AgentToolSpec[] = inAppTools.map((t) => ({
     name: t.name,
     description: t.description,
     inputSchema: zodToJsonSchema(t.inputSchema),

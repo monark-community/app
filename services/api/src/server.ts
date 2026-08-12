@@ -33,6 +33,7 @@ import {
   registerCalendarPermissions,
   registerCalendarEventTypes,
   registerCalendarNotificationKinds,
+  registerCalendarSearchSource,
   registerCalendarModelIntegration,
   registerCalendarDataModelSubscriber,
   getPendingReminders,
@@ -44,6 +45,7 @@ import {
   hydrateDataModelRegistrations,
   registerDataModelRecordWatchSubscriber,
   registerDataModelsEventTypes,
+  registerDataModelsSearchSource,
   registerDataModelsFeatureFlags,
   registerDataModelsNotificationKinds,
   registerDataModelsPermissions,
@@ -55,6 +57,7 @@ import {
   handleHttpTrigger,
   registerAutomationNotificationKinds,
   registerAutomationPermissions,
+  registerAutomationSearchSource,
   registerAutomationSubscribers,
   registerBuiltinAutomationNodes,
   runDueSchedules,
@@ -62,11 +65,28 @@ import {
 } from "@monark/automation/server";
 import {
   registerKanbanEventTypes,
+  registerKanbanSearchSource,
   registerKanbanFeatureFlags,
   registerKanbanNotificationKinds,
   registerKanbanNotificationSubscriber,
   registerKanbanPermissions,
 } from "@monark/kanban/server";
+import {
+  registerAchievementsPermissions,
+  registerAchievementsEventTypes,
+  registerAchievementsFeatureFlags,
+  registerAchievementsNotificationKinds,
+  registerAchievementsSubscriber,
+  startAchievementsWorker,
+  ensureAchievementIconsBucket,
+} from "@monark/achievements/server";
+import {
+  registerWikiAutomationNodes,
+  registerWikiEventTypes,
+  registerWikiSearchSource,
+  registerWikiFeatureFlags,
+  registerWikiPermissions,
+} from "@monark/wiki/server";
 import {
   registerGithubAutomationNodes,
   registerGithubEventTypes,
@@ -141,6 +161,8 @@ registerChatFeatureFlags();
 registerDataModelsFeatureFlags();
 registerFilesFeatureFlags();
 registerKanbanFeatureFlags();
+registerAchievementsFeatureFlags();
+registerWikiFeatureFlags();
 registerGithubFeatureFlags();
 registerDiscordFeatureFlags();
 registerTelegramFeatureFlags();
@@ -155,6 +177,8 @@ registerDataModelsPermissions();
 registerFeatureFlagsPermissions();
 registerFilesPermissions();
 registerKanbanPermissions();
+registerAchievementsPermissions();
+registerWikiPermissions();
 registerGithubPermissions();
 registerTelegramPermissions();
 registerTwitterPermissions();
@@ -179,6 +203,8 @@ registerDataModelsEventTypes();
 registerFeatureFlagsEventTypes();
 registerFilesEventTypes();
 registerKanbanEventTypes();
+registerAchievementsEventTypes();
+registerWikiEventTypes();
 registerGithubEventTypes();
 registerTelegramEventTypes();
 registerNotificationsEventTypes();
@@ -202,6 +228,7 @@ registerAutomationNotificationKinds();
 registerCalendarNotificationKinds();
 registerDataModelsNotificationKinds();
 registerKanbanNotificationKinds();
+registerAchievementsNotificationKinds();
 
 // Register the built-in automation node types (event-trigger + action nodes)
 // into the node registry so the engine can resolve a graph's node types and
@@ -213,6 +240,16 @@ registerGithubAutomationNodes();
 registerDiscordAutomationNodes();
 registerTelegramAutomationNodes();
 registerTwitterAutomationNodes();
+registerWikiAutomationNodes();
+
+// Global-search sources — each module contributes results to the unified command
+// palette (`search.global`) by registering a source (see @monark/common's
+// search-registry). Order here is the group order in the palette.
+registerWikiSearchSource();
+registerKanbanSearchSource();
+registerCalendarSearchSource();
+registerDataModelsSearchSource();
+registerAutomationSearchSource();
 
 // Wire the in-app AI chat agent's tool executor over the SAME public-API route
 // registry (`V1_ROUTES`) the MCP server uses, but executed in-process through
@@ -243,6 +280,7 @@ registerNotificationSubscribers();
 // enabled automations and enqueues runs. Registered before the webhook
 // subscriber (which must stay last) ; it ignores `automation.*` events itself.
 registerAutomationSubscribers();
+registerAchievementsSubscriber();
 registerWebhookSubscribers();
 
 // Dev-only : record every emitted domain event into an in-memory ring buffer so
@@ -325,11 +363,15 @@ function startBackgroundWork(): void {
   // executing each enabled automation's graph with retries. Same durable
   // outbox + worker shape as the webhook worker above.
   startAutomationWorker();
+  startAchievementsWorker();
 
   // Provision the shared private bucket that Data Model FILE / ATTACHMENTS
   // fields upload into. Best-effort : a deploy without file storage configured
   // (no SUPABASE_* env) just logs — the bucket is only needed once someone uses
   // a file field, and `files.createUpload` surfaces a clear error until then.
+  ensureAchievementIconsBucket().catch((err) =>
+    logger.error({ err }, "failed to ensure achievement-icons bucket"),
+  );
   ensureDataModelFilesBucket().catch((err) =>
     logger.warn({ err }, "data-model files bucket ensure skipped (storage not configured?)"),
   );

@@ -3,6 +3,7 @@
 
 import { router } from "@monark/common/trpc"
 
+import { achievementsRouter } from "@monark/achievements/server"
 import { apiKeysRouter } from "@monark/api-keys/server"
 import { authRouter } from "@monark/auth/server"
 import { automationRouter } from "@monark/automation/server"
@@ -16,13 +17,16 @@ import { kanbanRouter } from "@monark/kanban/server"
 import { notificationsRouter } from "@monark/notifications/server"
 import { organizationsRouter } from "@monark/organizations/server"
 import { rbacRouter } from "@monark/rbac/server"
+import { searchRouter } from "@monark/search/server"
 import { secretsRouter } from "@monark/secrets/server"
 import { telegramRouter } from "@monark/telegram/server"
 import { twitterRouter } from "@monark/twitter/server"
 import { usersRouter } from "@monark/users/server"
 import { webhooksRouter } from "@monark/webhooks/server"
+import { wikiRouter } from "@monark/wiki/server"
 
 export const appRouter = router({
+  achievements : achievementsRouter,
   apiKeys      : apiKeysRouter,
   auth         : authRouter,
   automation   : automationRouter,
@@ -36,11 +40,13 @@ export const appRouter = router({
   notifications: notificationsRouter,
   organizations: organizationsRouter,
   rbac         : rbacRouter,
+  search       : searchRouter,
   secrets      : secretsRouter,
   telegram     : telegramRouter,
   twitter      : twitterRouter,
   users        : usersRouter,
   webhooks     : webhooksRouter,
+  wiki         : wikiRouter,
 })
 
 export type AppRouter = typeof appRouter
