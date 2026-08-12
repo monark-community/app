@@ -11,6 +11,8 @@
  *   - `public-api.service-accounts`  — org service accounts + their API keys
  *   - `chat.enabled`                 — the Chat module (conversations UI + substrate)
  *   - `chat.ai-agent`                — the app-owned AI assistant inside chat
+ *   - `wiki.enabled`                 — the Wiki module (nested page tree + editor)
+ *   - `data-models.public-forms`     — public forms (anonymous / email-invite record submission)
  *
  * Idempotent : re-running upserts the same global overrides. Refuses to run with
  * `NODE_ENV=production` (flip production flags via the admin UI, deliberately).
@@ -28,6 +30,7 @@ import { getDb } from "@monark/db";
 import { registerChatFeatureFlags } from "@monark/chat/server";
 import { registerDataModelsFeatureFlags } from "@monark/data-models/server";
 import { registerPublicApiFeatureFlags } from "@monark/public-api/server";
+import { registerWikiFeatureFlags } from "@monark/wiki/server";
 import { setOverride, syncFlagsToDatabase } from "@monark/feature-flags/server";
 
 const DEV_FLAGS = [
@@ -36,6 +39,8 @@ const DEV_FLAGS = [
   "public-api.service-accounts",
   "chat.enabled",
   "chat.ai-agent",
+  "wiki.enabled",
+  "data-models.public-forms",
 ] as const;
 
 // Audit-trail marker on the override row. `FeatureFlagOverride.setById` is a
@@ -62,6 +67,7 @@ async function main(): Promise<void> {
   registerChatFeatureFlags();
   registerDataModelsFeatureFlags();
   registerPublicApiFeatureFlags();
+  registerWikiFeatureFlags();
   await syncFlagsToDatabase();
 
   for (const key of DEV_FLAGS) {

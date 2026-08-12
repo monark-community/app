@@ -54,26 +54,35 @@ const THRESHOLDS: Record<string, Thresholds> = {
   // (api-keys 61 %→72 % branches, 80 %→93 % functions) and the node executors +
   // boot registrations (automation 68 %→81 % functions), so both floors ratchet
   // up well past where the in-flight feature work had dragged them.
+  // New modules floored 2026-08-10 at ~5pts below their measured baseline.
+  // achievements was lifted 52 %→91 % lines / 39 %→89 % functions by a router
+  // integration suite + the boot-registration unit tests (the award engine
+  // itself is covered by engine.test.ts).
+  "package/achievements": { lines: 85, statements: 85, functions: 80, branches: 70 },
   "package/api-keys": { lines: 80, statements: 80, functions: 85, branches: 65 },
   "package/auth": { lines: 60, statements: 60, functions: 75, branches: 80 },
   "package/automation": { lines: 75, statements: 75, functions: 75, branches: 70 },
   "package/calendar": { lines: 80, statements: 80, functions: 85, branches: 75 },
   // chat : the AI-assistant substrate (agent loop, provider abstraction, tool
   // registry). Floors ~5pts below the measured ~69 % lines / 70 % funcs.
-  "package/chat": { lines: 65, statements: 65, functions: 65, branches: 70 },
+  "package/chat": { lines: 70, statements: 70, functions: 70, branches: 70 },
   "package/common": { lines: 70, statements: 70, functions: 70, branches: 80 },
   "package/data-models": { lines: 60, statements: 60, functions: 60, branches: 70 },
   // discord : unit-only (router-less integration). Every action-node executor +
   // config helper is covered by tests/nodes.test.ts (~91 % lines, 100 % on the
   // node files ; the mocked bot REST client sits under the module average).
-  "package/discord": { lines: 85, statements: 85, functions: 60, branches: 55 },
+  "package/discord": { lines: 90, statements: 90, functions: 90, branches: 65 },
   "package/feature-flags": { lines: 80, statements: 80, functions: 75, branches: 85 },
   "package/files": { lines: 60, statements: 60, functions: 60, branches: 80 },
   // github : event mapping + connection (integration) plus every action-node
   // executor + config helper (unit, tests/nodes.test.ts) are now covered —
   // ~82 % lines / 76 %+ functions on the unit run alone. Floors sit below the
   // measured merged baseline as a regression guard.
-  "package/github": { lines: 75, statements: 75, functions: 70, branches: 60 },
+  "package/github": { lines: 90, statements: 90, functions: 90, branches: 60 },
+  // The shared integration substrate (rest client, HMAC webhook verify, the
+  // connection-secret router) — now fully covered ; every integration builds on
+  // it, so keep it high.
+  "package/integration-kit": { lines: 90, statements: 90, functions: 85, branches: 85 },
   // kanban : the query-compiler unit suite (every field × operator × error
   // branch of compileKanbanFilter) took branches 65 %→97 %, recovering the dip
   // the in-flight board work had caused and then some.
@@ -91,8 +100,10 @@ const THRESHOLDS: Record<string, Thresholds> = {
   // Set conservatively off the unit lower bound for now — ratchet up once a
   // merged CI run publishes the real number.
   "package/telegram": { lines: 50, statements: 50, functions: 60, branches: 65 },
+  "package/twitter": { lines: 90, statements: 90, functions: 90, branches: 80 },
   "package/users": { lines: 65, statements: 65, functions: 80, branches: 85 },
   "package/webhooks": { lines: 85, statements: 85, functions: 80, branches: 80 },
+  "package/wiki": { lines: 70, statements: 70, functions: 70, branches: 75 },
   // Ratcheted up 2026-08-03 : the public-api service now has an integration
   // suite (public-api.test.ts), so api jumped 57 % → 75 % lines / 41 % → 79 %
   // functions once those procedures are exercised.
@@ -150,7 +161,10 @@ function pad(value: string, width: number): string {
 }
 
 function formatPct(pct: number): string {
-  if (Number.isNaN(pct)) return "  n/a ";
+  // istanbul reports a metric's pct as the string "Unknown" when the file/package
+  // has zero of that metric (e.g. no branches). Guard any non-number so a single
+  // metric-less package can't crash the whole report.
+  if (typeof pct !== "number" || Number.isNaN(pct)) return "  n/a ";
   return `${pct.toFixed(2).padStart(6, " ")}%`;
 }
 
@@ -177,6 +191,12 @@ async function mergeOne(
     map.merge(integration);
     sources.push("integration");
   }
+  // A package whose `test:coverage` runs with `--passWithNoTests` and has no
+  // tests (a barrel / constants package like `branding`) still writes an empty
+  // `coverage-final.json` (`{}`). That's "no coverage", not a gate-worthy
+  // package — treat it like a missing report so it doesn't spuriously trip the
+  // "produced coverage but has no floor" check below.
+  if (map.files().length === 0) return null;
   return { pkg, merged: map, sources };
 }
 
