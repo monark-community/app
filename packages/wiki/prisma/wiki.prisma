@@ -1,0 +1,42 @@
+// @monark/wiki — Prisma schema fragment (extended module).
+// Assembled into packages/db/prisma/schema.prisma by `pnpm gen:schema`.
+// Edit HERE, never the generated schema.prisma. Relations to core models
+// (Organization) resolve at assembly time.
+
+// ── MODULE: wiki ──────────────────────────────────────────
+// A nested-page wiki. Each page can have a parent, forming a tree of arbitrary
+// depth (adjacency list ; the small per-org tree is loaded whole and walked
+// in-app for subtree ops, so no recursive CTE is needed). Sibling order uses an
+// integer `position` in gaps of 10 (the house pattern from kanban / data-models
+// reorder) so a single move renumbers only its own sibling list. Pages are
+// soft-deleted a whole subtree at a time (`deletedAt`).
+model WikiPage {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  // Self-relation forming the tree. `parentId` null = a top-level page. Kept
+  // optional so a hard delete of a parent (not used in v1 — we soft-delete the
+  // subtree) would orphan children to top-level rather than cascade-destroy.
+  parentId String?
+  parent   WikiPage?  @relation("WikiTree", fields: [parentId], references: [id], onDelete: SetNull)
+  children WikiPage[] @relation("WikiTree")
+
+  title String
+  icon  String? // emoji or lucide key
+  // Body as a BlockNote block array (JSON) ; edited by the web BlockEditor. The
+  // derived `contentText` is the plain-text projection (via `blocksToText`) kept
+  // in sync on every write so search stays a cheap text `contains` (no jsonb
+  // text-walking) and events can diff content.
+  content     Json   @default("[]")
+  contentText String @default("")
+  position    Int    @default(0) // order among siblings — steps of 10
+
+  createdBy String
+  updatedBy String?
+  deletedAt DateTime? // set on a whole subtree at once
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([organizationId, parentId, position])
+}
