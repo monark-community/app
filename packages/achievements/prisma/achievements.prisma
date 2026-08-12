@@ -1,0 +1,114 @@
+// @monark/achievements — Prisma schema fragment (extended module).
+// Assembled into packages/db/prisma/schema.prisma by `pnpm gen:schema`.
+// Edit HERE, never the generated schema.prisma.
+
+// ── MODULE: achievements ──────────────────────────────────
+// Configurable, event-driven achievements. An Achievement is a badge an admin
+// defines ; each AchievementRule watches a registered domain event type and,
+// when it fires (optionally matching payload fields), credits the acting user
+// toward a threshold. When the threshold is crossed, the user is AWARDED once.
+// Awarding is durable : the wildcard event subscriber persists a matching event
+// to AchievementOutbox, and a background worker drains it (so a restart never
+// drops a count), mirroring the automation run outbox. `userId` fields are
+// org-member ids (soft refs, not FKs — the module boundary keeps core↔extended
+// FKs minimal ; cascade flows through Achievement → Organization).
+
+model Achievement {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String
+  description    String?
+  // The badge image : `iconFileId` is a `@monark/files` StoredFile id in the
+  // public `achievement-icons` bucket. Null renders a neutral placeholder ;
+  // locked (unearned) badges render grey-scaled in the gallery.
+  iconFileId     String?
+  points         Int          @default(0)
+  enabled        Boolean      @default(true)
+  createdBy      String
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  deletedAt      DateTime?
+
+  rules  AchievementRule[]
+  awards AchievementAward[]
+
+  @@index([organizationId])
+}
+
+model AchievementRule {
+  id            String      @id @default(cuid())
+  achievementId String
+  achievement   Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+  // Denormalized from the achievement (no FK) so a rule query never joins.
+  organizationId String
+  // The registered domain event type this rule watches (or one of its
+  // subscription aliases), e.g. "kanban.card-created".
+  eventType     String
+  // Matching events (per user) before the achievement is awarded.
+  threshold     Int         @default(1)
+  // The payload field naming the user to credit (default "actorId").
+  subjectField  String      @default("actorId")
+  // Optional equality matchers on the event payload : `{ "toColumnId": "x" }`.
+  // ALL must match. Null = count every event of the type.
+  match         Json?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  progress AchievementProgress[]
+
+  @@index([achievementId])
+  @@index([eventType])
+}
+
+model AchievementProgress {
+  id             String          @id @default(cuid())
+  ruleId         String
+  rule           AchievementRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+  organizationId String
+  userId         String
+  count          Int             @default(0)
+  updatedAt      DateTime        @updatedAt
+
+  @@unique([ruleId, userId])
+  @@index([userId])
+}
+
+model AchievementAward {
+  id             String      @id @default(cuid())
+  achievementId  String
+  achievement    Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+  organizationId String
+  userId         String
+  awardedAt      DateTime    @default(now())
+
+  @@unique([achievementId, userId])
+  @@index([userId])
+  @@index([organizationId])
+}
+
+enum AchievementOutboxStatus {
+  PENDING
+  DONE
+  FAILED
+}
+
+// Durable at-least-once outbox : one row per matching emitted event, drained by
+// the achievements worker (claim via a status-guarded update, retry with
+// backoff, dead-letter to FAILED).
+model AchievementOutbox {
+  id             String                  @id @default(cuid())
+  organizationId String
+  organization   Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  eventType      String
+  payload        Json
+  status         AchievementOutboxStatus @default(PENDING)
+  attempts       Int                     @default(0)
+  nextAttemptAt  DateTime                @default(now())
+  error          String?
+  createdAt      DateTime                @default(now())
+  processedAt    DateTime?
+
+  @@index([status, nextAttemptAt])
+  @@index([organizationId])
+}
