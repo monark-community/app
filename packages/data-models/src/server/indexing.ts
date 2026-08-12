@@ -60,6 +60,10 @@ function indexExpression(type: DataFieldType, key: string): string {
     // A FORMULA stores its computed scalar as text/number/bool/date in JSONB ;
     // a plain text extraction is a safe generic B-tree for equality/sort.
     case "FORMULA":
+    // DOCUMENT stores a block array (JSON) and is non-filterable (omitted from
+    // KIND_BY_TYPE), so this branch is effectively unused ; a text extraction of
+    // the raw JSON keeps the switch exhaustive without ever throwing.
+    case "DOCUMENT":
       return `(data->>'${key}')`;
   }
 }

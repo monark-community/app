@@ -17,6 +17,7 @@
     "test:integration:coverage": "vitest run --config vitest.integration.config.ts --coverage --passWithNoTests"
   },
   "dependencies": {
+    "@monark/branding": "workspace:*",
     "@monark/common": "workspace:*",
     "@monark/db": "workspace:*",
     "@monark/feature-flags": "workspace:*",

@@ -8,6 +8,10 @@ import {
   ValidationError,
 } from "@monark/common";
 import { MAX_PAGE_SIZE } from "@monark/common/pagination";
+import { checkRateLimit } from "@monark/common/rate-limit";
+import { isEnabled } from "@monark/feature-flags/server";
+import { sendMail } from "@monark/notifications/server";
+import { BRANDING } from "@monark/branding";
 import { requireOrg } from "@monark/organizations/server";
 import {
   getUserRoles,
@@ -22,6 +26,41 @@ import {
   registerDataModelRegistrations,
 } from "./registrations";
 import { isWatchingModel, isWatchingRecord, setModelWatch, setRecordWatch } from "./watchers";
+import {
+  addFormInvite,
+  createDataForm,
+  createPublicFormRecord,
+  findDataFormById,
+  findFormEntryById,
+  findFormInviteById,
+  findFormInviteByToken,
+  findLiveDataFormByToken,
+  isRecordPublishedForForm,
+  listDataForms,
+  listFormInvites,
+  listPendingEntries,
+  listPublicBoardRecords,
+  markFormInviteSubmitted,
+  projectPublicRecord,
+  removeFormInvite,
+  setEntryStatus,
+  softDeleteDataForm,
+  updateDataForm,
+  type DataFormEntryRow,
+  type DataFormInviteRow,
+  type DataFormRow,
+} from "./forms";
+import {
+  commentCountFor,
+  createRecordComment,
+  getCommentById,
+  listRecordComments,
+  setCommentHidden,
+  softDeleteComment,
+  toggleVote,
+  voteStateFor,
+  type CommentRow,
+} from "./engagement";
 import { DATA_FIELD_TYPES, TITLE_FIELD_KEY, type DataFieldType } from "../contracts/field-types";
 import { listModelIntegrations } from "../contracts/integrations";
 import { getFieldIndexStatus, requestFieldIndex } from "./indexing";
@@ -34,6 +73,9 @@ import {
 } from "../contracts/query";
 import type { RelationTargets } from "./query-compiler";
 import type {
+  DataFormEntryPublishedEvent,
+  DataFormSubmittedEvent,
+  DataRecordCommentedEvent,
   DataModelRecordCreatedEvent,
   DataModelRecordDeletedEvent,
   DataModelRecordUpdatedEvent,
@@ -148,7 +190,8 @@ type DataModelsPermission =
   | "data-models.record-read"
   | "data-models.record-write"
   | "data-models.record-bulk-write"
-  | "data-models.record-delete";
+  | "data-models.record-delete"
+  | "data-models.manage-forms";
 
 // Cap on how many records one bulk edit touches, so a runaway selection can't
 // fan out into thousands of sequential row updates + events in one request.
@@ -210,10 +253,150 @@ async function recordAccessContext(
   return { roleIds: roles.map((r) => r.id), bypass };
 }
 
+// ── Public form helpers ──────────────────────────────────────
+function serializeForm(f: DataFormRow) {
+  return {
+    id: f.id,
+    dataModelId: f.dataModelId,
+    name: f.name,
+    token: f.token,
+    mode: f.mode,
+    fieldKeys: f.fieldKeys,
+    active: f.active,
+    closesAt: f.closesAt,
+    intro: f.intro,
+    successMessage: f.successMessage,
+    listEnabled: f.listEnabled,
+    listReadFieldKeys: f.listReadFieldKeys,
+    listPublicRead: f.listPublicRead,
+    createdAt: f.createdAt,
+    updatedAt: f.updatedAt,
+  };
+}
+// Never leak `tokenHash`.
+function serializeFormInvite(i: DataFormInviteRow) {
+  return {
+    id: i.id,
+    email: i.email,
+    displayName: i.displayName,
+    submittedAt: i.submittedAt,
+    recordId: i.recordId,
+    createdAt: i.createdAt,
+  };
+}
+
+// Load a form + its model and gate on the manage-forms permission. Anonymous /
+// non-authorized callers are turned away here ; the public procedures below do
+// NOT use this (they authorize via the form token instead).
+async function requireFormAdmin(
+  ctx: RbacContext,
+  formId: string,
+): Promise<{ form: DataFormRow; model: DataModelRow }> {
+  if (!ctx.userId) throw new UnauthorizedError();
+  const form = await findDataFormById(formId);
+  if (!form) throw new NotFoundError("DataForm", formId);
+  const model = await requireModelById(form.dataModelId);
+  await requireModelAccess(ctx, model, "data-models.manage-forms");
+  return { form, model };
+}
+
+// Same gate, keyed by a board entry id (moderation actions).
+async function requireEntryAdmin(
+  ctx: RbacContext,
+  entryId: string,
+): Promise<{ entry: DataFormEntryRow; form: DataFormRow; model: DataModelRow }> {
+  if (!ctx.userId) throw new UnauthorizedError();
+  const entry = await findFormEntryById(entryId);
+  if (!entry) throw new NotFoundError("DataFormEntry", entryId);
+  const { form, model } = await requireFormAdmin(ctx, entry.dataFormId);
+  return { entry, form, model };
+}
+
+// Public forms are flag-gated ; when off, behave as if the form doesn't exist.
+async function assertPublicFormsEnabled(organizationId: string): Promise<void> {
+  const on = await isEnabled("data-models.public-forms", { organizationId });
+  if (!on) throw new NotFoundError("DataForm", "public-forms-disabled");
+}
+
+function formIsClosed(form: DataFormRow): boolean {
+  return !form.active || (form.closesAt != null && form.closesAt.getTime() < Date.now());
+}
+
+function absoluteFormUrl(appUrl: string | undefined, token: string, key?: string): string {
+  const base = (appUrl ?? "http://localhost:3000").replace(/\/$/, "");
+  return `${base}/f/${token}${key ? `?k=${key}` : ""}`;
+}
+
+// Resolve a form whose public BOARD (read side) is viewable by this caller :
+// live form, flag on, board enabled, and read access satisfied (public-read, or
+// a valid invite key). Throws (404/403) otherwise. Used by the public read
+// procedures ; submission has its own path.
+async function requireReadableBoard(token: string, key?: string): Promise<DataFormRow> {
+  const form = await findLiveDataFormByToken(token);
+  if (!form) throw new NotFoundError("DataForm", token);
+  await assertPublicFormsEnabled(form.organizationId);
+  if (!form.listEnabled) throw new NotFoundError("DataForm", token);
+  if (!form.listPublicRead) {
+    const invite = key ? await findFormInviteByToken(form.id, key) : null;
+    if (!invite) throw new ForbiddenError("This board requires a valid invite link.");
+  }
+  return form;
+}
+
 async function requireModelById(id: string): Promise<DataModelRow> {
   const model = await findDataModelById(id);
   if (!model) throw new NotFoundError("DataModel", id);
   return model;
+}
+
+// ── Engagement (votes + comments) helpers ────────────────────
+// A vote/comment identity is a real principal, never anonymous : a logged-in
+// user (`user:<id>`) or a board invite (`invite:<id>`). The optional variant is
+// used on read paths (an anonymous viewer just has no "hasVoted") ; the
+// required variant gates the vote mutation.
+async function resolveVoterKey(
+  ctx: RbacContext,
+  form: DataFormRow,
+  key?: string,
+): Promise<string | null> {
+  if (ctx.userId) return `user:${ctx.userId}`;
+  if (form.mode === "EMAIL" && key) {
+    const invite = await findFormInviteByToken(form.id, key);
+    if (invite) return `invite:${invite.id}`;
+  }
+  return null;
+}
+
+function serializeComment(c: CommentRow) {
+  return {
+    id: c.id,
+    body: c.body,
+    hidden: c.hidden,
+    createdAt: c.createdAt,
+    authorId: c.authorId,
+    authorName: c.author.displayName,
+    authorAvatarUrl: c.author.avatarUrl,
+  };
+}
+
+// Load the board's model and assert the requested engagement feature is on.
+// Behaves as "not found" when off, so a disabled feature never leaks structure.
+async function requireEngagementModel(
+  form: DataFormRow,
+  feature: "voting" | "discussions",
+): Promise<DataModelRow> {
+  const model = await requireModelById(form.dataModelId);
+  const on = feature === "voting" ? model.votingEnabled : model.discussionsEnabled;
+  if (!on) throw new NotFoundError("DataModel", `${feature}-disabled`);
+  return model;
+}
+
+// A published record is the only engageable target : gate every vote/comment
+// action on it, mirroring the board read guards.
+async function requirePublishedRecord(form: DataFormRow, recordId: string): Promise<void> {
+  if (!(await isRecordPublishedForForm(form.id, recordId))) {
+    throw new NotFoundError("DataRecord", recordId);
+  }
 }
 
 // Resolve the target models a query traverses into (`relation.subField`). Only
@@ -417,6 +600,8 @@ export const dataModelsRouter = router({
           name: z.string().trim().min(1).max(80).optional(),
           description: z.string().max(2000).nullable().optional(),
           icon: z.string().max(60).nullable().optional(),
+          votingEnabled: z.boolean().optional(),
+          discussionsEnabled: z.boolean().optional(),
         }),
       )
       .mutation(async ({ ctx, input }) => {
@@ -428,6 +613,8 @@ export const dataModelsRouter = router({
           name: input.name,
           description: input.description,
           icon: input.icon,
+          votingEnabled: input.votingEnabled,
+          discussionsEnabled: input.discussionsEnabled,
         });
 
         // Refresh the per-model permission / event-type labels — the model
@@ -1232,5 +1419,569 @@ export const dataModelsRouter = router({
         await deleteDataRecordView(input.id);
         return { id: input.id };
       }),
+  }),
+
+  // ── Public forms ───────────────────────────────────────────
+  // Admin procedures manage a model's shareable forms + email invites ;
+  // `public.*` are anonymous, token-authorized submission endpoints.
+  forms: router({
+    list: publicProcedure
+      .input(z.object({ dataModelId: z.string().min(1) }))
+      .query(async ({ ctx, input }) => {
+        if (!ctx.userId) throw new UnauthorizedError();
+        const model = await requireModelById(input.dataModelId);
+        await requireModelAccess(ctx, model, "data-models.manage-forms");
+        return (await listDataForms(input.dataModelId)).map(serializeForm);
+      }),
+
+    create: publicProcedure
+      .input(
+        z.object({
+          dataModelId: z.string().min(1),
+          name: z.string().trim().min(1).max(120),
+          mode: z.enum(["ANONYMOUS", "EMAIL"]),
+          fieldKeys: z.array(z.string().min(1)).max(200),
+          closesAt: z.coerce.date().nullable().optional(),
+          intro: z.string().max(2000).nullable().optional(),
+          successMessage: z.string().max(2000).nullable().optional(),
+          listEnabled: z.boolean().optional(),
+          listReadFieldKeys: z.array(z.string().min(1)).max(200).optional(),
+          listPublicRead: z.boolean().optional(),
+        }),
+      )
+      .mutation(async ({ ctx, input }) => {
+        if (!ctx.userId) throw new UnauthorizedError();
+        const model = await requireModelById(input.dataModelId);
+        const orgId = await requireModelAccess(ctx, model, "data-models.manage-forms");
+        const form = await createDataForm({
+          organizationId: orgId,
+          dataModelId: input.dataModelId,
+          name: input.name,
+          mode: input.mode,
+          fieldKeys: input.fieldKeys,
+          closesAt: input.closesAt ?? null,
+          intro: input.intro ?? null,
+          successMessage: input.successMessage ?? null,
+          listEnabled: input.listEnabled,
+          listReadFieldKeys: input.listReadFieldKeys,
+          listPublicRead: input.listPublicRead,
+          createdBy: ctx.userId,
+        });
+        return serializeForm(form);
+      }),
+
+    update: publicProcedure
+      .input(
+        z.object({
+          id: z.string().min(1),
+          name: z.string().trim().min(1).max(120).optional(),
+          mode: z.enum(["ANONYMOUS", "EMAIL"]).optional(),
+          fieldKeys: z.array(z.string().min(1)).max(200).optional(),
+          active: z.boolean().optional(),
+          closesAt: z.coerce.date().nullable().optional(),
+          intro: z.string().max(2000).nullable().optional(),
+          successMessage: z.string().max(2000).nullable().optional(),
+          listEnabled: z.boolean().optional(),
+          listReadFieldKeys: z.array(z.string().min(1)).max(200).optional(),
+          listPublicRead: z.boolean().optional(),
+        }),
+      )
+      .mutation(async ({ ctx, input }) => {
+        await requireFormAdmin(ctx, input.id);
+        const { id, ...patch } = input;
+        return serializeForm(await updateDataForm(id, patch));
+      }),
+
+    delete: publicProcedure
+      .input(z.object({ id: z.string().min(1) }))
+      .mutation(async ({ ctx, input }) => {
+        await requireFormAdmin(ctx, input.id);
+        await softDeleteDataForm(input.id);
+        return { id: input.id };
+      }),
+
+    invites: router({
+      list: publicProcedure
+        .input(z.object({ formId: z.string().min(1) }))
+        .query(async ({ ctx, input }) => {
+          await requireFormAdmin(ctx, input.formId);
+          return (await listFormInvites(input.formId)).map(serializeFormInvite);
+        }),
+
+      add: publicProcedure
+        .input(
+          z.object({
+            formId: z.string().min(1),
+            email: z.string().trim().email().max(320),
+            displayName: z.string().trim().max(120).optional(),
+            appUrl: z.string().url().optional(),
+          }),
+        )
+        .mutation(async ({ ctx, input }) => {
+          const { form, model } = await requireFormAdmin(ctx, input.formId);
+          if (form.mode !== "EMAIL") {
+            throw new ValidationError("Only EMAIL-mode forms can invite recipients.");
+          }
+          const { plaintext, invite } = await addFormInvite({
+            dataFormId: form.id,
+            email: input.email,
+            displayName: input.displayName ?? null,
+          });
+          const link = absoluteFormUrl(input.appUrl, form.token, plaintext);
+          await sendMail({
+            to: invite.email,
+            subject: `You're invited to submit "${form.name}"`,
+            text: `You've been invited to fill out the form "${form.name}" for ${model.name} on ${BRANDING.appName}.
+
+Open your personal form link:
+${link}
+
+This link is unique to you and can be submitted once.`,
+            html: `<p style="margin:0 0 12px 0;font-size:16px;color:#18181b;">You've been invited to fill out <strong>${form.name}</strong> on <strong>${BRANDING.appName}</strong>.</p>
+<p style="margin:0 0 24px 0;"><a href="${link}" style="display:inline-block;padding:12px 22px;background:#F0870C;color:#18181b;font-weight:700;text-decoration:none;border-radius:8px;">Open the form</a></p>
+<p style="margin:0;color:#a1a1aa;font-size:12px;">This link is unique to you and can be submitted once.</p>`,
+          }).catch(() => {});
+          return serializeFormInvite(invite);
+        }),
+
+      remove: publicProcedure
+        .input(z.object({ id: z.string().min(1) }))
+        .mutation(async ({ ctx, input }) => {
+          if (!ctx.userId) throw new UnauthorizedError();
+          const invite = await findFormInviteById(input.id);
+          if (!invite) throw new NotFoundError("DataFormInvite", input.id);
+          await requireFormAdmin(ctx, invite.dataFormId);
+          await removeFormInvite(input.id);
+          return { id: input.id };
+        }),
+    }),
+
+    // ── Board moderation (admin) ──────────────────────────────
+    entries: router({
+      pending: publicProcedure
+        .input(z.object({ formId: z.string().min(1) }))
+        .query(async ({ ctx, input }) => {
+          const { form } = await requireFormAdmin(ctx, input.formId);
+          const entries = await listPendingEntries(form.id);
+          const reviewKeys = [...new Set([...form.fieldKeys, ...form.listReadFieldKeys])];
+          const records = await Promise.all(entries.map((e) => findDataRecordById(e.recordId)));
+          return entries.map((e, i) => {
+            const rec = records[i];
+            return {
+              id: e.id,
+              recordId: e.recordId,
+              submitterEmail: e.submitterEmail,
+              createdAt: e.createdAt,
+              title: rec?.title ?? "",
+              data: rec ? projectPublicRecord(rec, reviewKeys).data : {},
+            };
+          });
+        }),
+
+      publish: publicProcedure
+        .input(z.object({ entryId: z.string().min(1) }))
+        .mutation(async ({ ctx, input }) => {
+          const { entry, form, model } = await requireEntryAdmin(ctx, input.entryId);
+          const updated = await setEntryStatus(entry.id, "PUBLISHED", ctx.userId as string);
+          const event: DataFormEntryPublishedEvent = {
+            type: "data-models.form-entry-published",
+            dataModelId: form.dataModelId,
+            dataModelKey: model.key,
+            recordId: entry.recordId,
+            formId: form.id,
+            organizationId: form.organizationId,
+            occurredAt: new Date(),
+          };
+          await emit(event).catch(() => {});
+          return { id: updated.id, status: updated.status };
+        }),
+
+      reject: publicProcedure
+        .input(z.object({ entryId: z.string().min(1) }))
+        .mutation(async ({ ctx, input }) => {
+          const { entry } = await requireEntryAdmin(ctx, input.entryId);
+          const updated = await setEntryStatus(entry.id, "REJECTED", ctx.userId as string);
+          return { id: updated.id, status: updated.status };
+        }),
+    }),
+
+    // ── Anonymous, token-authorized submission surface ────────
+    public: router({
+      get: publicProcedure
+        .input(z.object({ token: z.string().min(1), key: z.string().min(1).optional() }))
+        .query(async ({ input }) => {
+          const form = await findLiveDataFormByToken(input.token);
+          if (!form) throw new NotFoundError("DataForm", input.token);
+          await assertPublicFormsEnabled(form.organizationId);
+          const model = await requireModelById(form.dataModelId);
+
+          const invite =
+            form.mode === "EMAIL" && input.key
+              ? await findFormInviteByToken(form.id, input.key)
+              : null;
+          let state: "open" | "closed" | "submitted" | "invalid" = formIsClosed(form)
+            ? "closed"
+            : "open";
+          let prefillEmail: string | null = null;
+          if (form.mode === "EMAIL") {
+            if (!invite) state = "invalid";
+            else {
+              prefillEmail = invite.email;
+              if (invite.submittedAt) state = "submitted";
+            }
+          }
+
+          const byKey = new Map((await listDataFields(form.dataModelId)).map((f) => [f.key, f]));
+          const serializeKeys = (keys: string[]) =>
+            keys
+              .map((k) => byKey.get(k))
+              .filter((f): f is DataFieldRow => !!f)
+              .map(serializeField);
+
+          // Read-side (board) access is separate from submit : anyone can browse
+          // a public-read board ; an invite-gated one needs a valid key.
+          const canRead = form.listEnabled && (form.listPublicRead || invite != null);
+
+          return {
+            name: form.name,
+            intro: form.intro,
+            successMessage: form.successMessage,
+            mode: form.mode,
+            modelName: model.name,
+            state,
+            prefillEmail,
+            fields: serializeKeys(form.fieldKeys),
+            listEnabled: form.listEnabled,
+            canRead,
+            readFields: serializeKeys(form.listReadFieldKeys),
+            votingEnabled: model.votingEnabled,
+            discussionsEnabled: model.discussionsEnabled,
+          };
+        }),
+
+      submit: publicProcedure
+        .input(
+          z.object({
+            token: z.string().min(1),
+            key: z.string().min(1).optional(),
+            data: z.record(z.string(), z.unknown()),
+          }),
+        )
+        .mutation(async ({ ctx, input }) => {
+          const form = await findLiveDataFormByToken(input.token);
+          if (!form) throw new NotFoundError("DataForm", input.token);
+          await assertPublicFormsEnabled(form.organizationId);
+          if (formIsClosed(form)) throw new ValidationError("This form is closed.");
+
+          // Throttle by IP + form so an open anonymous link can't be flooded.
+          const rl = await checkRateLimit(`public-form:${form.id}:${ctx.clientIp ?? "unknown"}`, {
+            refillPerSecond: 0.2,
+            burst: 5,
+          });
+          if (!rl.allowed) throw new ValidationError("Too many submissions — please slow down.");
+
+          let invite: DataFormInviteRow | null = null;
+          if (form.mode === "EMAIL") {
+            invite = input.key ? await findFormInviteByToken(form.id, input.key) : null;
+            if (!invite) throw new ForbiddenError("This form requires a valid invite link.");
+            if (invite.expiresAt && invite.expiresAt.getTime() < Date.now()) {
+              throw new ForbiddenError("This invite link has expired.");
+            }
+            if (invite.submittedAt)
+              throw new ValidationError("You have already submitted this form.");
+          }
+
+          const model = await requireModelById(form.dataModelId);
+          const record = await createPublicFormRecord({
+            form,
+            data: input.data,
+            submitterEmail: invite?.email ?? null,
+          });
+          if (invite) await markFormInviteSubmitted(invite.id, record.id);
+
+          const actorId = `public-form:${form.id}`;
+          const created: DataModelRecordCreatedEvent = {
+            type: "data-models.record-created",
+            dataModelId: form.dataModelId,
+            dataModelKey: model.key,
+            recordId: record.id,
+            organizationId: form.organizationId,
+            actorId,
+            occurredAt: new Date(),
+            subscriptionAliases: [perModelEventType(model.key, "created")],
+          };
+          const submitted: DataFormSubmittedEvent = {
+            type: "data-models.form-submitted",
+            dataModelId: form.dataModelId,
+            dataModelKey: model.key,
+            recordId: record.id,
+            formId: form.id,
+            mode: form.mode === "EMAIL" ? "email" : "anonymous",
+            submitterEmail: invite?.email ?? null,
+            organizationId: form.organizationId,
+            occurredAt: new Date(),
+          };
+          await emit(created).catch(() => {});
+          await emit(submitted).catch(() => {});
+
+          return { ok: true as const, successMessage: form.successMessage };
+        }),
+
+      // Searchable public board : PUBLISHED entries only, projected to the
+      // board's read fields. Read-access gated ; lightly rate-limited.
+      list: publicProcedure
+        .input(
+          z.object({
+            token: z.string().min(1),
+            key: z.string().min(1).optional(),
+            search: z.string().trim().max(200).optional(),
+            sort: z.enum(["recent", "top"]).optional(),
+            limit: z.number().int().min(1).max(MAX_PAGE_SIZE).optional(),
+            cursor: z.string().min(1).nullish(),
+          }),
+        )
+        .query(async ({ ctx, input }) => {
+          const form = await requireReadableBoard(input.token, input.key);
+          const rl = await checkRateLimit(`public-board:${form.id}:${ctx.clientIp ?? "unknown"}`, {
+            refillPerSecond: 2,
+            burst: 30,
+          });
+          if (!rl.allowed) throw new ValidationError("Too many requests — please slow down.");
+          const model = await requireModelById(form.dataModelId);
+          const page = await listPublicBoardRecords(form, {
+            search: input.search,
+            sort: input.sort,
+            limit: input.limit,
+            cursor: input.cursor,
+          });
+          // Batched engagement counts for the page (no N+1) ; hasVoted is keyed
+          // to this caller's identity (logged-in user or invite), false anon.
+          const ids = page.items.map((it) => it.id);
+          const voterKey = await resolveVoterKey(ctx, form, input.key);
+          const votes = model.votingEnabled ? await voteStateFor(ids, voterKey) : {};
+          const comments = model.discussionsEnabled ? await commentCountFor(ids) : {};
+          return {
+            ...page,
+            votingEnabled: model.votingEnabled,
+            discussionsEnabled: model.discussionsEnabled,
+            items: page.items.map((it) => ({
+              ...it,
+              voteCount: votes[it.id]?.count ?? 0,
+              hasVoted: votes[it.id]?.hasVoted ?? false,
+              commentCount: comments[it.id] ?? 0,
+            })),
+          };
+        }),
+
+      record: publicProcedure
+        .input(
+          z.object({
+            token: z.string().min(1),
+            key: z.string().min(1).optional(),
+            recordId: z.string().min(1),
+          }),
+        )
+        .query(async ({ ctx, input }) => {
+          const form = await requireReadableBoard(input.token, input.key);
+          if (!(await isRecordPublishedForForm(form.id, input.recordId))) {
+            throw new NotFoundError("DataRecord", input.recordId);
+          }
+          const record = await findDataRecordById(input.recordId);
+          if (!record || record.deletedAt) throw new NotFoundError("DataRecord", input.recordId);
+          const model = await requireModelById(form.dataModelId);
+          const byKey = new Map((await listDataFields(form.dataModelId)).map((f) => [f.key, f]));
+          const readFields = form.listReadFieldKeys
+            .map((k) => byKey.get(k))
+            .filter((f): f is DataFieldRow => !!f)
+            .map(serializeField);
+          const voterKey = await resolveVoterKey(ctx, form, input.key);
+          const votes = model.votingEnabled
+            ? (await voteStateFor([record.id], voterKey))[record.id]
+            : undefined;
+          const commentCount = model.discussionsEnabled
+            ? (await commentCountFor([record.id]))[record.id]
+            : undefined;
+          return {
+            modelName: model.name,
+            readFields,
+            entry: projectPublicRecord(record, form.listReadFieldKeys),
+            votingEnabled: model.votingEnabled,
+            discussionsEnabled: model.discussionsEnabled,
+            voteCount: votes?.count ?? 0,
+            hasVoted: votes?.hasVoted ?? false,
+            commentCount: commentCount ?? 0,
+          };
+        }),
+
+      // Toggle the caller's vote on a published board record. Requires the
+      // model's votingEnabled + a real identity (login or invite).
+      vote: publicProcedure
+        .input(
+          z.object({
+            token: z.string().min(1),
+            key: z.string().min(1).optional(),
+            recordId: z.string().min(1),
+          }),
+        )
+        .mutation(async ({ ctx, input }) => {
+          const form = await requireReadableBoard(input.token, input.key);
+          await requireEngagementModel(form, "voting");
+          await requirePublishedRecord(form, input.recordId);
+          const voterKey = await resolveVoterKey(ctx, form, input.key);
+          if (!voterKey) {
+            throw new ForbiddenError("Sign in or open your invite link to vote.");
+          }
+          const rl = await checkRateLimit(`public-vote:${form.id}:${ctx.clientIp ?? "unknown"}`, {
+            refillPerSecond: 1,
+            burst: 20,
+          });
+          if (!rl.allowed) throw new ValidationError("Too many requests — please slow down.");
+          const result = await toggleVote(input.recordId, voterKey, ctx.userId ?? null);
+          return { count: result.count, hasVoted: result.voted };
+        }),
+
+      // The caller's own vote state for one record. Used by the detail page,
+      // whose initial load is server-anonymous (so its `hasVoted` is unknown) ;
+      // this client query carries the session/invite and reconciles it.
+      voteState: publicProcedure
+        .input(
+          z.object({
+            token: z.string().min(1),
+            key: z.string().min(1).optional(),
+            recordId: z.string().min(1),
+          }),
+        )
+        .query(async ({ ctx, input }) => {
+          const form = await requireReadableBoard(input.token, input.key);
+          await requirePublishedRecord(form, input.recordId);
+          const voterKey = await resolveVoterKey(ctx, form, input.key);
+          const state = (await voteStateFor([input.recordId], voterKey))[input.recordId];
+          return { count: state?.count ?? 0, hasVoted: state?.hasVoted ?? false };
+        }),
+
+      // Whether the current (logged-in) caller may moderate this board's
+      // comments (hide / delete any). Non-throwing : anonymous or non-admin
+      // callers get `false`, so the board UI can decide what to render.
+      canModerate: publicProcedure
+        .input(z.object({ token: z.string().min(1) }))
+        .query(async ({ ctx, input }) => {
+          if (!ctx.userId) return { canModerate: false };
+          const form = await findLiveDataFormByToken(input.token);
+          if (!form) return { canModerate: false };
+          const model = await requireModelById(form.dataModelId);
+          try {
+            await requireModelAccess(ctx, model, "data-models.manage-forms");
+            return { canModerate: true };
+          } catch {
+            return { canModerate: false };
+          }
+        }),
+
+      comments: router({
+        list: publicProcedure
+          .input(
+            z.object({
+              token: z.string().min(1),
+              key: z.string().min(1).optional(),
+              recordId: z.string().min(1),
+              limit: z.number().int().min(1).max(MAX_PAGE_SIZE).optional(),
+              cursor: z.string().min(1).nullish(),
+            }),
+          )
+          .query(async ({ ctx, input }) => {
+            const form = await requireReadableBoard(input.token, input.key);
+            await requireEngagementModel(form, "discussions");
+            await requirePublishedRecord(form, input.recordId);
+            // Moderators see hidden comments (flagged, so they can unhide) ;
+            // the public list never returns them.
+            let includeHidden = false;
+            if (ctx.userId) {
+              const model = await requireModelById(form.dataModelId);
+              try {
+                await requireModelAccess(ctx, model, "data-models.manage-forms");
+                includeHidden = true;
+              } catch {
+                includeHidden = false;
+              }
+            }
+            const page = await listRecordComments(input.recordId, {
+              limit: input.limit,
+              cursor: input.cursor,
+              includeHidden,
+            });
+            return { ...page, items: page.items.map(serializeComment) };
+          }),
+
+        // User-only : a logged-in User authors an auto-published comment.
+        // No invite / anonymous path (unlike voting).
+        post: publicProcedure
+          .input(
+            z.object({
+              token: z.string().min(1),
+              recordId: z.string().min(1),
+              body: z.string().min(1).max(4000),
+            }),
+          )
+          .mutation(async ({ ctx, input }) => {
+            if (!ctx.userId) throw new UnauthorizedError();
+            const form = await requireReadableBoard(input.token);
+            const model = await requireEngagementModel(form, "discussions");
+            await requirePublishedRecord(form, input.recordId);
+            const rl = await checkRateLimit(`public-comment:${form.id}:${ctx.userId}`, {
+              refillPerSecond: 0.5,
+              burst: 10,
+            });
+            if (!rl.allowed) throw new ValidationError("Too many comments — please slow down.");
+            const comment = await createRecordComment(input.recordId, ctx.userId, input.body);
+            const event: DataRecordCommentedEvent = {
+              type: "data-models.record-commented",
+              dataModelId: form.dataModelId,
+              dataModelKey: model.key,
+              recordId: input.recordId,
+              commentId: comment.id,
+              authorId: ctx.userId,
+              organizationId: form.organizationId,
+              occurredAt: new Date(),
+            };
+            await emit(event).catch(() => {});
+            return serializeComment(comment);
+          }),
+
+        // Soft delete : the comment's author, or a board admin (manage-forms).
+        remove: publicProcedure
+          .input(z.object({ token: z.string().min(1), commentId: z.string().min(1) }))
+          .mutation(async ({ ctx, input }) => {
+            if (!ctx.userId) throw new UnauthorizedError();
+            const form = await requireReadableBoard(input.token);
+            const comment = await getCommentById(input.commentId);
+            if (!comment) throw new NotFoundError("DataRecordComment", input.commentId);
+            await requirePublishedRecord(form, comment.dataRecordId);
+            const isAuthor = comment.authorId === ctx.userId;
+            if (!isAuthor) await requireFormAdmin(ctx, form.id);
+            await softDeleteComment(input.commentId);
+            return { ok: true as const };
+          }),
+
+        // Moderation : hide / unhide a comment. Board admin only (manage-forms).
+        setHidden: publicProcedure
+          .input(
+            z.object({
+              token: z.string().min(1),
+              commentId: z.string().min(1),
+              hidden: z.boolean(),
+            }),
+          )
+          .mutation(async ({ ctx, input }) => {
+            if (!ctx.userId) throw new UnauthorizedError();
+            const form = await requireReadableBoard(input.token);
+            await requireFormAdmin(ctx, form.id);
+            const comment = await getCommentById(input.commentId);
+            if (!comment) throw new NotFoundError("DataRecordComment", input.commentId);
+            await requirePublishedRecord(form, comment.dataRecordId);
+            await setCommentHidden(input.commentId, input.hidden);
+            return { ok: true as const };
+          }),
+      }),
+    }),
   }),
 });

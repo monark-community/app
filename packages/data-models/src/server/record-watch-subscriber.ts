@@ -6,6 +6,7 @@ import type {
   DataModelRecordCreatedEvent,
   DataModelRecordDeletedEvent,
   DataModelRecordUpdatedEvent,
+  DataRecordCommentedEvent,
 } from "../contracts/events";
 
 /** Payload for the `data-models.record-changed` notification kind. */
@@ -14,6 +15,15 @@ type RecordChangedData = {
   modelName: string;
   action: string;
   actorName: string;
+  link: string;
+};
+
+/** Payload for the `data-models.record-commented` notification kind. */
+type RecordCommentedData = {
+  recordTitle: string;
+  modelName: string;
+  authorName: string;
+  snippet: string;
   link: string;
 };
 
@@ -28,12 +38,18 @@ const notifyRecordChanged = notify as unknown as (
   recipient: { userId: string },
   data: RecordChangedData,
 ) => Promise<unknown>;
+const notifyRecordCommented = notify as unknown as (
+  kind: "data-models.record-commented",
+  recipient: { userId: string },
+  data: RecordCommentedData,
+) => Promise<unknown>;
 import {
   findDataModelById,
   findDataRecordById,
   getDataRecordRoleAccess,
   isDataRecordRoleAccessible,
 } from "./data";
+import { getCommentById } from "./engagement";
 import { listModelWatchers, listRecordWatchers } from "./watchers";
 
 let registered = false;
@@ -68,6 +84,41 @@ export function registerDataModelRecordWatchSubscriber(): void {
   for (const type of types) {
     on(type, (event) => handle(event as RecordEvent));
   }
+  on("data-models.record-commented", (event) => handleCommented(event as DataRecordCommentedEvent));
+}
+
+// Recipients for a record event : record watchers ∪ model watchers, minus the
+// actor, minus anyone who can't see the record under row-level access. The
+// cheap path (an unrestricted record with no access rows) skips per-user checks.
+async function accessibleWatchers(
+  recordId: string,
+  dataModelId: string,
+  excludeUserId: string,
+  orgId?: string,
+): Promise<string[]> {
+  const [recordWatchers, modelWatchers] = await Promise.all([
+    listRecordWatchers(recordId),
+    listModelWatchers(dataModelId),
+  ]);
+  const candidates = [...new Set([...recordWatchers, ...modelWatchers])].filter(
+    (uid) => uid !== excludeUserId,
+  );
+  if (candidates.length === 0) return [];
+  const restricted = (await getDataRecordRoleAccess(recordId)).length > 0;
+  if (!restricted || !orgId) return candidates;
+  const recipients: string[] = [];
+  for (const uid of candidates) {
+    const [roles, bypass] = await Promise.all([
+      getUserRoles(uid, orgId),
+      hasPermission(uid, "data-models.manage-schema", orgId),
+    ]);
+    const ok = await isDataRecordRoleAccessible(recordId, {
+      roleIds: roles.map((r) => r.id),
+      bypass,
+    });
+    if (ok) recipients.push(uid);
+  }
+  return recipients;
 }
 
 async function handle(event: RecordEvent): Promise<void> {
@@ -75,35 +126,12 @@ async function handle(event: RecordEvent): Promise<void> {
     const deleted = event.type === "data-models.record-deleted";
     const orgId = event.organizationId ?? undefined;
 
-    // Recipients : record watchers + model watchers, minus the actor.
-    const [recordWatchers, modelWatchers] = await Promise.all([
-      listRecordWatchers(event.recordId),
-      listModelWatchers(event.dataModelId),
-    ]);
-    const candidates = [...new Set([...recordWatchers, ...modelWatchers])].filter(
-      (uid) => uid !== event.actorId,
+    const recipients = await accessibleWatchers(
+      event.recordId,
+      event.dataModelId,
+      event.actorId,
+      orgId,
     );
-    if (candidates.length === 0) return;
-
-    // Row-level access filter. Cheap path : an unrestricted record (no access
-    // rows) is visible to every watcher, so skip the per-user checks. A hard-
-    // deleted record has no rows left either → unrestricted, which is fine.
-    let recipients = candidates;
-    const restricted = (await getDataRecordRoleAccess(event.recordId)).length > 0;
-    if (restricted && orgId) {
-      recipients = [];
-      for (const uid of candidates) {
-        const [roles, bypass] = await Promise.all([
-          getUserRoles(uid, orgId),
-          hasPermission(uid, "data-models.manage-schema", orgId),
-        ]);
-        const ok = await isDataRecordRoleAccessible(event.recordId, {
-          roleIds: roles.map((r) => r.id),
-          bypass,
-        });
-        if (ok) recipients.push(uid);
-      }
-    }
     if (recipients.length === 0) return;
 
     const [model, record, actor] = await Promise.all([
@@ -139,5 +167,49 @@ async function handle(event: RecordEvent): Promise<void> {
     );
   } catch (err) {
     logger.error({ err, eventType: event.type }, "record-watch subscriber failed");
+  }
+}
+
+// A comment fans out to the record's watchers (minus the author), same
+// row-level-access rules as record changes. Best-effort ; the comment is
+// already committed.
+async function handleCommented(event: DataRecordCommentedEvent): Promise<void> {
+  try {
+    const orgId = event.organizationId ?? undefined;
+    const recipients = await accessibleWatchers(
+      event.recordId,
+      event.dataModelId,
+      event.authorId,
+      orgId,
+    );
+    if (recipients.length === 0) return;
+
+    const [model, record, comment, author] = await Promise.all([
+      findDataModelById(event.dataModelId),
+      findDataRecordById(event.recordId),
+      getCommentById(event.commentId),
+      getDb().user.findUnique({
+        where: { id: event.authorId },
+        select: { displayName: true, email: true },
+      }),
+    ]);
+
+    const body = comment?.body ?? "";
+    const snippet = body.length > 120 ? `${body.slice(0, 117)}...` : body;
+    const data: RecordCommentedData = {
+      recordTitle: record?.title ?? "",
+      modelName: model?.name ?? "",
+      authorName: author?.displayName || author?.email || "someone",
+      snippet,
+      link: `/data/models/${event.dataModelKey}?record=${event.recordId}`,
+    };
+
+    await Promise.all(
+      recipients.map((userId) =>
+        notifyRecordCommented("data-models.record-commented", { userId }, data),
+      ),
+    );
+  } catch (err) {
+    logger.error({ err, eventType: event.type }, "record-comment subscriber failed");
   }
 }

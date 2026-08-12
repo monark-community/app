@@ -1,6 +1,7 @@
 export { dataModelsRouter } from "./router";
 export { registerDataModelsPermissions } from "./permissions";
 export { registerDataModelsEventTypes } from "./event-types";
+export { registerDataModelsSearchSource } from "./search-source";
 export {
   hydrateDataModelRegistrations,
   registerDataModelRegistrations,
@@ -17,6 +18,49 @@ export {
   type RelationTargets,
 } from "./query-compiler";
 export { registerDataModelsFeatureFlags } from "./flags";
+export {
+  createDataForm,
+  listDataForms,
+  findDataFormById,
+  findLiveDataFormByToken,
+  updateDataForm,
+  softDeleteDataForm,
+  assertFormFieldsValid,
+  listFormInvites,
+  addFormInvite,
+  findFormInviteById,
+  findFormInviteByToken,
+  removeFormInvite,
+  markFormInviteSubmitted,
+  createPublicFormRecord,
+  assertBoardConfigValid,
+  listPendingEntries,
+  findFormEntryById,
+  setEntryStatus,
+  isRecordPublishedForForm,
+  projectPublicRecord,
+  listPublicBoardRecords,
+  type BoardSort,
+  type DataFormRow,
+  type DataFormInviteRow,
+  type DataFormEntryRow,
+  type PublicBoardRecord,
+  type CreateDataFormInput,
+  type UpdateDataFormPatch,
+} from "./forms";
+export {
+  toggleVote,
+  voteStateFor,
+  listRecordComments,
+  createRecordComment,
+  getCommentById,
+  setCommentHidden,
+  softDeleteComment,
+  commentCountFor,
+  type VoteResult,
+  type VoteState,
+  type CommentRow,
+} from "./engagement";
 export {
   registerModelIntegration,
   listModelIntegrations,

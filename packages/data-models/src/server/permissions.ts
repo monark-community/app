@@ -32,6 +32,11 @@ const DATA_MODELS_PERMISSIONS = {
     description: "Soft-delete or hard-delete Data Records.",
     category: "data-models",
   },
+  "manage-forms": {
+    description:
+      "Create and manage public forms (shareable links + email invites) that let non-users submit records to a Data Model.",
+    category: "data-models",
+  },
 } as const;
 
 export function registerDataModelsPermissions(): void {

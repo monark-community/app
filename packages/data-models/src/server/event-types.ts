@@ -74,6 +74,59 @@ const DATA_MODELS_EVENT_TYPES = {
       { key: "hard", type: "boolean", description: "True for hard-delete, false for soft-delete." },
     ],
   },
+  "data-models.form-submitted": {
+    description: "A record was submitted through a public form (anonymous link or email invite).",
+    fields: [
+      { key: "dataModelId", type: "string", description: "The data model the record belongs to." },
+      {
+        key: "dataModelKey",
+        type: "string",
+        description: "The data model's key, for filtering without lookup.",
+      },
+      { key: "recordId", type: "string", description: "The submitted record's id." },
+      { key: "formId", type: "string", description: "The public form that was submitted." },
+      { key: "mode", type: "string", description: "Submission mode: anonymous or email." },
+      {
+        key: "submitterEmail",
+        type: "string",
+        description: "The invited recipient's email (email mode), or null.",
+      },
+      {
+        key: "organizationId",
+        type: "string",
+        description: "The record's org scope, or null for platform-tier.",
+      },
+    ],
+  },
+  "data-models.form-entry-published": {
+    description: "An admin approved a public-form submission onto the public board (now visible).",
+    fields: [
+      { key: "dataModelId", type: "string", description: "The data model the record belongs to." },
+      { key: "dataModelKey", type: "string", description: "The data model's key." },
+      { key: "recordId", type: "string", description: "The published record's id." },
+      { key: "formId", type: "string", description: "The public form / board." },
+      {
+        key: "organizationId",
+        type: "string",
+        description: "The record's org scope, or null for platform-tier.",
+      },
+    ],
+  },
+  "data-models.record-commented": {
+    description: "A user posted a comment on a Data Record (discussions).",
+    fields: [
+      { key: "dataModelId", type: "string", description: "The data model the record belongs to." },
+      { key: "dataModelKey", type: "string", description: "The data model's key." },
+      { key: "recordId", type: "string", description: "The record that was commented on." },
+      { key: "commentId", type: "string", description: "The new comment's id." },
+      { key: "authorId", type: "string", description: "The user who posted the comment." },
+      {
+        key: "organizationId",
+        type: "string",
+        description: "The record's org scope, or null for platform-tier.",
+      },
+    ],
+  },
 } as const;
 
 export function registerDataModelsEventTypes(): void {

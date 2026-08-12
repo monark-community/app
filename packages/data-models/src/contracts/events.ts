@@ -47,8 +47,51 @@ export type DataModelRecordDeletedEvent = DomainEventBase & {
   hard: boolean;
 };
 
+// Emitted when a record is created through a public form (anonymous shareable
+// link or an email invite). The submit path ALSO emits a normal
+// `data-models.record-created` (so watchers / automation / webhooks keep
+// working) ; this event carries the form-specific context.
+export type DataFormSubmittedEvent = DomainEventBase & {
+  type: "data-models.form-submitted";
+  dataModelId: string;
+  dataModelKey: string;
+  recordId: string;
+  formId: string;
+  mode: "anonymous" | "email";
+  // The invited recipient's email for EMAIL mode ; null for anonymous.
+  submitterEmail: string | null;
+  organizationId: string | null;
+};
+
+// Emitted when an admin approves a public-form submission onto the public board
+// (it becomes visible + searchable). Lets automation / webhooks react to
+// "an entry went public" (e.g. announce a new published feature request).
+export type DataFormEntryPublishedEvent = DomainEventBase & {
+  type: "data-models.form-entry-published";
+  dataModelId: string;
+  dataModelKey: string;
+  recordId: string;
+  formId: string;
+  organizationId: string | null;
+};
+
+// Emitted when a logged-in user posts a comment on a record (auto-published).
+// Drives the discussion notification to the record's watchers.
+export type DataRecordCommentedEvent = DomainEventBase & {
+  type: "data-models.record-commented";
+  dataModelId: string;
+  dataModelKey: string;
+  recordId: string;
+  commentId: string;
+  authorId: string;
+  organizationId: string | null;
+};
+
 export type DataModelsEvents =
   | DataModelSchemaChangedEvent
   | DataModelRecordCreatedEvent
   | DataModelRecordUpdatedEvent
-  | DataModelRecordDeletedEvent;
+  | DataModelRecordDeletedEvent
+  | DataFormSubmittedEvent
+  | DataFormEntryPublishedEvent
+  | DataRecordCommentedEvent;

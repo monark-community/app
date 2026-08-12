@@ -46,4 +46,39 @@ export function registerDataModelsNotificationKinds(): void {
       },
     },
   );
+
+  // A new comment on a watched record (discussions). IN_APP only, opt-out-able ;
+  // the bell feed is the right surface for a reply, not an email per comment.
+  registerNotificationKind(
+    "data-models.record-commented",
+    {
+      category: "ACTIVITY",
+      channels: ["IN_APP"],
+      defaultEnabled: { IN_APP: true },
+      requiredEmail: false,
+      template: "data-models/record-commented",
+    },
+    {
+      en: {
+        subject: "{{ recordTitle }}",
+        html: "",
+        text: "",
+        inapp: {
+          subject: "{{ recordTitle }}",
+          body: "{{ authorName }} commented: {{ snippet }}",
+          link: "{{ link }}",
+        },
+      },
+      fr: {
+        subject: "{{ recordTitle }}",
+        html: "",
+        text: "",
+        inapp: {
+          subject: "{{ recordTitle }}",
+          body: "{{ authorName }} a commenté : {{ snippet }}",
+          link: "{{ link }}",
+        },
+      },
+    },
+  );
 }

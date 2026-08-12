@@ -1,4 +1,8 @@
 import { z } from "zod";
+// Subpath import (not the `@monark/common` barrel) so this contracts file, which
+// runs in the browser via the fields toolkit, never pulls in the server-only
+// pino logger (`log.ts` reads `process.stdout.isTTY` at load — crashes client).
+import { blocksToText } from "@monark/common/blocks";
 
 /**
  * The v1 field-type catalog for the polymorphic Data Model engine. Mirrors
@@ -21,6 +25,7 @@ export const DATA_FIELD_TYPES = [
   "FORMULA",
   "FILE",
   "ATTACHMENTS",
+  "DOCUMENT",
 ] as const;
 export type DataFieldType = (typeof DATA_FIELD_TYPES)[number];
 
@@ -31,6 +36,31 @@ export type DataFieldType = (typeof DATA_FIELD_TYPES)[number];
  * title is this field's value — never an admin-chosen "title field" pointer.
  */
 export const TITLE_FIELD_KEY = "title";
+
+/**
+ * Field types a public form may expose for anonymous / invited input. Excludes
+ * RELATION (would leak other records + needs an async picker), FILE / ATTACHMENTS
+ * (anonymous uploads are a much larger surface), DOCUMENT (block editor), and
+ * FORMULA (computed, never user-entered). Used both server-side to validate a
+ * form's field selection and in the admin field picker.
+ */
+export const PUBLIC_FORM_FIELD_TYPES = [
+  "TEXT",
+  "LONG_TEXT",
+  "RICH_TEXT",
+  "NUMBER",
+  "BOOLEAN",
+  "DATE",
+  "DATETIME",
+  "SELECT",
+  "MULTI_SELECT",
+  "URL",
+  "EMAIL",
+] as const satisfies readonly DataFieldType[];
+
+export function isPublicFormFieldType(type: DataFieldType): boolean {
+  return (PUBLIC_FORM_FIELD_TYPES as readonly DataFieldType[]).includes(type);
+}
 
 /**
  * The single private `@monark/files` bucket every Data Model FILE / ATTACHMENTS
@@ -126,6 +156,9 @@ export const fieldConfigSchemas = {
     maxSizeBytes: z.number().int().min(1).optional(),
     max: z.number().int().min(1).optional(),
   }),
+  // A Notion-style block document. No admin-facing config ; the value is a
+  // BlockNote block array (JSON) stored opaquely in `DataRecord.data`.
+  DOCUMENT: z.object({}),
 } as const satisfies Record<DataFieldType, z.ZodTypeAny>;
 
 export type FieldConfig<T extends DataFieldType> = z.infer<(typeof fieldConfigSchemas)[T]>;
@@ -317,6 +350,15 @@ export function valueSchemaFor(
       let a = z.array(z.string());
       if (def.maxItems != null) a = a.max(def.maxItems, m.tooManyItems?.(def.maxItems));
       return def.required ? a.min(1, m.required) : a;
+    }
+
+    case "DOCUMENT": {
+      // A BlockNote block array, stored opaquely as JSON (the editor produces
+      // valid blocks ; we don't re-validate the block schema server-side, same
+      // stance as FORMULA). "Required" means it has visible text — checked via
+      // `blocksToText`, the same extractor title / search / previews use.
+      const a = z.array(z.unknown());
+      return def.required ? a.refine((v) => blocksToText(v).trim().length > 0, m.required) : a;
     }
   }
 }

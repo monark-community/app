@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { ValidationError } from "@monark/common";
-import { getDb, Prisma } from "@monark/db";
+import { ValidationError, blocksToText } from "@monark/common";
+import { getDb, Prisma, trigramMatch, trigramOrder } from "@monark/db";
 import {
   cursorFindArgs,
   resolveLimit,
@@ -234,6 +234,8 @@ export type UpdateDataModelPatch = {
   name?: string;
   description?: string | null;
   icon?: string | null;
+  votingEnabled?: boolean;
+  discussionsEnabled?: boolean;
 };
 
 export async function updateDataModel(
@@ -247,6 +249,10 @@ export async function updateDataModel(
       ...(patch.name !== undefined ? { name: patch.name } : {}),
       ...(patch.description !== undefined ? { description: patch.description } : {}),
       ...(patch.icon !== undefined ? { icon: patch.icon } : {}),
+      ...(patch.votingEnabled !== undefined ? { votingEnabled: patch.votingEnabled } : {}),
+      ...(patch.discussionsEnabled !== undefined
+        ? { discussionsEnabled: patch.discussionsEnabled }
+        : {}),
     },
   });
 }
@@ -475,7 +481,9 @@ export async function unarchiveDataField(id: string): Promise<void> {
 // recomputed from the record's own data on every write (see
 // `applyComputedFields`), so any client-supplied value for one is dropped
 // here rather than trusted.
-function recordDataSchema(fields: DataFieldRow[]): z.ZodObject<Record<string, z.ZodTypeAny>> {
+export function recordDataSchema(
+  fields: DataFieldRow[],
+): z.ZodObject<Record<string, z.ZodTypeAny>> {
   return z.object(
     Object.fromEntries(
       fields
@@ -551,11 +559,14 @@ function deriveTitle(value: unknown, type: DataFieldType | undefined): string {
         // title like "<p>Hello <strong>world</strong></p>" reads "Hello world",
         // not "Hello  world".
         stripHtmlTags(value).replace(/\s+/g, " ")
-      : Array.isArray(value)
-        ? value.map((v) => String(v)).join(", ")
-        : value instanceof Date
-          ? value.toISOString()
-          : String(value);
+      : type === "DOCUMENT"
+        ? // A block array — flatten to plain text (first line reads as the title).
+          blocksToText(value).replace(/\s+/g, " ")
+        : Array.isArray(value)
+          ? value.map((v) => String(v)).join(", ")
+          : value instanceof Date
+            ? value.toISOString()
+            : String(value);
   return raw.trim().slice(0, 200);
 }
 
@@ -678,6 +689,9 @@ export type ListDataRecordsInput = PaginationArgs & {
   roleIds?: string[];
   /** When true (a data admin), the role-access filter is skipped. */
   bypassRoleAccess?: boolean;
+  /** Restrict to records PUBLISHED on a given public form's board (the read
+   *  side of public forms). A relation filter, so it scales past an id list. */
+  publishedForFormId?: string;
 };
 
 export async function listDataRecords(
@@ -703,6 +717,15 @@ export async function listDataRecords(
           ]
         : []),
       ...fieldWheres,
+      ...(input.publishedForFormId
+        ? [
+            {
+              formEntries: {
+                some: { dataFormId: input.publishedForFormId, status: "PUBLISHED" as const },
+              },
+            },
+          ]
+        : []),
       recordRoleAccessWhere({
         roleIds: input.roleIds ?? [],
         bypass: input.bypassRoleAccess ?? false,
@@ -719,6 +742,44 @@ export async function listDataRecords(
     db.dataRecord.count({ where }),
   ]);
   return toPage(rows, total, limit);
+}
+
+/**
+ * Cross-model record **title** search for the global command palette. The caller
+ * has already narrowed `readableModelIds` to the models it may record-read
+ * (model-level) ; this applies the row-level role access on top (the same
+ * `recordRoleAccessWhere` `listDataRecords` uses) and title-matches across all of
+ * them in one query. Returns each hit's model key + name for the palette's href
+ * + subtitle.
+ */
+export async function searchRecordsAcrossModels(input: {
+  organizationId: string;
+  readableModelIds: string[];
+  roleIds: string[];
+  bypassRoleAccess: boolean;
+  query: string;
+  limit: number;
+}): Promise<Array<{ id: string; title: string; modelKey: string; modelName: string }>> {
+  if (input.readableModelIds.length === 0) return [];
+  // Fuzzy (trigram) title match, ranked by similarity, with the row-level role
+  // access applied as raw SQL (`recordRoleAccessSql`) so the whole thing is one
+  // query. Joins the model for the hit's key (href) + name (subtitle).
+  return getDb().$queryRaw<
+    Array<{ id: string; title: string; modelKey: string; modelName: string }>
+  >(
+    Prisma.sql`
+      SELECT r.id, r.title, m.key AS "modelKey", m.name AS "modelName"
+      FROM "DataRecord" r
+      JOIN "DataModel" m ON m.id = r."dataModelId"
+      WHERE r."organizationId" = ${input.organizationId}
+        AND r."dataModelId" IN (${Prisma.join(input.readableModelIds)})
+        AND r."deletedAt" IS NULL
+        AND ${trigramMatch(["title"], input.query, { alias: "r" })}
+        AND ${recordRoleAccessSql(input.roleIds, input.bypassRoleAccess, "r")}
+      ORDER BY ${trigramOrder(["title"], input.query, { alias: "r" })}, r."updatedAt" DESC
+      LIMIT ${input.limit}
+    `,
+  );
 }
 
 // ── Structured query language (MonarkQL) list path ───────
