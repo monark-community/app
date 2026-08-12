@@ -3,6 +3,7 @@ export { PrismaClient, NotificationCategory, NotificationChannel } from "@prisma
 // runtime helpers — `Prisma.sql` / `Prisma.join` / `Prisma.empty` for tagged
 // raw queries — as well as its type namespace (`Prisma.DataRecordWhereInput`).
 export { Prisma } from "@prisma/client";
+export { trigramMatch, trigramOrder, TRIGRAM_THRESHOLD } from "./trigram";
 
 import { PrismaClient } from "@prisma/client";
 

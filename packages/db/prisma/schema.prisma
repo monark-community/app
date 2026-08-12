@@ -88,6 +88,8 @@ model User {
   metadata            UserMetadata[]
   dataRecordWatches   DataRecordWatcher[]
   dataModelWatches    DataModelWatcher[]
+  dataRecordVotes     DataRecordVote[]
+  dataRecordComments  DataRecordComment[]
   apiKeys             ApiKey[]
   createdConversations        Conversation[]
   conversationParticipations  ConversationParticipant[]
@@ -368,12 +370,16 @@ model Organization {
   kanbanColumns          KanbanColumn[]
   kanbanCards            KanbanCard[]
   kanbanViews            KanbanView[]
+  achievements           Achievement[]
+  achievementOutbox      AchievementOutbox[]
+  wikiPages              WikiPage[]
   automations            Automation[]
   automationRuns         AutomationRun[]
   storedFiles            StoredFile[]
   secrets                Secret[]
   apiKeys                ApiKey[]
   dataRecordViews        DataRecordView[]
+  dataForms              DataForm[]
   conversations          Conversation[]
   chatMessages           Message[]
   chatMessageToolCalls   MessageToolCall[]
@@ -763,6 +769,11 @@ enum DataFieldType {
   // A bucket of many uploaded files ; value is `StoredFile.id[]` (like a
   // RELATION MANY). Config holds { allowedFormats?, maxSizeBytes?, max? }.
   ATTACHMENTS
+  // Notion-style block document ; value is a BlockNote block array (JSON) stored
+  // in `DataRecord.data`. The heavier, structured sibling of RICH_TEXT (which
+  // stays for compact inline HTML). Config is empty ; title / search / index use
+  // `blocksToText` (@monark/common). Rendered by the web BlockEditor / BlockView.
+  DOCUMENT
 }
 
 // A model definition. Every Data Model is org-scoped ; platform-wide
@@ -794,11 +805,19 @@ model DataModel {
   deletedAt DateTime?
   createdBy String
 
+  // Per-model engagement features (surface on the public board). Opt-in,
+  // like a board itself. votingEnabled lets identities upvote records (one
+  // vote per identity) and adds a "top" board sort ; discussionsEnabled lets
+  // logged-in users post auto-published, admin-moderated comments.
+  votingEnabled      Boolean @default(false)
+  discussionsEnabled Boolean @default(false)
+
   fields       DataField[]
   records      DataRecord[]
   integrations DataModelIntegration[]
   watchers     DataModelWatcher[]
   views        DataRecordView[]
+  forms        DataForm[]
 
   // Per-org key uniqueness among LIVE models is enforced by the hand-
   // written partial index `DataModel_org_key_active_unique`
@@ -877,8 +896,11 @@ model DataRecord {
   // Partial-unique (dataModelId, slug) WHERE slug IS NOT NULL is added
   // by hand-written migration SQL, same reason as DataModel above.
 
-  roleAccess DataRecordRoleAccess[]
-  watchers   DataRecordWatcher[]
+  roleAccess  DataRecordRoleAccess[]
+  watchers    DataRecordWatcher[]
+  formEntries DataFormEntry[]
+  votes       DataRecordVote[]
+  comments    DataRecordComment[]
 
   @@index([dataModelId, deletedAt])
   @@index([organizationId, dataModelId])
@@ -914,6 +936,45 @@ model DataRecordWatcher {
 
   @@id([dataRecordId, userId])
   @@index([userId])
+}
+
+// One upvote per identity per record. voterKey = "user:<userId>" or
+// "invite:<dataFormInviteId>" — engagement is never anonymous, so the key is
+// always a real principal ; the (dataRecordId, voterKey) unique enforces the
+// one-vote rule at the DB, not in app logic. userId is set (nullable FK) for
+// user votes so a vote cascades on account deletion ; invite votes carry only
+// the key. Gated per-model by DataModel.votingEnabled ; surfaces on the board.
+model DataRecordVote {
+  id           String     @id @default(cuid())
+  dataRecordId String
+  dataRecord   DataRecord @relation(fields: [dataRecordId], references: [id], onDelete: Cascade)
+  voterKey     String
+  userId       String?
+  user         User?      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt    DateTime   @default(now())
+
+  @@unique([dataRecordId, voterKey])
+  @@index([dataRecordId])
+}
+
+// A user-authored comment on a record. Comments are user-only (a logged-in
+// User authors them — never anonymous) and auto-published. `hidden` is admin
+// moderation (row kept, not shown publicly) ; `deletedAt` is a soft delete
+// (author or admin). `body` is plain text (tag-stripped on write, no stored
+// HTML). Gated per-model by DataModel.discussionsEnabled ; surfaces on the board.
+model DataRecordComment {
+  id           String     @id @default(cuid())
+  dataRecordId String
+  dataRecord   DataRecord @relation(fields: [dataRecordId], references: [id], onDelete: Cascade)
+  authorId     String
+  author       User       @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  body         String
+  hidden       Boolean    @default(false)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  deletedAt    DateTime?
+
+  @@index([dataRecordId, createdAt])
 }
 
 // A user watching a whole model : notified when ANY record in it is
@@ -981,6 +1042,104 @@ model DataRecordView {
   @@index([dataModelId])
   @@index([organizationId])
   @@index([createdBy])
+}
+
+// A published "public form" for a Data Model : lets people who are not users
+// submit a DataRecord, exposing only a chosen SUBSET of the model's fields
+// (`fieldKeys`). Anything not listed stays private (admins fill it later in the
+// normal record editor). Trust is resolved from `token`/the invite key, never
+// from a session — the row carries its own `organizationId` (denormalized from
+// the model, like DataRecord) so anonymous requests never touch `requireOrg`.
+model DataForm {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  dataModelId    String
+  dataModel      DataModel    @relation(fields: [dataModelId], references: [id], onDelete: Cascade)
+  name           String
+  // Public capability slug in the shareable URL /f/<token>. Random + unguessable,
+  // stored in plaintext (it IS the public identifier, not a secret) ; the
+  // per-recipient secret lives hashed on DataFormInvite.
+  token          String       @unique
+  mode           DataFormMode @default(ANONYMOUS)
+  // Allow-listed public field keys (DataField.key), in form display order.
+  fieldKeys      String[]     @default([])
+  active         Boolean      @default(true)
+  closesAt       DateTime?
+  intro          String?
+  successMessage String?
+  // ── Public board (read side) ──
+  // When on, this form also exposes a moderated, searchable, read-only public
+  // list of its entries (feature-request / bug / Q&A board).
+  listEnabled       Boolean  @default(false)
+  // Publicly READABLE field keys shown in the board list/detail — SEPARATE from
+  // `fieldKeys` (writable). Lets a `status` field be public-readable but not
+  // public-writable ; private fields never appear (the read path projects to
+  // this list). `DataRecord.title` is always shown as the entry title.
+  listReadFieldKeys String[] @default([])
+  // Read access : true = anyone with the link can browse ; false = browsing
+  // requires a valid invite key (only meaningful for EMAIL mode).
+  listPublicRead    Boolean  @default(true)
+  createdBy      String
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  deletedAt      DateTime?
+
+  invites DataFormInvite[]
+  entries DataFormEntry[]
+
+  @@index([organizationId])
+  @@index([dataModelId])
+}
+
+enum DataFormMode {
+  ANONYMOUS
+  EMAIL
+}
+
+// A single-use, per-recipient invite for an EMAIL-mode DataForm. The recipient's
+// key is SHA-256-hashed at rest (plaintext only in the emailed link), same
+// pattern as Invite.tokenHash. `submittedAt` locks the invite after one submit.
+model DataFormInvite {
+  id          String    @id @default(cuid())
+  dataFormId  String
+  dataForm    DataForm  @relation(fields: [dataFormId], references: [id], onDelete: Cascade)
+  email       String
+  displayName String?
+  tokenHash   String    @unique
+  expiresAt   DateTime?
+  submittedAt DateTime?
+  recordId    String?
+  createdAt   DateTime  @default(now())
+
+  @@unique([dataFormId, email])
+  @@index([dataFormId])
+}
+
+// One row per public-form submission : the record↔form link + moderation state
+// for the public board. A submission starts PENDING (invisible to the public
+// list) ; an admin PUBLISHED it to the board or REJECTED it. Kept even when the
+// form has no board (audit trail of which form a record came from).
+model DataFormEntry {
+  id             String              @id @default(cuid())
+  dataFormId     String
+  dataForm       DataForm            @relation(fields: [dataFormId], references: [id], onDelete: Cascade)
+  recordId       String
+  record         DataRecord          @relation(fields: [recordId], references: [id], onDelete: Cascade)
+  status         DataFormEntryStatus @default(PENDING)
+  submitterEmail String?
+  createdAt      DateTime            @default(now())
+  moderatedAt    DateTime?
+  moderatedBy    String?
+
+  @@unique([dataFormId, recordId])
+  @@index([dataFormId, status])
+}
+
+enum DataFormEntryStatus {
+  PENDING
+  PUBLISHED
+  REJECTED
 }
 
 
@@ -1213,6 +1372,121 @@ model RateLimitBucket {
   key       String   @id
   tokens    Float
   updatedAt DateTime
+}
+
+// @monark/achievements — Prisma schema fragment (extended module).
+// Assembled into packages/db/prisma/schema.prisma by `pnpm gen:schema`.
+// Edit HERE, never the generated schema.prisma.
+
+// ── MODULE: achievements ──────────────────────────────────
+// Configurable, event-driven achievements. An Achievement is a badge an admin
+// defines ; each AchievementRule watches a registered domain event type and,
+// when it fires (optionally matching payload fields), credits the acting user
+// toward a threshold. When the threshold is crossed, the user is AWARDED once.
+// Awarding is durable : the wildcard event subscriber persists a matching event
+// to AchievementOutbox, and a background worker drains it (so a restart never
+// drops a count), mirroring the automation run outbox. `userId` fields are
+// org-member ids (soft refs, not FKs — the module boundary keeps core↔extended
+// FKs minimal ; cascade flows through Achievement → Organization).
+
+model Achievement {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String
+  description    String?
+  // The badge image : `iconFileId` is a `@monark/files` StoredFile id in the
+  // public `achievement-icons` bucket. Null renders a neutral placeholder ;
+  // locked (unearned) badges render grey-scaled in the gallery.
+  iconFileId     String?
+  points         Int          @default(0)
+  enabled        Boolean      @default(true)
+  createdBy      String
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  deletedAt      DateTime?
+
+  rules  AchievementRule[]
+  awards AchievementAward[]
+
+  @@index([organizationId])
+}
+
+model AchievementRule {
+  id            String      @id @default(cuid())
+  achievementId String
+  achievement   Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+  // Denormalized from the achievement (no FK) so a rule query never joins.
+  organizationId String
+  // The registered domain event type this rule watches (or one of its
+  // subscription aliases), e.g. "kanban.card-created".
+  eventType     String
+  // Matching events (per user) before the achievement is awarded.
+  threshold     Int         @default(1)
+  // The payload field naming the user to credit (default "actorId").
+  subjectField  String      @default("actorId")
+  // Optional equality matchers on the event payload : `{ "toColumnId": "x" }`.
+  // ALL must match. Null = count every event of the type.
+  match         Json?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  progress AchievementProgress[]
+
+  @@index([achievementId])
+  @@index([eventType])
+}
+
+model AchievementProgress {
+  id             String          @id @default(cuid())
+  ruleId         String
+  rule           AchievementRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+  organizationId String
+  userId         String
+  count          Int             @default(0)
+  updatedAt      DateTime        @updatedAt
+
+  @@unique([ruleId, userId])
+  @@index([userId])
+}
+
+model AchievementAward {
+  id             String      @id @default(cuid())
+  achievementId  String
+  achievement    Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+  organizationId String
+  userId         String
+  awardedAt      DateTime    @default(now())
+
+  @@unique([achievementId, userId])
+  @@index([userId])
+  @@index([organizationId])
+}
+
+enum AchievementOutboxStatus {
+  PENDING
+  DONE
+  FAILED
+}
+
+// Durable at-least-once outbox : one row per matching emitted event, drained by
+// the achievements worker (claim via a status-guarded update, retry with
+// backoff, dead-letter to FAILED).
+model AchievementOutbox {
+  id             String                  @id @default(cuid())
+  organizationId String
+  organization   Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  eventType      String
+  payload        Json
+  status         AchievementOutboxStatus @default(PENDING)
+  attempts       Int                     @default(0)
+  nextAttemptAt  DateTime                @default(now())
+  error          String?
+  createdAt      DateTime                @default(now())
+  processedAt    DateTime?
+
+  @@index([status, nextAttemptAt])
+  @@index([organizationId])
 }
 
 // @monark/api-keys — Prisma schema fragment (core module).
@@ -1586,7 +1860,12 @@ model KanbanCard {
   organizationId String
   organization   Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   title          String
-  description    String?
+  // Card body as a BlockNote block array (JSON), edited by the web BlockEditor.
+  // `descriptionText` is the plain-text projection (via `blocksToText`) kept in
+  // sync on write so the query language can still filter on the description text
+  // without walking jsonb.
+  description     Json   @default("[]")
+  descriptionText String @default("")
   // Org member userIds. Not FKs, to keep the module decoupled from the users
   // table shape ; resolved for display by the web layer. A card can have many
   // assignees and many reviewers (each stored as an order-preserving text array).
@@ -1596,9 +1875,9 @@ model KanbanCard {
   priority       KanbanCardPriority?
   // Effort estimate (story points / hours — caller's convention). Non-negative.
   estimate       Int?
-  // Ordered checklist items, stored inline as JSON (edited with the card, not
-  // individually) : Array<{ id, title, done }>. Validated at the tRPC boundary.
-  subtasks       Json                @default("[]")
+  // Checklists live in the block-array `description` body now (BlockNote
+  // `checkListItem` blocks) ; the card face derives its progress bar from them
+  // via `checklistProgress`. The old dedicated `subtasks` JSON column is gone.
   // Ordering within the column. Assigned in steps of 10.
   position       Int
   createdAt      DateTime            @default(now())
@@ -1608,4 +1887,47 @@ model KanbanCard {
   @@index([columnId])
   @@index([boardId])
   @@index([organizationId])
+}
+
+// @monark/wiki — Prisma schema fragment (extended module).
+// Assembled into packages/db/prisma/schema.prisma by `pnpm gen:schema`.
+// Edit HERE, never the generated schema.prisma. Relations to core models
+// (Organization) resolve at assembly time.
+
+// ── MODULE: wiki ──────────────────────────────────────────
+// A nested-page wiki. Each page can have a parent, forming a tree of arbitrary
+// depth (adjacency list ; the small per-org tree is loaded whole and walked
+// in-app for subtree ops, so no recursive CTE is needed). Sibling order uses an
+// integer `position` in gaps of 10 (the house pattern from kanban / data-models
+// reorder) so a single move renumbers only its own sibling list. Pages are
+// soft-deleted a whole subtree at a time (`deletedAt`).
+model WikiPage {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  // Self-relation forming the tree. `parentId` null = a top-level page. Kept
+  // optional so a hard delete of a parent (not used in v1 — we soft-delete the
+  // subtree) would orphan children to top-level rather than cascade-destroy.
+  parentId String?
+  parent   WikiPage?  @relation("WikiTree", fields: [parentId], references: [id], onDelete: SetNull)
+  children WikiPage[] @relation("WikiTree")
+
+  title String
+  icon  String? // emoji or lucide key
+  // Body as a BlockNote block array (JSON) ; edited by the web BlockEditor. The
+  // derived `contentText` is the plain-text projection (via `blocksToText`) kept
+  // in sync on every write so search stays a cheap text `contains` (no jsonb
+  // text-walking) and events can diff content.
+  content     Json   @default("[]")
+  contentText String @default("")
+  position    Int    @default(0) // order among siblings — steps of 10
+
+  createdBy String
+  updatedBy String?
+  deletedAt DateTime? // set on a whole subtree at once
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([organizationId, parentId, position])
 }
