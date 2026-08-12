@@ -4,7 +4,13 @@
 import "../contracts/types";
 import { z } from "zod";
 import { router, publicProcedure } from "@monark/common/trpc";
-import { emit, NotFoundError, UnauthorizedError, ValidationError } from "@monark/common";
+import {
+  emit,
+  NotFoundError,
+  registerSearchSource,
+  UnauthorizedError,
+  ValidationError,
+} from "@monark/common";
 import { requireOrg } from "@monark/organizations/server";
 import { getUserRoles, hasPermission } from "@monark/rbac/server";
 import {
@@ -39,6 +45,7 @@ import {
   listEventsForDay,
   listEventsForExport,
   listEventsPaginated,
+  searchCalendarEventsForPalette,
   restoreCalendar,
   searchCalendarEvents,
   setCalendarRoleAccess,
@@ -618,6 +625,42 @@ export const calendarRouter = router({
 
 export { registerCalendarPermissions } from "./permissions";
 export { registerCalendarEventTypes } from "./event-types";
+/**
+ * Contribute calendar events to the global command palette (registered at api
+ * boot). Scoped to the caller's accessible calendars, like `calendar.events.search`.
+ */
+export function registerCalendarSearchSource(): void {
+  registerSearchSource({
+    module: "calendar",
+    groupId: "calendar",
+    label: "Calendar events",
+    run: async (ctx, query, limit) => {
+      if (!ctx.userId) return [];
+      const org = await requireOrg({
+        userId: ctx.userId,
+        activeOrganizationId: ctx.activeOrganizationId,
+      });
+      const calendarIds = await resolveAccessibleCalendarIds(ctx.userId, org.id);
+      if (calendarIds.length === 0) return [];
+      const events = await searchCalendarEventsForPalette({
+        organizationId: org.id,
+        calendarIds,
+        query,
+        limit,
+      });
+      return events.map((event) => {
+        const date = event.startAt.toISOString().slice(0, 10);
+        return {
+          id: event.id,
+          title: event.title,
+          subtitle: date,
+          href: `/calendar?view=day&date=${date}&event=${event.id}`,
+        };
+      });
+    },
+  });
+}
+
 export { registerCalendarNotificationKinds } from "./notification-kinds";
 export { registerCalendarModelIntegration } from "./model-integration";
 export {

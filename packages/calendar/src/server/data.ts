@@ -1,4 +1,4 @@
-import { getDb, type Prisma } from "@monark/db";
+import { getDb, Prisma, trigramMatch, trigramOrder } from "@monark/db";
 import {
   cursorFindArgs,
   resolveLimit,
@@ -408,6 +408,33 @@ export async function searchCalendarEvents({
     orderBy: { startAt: "asc" },
     take: 25,
   });
+}
+
+/**
+ * Light, **fuzzy** event search (trigram `pg_trgm`) over title + description for
+ * the global palette — `{ id, title, startAt }` only, ranked by similarity.
+ * Separate from `searchCalendarEvents` (which returns the heavy row + reminders
+ * for the tRPC proc) so the palette query stays cheap. Raw SQL (no similarity in
+ * Prisma). Row-level access is the caller-resolved `calendarIds`.
+ */
+export async function searchCalendarEventsForPalette(input: {
+  organizationId: string;
+  calendarIds: string[];
+  query: string;
+  limit: number;
+}): Promise<Array<{ id: string; title: string; startAt: Date }>> {
+  if (input.calendarIds.length === 0) return [];
+  const columns = ["title", "description"];
+  return getDb().$queryRaw<Array<{ id: string; title: string; startAt: Date }>>(Prisma.sql`
+    SELECT id, title, "startAt"
+    FROM "CalendarEvent"
+    WHERE "organizationId" = ${input.organizationId}
+      AND "calendarId" IN (${Prisma.join(input.calendarIds)})
+      AND "deletedAt" IS NULL
+      AND ${trigramMatch(columns, input.query)}
+    ORDER BY ${trigramOrder(columns, input.query)}, "startAt" DESC
+    LIMIT ${input.limit}
+  `);
 }
 
 // Full-history export for ICS download — an intentionally unbounded (but
