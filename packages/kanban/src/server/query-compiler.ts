@@ -138,13 +138,12 @@ function stringFilter(leaf: FilterLeaf, ctx: QueryContext): Prisma.StringFilter 
   }
 }
 
-// `description` is nullable, so empty means null OR "" and present is the inverse.
+// The description is now a JSON block array ; filter its plain-text projection
+// `descriptionText` (a non-nullable column, so "empty" is just an empty string).
 function descriptionWhere(leaf: FilterLeaf, ctx: QueryContext): Prisma.KanbanCardWhereInput {
-  if (leaf.op === "isEmpty") return { OR: [{ description: null }, { description: "" }] };
-  if (leaf.op === "isNotEmpty") {
-    return { AND: [{ description: { not: null } }, { description: { not: "" } }] };
-  }
-  return { description: stringFilter(leaf, ctx) };
+  if (leaf.op === "isEmpty") return { descriptionText: "" };
+  if (leaf.op === "isNotEmpty") return { descriptionText: { not: "" } };
+  return { descriptionText: stringFilter(leaf, ctx) };
 }
 
 // `status` is the board's column ; a select over `columnId` (options = columns).

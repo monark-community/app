@@ -51,16 +51,12 @@ describe("title / string operators", () => {
   });
 });
 
-describe("description (nullable string)", () => {
-  it("treats empty as null-or-blank and present as the inverse", () => {
-    expect(compile(leaf("description", "isEmpty"))).toEqual({
-      OR: [{ description: null }, { description: "" }],
-    });
-    expect(compile(leaf("description", "isNotEmpty"))).toEqual({
-      AND: [{ description: { not: null } }, { description: { not: "" } }],
-    });
+describe("description (block body, filtered via its text projection)", () => {
+  it("filters the `descriptionText` column ; empty is a blank string", () => {
+    expect(compile(leaf("description", "isEmpty"))).toEqual({ descriptionText: "" });
+    expect(compile(leaf("description", "isNotEmpty"))).toEqual({ descriptionText: { not: "" } });
     expect(compile(leaf("description", "contains", "x"))).toEqual({
-      description: { contains: "x", mode: INSENS },
+      descriptionText: { contains: "x", mode: INSENS },
     });
   });
 });

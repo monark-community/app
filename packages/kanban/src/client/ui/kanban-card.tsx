@@ -30,7 +30,7 @@ export function KanbanCard({
   assignees,
   priority,
   estimate,
-  subtasks,
+  checklist,
   dueLabel,
   dueOverdue,
   isDragging,
@@ -45,8 +45,9 @@ export function KanbanCard({
   assignees?: CardAssignee[];
   priority?: CardPriority;
   estimate?: number;
-  /** Checklist progress ; the chip shows only when `total > 0`. */
-  subtasks?: { done: number; total: number };
+  /** Checklist progress (derived from the card body's check-list blocks) ; the
+   *  bar shows only when `total > 0`. */
+  checklist?: { done: number; total: number };
   dueLabel?: string;
   dueOverdue?: boolean;
   isDragging?: boolean;
@@ -58,7 +59,7 @@ export function KanbanCard({
   onOpen?: () => void;
 }) {
   const assigneeList = assignees ?? [];
-  const hasSubtasks = subtasks != null && subtasks.total > 0;
+  const hasChecklist = checklist != null && checklist.total > 0;
   const hasMeta = Boolean(priority || estimate != null || dueLabel || assigneeList.length > 0);
   return (
     <div
@@ -91,7 +92,7 @@ export function KanbanCard({
           {dueLabel && <DueBadge label={dueLabel} overdue={dueOverdue} />}
         </div>
       )}
-      {hasSubtasks && <SubtaskBar done={subtasks.done} total={subtasks.total} />}
+      {hasChecklist && <ChecklistBar done={checklist.done} total={checklist.total} />}
     </div>
   );
 }
@@ -124,7 +125,7 @@ function EstimateChip({ estimate }: { estimate: number }): ReactNode {
 // normal-flow element (so it reserves its own space and content — e.g. the
 // z-indexed avatar stack — can't paint over it). The card is `overflow-hidden`,
 // so it clips to the rounded corners. Brand primary while in progress, green
-// once every subtask is done ; the exact `done/total` is on the title/aria for
+// once every item is done ; the exact `done/total` is on the title/aria for
 // hover + screen readers.
 //
 // EVERYTHING here is inline `style`, not Tailwind classes : the package is NOT
@@ -133,7 +134,7 @@ function EstimateChip({ estimate }: { estimate: number }): ReactNode {
 // NOT generated in the real app — which made the bar vanish / collapse. Inline
 // styles always apply. `-0.75rem` margins cancel the card's `p-3` so the bar
 // spans the full card width flush to the bottom edge.
-function SubtaskBar({ done, total }: { done: number; total: number }): ReactNode {
+function ChecklistBar({ done, total }: { done: number; total: number }): ReactNode {
   const complete = done >= total;
   const pct = total > 0 ? Math.min(100, Math.round((done / total) * 100)) : 0;
   return (

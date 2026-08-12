@@ -1,7 +1,7 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { getDb } from "@monark/db";
 import { truncate } from "@monark/test-utils/db";
-import { DEFAULT_COLUMN_NAMES, DEFAULT_COLUMNS, parseSubtasks } from "../../src/contracts/types";
+import { DEFAULT_COLUMN_NAMES, DEFAULT_COLUMNS } from "../../src/contracts/types";
 import {
   createBoard,
   createCard,
@@ -215,45 +215,49 @@ describe("kanban data layer", () => {
     expect(bare.reviewerIds).toEqual([]);
   });
 
-  it("stores an inline subtask checklist and replaces / preserves it on update", async () => {
+  it("stores the block-array description and keeps its text projection in sync", async () => {
     const board = await createBoard({ organizationId: ORG, name: "Board" });
     const [col] = await listColumnsForBoard(board.id);
 
-    const initial = [
-      { id: "s1", title: "Write it", done: true },
-      { id: "s2", title: "Ship it", done: false },
+    // The card's checklist now lives in the block body (a `checkListItem` block).
+    const body = [
+      { type: "paragraph", content: [{ type: "text", text: "hello", styles: {} }], children: [] },
+      {
+        type: "checkListItem",
+        props: { checked: true },
+        content: [{ type: "text", text: "done item", styles: {} }],
+        children: [],
+      },
     ];
     const created = await createCard({
       organizationId: ORG,
       boardId: board.id,
       columnId: col!.id,
-      title: "Checklist",
-      subtasks: initial,
+      title: "Doc",
+      description: body,
     });
-    // Round-trips through the JSON column unchanged (order + `done` preserved).
-    expect(parseSubtasks(created.subtasks)).toEqual(initial);
+    // The blocks round-trip through the JSONB column, and `descriptionText` is
+    // the derived plain text (what the query language filters on).
+    expect(created.description).toEqual(body);
+    expect(created.descriptionText).toBe("hello\ndone item");
 
-    // An array replaces the whole list.
-    const next = [{ id: "s3", title: "Done", done: true }];
-    const updated = await updateCard(created.id, { subtasks: next });
-    expect(parseSubtasks(updated.subtasks)).toEqual(next);
+    // An array replaces the whole body ; the text projection follows.
+    const next = [
+      { type: "paragraph", content: [{ type: "text", text: "changed", styles: {} }], children: [] },
+    ];
+    const updated = await updateCard(created.id, { description: next });
+    expect(updated.description).toEqual(next);
+    expect(updated.descriptionText).toBe("changed");
 
-    // `undefined` leaves the checklist untouched.
-    const renamed = await updateCard(created.id, { title: "Checklist 2" });
-    expect(parseSubtasks(renamed.subtasks)).toEqual(next);
-
-    // An empty array clears it.
-    const cleared = await updateCard(created.id, { subtasks: [] });
-    expect(parseSubtasks(cleared.subtasks)).toEqual([]);
-
-    // A card created with no subtasks defaults to an empty list.
+    // A card created with no description defaults to an empty block array.
     const bare = await createCard({
       organizationId: ORG,
       boardId: board.id,
       columnId: col!.id,
       title: "Bare",
     });
-    expect(parseSubtasks(bare.subtasks)).toEqual([]);
+    expect(bare.description).toEqual([]);
+    expect(bare.descriptionText).toBe("");
   });
 
   it("moves a card to another column via updateCard(columnId), appending it (status change)", async () => {

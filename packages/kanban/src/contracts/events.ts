@@ -42,14 +42,7 @@ export type KanbanCardUpdatedEvent = DomainEventBase & {
   // Which fields changed, so a subscriber can filter (e.g. only react to a
   // reassignment). `assignee` fires when the card's assignee set changed.
   changed: Array<
-    | "title"
-    | "description"
-    | "assignee"
-    | "reviewer"
-    | "dueAt"
-    | "priority"
-    | "estimate"
-    | "subtasks"
+    "title" | "description" | "assignee" | "reviewer" | "dueAt" | "priority" | "estimate"
   >;
   assigneeIds: string[];
   actorId: string;

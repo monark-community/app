@@ -4,6 +4,8 @@
 // colliding with the React component names in `client/ui/*` (e.g. the type
 // `CardItem` vs the `KanbanCard` component).
 
+import type { DocumentBlock } from "@monark/common/blocks";
+
 export type BoardDef = {
   id: string;
   name: string;
@@ -42,46 +44,13 @@ export const KANBAN_PRIORITY_COLOR: Record<KanbanCardPriority, string> = {
   CRITICAL: "#ef4444",
 };
 
-/** A single checklist item on a card. Stored inline (JSON), order-preserving. */
-export type KanbanSubtask = {
-  id: string;
-  title: string;
-  done: boolean;
-};
-
-/** Max subtasks per card. */
-export const KANBAN_SUBTASK_MAX = 50;
-
-/**
- * Coerce an untyped value (a Prisma `Json` column, or client input) into a
- * well-formed `KanbanSubtask[]`, dropping anything malformed. Subtasks are
- * stored as JSON, so every read crosses an `unknown` boundary — this is the one
- * place that shape is trusted.
- */
-export function parseSubtasks(value: unknown): KanbanSubtask[] {
-  if (!Array.isArray(value)) return [];
-  const out: KanbanSubtask[] = [];
-  for (const item of value) {
-    if (
-      item &&
-      typeof item === "object" &&
-      typeof (item as { id?: unknown }).id === "string" &&
-      typeof (item as { title?: unknown }).title === "string"
-    ) {
-      const it = item as { id: string; title: string; done?: unknown };
-      // Cap the title defensively (subtasks can arrive as an opaque JSON string).
-      out.push({ id: it.id.slice(0, 64), title: it.title.slice(0, 500), done: it.done === true });
-    }
-  }
-  return out.slice(0, KANBAN_SUBTASK_MAX);
-}
-
 export type CardItem = {
   id: string;
   boardId: string;
   columnId: string;
   title: string;
-  description?: string;
+  /** Card body as a BlockNote block array (JSON). */
+  description?: DocumentBlock[];
   /** Org member userIds the card is assigned to (order-preserving, may be empty). */
   assigneeIds: string[];
   /** Org member userIds set as reviewers (order-preserving, may be empty). */
@@ -90,8 +59,6 @@ export type CardItem = {
   priority?: KanbanCardPriority;
   /** Effort estimate (story points / hours — caller's convention). */
   estimate?: number;
-  /** Inline checklist items (order-preserving, may be empty). */
-  subtasks: KanbanSubtask[];
   position: number;
 };
 

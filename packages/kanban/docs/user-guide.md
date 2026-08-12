@@ -22,10 +22,10 @@ Columns are the stages across the board :
 
 - **Add a card** to a column, then **drag** it within a column to reorder, or to another column to change its status.
 - **Open a card** to edit it. A card holds :
-  - **Title** and a rich-text **description**.
+  - **Title** and a **description** written in a block editor — press **`/`** for the block menu (headings, lists, quotes, and more).
+  - A **checklist** : add a **Check List** block in the description and tick items off. The card face shows a **progress bar** (how many items are done).
   - **Assignees** and **reviewers** — one or more org members each.
   - **Due date**, **priority** (Low / Medium / High / Critical), and an **estimate**.
-  - **Subtasks** — a checklist you tick off inside the card.
 
 Assignees and reviewers show as avatars on the card.
 

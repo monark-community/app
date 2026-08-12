@@ -1,16 +1,20 @@
-import { getDb, type Prisma } from "@monark/db";
-import { DEFAULT_COLUMNS, type KanbanCardPriority, type KanbanSubtask } from "../contracts/types";
+import { getDb, Prisma, trigramMatch, trigramOrder } from "@monark/db";
+import { blocksToText, type DocumentBlock } from "@monark/common/blocks";
+import { DEFAULT_COLUMNS, type KanbanCardPriority } from "../contracts/types";
 
 export type KanbanBoardRow = Prisma.KanbanBoardGetPayload<{
   include: { roleAccess: true };
 }>;
 export type KanbanColumnRow = Prisma.KanbanColumnGetPayload<Record<string, never>>;
-// `subtasks` is a JSON column ; expose it as `unknown` (callers coerce it with
-// `parseSubtasks`) rather than the recursive `Prisma.JsonValue`. On this
-// already-wide row, the recursive type pushed tRPC's output inference past
-// tsc's instantiation-depth limit (TS2589) in the web client.
-export type KanbanCardRow = Omit<Prisma.KanbanCardGetPayload<Record<string, never>>, "subtasks"> & {
-  subtasks: unknown;
+// `description` is a JSON column (a BlockNote block array) ; expose it as
+// `unknown` so callers coerce it rather than leaking the recursive
+// `Prisma.JsonValue`, which pushed tRPC's output inference past tsc's
+// instantiation-depth limit (TS2589) in the web client on this wide row.
+export type KanbanCardRow = Omit<
+  Prisma.KanbanCardGetPayload<Record<string, never>>,
+  "description"
+> & {
+  description: unknown;
 };
 
 // Ordering step. Columns and cards are numbered in gaps of this size so a
@@ -276,10 +280,12 @@ export type KanbanCardSearchHit = {
 };
 
 /**
- * Cards whose title matches `query`, across a caller-provided set of accessible
- * board ids (row-level access already resolved by the router, mirroring the
- * calendar's `searchCalendarEvents`). Bounded by `limit` (a small palette page),
- * newest-updated first. Returns each card's board name for the result subtitle.
+ * Fuzzy card search (trigram `pg_trgm`, typo-tolerant) over title + the
+ * `descriptionText` projection, across a caller-provided set of accessible board
+ * ids (row-level access already resolved by the router, mirroring the calendar's
+ * `searchCalendarEvents`). Ranked by best similarity, bounded by `limit`. Returns
+ * each card's board name for the result subtitle. Raw SQL (Prisma can't do
+ * similarity).
  */
 export async function searchCards({
   organizationId,
@@ -293,23 +299,18 @@ export async function searchCards({
   limit?: number;
 }): Promise<KanbanCardSearchHit[]> {
   if (boardIds.length === 0) return [];
-  const rows = await getDb().kanbanCard.findMany({
-    where: {
-      organizationId,
-      boardId: { in: boardIds },
-      deletedAt: null,
-      title: { contains: query, mode: "insensitive" },
-    },
-    orderBy: [{ updatedAt: "desc" }, { id: "desc" }],
-    take: limit,
-    select: { id: true, title: true, boardId: true, board: { select: { name: true } } },
-  });
-  return rows.map((r) => ({
-    id: r.id,
-    title: r.title,
-    boardId: r.boardId,
-    boardName: r.board.name,
-  }));
+  const columns = ["title", "descriptionText"];
+  return getDb().$queryRaw<KanbanCardSearchHit[]>(Prisma.sql`
+    SELECT c.id, c.title, c."boardId", b.name AS "boardName"
+    FROM "KanbanCard" c
+    JOIN "KanbanBoard" b ON b.id = c."boardId"
+    WHERE c."organizationId" = ${organizationId}
+      AND c."boardId" IN (${Prisma.join(boardIds)})
+      AND c."deletedAt" IS NULL
+      AND ${trigramMatch(columns, query, { alias: "c" })}
+    ORDER BY ${trigramOrder(columns, query, { alias: "c" })}, c."updatedAt" DESC
+    LIMIT ${limit}
+  `);
 }
 
 export async function createCard({
@@ -323,19 +324,17 @@ export async function createCard({
   dueAt,
   priority,
   estimate,
-  subtasks,
 }: {
   boardId: string;
   columnId: string;
   organizationId: string;
   title: string;
-  description?: string | null;
+  description?: DocumentBlock[];
   assigneeIds?: string[];
   reviewerIds?: string[];
   dueAt?: Date | null;
   priority?: KanbanCardPriority | null;
   estimate?: number | null;
-  subtasks?: KanbanSubtask[];
 }): Promise<KanbanCardRow> {
   const db = getDb();
   const count = await db.kanbanCard.count({ where: { columnId, deletedAt: null } });
@@ -345,13 +344,13 @@ export async function createCard({
       columnId,
       organizationId,
       title,
-      description,
+      description: (description ?? []) as Prisma.InputJsonValue,
+      descriptionText: blocksToText(description ?? []),
       assigneeIds: assigneeIds ?? [],
       reviewerIds: reviewerIds ?? [],
       dueAt,
       priority,
       estimate,
-      subtasks: (subtasks ?? []) as Prisma.InputJsonValue,
       position: (count + 1) * POSITION_STEP,
     },
   });
@@ -361,15 +360,13 @@ export async function updateCard(
   id: string,
   patch: {
     title?: string;
-    description?: string | null;
+    description?: DocumentBlock[];
     // `undefined` leaves the set untouched ; an array (even empty) replaces it.
     assigneeIds?: string[];
     reviewerIds?: string[];
     dueAt?: Date | null;
     priority?: KanbanCardPriority | null;
     estimate?: number | null;
-    // Inline checklist ; `undefined` leaves it untouched, an array replaces it.
-    subtasks?: KanbanSubtask[];
     // Move the card to another column (the card form's status select). The card
     // is placed at the end of the target column ; caller passes this only when
     // the column actually changed.
@@ -384,14 +381,20 @@ export async function updateCard(
     });
     position = (count + 1) * POSITION_STEP;
   }
-  // Subtasks is a JSON column ; pull it out so it's cast to Prisma's JSON input
-  // rather than spread as a typed array (which its update input won't accept).
-  const { subtasks, ...rest } = patch;
+  // `description` is a JSON column ; pull it out so it's cast to Prisma's JSON
+  // input rather than spread as a typed array (which the update input won't
+  // accept). Writing it also refreshes its text projection.
+  const { description, ...rest } = patch;
   return db.kanbanCard.update({
     where: { id },
     data: {
       ...rest,
-      ...(subtasks !== undefined ? { subtasks: subtasks as Prisma.InputJsonValue } : {}),
+      ...(description !== undefined
+        ? {
+            description: description as Prisma.InputJsonValue,
+            descriptionText: blocksToText(description),
+          }
+        : {}),
       ...(position != null ? { position } : {}),
     },
   });

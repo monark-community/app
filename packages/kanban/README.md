@@ -59,18 +59,21 @@ schema fragment [`prisma/kanban.prisma`](prisma/kanban.prisma) under the
 Prisma models under the `// ── MODULE: kanban ──` banner in this module's own
 fragment [`prisma/kanban.prisma`](prisma/kanban.prisma) (assembled into the
 generated `schema.prisma`) — migrations
-`20260725200201_add_kanban` ; `20260726023411_kanban_card_fields` ; `20260726040000_kanban_card_multi_assignee` ; `20260727150000_kanban_card_multi_reviewer` ; `20260727170000_kanban_card_subtasks`:
+`20260725200201_add_kanban` ; `20260726023411_kanban_card_fields` ; `20260726040000_kanban_card_multi_assignee` ; `20260727150000_kanban_card_multi_reviewer` ; `20260727170000_kanban_card_subtasks` ; `20260808020000_kanban_card_blocks` ; `20260808030000_kanban_drop_subtasks`:
 
-- **`KanbanBoard`** — org-scoped, soft-deleted ; `name`, `description`, `color`.
+- **`KanbanBoard`** — org-scoped, soft-deleted ; `name`, `description` (short text), `color`.
 - **`KanbanBoardRoleAccess`** — `(boardId, roleId)` per-board role grant.
 - **`KanbanColumn`** — `boardId`, `name`, `color`, `position`, `wipLimit?`.
-- **`KanbanCard`** — `boardId`, `columnId`, `title`, `description`, `assigneeIds`
+- **`KanbanCard`** — `boardId`, `columnId`, `title`, `description` (a BlockNote
+  block array stored as `Json`) + `descriptionText` (its plain-text projection via
+  `blocksToText`, which the query language filters on), `assigneeIds`
   - `reviewerIds` (text arrays, each may hold **many** members, order-preserving),
     `dueAt?`, `priority?` (`KanbanCardPriority` enum : LOW / MEDIUM / HIGH /
-    CRITICAL), `estimate?` (Int), `subtasks` (a `Json` checklist —
-    `KanbanSubtask[]` of `{ id, title, done }`, coerced with `parseSubtasks`),
-    `position`, soft-deleted. `assigneeIds` / `reviewerIds` are org-member userIds
-    (not FKs, resolved for display by the web).
+    CRITICAL), `estimate?` (Int), `position`, soft-deleted. `assigneeIds` /
+    `reviewerIds` are org-member userIds (not FKs, resolved for display by the web).
+    A card's **checklist lives in the block body** (`checkListItem` blocks) ; the
+    card-face progress bar derives from them via `checklistProgress` (the dedicated
+    `subtasks` column was dropped).
 - **`KanbanView`** — a saved MonarkQL query per board : `boardId`, `name`,
   `query` (`FilterNode` JSON), `shared`, `createdBy` ; migration
   `20260803140000_add_kanban_views`.
@@ -79,7 +82,7 @@ generated `schema.prisma`) — migrations
 
 `kanban.board-created`, `kanban.column-created`, `kanban.card-created`,
 `kanban.card-updated` (carries a `changed` array over `title` / `description` /
-`assignee` / `reviewer` / `dueAt` / `priority` / `estimate` / `subtasks`, and the full
+`assignee` / `reviewer` / `dueAt` / `priority` / `estimate`, and the full
 `assigneeIds`), `kanban.card-moved` (carries `fromColumnId` / `toColumnId`),
 `kanban.card-deleted`, `kanban.card-assigned` (per newly-added assignee ; carries
 `boardName` / `cardTitle` / `assigneeId`).

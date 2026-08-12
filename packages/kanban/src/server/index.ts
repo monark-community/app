@@ -7,9 +7,11 @@ import {
   emit,
   ForbiddenError,
   NotFoundError,
+  registerSearchSource,
   UnauthorizedError,
   ValidationError,
 } from "@monark/common";
+import type { DocumentBlock } from "@monark/common/blocks";
 import { requireOrg } from "@monark/organizations/server";
 import { getUserRoles, hasPermission, requirePermission } from "@monark/rbac/server";
 import type {
@@ -21,7 +23,6 @@ import type {
   KanbanCardUpdatedEvent,
   KanbanColumnCreatedEvent,
 } from "../contracts/events";
-import { parseSubtasks, type KanbanSubtask } from "../contracts/types";
 import { filterQuerySchema, type FilterNode } from "@monark/query/contracts";
 import { compileKanbanFilter } from "./query-compiler";
 import {
@@ -54,19 +55,6 @@ import {
   updateKanbanView,
   type KanbanViewRow,
 } from "./data";
-
-// Subtasks travel as a JSON-encoded string in the tRPC input, then get parsed +
-// shape-validated here. A typed `z.array(z.object(...))` in the input inflated
-// the inferred router type past tsc's instantiation-depth limit (TS2589) ; a
-// plain string keeps the procedure input flat. `undefined` = leave untouched.
-function parseSubtasksInput(raw: string | undefined): KanbanSubtask[] | undefined {
-  if (raw === undefined) return undefined;
-  try {
-    return parseSubtasks(JSON.parse(raw));
-  } catch {
-    return [];
-  }
-}
 
 // Builds the card-assigned event once (create + reassign share the shape).
 function cardAssignedEvent(args: {
@@ -148,9 +136,9 @@ export const kanbanRouter = router({
           listColumnsForBoard(board.id),
           listCardsForBoard(board.id),
         ]);
-        // `subtasks` stays a JSON column here (the web coerces it with
-        // `parseSubtasks`) — spreading the whole card row to retype it inflated
-        // the inferred router type past tsc's instantiation-depth limit.
+        // `description` stays a JSON column here (the web coerces it) — spreading
+        // the whole card row to retype it inflated the inferred router type past
+        // tsc's instantiation-depth limit.
         return { board, columns, cards };
       }),
 
@@ -399,15 +387,14 @@ export const kanbanRouter = router({
           boardId: z.string().min(1),
           columnId: z.string().min(1),
           title: z.string().trim().min(1).max(200),
-          // Rich-text (HTML) description ; the markup makes it much larger than
-          // the equivalent plain text, so the cap is generous.
-          description: z.string().max(20000).nullable().optional(),
+          // Block-array description (BlockNote) ; the editor owns the schema, so
+          // it's stored opaquely as JSON.
+          description: z.array(z.unknown()).optional(),
           assigneeIds: z.array(z.string().min(1)).max(20).optional(),
           reviewerIds: z.array(z.string().min(1)).max(20).optional(),
           dueAt: z.string().min(1).nullable().optional(),
           priority: z.enum(["LOW", "MEDIUM", "HIGH", "CRITICAL"]).nullable().optional(),
           estimate: z.number().int().min(0).max(9999).nullable().optional(),
-          subtasks: z.string().max(40000).optional(),
         }),
       )
       .mutation(async ({ ctx, input }) => {
@@ -428,13 +415,12 @@ export const kanbanRouter = router({
           columnId: input.columnId,
           organizationId: org.id,
           title: input.title,
-          description: input.description,
+          description: input.description as DocumentBlock[] | undefined,
           assigneeIds: dedupe(input.assigneeIds),
           reviewerIds: dedupe(input.reviewerIds),
           dueAt,
           priority: input.priority,
           estimate: input.estimate,
-          subtasks: parseSubtasksInput(input.subtasks),
         });
         const event: KanbanCardCreatedEvent = {
           type: "kanban.card-created",
@@ -470,9 +456,8 @@ export const kanbanRouter = router({
         z.object({
           id: z.string().min(1),
           title: z.string().trim().min(1).max(200).optional(),
-          // Rich-text (HTML) description ; the markup makes it much larger than
-          // the equivalent plain text, so the cap is generous.
-          description: z.string().max(20000).nullable().optional(),
+          // Block-array description (BlockNote) ; stored opaquely as JSON.
+          description: z.array(z.unknown()).optional(),
           // Move the card to this column (the form's "status"). Ignored when it
           // matches the current column.
           columnId: z.string().min(1).optional(),
@@ -481,7 +466,6 @@ export const kanbanRouter = router({
           dueAt: z.string().min(1).nullable().optional(),
           priority: z.enum(["LOW", "MEDIUM", "HIGH", "CRITICAL"]).nullable().optional(),
           estimate: z.number().int().min(0).max(9999).nullable().optional(),
-          subtasks: z.string().max(40000).optional(),
         }),
       )
       .mutation(async ({ ctx, input }) => {
@@ -510,7 +494,10 @@ export const kanbanRouter = router({
         const nextReviewers = input.reviewerIds ? dedupe(input.reviewerIds) : undefined;
         const changed: KanbanCardUpdatedEvent["changed"] = [];
         if (input.title !== undefined && input.title !== existing.title) changed.push("title");
-        if (input.description !== undefined && input.description !== existing.description)
+        if (
+          input.description !== undefined &&
+          JSON.stringify(input.description) !== JSON.stringify(existing.description)
+        )
           changed.push("description");
         const assigneeChanged =
           nextAssignees !== undefined && !sameSet(existing.assigneeIds, nextAssignees);
@@ -523,21 +510,14 @@ export const kanbanRouter = router({
           changed.push("priority");
         if (input.estimate !== undefined && (input.estimate ?? null) !== existing.estimate)
           changed.push("estimate");
-        const nextSubtasks = parseSubtasksInput(input.subtasks);
-        if (
-          nextSubtasks !== undefined &&
-          JSON.stringify(nextSubtasks) !== JSON.stringify(parseSubtasks(existing.subtasks))
-        )
-          changed.push("subtasks");
         const card = await updateCard(input.id, {
           title: input.title,
-          description: input.description,
+          description: input.description as DocumentBlock[] | undefined,
           assigneeIds: nextAssignees,
           reviewerIds: nextReviewers,
           dueAt,
           priority: input.priority,
           estimate: input.estimate,
-          subtasks: nextSubtasks,
           ...(movedToColumnId ? { columnId: movedToColumnId } : {}),
         });
         // A status change is a move — emit the same event a drag does.
@@ -807,6 +787,34 @@ async function requireOwnedKanbanView(id: string, userId: string): Promise<Kanba
   if (!view) throw new NotFoundError("KanbanView", id);
   if (view.createdBy !== userId) throw new ForbiddenError("You can only edit your own views.");
   return view;
+}
+
+/**
+ * Contribute kanban cards to the global command palette (registered at api boot).
+ * Scopes to accessible boards exactly like `kanban.cards.search`.
+ */
+export function registerKanbanSearchSource(): void {
+  registerSearchSource({
+    module: "kanban",
+    groupId: "kanban",
+    label: "Kanban cards",
+    run: async (ctx, query, limit) => {
+      if (!ctx.userId) return [];
+      const org = await requireOrg({
+        userId: ctx.userId,
+        activeOrganizationId: ctx.activeOrganizationId,
+      });
+      await requirePermission(ctx, "kanban.view", org.id);
+      const boardIds = await resolveAccessibleBoardIds(ctx.userId, org.id);
+      const hits = await searchCards({ organizationId: org.id, boardIds, query, limit });
+      return hits.map((hit) => ({
+        id: hit.id,
+        title: hit.title,
+        subtitle: hit.boardName,
+        href: `/kanban?board=${hit.boardId}&card=${hit.id}`,
+      }));
+    },
+  });
 }
 
 export { registerKanbanPermissions } from "./permissions";

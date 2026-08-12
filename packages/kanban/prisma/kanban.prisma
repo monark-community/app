@@ -100,7 +100,12 @@ model KanbanCard {
   organizationId String
   organization   Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   title          String
-  description    String?
+  // Card body as a BlockNote block array (JSON), edited by the web BlockEditor.
+  // `descriptionText` is the plain-text projection (via `blocksToText`) kept in
+  // sync on write so the query language can still filter on the description text
+  // without walking jsonb.
+  description     Json   @default("[]")
+  descriptionText String @default("")
   // Org member userIds. Not FKs, to keep the module decoupled from the users
   // table shape ; resolved for display by the web layer. A card can have many
   // assignees and many reviewers (each stored as an order-preserving text array).
@@ -110,9 +115,9 @@ model KanbanCard {
   priority       KanbanCardPriority?
   // Effort estimate (story points / hours — caller's convention). Non-negative.
   estimate       Int?
-  // Ordered checklist items, stored inline as JSON (edited with the card, not
-  // individually) : Array<{ id, title, done }>. Validated at the tRPC boundary.
-  subtasks       Json                @default("[]")
+  // Checklists live in the block-array `description` body now (BlockNote
+  // `checkListItem` blocks) ; the card face derives its progress bar from them
+  // via `checklistProgress`. The old dedicated `subtasks` JSON column is gone.
   // Ordering within the column. Assigned in steps of 10.
   position       Int
   createdAt      DateTime            @default(now())
