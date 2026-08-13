@@ -86,12 +86,17 @@ const statements = (result.stdout ?? "")
 //     (`'400 days'::interval` ↔ `INTERVAL '400 days'`).
 // Extend this list (with a comment) only for another genuine raw-SQL divergence.
 const ALLOWLIST: RegExp[] = [
-  /^DROP INDEX "DataRecord_data_gin"$/,
-  // pg_trgm trigram indexes (fuzzy / full-text search across modules —
-  // Automation, CalendarEvent, DataRecord, KanbanCard, WikiPage, …) are created
-  // in raw-SQL migrations ; Prisma's schema has no trigram index type, so the
-  // datamodel doesn't know about them and migrate diff always "drops" them.
-  /^DROP INDEX ".*_trgm"$/,
+  // Raw-SQL search indexes — the jsonb GIN index (`<Table>_<col>_gin`) and the
+  // pg_trgm trigram indexes (`<Table>_<col>_trgm`, fuzzy/full-text search across
+  // Automation, CalendarEvent, DataRecord, KanbanCard, WikiPage, …). Prisma's
+  // schema has no GIN/trigram index type, so the datamodel doesn't know about
+  // them and migrate diff always "drops" them. The pattern matches every table's
+  // search indexes on purpose, so adding one to a NEW module never has to touch
+  // this list. Anything else in the diff (a real missing migration, an
+  // ADD COLUMN, a non-search index) still fails the check and gets surfaced.
+  /^DROP INDEX ".*_(gin|trgm)"$/,
+  // TrustedDevice.expiresAt's dbgenerated default — the same expression the
+  // migration wrote, reformatted by Prisma's introspection.
   /^ALTER TABLE "TrustedDevice" ALTER COLUMN "expiresAt" SET DEFAULT /,
 ];
 

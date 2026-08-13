@@ -285,6 +285,27 @@ async function main(): Promise<void> {
     );
   }
 
+  // `--suggest` : print a recommended floor for every measured package (its
+  // measured coverage, rounded down to 5 %, minus a 5-pt buffer) in THRESHOLDS
+  // format, so floors are DERIVED from a real run rather than hand-typed from a
+  // stale number (the mistake that broke CI once). Run it AFTER a full
+  // `pnpm test:coverage && pnpm test:integration:coverage` so it sees fresh
+  // coverage/{unit,integration} — the 5-pt buffer then absorbs normal
+  // local↔CI variance. Reporting only ; does not gate.
+  if (process.argv.includes("--suggest")) {
+    const floorFor = (pct: number) =>
+      typeof pct === "number" && !Number.isNaN(pct) ? Math.max(0, Math.floor(pct / 5) * 5 - 5) : 0;
+    console.log("");
+    console.log("merge-coverage : suggested floors (measured, rounded down to 5 %, minus 5) —");
+    for (const r of results) {
+      const s = summarisePercent(r.merged);
+      console.log(
+        `  "${r.pkg.kind}/${r.pkg.name}": { lines: ${floorFor(s.lines)}, statements: ${floorFor(s.statements)}, functions: ${floorFor(s.functions)}, branches: ${floorFor(s.branches)} },`,
+      );
+    }
+    return;
+  }
+
   // Threshold gate. After-merge so the data-layer files (mostly
   // covered under integration only) count toward the floor even
   // though they show 0 % in the unit-only run. Any package below its
