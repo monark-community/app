@@ -51,6 +51,19 @@ const fragments: Fragment[] = fragmentNames.map((file) => {
     );
     process.exit(1);
   }
+  // Fragments live in changelog.d/ but compile into CHANGELOG.md at the repo
+  // root, so a link written relative to the fragment ("../tools/foo.ts") ends
+  // up pointing one level above the repo. Easy to write, invisible once
+  // compiled ; reject it here instead of shipping a dead link.
+  const escaping = [...text.matchAll(/\]\((\.\.\/[^)]*)\)/g)].flatMap((x) => x[1] ?? []);
+  if (escaping.length > 0) {
+    console.error(
+      `changelog:compile — ${file} has link(s) relative to changelog.d/ instead of the repo root:\n` +
+        escaping.map((l) => `    ${l}  ->  ${l.replace(/^\.\.\//, "")}`).join("\n") +
+        `\n  The entry compiles into CHANGELOG.md at the root, so drop the leading "../".`,
+    );
+    process.exit(1);
+  }
   return { file, date: m[1], text };
 });
 
