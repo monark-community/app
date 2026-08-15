@@ -8,11 +8,13 @@ By contributing, you agree to the following terms:
 
 ## 1. How to Contribute
 
-1. **Fork the repository** and create your feature branch:
+1. **Fork the repository** and create your branch, named `<type>/<short-slug>`:
 
 ```bash
-git checkout -b feature/my-feature
+git checkout -b feat/my-feature
 ```
+
+Use the same types as [conventional commits](https://www.conventionalcommits.org/en/v1.0.0): `feat/`, `fix/`, `docs/`, `test/`, `chore/`, plus `tooling/` for build and developer-tooling work. One task per branch.
 
 2. **Make your changes** following our [code style guidelines](#code-style).
 
@@ -25,10 +27,10 @@ git commit -m "feat: add short descriptive message"
 4. **Push your branch** to your fork:
 
 ```bash
-git push origin feature/my-feature
+git push origin feat/my-feature
 ```
 
-5. **Open a pull request** against the `main` branch of this repository.
+5. **Open a pull request** against the **`develop`** branch of this repository. `develop` is the integration branch where all work lands ; `main` is the release branch, promoted from `develop` by the maintainers. A PR opened against `main` will be asked to retarget.
 
 ---
 
