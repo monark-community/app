@@ -8,6 +8,18 @@ Companion docs, read them before large work:
 - [docs/technical-documentation/architecture.md](docs/technical-documentation/architecture.md) — module system, boundaries, event bus, monorepo layout & tooling.
 - [modules.manifest.ts](modules.manifest.ts) — the core / extended tier registry.
 
+## Parallel work: worktrees, branches, PRs
+
+Multiple agents work this repo at once. **Never work directly in a shared checkout** — start every task in its own git worktree, on its own branch, and land it as a PR into `develop`. That's the difference between conflicts discovered mid-edit (someone else's half-finished file, in your working tree, right now) and conflicts resolved once, small, at merge time.
+
+- **Start in a worktree.** `claude --worktree <name>` (or `-w <name>`) creates an isolated worktree + branch and starts the session inside it — built into the CLI, no extra tooling needed. Plain `git worktree add ../<name> -b <branch> develop` works the same way if you're not launching through the CLI.
+- **Branch naming**: `<type>/<slug>` — `feat/`, `fix/`, `chore/`, `docs/`, `tooling/`, matching the prefixes already in use. One task, one branch ; rename a placeholder branch once the task is scoped.
+- **Commit small, commit often.** Isolation removes the reason to hoard changes into one giant commit — there's nothing to accidentally catch by committing early anymore. Commit at each coherent, gate-passing increment (a green test, a working slice), not just once at the end.
+- **Open a PR, don't push to `develop` directly.** Draft PRs early are welcome — opening one as soon as the branch exists gives everyone else (human or agent) visibility into what's in flight, which is the cheapest way to avoid two agents building the same thing twice. `gh pr create --base develop`.
+- **CI is the real gate.** Run the pre-PR gate locally in your own worktree before marking a PR ready (below), but CI ([.github/workflows/ci.yml](.github/workflows/ci.yml)) checking a clean, isolated checkout is the actual source of truth — not a local run against a tree other agents have also been touching.
+- **Known shared hotspots** still get touched by everyone regardless of isolation — [services/api/src/server.ts](services/api/src/server.ts)'s `register*` calls, [modules.manifest.ts](modules.manifest.ts), the i18n catalogs. Module-boundary discipline (`check:tiers`) keeps most other work file-disjoint. Small, frequent commits make a conflict on one of these trivial to resolve instead of a scramble.
+- **CHANGELOG entries are fragments, not direct edits** — see § CHANGELOG below.
+
 ## Every feature must consider these four systems
 
 When you add or change a feature, decide **explicitly** how it touches each of the following — and if the answer is "not at all", make that a conscious choice, not an oversight. Wire what applies at api boot in [services/api/src/server.ts](services/api/src/server.ts) next to the existing `register*` calls.
@@ -150,7 +162,9 @@ All user-facing strings go through i18n in both `en` and `fr` — never hardcode
 
 ## CHANGELOG
 
-Every completed feature, foundation shift, or substantive fix lands one dated entry in [CHANGELOG.md](CHANGELOG.md) under `## [Unreleased]`, newest first:
+Every completed feature, foundation shift, or substantive fix gets one dated entry — added as a new file under [changelog.d/](changelog.d/README.md), **never by hand-editing [CHANGELOG.md](CHANGELOG.md) directly.** With several branches in flight, everyone editing the same insertion point in one shared file is a guaranteed merge conflict ; everyone adding their own new file isn't. `pnpm changelog:compile` ([tools/compile-changelog.ts](tools/compile-changelog.ts)) folds pending fragments into `CHANGELOG.md` under `## [Unreleased]` (newest first) ; this runs automatically in CI on every push to `develop` ([.github/workflows/changelog-compile.yml](.github/workflows/changelog-compile.yml)), so a PR only ever adds its fragment, never the compiled file.
+
+Create `changelog.d/<branch-slug>.md` containing one entry:
 
 ```
 - YYYY-MM-DD: <Module / area> — <concise summary>. <one paragraph of what changed and why, linking the key files>.
@@ -164,7 +178,7 @@ House style throughout docs, commits, READMEs, and CHANGELOG: use `;` rather tha
 
 ## Pre-PR gate
 
-Run the same sequence CI runs, in order, before a change is done:
+Run this in your own worktree (§ Parallel work above), not a shared checkout — a stale or half-edited file from another agent's session makes the result meaningless. Run the same sequence CI runs, in order, before a change is done:
 
 ```
 pnpm gen && pnpm typecheck && pnpm lint && pnpm test && pnpm check:tiers && pnpm check:modules && pnpm check:i18n && pnpm check:mcp
@@ -185,6 +199,7 @@ pnpm gen && pnpm typecheck && pnpm lint && pnpm test && pnpm check:tiers && pnpm
 - [ ] A module with a page has a `PRIMARY_NAV` entry (auto-adds it to global-search "Go to") ; a module with searchable entities registers a `registerSearchSource` at boot (self-scoped, server-built hrefs) + a `globalSearch.groups.<id>` heading (or consciously N/A)
 - [ ] Module README updated (API + data model) ; user + dev docs updated where they apply
 - [ ] i18n keys added for en + fr
-- [ ] CHANGELOG entry added, dated, under `[Unreleased]`
+- [ ] CHANGELOG fragment added under `changelog.d/` (not a direct `CHANGELOG.md` edit)
 - [ ] `register*` helpers wired into [services/api/src/server.ts](services/api/src/server.ts)
+- [ ] Work happened in its own worktree/branch ; landed as a PR into `develop`, not a direct push to a shared checkout
 - [ ] Pre-PR gate passes: `pnpm gen && pnpm typecheck && pnpm lint && pnpm test && pnpm check:tiers && pnpm check:modules && pnpm check:i18n && pnpm check:mcp`

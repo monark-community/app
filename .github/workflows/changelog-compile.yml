@@ -1,0 +1,61 @@
+name: Compile changelog
+
+# Folds pending changelog.d/*.md fragments into CHANGELOG.md and commits the
+# result straight to develop. Each PR adds its own new fragment file instead
+# of editing the shared CHANGELOG.md (see changelog.d/README.md) — with
+# several branches in flight at once, that used to be a guaranteed, recurring
+# merge conflict at the top-of-file insertion point. Compiling happens here,
+# once, serialized on develop, instead of on every branch.
+#
+# Self-limiting, not just triggered-once: this bot's own commit also pushes
+# to develop and re-triggers the workflow, but by then changelog.d/ is empty
+# (the fragments it just folded were deleted in the same commit), so
+# `pnpm changelog:compile` finds nothing pending and exits 0 without
+# committing — no loop, just one cheap extra no-op run per real compile.
+
+on:
+  push:
+    branches: [develop]
+
+concurrency:
+  group: changelog-compile-${{ github.ref }}
+  cancel-in-progress: false # never cancel a mid-flight commit-and-push
+
+permissions:
+  contents: write
+
+jobs:
+  compile:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: develop
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Compile changelog fragments
+        run: pnpm changelog:compile
+
+      - name: Commit + push if changed
+        run: |
+          if git diff --quiet && git diff --cached --quiet; then
+            echo "Nothing to commit."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add CHANGELOG.md changelog.d
+          git commit -m "chore: compile changelog fragments"
+          git push origin HEAD:develop
