@@ -1,0 +1,1 @@
+- 2026-04-24: Dev overlay gained a "current user" panel pulling `trpc.users.me`.

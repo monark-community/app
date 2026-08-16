@@ -1,0 +1,1 @@
+- 2026-04-23: Added feature flags (`@monark/feature-flags`); in-code flag definitions + DB overrides scoped by global/org/user/role, tRPC router, React hooks + `FlagsProvider`, audit event on flip.

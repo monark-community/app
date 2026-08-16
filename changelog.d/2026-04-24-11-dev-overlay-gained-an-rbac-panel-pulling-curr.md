@@ -1,0 +1,1 @@
+- 2026-04-24: Dev overlay gained an "rbac" panel pulling current roles + resolved permissions.

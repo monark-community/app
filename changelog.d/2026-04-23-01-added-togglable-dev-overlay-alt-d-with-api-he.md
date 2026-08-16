@@ -1,0 +1,1 @@
+- 2026-04-23: Added togglable dev overlay (Alt+D) with API health + feature-flag smoke-test panels; production-stripped.

@@ -1,0 +1,1 @@
+- 2026-04-22: Phase 0 foundation shipped; pnpm + Turborepo monorepo, strict TS base config, Express 5 + tRPC 11 api, Next App Router web, module manifest with tier check, three codegen tools (`gen:module`, `gen:events`, `gen:routers`), CI workflow.

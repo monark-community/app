@@ -1,17 +1,18 @@
 name: Compile changelog
 
-# Folds pending changelog.d/*.md fragments into CHANGELOG.md and commits the
-# result straight to develop. Each PR adds its own new fragment file instead
-# of editing the shared CHANGELOG.md (see changelog.d/README.md) — with
-# several branches in flight at once, that used to be a guaranteed, recurring
-# merge conflict at the top-of-file insertion point. Compiling happens here,
-# once, serialized on develop, instead of on every branch.
+# Rebuilds CHANGELOG.md from the changelog.d/ fragments and commits the result
+# straight to develop.
 #
-# Self-limiting, not just triggered-once: this bot's own commit also pushes
-# to develop and re-triggers the workflow, but by then changelog.d/ is empty
-# (the fragments it just folded were deleted in the same commit), so
-# `pnpm changelog:compile` finds nothing pending and exits 0 without
-# committing — no loop, just one cheap extra no-op run per real compile.
+# The fragments are the source of truth ; CHANGELOG.md is a generated artifact
+# (see changelog.d/README.md). A PR only ever adds its own new fragment file,
+# never touching the compiled file — with several branches in flight at once,
+# everyone editing one shared file collided on the same insertion point every
+# time. Regeneration happens here, once, serialized on develop.
+#
+# Self-limiting: this bot's own commit pushes to develop and re-triggers the
+# workflow, but the second run regenerates identical content, finds no diff,
+# and exits without committing — no loop, just one cheap no-op run per real
+# change.
 
 on:
   push:
@@ -45,7 +46,7 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Compile changelog fragments
+      - name: Rebuild CHANGELOG.md from fragments
         run: pnpm changelog:compile
 
       - name: Commit + push if changed
@@ -56,6 +57,6 @@ jobs:
           fi
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add CHANGELOG.md changelog.d
-          git commit -m "chore: compile changelog fragments"
+          git add CHANGELOG.md
+          git commit -m "chore: rebuild changelog from fragments"
           git push origin HEAD:develop

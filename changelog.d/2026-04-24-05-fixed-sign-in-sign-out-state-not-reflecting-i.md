@@ -1,0 +1,1 @@
+- 2026-04-24: Fixed sign-in / sign-out state not reflecting in UI after server-action redirects; `TrpcProvider` now subscribes to Supabase `onAuthStateChange` and invalidates the React Query cache so session-dependent queries (users.me, rbac, trusted-devices, current-org) refetch with the new token without a manual reload.

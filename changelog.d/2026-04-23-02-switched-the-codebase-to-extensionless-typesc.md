@@ -1,0 +1,1 @@
+- 2026-04-23: Switched the codebase to extensionless TypeScript relative imports (`moduleResolution: "Bundler"`), eliminating repeated Next-bundler breakage around `.js` suffixes.

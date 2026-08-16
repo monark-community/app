@@ -1,0 +1,1 @@
+- 2026-04-24: Dev overlay gained a "current org" panel pulling `trpc.organizations.current` + `trpc.organizations.mine`.
