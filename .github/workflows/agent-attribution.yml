@@ -1,0 +1,60 @@
+name: Agent attribution
+
+# Detects agent work that landed under a human's identity.
+#
+# Agents run on a developer's own machine, as that developer's OS user, so
+# they can reach the human's stored GitHub credentials (keyring token, git
+# credential manager, IDE tokens). Nothing in GitHub can prevent that — the
+# boundary would have to be at the OS level. What we CAN do is make it loud
+# rather than silent: an agent that falls back to the human's credentials
+# (say, after its own token fails) produces a PR opened by the machine
+# account whose commits are authored by a person. That mismatch is the
+# signal this job looks for.
+#
+# Scope, stated honestly: this catches misconfiguration and accidental
+# credential fallback, which is the realistic failure mode. It cannot catch
+# an agent that uses the human's identity for BOTH the commits and the PR —
+# that is indistinguishable from the human working normally.
+
+on:
+  pull_request:
+    branches: [main, develop]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: agent-attribution-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify-authorship:
+    # Only meaningful for PRs opened by the machine account ; human and
+    # dependabot PRs are expected to carry their own authorship.
+    if: github.event.pull_request.user.login == 'monark-agent'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Every commit must be authored by the machine account
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          mismatched=$(gh api "repos/$REPO/pulls/$PR/commits" --paginate \
+            -q '.[] | select((.author.login // "") != "monark-agent")
+                 | "  \(.sha[0:8])  \(.commit.author.name) <\(.commit.author.email)>"')
+
+          if [ -n "$mismatched" ]; then
+            echo "::error::PR was opened by monark-agent, but these commits are authored by someone else:"
+            echo "$mismatched"
+            echo ""
+            echo "This usually means the agent session lost its GIT_AUTHOR_* environment and"
+            echo "fell back to the machine owner's git identity. Fix the session setup and"
+            echo "re-commit with the correct author rather than merging as-is: the point of"
+            echo "the machine account is that the review trail says who actually did the work."
+            exit 1
+          fi
+
+          echo "All commits authored by monark-agent."
