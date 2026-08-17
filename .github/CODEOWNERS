@@ -1,0 +1,4 @@
+# Review on every change routes to the repo owner. This also makes the
+# "require code owner review" rule meaningful on protected branches: an
+# agent cannot satisfy it by approving its own work.
+* @DominicF96
