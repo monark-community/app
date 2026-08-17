@@ -1,0 +1,9 @@
+# CHANGELOG.md is generated from changelog.d/ by tools/compile-changelog.ts
+# and staged by the pre-commit hook. Marking it generated collapses it in
+# GitHub diffs, where it is noise rather than review material.
+#
+# Deliberately NOT given a custom merge driver: a driver that regenerates the
+# file runs before git has placed the other side's new fragment in the working
+# tree, so it silently rebuilds from incomplete input and drops entries. On a
+# conflict here, run `pnpm changelog:compile` and stage the result instead.
+CHANGELOG.md linguist-generated=true

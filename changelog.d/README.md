@@ -16,15 +16,26 @@ Multi-line entries are fine — indent continuation lines by two spaces, as many
 
 **Write file links relative to the repo root, not to this directory.** The entry is compiled into `CHANGELOG.md` at the root, so a link that looks right from `changelog.d/` (`../tools/foo.ts`) resolves one level _above_ the repo once compiled and breaks. Write `tools/foo.ts`, `CLAUDE.md`, `.github/workflows/ci.yml`. `pnpm changelog:compile` rejects a fragment containing a `](../…)` link rather than let a broken link through.
 
-You do **not** need to run the compiler or commit `CHANGELOG.md` — CI does that after your PR merges. Committing a regenerated `CHANGELOG.md` in your PR would reintroduce exactly the conflicts this design removes.
+You don't need to run the compiler by hand: a **pre-commit hook** regenerates `CHANGELOG.md` and stages it alongside your fragment, so the generated file always travels in the same commit as the change that caused it. CI re-checks it (`pnpm changelog:compile --check`) to catch commits made with `--no-verify` or without hooks installed.
+
+### If `CHANGELOG.md` conflicts on a merge or rebase
+
+Two branches that each add an entry both rewrite the same generated file, so a conflict there is expected and means nothing is wrong. Don't hand-merge it — the fragments have already merged cleanly, so just rebuild from them:
+
+```bash
+pnpm changelog:compile
+git add CHANGELOG.md
+```
+
+(There is deliberately no custom merge driver for this. A driver that regenerates the file runs before git has placed the other branch's new fragment in the working tree, so it rebuilds from incomplete input and silently drops entries — verified, not theorised.)
 
 ## Files here
 
-| File | Purpose |
-| --- | --- |
-| `<slug>.md` | One changelog entry. Yours goes here. |
+| File                      | Purpose                                                                                                                                   |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `<slug>.md`               | One changelog entry. Yours goes here.                                                                                                     |
 | `YYYY-MM-DD-NN-<slug>.md` | The 411 historical entries, extracted from the old hand-maintained `CHANGELOG.md`. The `NN` preserves their original within-day ordering. |
-| `_header.md` | The static top of `CHANGELOG.md` (title, Keep a Changelog blurb, `## [Unreleased]`). Files starting with `_` are structure, not entries. |
+| `_header.md`              | The static top of `CHANGELOG.md` (title, Keep a Changelog blurb, `## [Unreleased]`). Files starting with `_` are structure, not entries.  |
 
 ## Compiling
 
@@ -33,4 +44,4 @@ pnpm changelog:compile          # rewrite CHANGELOG.md from every fragment
 pnpm changelog:compile --check  # exit 1 if CHANGELOG.md is out of date
 ```
 
-[tools/compile-changelog.ts](../tools/compile-changelog.ts) sorts by date descending, breaking ties on filename, and writes `_header.md` followed by every entry. It runs automatically on every push to `develop` ([.github/workflows/changelog-compile.yml](../.github/workflows/changelog-compile.yml)) and commits the result only when the output actually changed.
+[tools/compile-changelog.ts](../tools/compile-changelog.ts) sorts by date descending, breaking ties on filename, and writes `_header.md` followed by every entry. The pre-commit hook runs it with `--stage` (wired through `lint-staged` in [package.json](../package.json)), so you normally never invoke it yourself ; `--check` is what CI runs.

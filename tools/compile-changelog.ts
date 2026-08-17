@@ -4,10 +4,15 @@
 // artifact. That inversion exists because several agents and contributors
 // work this repo at once: everyone appending to one shared file collides on
 // the same insertion point every time, while everyone adding their own new
-// file never collides at all. A PR only ever adds a fragment ; CHANGELOG.md
-// is rewritten by CI on develop (.github/workflows/changelog-compile.yml),
-// so no branch has to touch the compiled file and there is nothing to
-// conflict over.
+// file never collides at all.
+//
+// A pre-commit hook runs this with --stage, so the regenerated file is
+// committed alongside the fragment that changed it, and CI re-checks it with
+// --check. Regenerating client-side (rather than having CI push the result to
+// develop) is what lets develop stay branch-protected: no bot needs push
+// access to it. The cost is that two branches adding entries both rewrite
+// this file and conflict ; that conflict is resolved by re-running this tool,
+// never by hand-merging (see changelog.d/README.md).
 //
 // Ordering is (date DESC, filename ASC). The historical fragments carry a
 // `YYYY-MM-DD-NN-` prefix so their original within-day order is preserved
@@ -17,9 +22,11 @@
 // Usage:
 //   pnpm changelog:compile           rewrite CHANGELOG.md
 //   pnpm changelog:compile --check   exit 1 if CHANGELOG.md is out of date
+//   pnpm changelog:compile --stage   rewrite, then `git add` it (pre-commit hook)
 //
 // See changelog.d/README.md for the fragment format.
 import { readFileSync, writeFileSync, readdirSync } from "node:fs";
+import { execFileSync } from "node:child_process";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -29,7 +36,10 @@ const CHANGELOG_PATH = join(ROOT, "CHANGELOG.md");
 const HEADER_FILE = "_header.md";
 const ENTRY_DATE_RE = /^-\s*(\d{4}-\d{2}-\d{2}):/;
 
+// lint-staged appends the staged filenames to the command, so any extra
+// argv entries are ignored by design.
 const checkOnly = process.argv.includes("--check");
+const stage = process.argv.includes("--stage");
 
 // Files starting with "_" are structure (the header), not entries ; README.md
 // documents the convention for humans.
@@ -100,5 +110,19 @@ if (checkOnly) {
   process.exit(1);
 }
 
-writeFileSync(CHANGELOG_PATH, output, "utf8");
-console.log(`changelog:compile — rebuilt CHANGELOG.md from ${fragments.length} fragments.`);
+const changed = existingRaw !== output;
+if (changed) writeFileSync(CHANGELOG_PATH, output, "utf8");
+
+// The pre-commit hook regenerates and stages in one step, so the generated
+// file always lands in the same commit as the fragment that changed it.
+// Staging unconditionally (not only when changed) keeps the hook correct if
+// CHANGELOG.md was edited by hand and the rebuild reverted it.
+if (stage) {
+  execFileSync("git", ["add", "--", CHANGELOG_PATH], { stdio: "inherit" });
+}
+
+console.log(
+  changed
+    ? `changelog:compile — rebuilt CHANGELOG.md from ${fragments.length} fragments.`
+    : `changelog:compile — CHANGELOG.md already up to date (${fragments.length} fragments).`,
+);

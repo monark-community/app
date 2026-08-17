@@ -120,6 +120,7 @@
     ],
     "*.{js,mjs,cjs,json,yaml,yml,md}": [
       "prettier --write"
-    ]
+    ],
+    "changelog.d/*.md": "tsx tools/compile-changelog.ts --stage"
   }
 }

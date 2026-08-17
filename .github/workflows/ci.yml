@@ -87,6 +87,12 @@ jobs:
       - name: Check public-API MCP visibility
         run: pnpm check:mcp
 
+      # CHANGELOG.md is generated from changelog.d/ and staged by a pre-commit
+      # hook. This catches a commit made with --no-verify or without hooks
+      # installed, which would otherwise land a stale changelog.
+      - name: Check changelog is compiled
+        run: pnpm changelog:compile --check
+
   # Migration ↔ schema drift. Replays every committed migration into a throwaway
   # Postgres and diffs the result against schema.prisma (modulo an allowlist of
   # raw-SQL divergences the Prisma datamodel can't express). Catches a modeled
