@@ -1,0 +1,1 @@
+- 2026-04-24: Added `activeOrganizationId` to `TrpcContext`; null until auth wires the session claim.

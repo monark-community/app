@@ -1,0 +1,1 @@
+- 2026-04-24: Dev overlay gained an "auth" actions panel (sign up / sign in links + sign-out button).

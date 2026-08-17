@@ -1,0 +1,1 @@
+- 2026-04-24: Dev overlay gained a "trusted devices" panel with per-device first/last-seen timestamps, IP, and inline revoke.

@@ -1,48 +1,55 @@
-// Compiles per-PR changelog fragments (changelog.d/*.md) into CHANGELOG.md.
+// Rebuilds CHANGELOG.md from the per-entry fragments in changelog.d/.
 //
-// Each PR adds one new file under changelog.d/ instead of hand-editing the
-// shared CHANGELOG.md directly ; with several branches in flight at once,
-// everyone editing the same insertion point at the top of one file is a
-// guaranteed, recurring merge conflict, while everyone adding their own new
-// file never conflicts. This script is the other half : it folds every
-// pending fragment into CHANGELOG.md under `## [Unreleased]` (newest-dated
-// first, ties broken by filename for determinism) and deletes the fragments
-// it consumed. Runs automatically in CI on every push to develop
-// (.github/workflows/changelog-compile.yml) ; safe to run locally too, and a
-// no-op when changelog.d/ has no fragments (nothing to compile, nothing
-// written, exit 0).
+// The fragments are the source of truth ; CHANGELOG.md is a generated
+// artifact. That inversion exists because several agents and contributors
+// work this repo at once: everyone appending to one shared file collides on
+// the same insertion point every time, while everyone adding their own new
+// file never collides at all. A PR only ever adds a fragment ; CHANGELOG.md
+// is rewritten by CI on develop (.github/workflows/changelog-compile.yml),
+// so no branch has to touch the compiled file and there is nothing to
+// conflict over.
 //
-// See changelog.d/README.md for the fragment format + authoring convention.
-import { readFileSync, writeFileSync, readdirSync, unlinkSync } from "node:fs";
+// Ordering is (date DESC, filename ASC). The historical fragments carry a
+// `YYYY-MM-DD-NN-` prefix so their original within-day order is preserved
+// exactly ; new fragments can be named freely, since a new entry's date
+// almost always places it on its own.
+//
+// Usage:
+//   pnpm changelog:compile           rewrite CHANGELOG.md
+//   pnpm changelog:compile --check   exit 1 if CHANGELOG.md is out of date
+//
+// See changelog.d/README.md for the fragment format.
+import { readFileSync, writeFileSync, readdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const FRAGMENTS_DIR = join(ROOT, "changelog.d");
 const CHANGELOG_PATH = join(ROOT, "CHANGELOG.md");
-const UNRELEASED_HEADING = "## [Unreleased]";
+const HEADER_FILE = "_header.md";
 const ENTRY_DATE_RE = /^-\s*(\d{4}-\d{2}-\d{2}):/;
 
+const checkOnly = process.argv.includes("--check");
+
+// Files starting with "_" are structure (the header), not entries ; README.md
+// documents the convention for humans.
 const fragmentNames = readdirSync(FRAGMENTS_DIR)
-  .filter((name) => name.endsWith(".md") && name !== "README.md")
+  .filter((name) => name.endsWith(".md") && name !== "README.md" && !name.startsWith("_"))
   .sort();
 
 if (fragmentNames.length === 0) {
-  console.log("changelog:compile — no pending fragments, nothing to do.");
-  process.exit(0);
+  console.error(
+    "changelog:compile — changelog.d/ has no entry fragments ; refusing to write an empty CHANGELOG.md.",
+  );
+  process.exit(1);
 }
 
-type Fragment = { file: string; date: string; text: string };
-
-// Windows checkouts of this repo land CHANGELOG.md with CRLF even though the
-// git blob itself is LF ; a fragment file could be saved with either style
-// too. Normalize everything to LF for the actual splice, then restore
-// whatever line ending CHANGELOG.md was using on write — doing the insertion
-// on a mixed \n / \r\n string is how a spurious blank line sneaks in (the
-// collapse regex matches \n\n but not \r\n\r\n).
+// Windows checkouts land these files with CRLF even though the git blobs are
+// LF. Normalize for processing, restore on write, so the rebuild doesn't
+// rewrite every line ending as a side effect.
 const normalize = (s: string) => s.replace(/\r\n/g, "\n");
 
-const fragments: Fragment[] = fragmentNames.map((file) => {
+const fragments = fragmentNames.map((file) => {
   const text = normalize(readFileSync(join(FRAGMENTS_DIR, file), "utf8")).trim();
   const m = ENTRY_DATE_RE.exec(text);
   if (!m?.[1]) {
@@ -67,26 +74,31 @@ const fragments: Fragment[] = fragmentNames.map((file) => {
   return { file, date: m[1], text };
 });
 
-// Newest first ; stable tiebreak on filename so output is deterministic.
+// Newest first ; filename breaks ties so the output is deterministic and the
+// historical within-day ordering (encoded in the NN prefix) is preserved.
 fragments.sort((a, b) =>
   a.date === b.date ? a.file.localeCompare(b.file) : b.date.localeCompare(a.date),
 );
 
-const raw = readFileSync(CHANGELOG_PATH, "utf8");
-const usesCRLF = raw.includes("\r\n");
-const changelog = normalize(raw);
-const headingIdx = changelog.indexOf(UNRELEASED_HEADING);
-if (headingIdx === -1) {
-  console.error(`changelog:compile — couldn't find "${UNRELEASED_HEADING}" in CHANGELOG.md.`);
+const header = normalize(readFileSync(join(FRAGMENTS_DIR, HEADER_FILE), "utf8")).trimEnd();
+const rebuilt = header + "\n\n" + fragments.map((f) => f.text).join("\n\n") + "\n";
+
+const existingRaw = readFileSync(CHANGELOG_PATH, "utf8");
+const usesCRLF = existingRaw.includes("\r\n");
+const output = usesCRLF ? rebuilt.replace(/\n/g, "\r\n") : rebuilt;
+
+if (checkOnly) {
+  if (existingRaw === output) {
+    console.log(
+      `changelog:compile --check — CHANGELOG.md is up to date (${fragments.length} entries).`,
+    );
+    process.exit(0);
+  }
+  console.error(
+    "changelog:compile --check — CHANGELOG.md is out of date ; run `pnpm changelog:compile`.",
+  );
   process.exit(1);
 }
-const insertAt = headingIdx + UNRELEASED_HEADING.length;
-const block = "\n\n" + fragments.map((f) => f.text).join("\n");
-const updated =
-  changelog.slice(0, insertAt) + block + changelog.slice(insertAt).replace(/^\n\n/, "\n");
 
-writeFileSync(CHANGELOG_PATH, usesCRLF ? updated.replace(/\n/g, "\r\n") : updated, "utf8");
-for (const f of fragments) unlinkSync(join(FRAGMENTS_DIR, f.file));
-
-console.log(`changelog:compile — folded ${fragments.length} fragment(s) into CHANGELOG.md:`);
-for (const f of fragments) console.log(`  ${f.file} (${f.date})`);
+writeFileSync(CHANGELOG_PATH, output, "utf8");
+console.log(`changelog:compile — rebuilt CHANGELOG.md from ${fragments.length} fragments.`);

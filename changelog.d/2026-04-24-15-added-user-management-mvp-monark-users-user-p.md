@@ -1,0 +1,1 @@
+- 2026-04-24: Added user-management MVP (`@monark/users`); `User` + `PendingEmailChange` Prisma models, read-interface (`getById`, `getByIdOrThrow`, `getByEmail`, `getCurrent`), `users.me` tRPC query, `UserProfileUpdatedEvent` type. Profile-edit, admin ops, account deletion, and avatar upload deferred until auth + rbac land.
