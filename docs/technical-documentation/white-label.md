@@ -87,6 +87,12 @@ Brand color arrives from two independent places, and they stack:
   single-tenant deploy typically sets both — the org color drives day-to-day UI,
   the branding colors cover the pre-auth and email surfaces.
 
+The pre-auth screens (signin, signup, the TOTP challenge, password reset) sit
+across both layers: the logo resolves through the singleton org, while the
+animated gradient backdrop behind them paints from `--primary` — the org color
+when one is set, the starter orange otherwise. Nothing to configure separately ;
+set the org color and the sign-in screen follows.
+
 ## Provisioning the organization
 
 Single-tenant deploys need exactly one organization. There is no in-app setup

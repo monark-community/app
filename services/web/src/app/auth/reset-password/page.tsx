@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
+import { AuthScreen } from "@/components/auth-screen";
 import { BrandedAppLogo } from "@/components/branded-app-logo";
 import { Button } from "@/components/ui/button";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -19,18 +20,16 @@ export default async function ResetPasswordPage() {
 
   if (error || !data.user) {
     return (
-      <main className="flex min-h-screen items-center justify-center p-8">
-        <div className="w-full max-w-sm">
-          <div className="mb-8 flex flex-col items-center text-center">
-            <BrandedAppLogo size={56} className="mb-4" />
-            <h1 className="text-2xl font-semibold tracking-tight">{t("expiredTitle")}</h1>
-            <p className="mt-1 text-sm text-muted-foreground">{t("expiredSubtitle")}</p>
-          </div>
-          <Button asChild variant="outline" className="w-full">
-            <Link href="/forgot-password">{t("requestAgain")}</Link>
-          </Button>
+      <AuthScreen>
+        <div className="mb-8 flex flex-col items-center text-center">
+          <BrandedAppLogo size={56} className="mb-4" />
+          <h1 className="text-2xl font-semibold tracking-tight">{t("expiredTitle")}</h1>
+          <p className="mt-1 text-sm text-muted-foreground">{t("expiredSubtitle")}</p>
         </div>
-      </main>
+        <Button asChild variant="outline" className="w-full">
+          <Link href="/forgot-password">{t("requestAgain")}</Link>
+        </Button>
+      </AuthScreen>
     );
   }
 
@@ -40,17 +39,15 @@ export default async function ResetPasswordPage() {
   if (!data.user.email) redirect("/account");
 
   return (
-    <main className="flex min-h-screen items-center justify-center p-8">
-      <div className="w-full max-w-sm">
-        <div className="mb-8 flex flex-col items-center text-center">
-          <BrandedAppLogo size={56} className="mb-4" />
-          <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {t("subtitle", { email: data.user.email })}
-          </p>
-        </div>
-        <ResetPasswordForm email={data.user.email} />
+    <AuthScreen>
+      <div className="mb-8 flex flex-col items-center text-center">
+        <BrandedAppLogo size={56} className="mb-4" />
+        <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          {t("subtitle", { email: data.user.email })}
+        </p>
       </div>
-    </main>
+      <ResetPasswordForm email={data.user.email} />
+    </AuthScreen>
   );
 }

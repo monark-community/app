@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
+import { AuthScreen } from "@/components/auth-screen";
 import { Button } from "@/components/ui/button";
 import { BrandedAppLogo } from "@/components/branded-app-logo";
 
@@ -21,17 +22,15 @@ export default async function ConfirmErrorPage({ searchParams }: Props) {
   const key = reasonKey(params.reason);
 
   return (
-    <main className="flex min-h-screen items-center justify-center p-8">
-      <div className="w-full max-w-sm">
-        <div className="mb-8 flex flex-col items-center text-center">
-          <BrandedAppLogo size={56} className="mb-4" />
-          <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
-          <p className="mt-1 text-sm text-muted-foreground">{t(key)}</p>
-        </div>
-        <Button asChild variant="outline" className="w-full">
-          <Link href="/signin">{t("retry")}</Link>
-        </Button>
+    <AuthScreen>
+      <div className="mb-8 flex flex-col items-center text-center">
+        <BrandedAppLogo size={56} className="mb-4" />
+        <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
+        <p className="mt-1 text-sm text-muted-foreground">{t(key)}</p>
       </div>
-    </main>
+      <Button asChild variant="outline" className="w-full">
+        <Link href="/signin">{t("retry")}</Link>
+      </Button>
+    </AuthScreen>
   );
 }

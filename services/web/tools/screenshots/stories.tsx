@@ -89,6 +89,9 @@ import { UserBanner, type UserBannerEditConfig } from "@/components/user-banner"
 import { DragHandle } from "@monark/components/ui/drag-handle";
 import { BoardArea, BoardColumn, COLUMN_WIDTH_PX, KanbanCard } from "@monark/kanban/client";
 import { Skeleton } from "@/components/ui/skeleton";
+import { AuthScreen } from "@/components/auth-screen";
+import { BrandedAppLogoView } from "@/components/branded-app-logo-view";
+import { Card, CardContent } from "@/components/ui/card";
 
 /**
  * Stories for the screenshot harness. Each is a plain React component
@@ -2246,7 +2249,55 @@ function ControlHeightsStory() {
   );
 }
 
+/**
+ * The pre-auth screen shell — a stand-in for the real signin page (which
+ * can't mount here : its logo wrapper and form are server components).
+ * What this validates is the animated brand aurora behind the content :
+ * contrast of the card / text over the washes, in light and dark.
+ * The drift is frozen wherever the capture lands, so treat the framing
+ * as one sample of the animation, not the whole of it.
+ */
+const AuthScreenStory: FC = () => (
+  <AuthScreen>
+    <div className="mb-8 flex flex-col items-center text-center">
+      <BrandedAppLogoView
+        data={{
+          singletonLogoUrl: null,
+          singletonDisplayName: null,
+          isSingleTenantBootstrapped: false,
+        }}
+        size={56}
+        className="mb-4"
+      />
+      <h1 className="text-2xl font-semibold tracking-tight">Sign in</h1>
+      <p className="mt-1 text-sm text-muted-foreground">Welcome back.</p>
+    </div>
+    <Card className="shadow-none border-border">
+      <CardContent className="pt-6">
+        <div className="flex flex-col gap-4">
+          <div className="grid gap-2">
+            <Label htmlFor="story-email">Email</Label>
+            <Input id="story-email" defaultValue="ada@example.com" />
+          </div>
+          <div className="grid gap-2">
+            <div className="flex items-baseline justify-between">
+              <Label htmlFor="story-password">Password</Label>
+              <span className="text-xs font-medium text-primary">Forgot password?</span>
+            </div>
+            <Input id="story-password" type="password" defaultValue="password" />
+          </div>
+          <Button className="w-full">Sign in</Button>
+        </div>
+      </CardContent>
+    </Card>
+    <p className="mt-6 text-center text-sm text-muted-foreground">
+      No account? <span className="font-medium text-primary">Sign up</span>
+    </p>
+  </AuthScreen>
+);
+
 export const STORIES: Record<string, FC> = {
+  "auth-screen": AuthScreenStory,
   "control-heights": ControlHeightsStory,
   "filter-date": FilterDateStory,
   "mobile-ux": MobileUxStory,

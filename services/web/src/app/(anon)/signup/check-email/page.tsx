@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
+import { AuthScreen } from "@/components/auth-screen";
 import { BrandedAppLogo } from "@/components/branded-app-logo";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { CheckEmailActions } from "./check-email-actions";
@@ -28,28 +29,26 @@ export default async function CheckEmailPage({ searchParams }: Props) {
   const email = data.user?.email ?? params.email ?? null;
 
   return (
-    <main className="flex min-h-screen items-center justify-center p-8">
-      <div className="w-full max-w-sm">
-        <div className="mb-8 flex flex-col items-center text-center">
-          <BrandedAppLogo size={56} className="mb-4" />
-          <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {email
-              ? t.rich("subtitleWithEmail", {
-                  email: redactEmail(email),
-                  em: (chunks) => <span className="font-medium text-foreground">{chunks}</span>,
-                })
-              : t("subtitleNoEmail")}
-          </p>
-        </div>
-        <CheckEmailActions email={email} />
-        <p className="mt-6 text-center text-sm text-muted-foreground">
-          {t("wrongEmail")}{" "}
-          <a href="/signup" className="font-medium text-primary hover:underline">
-            {t("signUpAgain")}
-          </a>
+    <AuthScreen>
+      <div className="mb-8 flex flex-col items-center text-center">
+        <BrandedAppLogo size={56} className="mb-4" />
+        <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          {email
+            ? t.rich("subtitleWithEmail", {
+                email: redactEmail(email),
+                em: (chunks) => <span className="font-medium text-foreground">{chunks}</span>,
+              })
+            : t("subtitleNoEmail")}
         </p>
       </div>
-    </main>
+      <CheckEmailActions email={email} />
+      <p className="mt-6 text-center text-sm text-muted-foreground">
+        {t("wrongEmail")}{" "}
+        <a href="/signup" className="font-medium text-primary hover:underline">
+          {t("signUpAgain")}
+        </a>
+      </p>
+    </AuthScreen>
   );
 }

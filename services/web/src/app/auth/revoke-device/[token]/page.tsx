@@ -1,4 +1,5 @@
 import { getTranslations } from "next-intl/server";
+import { AuthScreen } from "@/components/auth-screen";
 import { BrandedAppLogo } from "@/components/branded-app-logo";
 import { RevokeDeviceForm } from "./revoke-device-form";
 
@@ -21,15 +22,13 @@ export default async function RevokeDevicePage({ params }: Props) {
   const { token } = await params;
   const t = await getTranslations("auth.revokeDevice");
   return (
-    <main className="flex min-h-screen items-center justify-center p-8">
-      <div className="w-full max-w-sm">
-        <div className="mb-8 flex flex-col items-center text-center">
-          <BrandedAppLogo size={56} className="mb-4" />
-          <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
-          <p className="mt-1 text-sm text-muted-foreground">{t("subtitle")}</p>
-        </div>
-        <RevokeDeviceForm token={token} />
+    <AuthScreen>
+      <div className="mb-8 flex flex-col items-center text-center">
+        <BrandedAppLogo size={56} className="mb-4" />
+        <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
+        <p className="mt-1 text-sm text-muted-foreground">{t("subtitle")}</p>
       </div>
-    </main>
+      <RevokeDeviceForm token={token} />
+    </AuthScreen>
   );
 }
