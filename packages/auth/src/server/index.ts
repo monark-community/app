@@ -11,6 +11,8 @@ import { checkPassword } from "./password";
 import { markEmailVerified, recordResendAttempt, type ResendResult } from "./email-verification";
 import { emitPasswordChanged, emitSignedIn, emitSignedOut } from "./events";
 import { signUpUser, signUpInputSchema } from "./signup";
+import { configuredOAuthProviders, provisionOAuthUser, readIdentityStatus } from "./oauth";
+import type { IdentityStatus, OAuthProvider, OAuthProvisionResult } from "../contracts/oauth";
 import { verifyEmailActionToken } from "./email-action-token";
 import {
   findCurrentDeviceId,
@@ -346,9 +348,54 @@ const trustedDevicesRouter = router({
     }),
 });
 
+const oauthRouter = router({
+  // Anon-safe on purpose : /signin and /signup are rendered for signed-
+  // out visitors and need to know which buttons to draw. Returns only
+  // operator configuration (which providers this deployment offers),
+  // never anything user-specific.
+  providers: publicProcedure.query(async (): Promise<OAuthProvider[]> => {
+    const flagOn = await isEnabled("auth.oauth");
+    if (!flagOn) return [];
+    return configuredOAuthProviders();
+  }),
+
+  // Called by /auth/callback the moment the OAuth session cookie is
+  // live, before the user is allowed anywhere else. Creates the shadow
+  // `User` row on a first social sign-in and backfills it afterwards.
+  // The caller forwards the freshly-issued access token, so `ctx.userId`
+  // is the only identity input ; everything else is re-read from the
+  // Supabase admin API inside `provisionOAuthUser`.
+  provision: publicProcedure
+    .input(
+      z
+        .object({
+          localePreference: z.enum(["en", "fr"]).optional(),
+        })
+        .optional(),
+    )
+    .mutation(async ({ ctx, input }): Promise<OAuthProvisionResult> => {
+      if (!ctx.userId) throw new UnauthorizedError();
+      const flagOn = await isEnabled("auth.oauth", { userId: ctx.userId });
+      if (!flagOn) return { ok: false, reason: "disabled" };
+      return provisionOAuthUser({
+        userId: ctx.userId,
+        localePreference: input?.localePreference,
+      });
+    }),
+
+  // Which credentials the signed-in account actually holds. The account
+  // pages branch on `hasPassword` : an OAuth-only user can't be asked
+  // for a current password they never set.
+  identities: publicProcedure.query(async ({ ctx }): Promise<IdentityStatus> => {
+    if (!ctx.userId) return { hasPassword: false, providers: [] };
+    return readIdentityStatus(ctx.userId);
+  }),
+});
+
 export const authRouter = router({
   trustedDevices: trustedDevicesRouter,
   totp: totpRouter,
+  oauth: oauthRouter,
 
   ping: publicProcedure.query(() => ({
     pong: true,
@@ -564,6 +611,14 @@ export {
   type TotpStatus,
   type AdminTotpEnforcement,
 } from "./totp";
+export {
+  provisionOAuthUser,
+  readIdentityStatus,
+  configuredOAuthProviders,
+  extractOAuthProfile,
+  type OAuthAuthUserLike,
+  type OAuthProfile,
+} from "./oauth";
 export { hardDeleteUser, processExpiredDeletions } from "./account-lifecycle";
 export { getSupabaseAdmin } from "./supabase-admin";
 export { registerAuthFeatureFlags } from "./flags";

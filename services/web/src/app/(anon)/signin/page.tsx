@@ -1,10 +1,18 @@
 import { getTranslations } from "next-intl/server";
 import { BrandedAppLogo } from "@/components/branded-app-logo";
+import { createServerTrpcClient } from "@/lib/trpc-server";
+import { OAuthButtons } from "../oauth-buttons";
 import { SignInForm } from "./signin-form";
 import { SignInStatusBanner } from "./signin-status-banner";
 
 export default async function SignInPage() {
   const t = await getTranslations("auth.signIn");
+  // Anon-safe query ; returns [] when social sign-in isn't configured
+  // for this deployment or the `auth.oauth` flag is off, and the
+  // buttons then render nothing at all.
+  const providers = await createServerTrpcClient()
+    .auth.oauth.providers.query()
+    .catch(() => []);
   return (
     <main className="flex min-h-screen items-center justify-center p-8">
       <div className="w-full max-w-sm">
@@ -14,6 +22,7 @@ export default async function SignInPage() {
           <p className="mt-1 text-sm text-muted-foreground">{t("subtitle")}</p>
         </div>
         <SignInStatusBanner />
+        <OAuthButtons providers={providers} />
         <SignInForm />
         <p className="mt-6 text-center text-sm text-muted-foreground">
           {t("noAccount")}{" "}

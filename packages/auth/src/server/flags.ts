@@ -16,6 +16,11 @@ const AUTH_FLAGS = {
       "Let a previously-TOTP-verified device skip the challenge on subsequent sign-ins. Off ⇒ TOTP is always challenged, even on recognized devices.",
     defaultOn: true,
   },
+  oauth: {
+    description:
+      "Social sign-in (Google / Microsoft / GitHub) through Supabase Auth. Off ⇒ the provider buttons disappear from /signin and /signup and the callback refuses to provision, so an in-flight round trip can't land an account. Which providers are offered is separately controlled by the api's AUTH_OAUTH_PROVIDERS env.",
+    defaultOn: true,
+  },
   "totp-required-admin": {
     description: "Enforce TOTP enrollment for admin roles within 7 days of first sign-in.",
     defaultOn: true,

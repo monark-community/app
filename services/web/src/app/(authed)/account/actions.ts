@@ -104,6 +104,78 @@ export async function changePasswordAction(input: {
   return { ok: true };
 }
 
+export type SetPasswordErrorCode =
+  | "alreadySet"
+  | "weakPassword"
+  | "totpRequired"
+  | "invalidTotpCode"
+  | "upstream";
+
+export type SetPasswordResult = { ok: true } | { ok: false; errorCode: SetPasswordErrorCode };
+
+// First password for an account that has never had one : the user
+// registered through Google / Microsoft / GitHub, so there is no
+// current password to re-enter and `changePasswordAction`'s gate can't
+// be satisfied. The live session is the proof of identity here, which
+// is the same standard the provider round trip just met.
+//
+// The `alreadySet` refusal is what keeps this from being a way around
+// that gate. Identity state is read from the Supabase admin API
+// server-side (never from the client), so a caller who already has a
+// password lands back on `changePasswordAction` with its
+// current-password requirement intact.
+//
+// The TOTP second factor still applies when enrolled : an attacker
+// holding a stolen OAuth session shouldn't be able to mint a password
+// and convert it into durable, provider-independent access.
+export async function setPasswordAction(input: {
+  newPassword: string;
+  totpCode?: string;
+}): Promise<SetPasswordResult> {
+  const supabase = await createSupabaseServerClient();
+  const [{ data: userData }, { data: sessionData }] = await Promise.all([
+    supabase.auth.getUser(),
+    supabase.auth.getSession(),
+  ]);
+  const email = userData.user?.email;
+  const accessToken = sessionData.session?.access_token;
+  if (!email || !accessToken) return { ok: false, errorCode: "upstream" };
+
+  const api = createServerTrpcClient(accessToken);
+  const identities = await api.auth.oauth.identities.query().catch(() => null);
+  if (!identities) return { ok: false, errorCode: "upstream" };
+  if (identities.hasPassword) return { ok: false, errorCode: "alreadySet" };
+
+  const totpStatus = await api.auth.totp.status.query().catch(() => null);
+  if (totpStatus && "enrolled" in totpStatus && totpStatus.enrolled) {
+    if (!input.totpCode || input.totpCode.length < 6) {
+      return { ok: false, errorCode: "totpRequired" };
+    }
+    const verified = await api.auth.totp.verifyCode
+      .mutate({ code: input.totpCode })
+      .catch(() => ({ ok: false }));
+    if (!verified.ok) return { ok: false, errorCode: "invalidTotpCode" };
+  }
+
+  const me = await api.users.me.query().catch(() => null);
+  const strength = await api.auth.checkPassword
+    .mutate({
+      password: input.newPassword,
+      email,
+      displayName: me?.displayName ?? undefined,
+    })
+    .catch(() => null);
+  if (!strength || !strength.ok) return { ok: false, errorCode: "weakPassword" };
+
+  const { data: updated, error: updateError } = await supabase.auth.updateUser({
+    password: input.newPassword,
+  });
+  if (updateError || !updated.user) return { ok: false, errorCode: "upstream" };
+
+  await api.auth.notifyPasswordChanged.mutate({ triggeredBy: "user" }).catch(() => {});
+  return { ok: true };
+}
+
 // Persists the user's locale preference AND writes the cookie so the next
 // navigation renders in the new language without waiting for a full sign-out.
 // Also mirrors the locale into Supabase `user_metadata.locale_preference`

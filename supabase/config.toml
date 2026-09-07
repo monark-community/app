@@ -387,6 +387,66 @@ skip_nonce_check = false
 # If enabled, it will allow the user to successfully authenticate when the provider does not return an email address.
 email_optional = false
 
+# ── Social sign-in ──────────────────────────────────────────────────
+# Google / Microsoft (`azure`) / GitHub back the "Continue with …"
+# buttons on /signin and /signup. All three ship disabled : a developer
+# without OAuth apps registered at the three vendors runs the stack
+# exactly as before, and `AUTH_OAUTH_PROVIDERS` on the api (unset by
+# default) keeps the buttons off the page to match.
+#
+# To turn one on locally : register the app with the vendor, set its
+# callback / redirect URI to
+#   http://127.0.0.1:54321/auth/v1/callback
+# put the client id + secret in `services/api/.env` (see
+# packages/auth/README.md § Operational), flip `enabled` to true here,
+# and add the slug to `AUTH_OAUTH_PROVIDERS`. Secrets are read through
+# `env()` so nothing credential-shaped is ever committed.
+#
+# Hosted projects configure the same three under Authentication →
+# Providers in the dashboard rather than through this file.
+
+[auth.external.google]
+enabled = false
+client_id = "env(SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID)"
+secret = "env(SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET)"
+redirect_uri = ""
+url = ""
+# Google's local flow trips the nonce check when the browser hits the
+# CLI's loopback auth server ; flip this to true if a local sign-in
+# fails with a nonce mismatch. Leave it false everywhere else, and
+# never carry it into a hosted project.
+skip_nonce_check = false
+# Every provider here is required to return a verified email address :
+# our callback refuses to provision an account without one, so
+# accepting email-less identities would only produce a dead end.
+email_optional = false
+
+# Microsoft Entra ID. `azure` is Supabase's slug for it and the id we
+# carry end to end (see packages/auth/src/contracts/oauth.ts).
+# Single-tenant apps override `url` with
+# https://login.microsoftonline.com/<tenant-id>/v2.0 ; the default
+# multi-tenant endpoint accepts both work and personal accounts.
+[auth.external.azure]
+enabled = false
+client_id = "env(SUPABASE_AUTH_EXTERNAL_AZURE_CLIENT_ID)"
+secret = "env(SUPABASE_AUTH_EXTERNAL_AZURE_SECRET)"
+redirect_uri = ""
+url = ""
+skip_nonce_check = false
+email_optional = false
+
+# GitHub accounts can have an unverified or private primary address ;
+# the callback refuses those rather than trusting the provider's word,
+# so a user in that state has to verify with GitHub first.
+[auth.external.github]
+enabled = false
+client_id = "env(SUPABASE_AUTH_EXTERNAL_GITHUB_CLIENT_ID)"
+secret = "env(SUPABASE_AUTH_EXTERNAL_GITHUB_SECRET)"
+redirect_uri = ""
+url = ""
+skip_nonce_check = false
+email_optional = false
+
 # Allow Solana wallet holders to sign in to your project via the Sign in with Solana (SIWS, EIP-4361) standard.
 # You can configure "web3" rate limit in the [auth.rate_limit] section and set up [auth.captcha] if self-hosting.
 [auth.web3.solana]

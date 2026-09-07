@@ -4,6 +4,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createServerTrpcClient } from "@/lib/trpc-server";
 import { DEVICE_COOKIE_NAME } from "@/lib/trusted-device-cookie";
 import { AccountPageHeader } from "../account-page-header";
+import { ConnectedAccountsSection } from "../connected-accounts-section";
 import { EmailSection } from "../email-section";
 import { PasswordSection } from "../password-section";
 import { TotpSection } from "../totp-section";
@@ -44,6 +45,8 @@ export default async function AccountSecurityPage() {
       <EmailSection />
       <Separator />
       <PasswordSection />
+      <Separator />
+      <ConnectedAccountsSection />
       <Separator />
       <TotpSection />
       <Separator />

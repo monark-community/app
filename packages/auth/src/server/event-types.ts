@@ -16,6 +16,12 @@ const AUTH_EVENT_TYPES = {
         type: "string",
         description: "Optional referral code used at signup.",
       },
+      {
+        key: "provider",
+        type: "string",
+        description:
+          "Social provider the account registered through (google, azure, github). Absent for email + password signups.",
+      },
     ],
   },
   "user.signed-in": {

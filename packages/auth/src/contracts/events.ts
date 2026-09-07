@@ -5,6 +5,13 @@ export type UserSignedUpEvent = DomainEventBase & {
   userId: string;
   email: string;
   referralCode?: string;
+  /**
+   * Which social provider registered the account (`google`, `azure`,
+   * `github`). Absent for the email + password path, which is what an
+   * omitted value means to a subscriber ; it is never set to a
+   * "password" sentinel.
+   */
+  provider?: string;
 };
 
 export type UserSignedInEvent = DomainEventBase & {
