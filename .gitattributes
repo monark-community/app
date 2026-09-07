@@ -1,0 +1,9 @@
+# CHANGELOG.md is generated from changelog.d/ by tools/compile-changelog.ts
+# and rebuilt on develop by .github/workflows/changelog-compile.yml. Marking
+# it generated collapses it in GitHub diffs, where a regenerated file is noise
+# rather than review material.
+#
+# Feature branches never touch it (CI owns it), so it should not conflict. If
+# it ever does, rebuild with `pnpm changelog:compile` rather than hand-merging
+# two rewrites of the same file.
+CHANGELOG.md linguist-generated=true

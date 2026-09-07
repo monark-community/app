@@ -13,6 +13,14 @@ name: Compile changelog
 # workflow, but the second run regenerates identical content, finds no diff,
 # and exits without committing — no loop, just one cheap no-op run per real
 # change.
+#
+# Auth deliberately uses a GitHub App token rather than the built-in
+# GITHUB_TOKEN. develop is branch-protected, and a protected branch can only
+# be pushed to by an actor on the ruleset's bypass list — which accepts Apps
+# but NOT GitHub Actions itself, so GITHUB_TOKEN can never be granted the
+# exception. Pushing as an App is what lets develop stay protected while this
+# automation keeps working. It also means feature branches never touch the
+# generated file, so they never conflict on it.
 
 on:
   push:
@@ -22,17 +30,25 @@ concurrency:
   group: changelog-compile-${{ github.ref }}
   cancel-in-progress: false # never cancel a mid-flight commit-and-push
 
-permissions:
-  contents: write
+# The App token carries its own permissions ; GITHUB_TOKEN needs none.
+permissions: {}
 
 jobs:
   compile:
     runs-on: ubuntu-latest
     steps:
+      - name: Mint a GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ secrets.CHANGELOG_APP_ID }}
+          private-key: ${{ secrets.CHANGELOG_APP_PRIVATE_KEY }}
+
       - name: Checkout
         uses: actions/checkout@v6
         with:
           ref: develop
+          token: ${{ steps.app-token.outputs.token }}
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v6
@@ -55,8 +71,8 @@ jobs:
             echo "Nothing to commit."
             exit 0
           fi
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "monark-ci[bot]"
+          git config user.email "monark-ci[bot]@users.noreply.github.com"
           git add CHANGELOG.md
           git commit -m "chore: rebuild changelog from fragments"
           git push origin HEAD:develop
