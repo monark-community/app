@@ -7,12 +7,16 @@ Spec: [docs/features-planning/phase-1/auth-login-password.md](../../docs/feature
 ## What's here (Phase 1 MVP)
 
 - `/server` — `authRouter` (tRPC) with `ping`, `session`, `checkPassword`, `signUp`, `notifySignedIn` / `notifySignedOut` / `notifyPasswordChanged`, `markOwnEmailVerified`, `requestConfirmationResend`, plus the `trustedDevices` sub-router (`mine`, `recognize`, `revoke`, `revokeAll`) and the `totp` sub-router (`status`, `beginEnrollment`, `confirmEnrollment`, `verifyCode`, `verifyRecoveryCode`, `regenerateRecoveryCodes`, `disable`, `isChallengeRequired`, `adminEnforcement`); `signUpUser` orchestrator (public `auth.signUp`, triggers verification email); `checkPassword` (offline rules + HIBP k-anonymity); email-verification helpers (`markEmailVerified`, `recordResendAttempt`, `requireVerifiedEmail`); trusted-device helpers (`recognizeOrRegister`, `listTrustedDevices`, `revokeTrustedDevice`, `DEVICE_COOKIE_NAME`) with per-device Supabase session revocation via the `DeviceSession` join table; TOTP helpers (`beginTotpEnrollment`, `confirmTotpEnrollment`, `verifyTotpCode`, `verifyRecoveryCode`, `regenerateRecoveryCodes`, `disableTotp`, `getTotpStatus`, `isTotpActive`, `requiresTotpChallenge`, `markDeviceTotpVerified`, `adminTotpEnforcement`, `cleanupStaleTotpEnrollments`, `TotpRateLimitError`); account lifecycle (`hardDeleteUser`, `processExpiredDeletions`); AES-256-GCM crypto (`encryptSecret` / `decryptSecret`); SMTP outbound (`sendMail`, `registerNewDeviceEmailListener`); admin client (`getSupabaseAdmin`); event emitters; `getCurrentUser` / `requireUser` read interface.
-- `/contracts` — event types (including `EmailVerifiedEvent`, `TrustedDeviceAddedEvent`, `TrustedDeviceRevokedEvent`, `TotpEnabledEvent`, `TotpDisabledEvent`, `TotpRecoveryCodeUsedEvent`), `PASSWORD_RULES` constants, `PasswordCheckResult` + `PasswordFailureReason` types, `checkPasswordOffline` pure function (safe for browser + server), `PASSWORD_RULE_HINTS` map for UI.
+- `/contracts` — event types (including `EmailVerifiedEvent`, `TrustedDeviceAddedEvent`, `TrustedDeviceRevokedEvent`, `TotpEnabledEvent`, `TotpDisabledEvent`, `TotpRecoveryCodeUsedEvent`), `PASSWORD_RULES` constants, `PasswordCheckResult` + `PasswordFailureReason` types, `checkPasswordOffline` pure function (safe for browser + server), `PASSWORD_RULE_HINTS` map for UI, and the social sign-in surface (`OAUTH_PROVIDERS`, `OAUTH_PROVIDER_LABELS`, `isOAuthProvider`, `OAuthProvisionResult`, `IdentityStatus`).
 - `/client` — placeholder. The web's signup/signin/verification/totp pages live under [`services/web/src/app/signin`](../../services/web/src/app/signin) / [`signup`](../../services/web/src/app/signup) / [`auth/confirm`](../../services/web/src/app/auth/confirm) directly, because they rely on Next-specific primitives (server actions, `redirect()`, `cookies()`).
 
 ## Key concepts
 
 - **Supabase is the session source of truth.** We never duplicate session state. Our `User` table shadows Supabase Auth's `auth.users` table 1:1 via matching ids (Supabase UUID).
+- **Social sign-in inverts who creates the account.** "Continue with GitHub" runs through Supabase's OAuth providers, which means Supabase mints `auth.users` while the browser is away at the provider ; the first thing our stack hears about the account is a session cookie for an id we've never seen. `provisionOAuthUser` closes that gap: [`/auth/callback`](../../services/web/src/app/auth/callback/route.ts) calls `auth.oauth.provision` the moment the session lands, before the user is allowed anywhere, and the mutation re-reads the identity from the Supabase **admin** API rather than trusting the caller (`ctx.userId` is the only authenticated input, so a valid token for account A can't claim account B's address). It is idempotent, so every subsequent sign-in just backfills profile fields that are still null. A first-time provision emits `user.signed-up` with `provider` set, so every downstream listener that already reacts to registrations covers social signups for free. Provider ids are **Supabase's own slugs** end to end (Microsoft would be `azure`, not "microsoft") ; the display name lives in `OAUTH_PROVIDER_LABELS`, not in a translation catalog. Adding a provider is an entry in `OAUTH_PROVIDERS`, a label, a brand mark, and an `[auth.external.<slug>]` stanza — nothing in the provisioning path is provider-specific.
+- **A provider-verified email is a hard requirement.** The callback refuses (`email-unverified`) when neither `email_confirmed_at` nor `user_metadata.email_verified` is set, which is GitHub's common shape. Accepting an unverified address would let anyone who can attach it to a throwaway provider account take over the matching Monark account. Same reasoning behind `email-collision`: Supabase links identities itself when the provider email is verified, so a _different_ `User` row already holding the address means the two sides disagree, and we refuse rather than guess. The check is case-insensitive because `signUpUser` stores whatever casing the signup form submitted while Supabase always lowercases.
+- **Social sign-in is not a second factor bypass.** Password and social sign-in converge on [`completeSignIn`](../../services/web/src/lib/complete-sign-in.ts), which owns device recognition, the TOTP gate, `user.signed-in`, pending-invite consumption, and the deletion-grace bounce. A new entry point that set a session without running that sequence would let an enrolled user skip their own authenticator by clicking "Continue with GitHub".
+- **An OAuth-only account has no password**, so the flows that re-verify with one need a branch. `auth.oauth.identities` reports `hasPassword` (Supabase's `email` identity) plus the linked providers ; `/account/security` renders "Set a password" instead of "Change password", and defers the email-change flow until a password exists rather than inventing a second re-auth channel. `setPasswordAction` refuses outright once a password exists, which is what keeps it from being a way around the current-password gate.
 - **Two compensating writes on signup.** `signUpUser` creates the Supabase Auth user, then inserts the shadow `User` row. If the DB insert throws, we delete the Supabase user so nothing orphans. Logged loudly on either failure.
 - **Session hydration is split across services.** The web's Supabase SSR helpers set cookies; the api receives the access token via `Authorization: Bearer <token>` on every tRPC call and verifies it through Supabase's admin API (`getUser(token)`) to populate `ctx.userId` + `ctx.activeOrganizationId`.
 - **Active org lives in user metadata.** `user_metadata.active_organization_id` on the Supabase user is the source; the JWT claim flows through to `ctx.activeOrganizationId`. Setting it is the org-switcher flow's job (not yet built).
@@ -69,6 +73,10 @@ const result = checkPasswordOffline(password, { email, displayName });
 | `@monark/auth/server`    | `signUpInputSchema`                                                                                 | Zod validator shared between server + forms                                           |
 | `@monark/auth/server`    | `checkPassword(pw, ctx)`                                                                            | full rules + HIBP k-anonymity; returns `PasswordCheckResult`                          |
 | `@monark/auth/server`    | `emitSignedIn` / `emitSignedOut` / `emitPasswordChanged`                                            | event helpers for the web-side server actions                                         |
+| `@monark/auth/server`    | `provisionOAuthUser(input)`                                                                         | creates / backfills the shadow `User` row for a social sign-in ; idempotent           |
+| `@monark/auth/server`    | `readIdentityStatus(userId)`                                                                        | `{ hasPassword, providers }` read from Supabase's identities                          |
+| `@monark/auth/server`    | `extractOAuthProfile(authUser)`                                                                     | pure ; normalizes provider metadata into email / name / avatar / provider             |
+| `@monark/auth/server`    | `configuredOAuthProviders()`                                                                        | providers this deployment offers, from `AUTH_OAUTH_PROVIDERS`                         |
 | `@monark/auth/server`    | `getCurrentUser(ctx)`                                                                               | resolves `ctx.userId` → `User \| null` via `@monark/users`                            |
 | `@monark/auth/server`    | `requireUser(ctx)`                                                                                  | throws `UnauthorizedError` if unauthenticated                                         |
 | `@monark/auth/server`    | `requireVerifiedEmail(ctx)`                                                                         | throws `ForbiddenError` if `User.emailVerifiedAt` is null                             |
@@ -89,6 +97,9 @@ tRPC procedures under `auth.*`:
 | `auth.notifyPasswordChanged`        | `{ triggeredBy?: "user" \| "reset" }`                                     | void (mutation; requires `ctx.userId`; emits `user.password-changed`)                                      |
 | `auth.markOwnEmailVerified`         | —                                                                         | void (mutation; uses `ctx.userId` post-verifyOtp)                                                          |
 | `auth.requestConfirmationResend`    | `{ email }`                                                               | `ResendActionResult` (mutation)                                                                            |
+| `auth.oauth.providers`              | —                                                                         | `OAuthProvider[]` (query ; anon-safe, drives the /signin + /signup buttons)                                |
+| `auth.oauth.provision`              | `{ localePreference? }?`                                                  | `OAuthProvisionResult` (mutation ; called by /auth/callback before the user goes anywhere)                 |
+| `auth.oauth.identities`             | —                                                                         | `IdentityStatus` (query ; `{ hasPassword, providers }`)                                                    |
 | `auth.trustedDevices.mine`          | —                                                                         | `TrustedDeviceView[]`                                                                                      |
 | `auth.trustedDevices.recognize`     | `{ userAgent?, ip?, country?, existingCookieValue?, supabaseSessionId? }` | `{ deviceId, isNew, rawCookieValue }`                                                                      |
 | `auth.trustedDevices.revoke`        | `{ deviceId }`                                                            | void (mutation)                                                                                            |
@@ -139,6 +150,11 @@ TOTP_ENCRYPTION_KEY=...
 # Leave SMTP_URL unset to log instead of send.
 SMTP_URL=smtp://127.0.0.1:54325
 SMTP_FROM=Monark <noreply@monark.io>
+# Social sign-in. Comma-separated Supabase provider slugs ; unset (the
+# default) means no "Continue with …" buttons render anywhere and the
+# app behaves as it did before the feature existed. Only providers you
+# have actually configured in Supabase belong here.
+AUTH_OAUTH_PROVIDERS=github
 ```
 
 **web** (`services/web/.env`):
@@ -151,6 +167,24 @@ SUPABASE_SECRET_KEY=sb_secret_...
 ```
 
 Pull all four values from `pnpm supabase status`. The server-only `SUPABASE_SECRET_KEY` on web is needed because `signUpUser` runs server-side and needs admin access.
+
+### Social sign-in setup
+
+Three moving parts have to agree before a "Continue with …" button appears and works:
+
+1. **The vendor** issues a client id + secret and accepts our callback URL. The redirect URI you register with the vendor is **Supabase's**, not ours: `http://127.0.0.1:54321/auth/v1/callback` locally, `https://<project-ref>.supabase.co/auth/v1/callback` hosted. Supabase then bounces the browser to `<app-origin>/auth/callback`, which is the URL that has to appear in `additional_redirect_urls`.
+2. **Supabase** holds the credentials, through the `[auth.external.*]` stanzas in [`supabase/config.toml`](../../supabase/config.toml) locally (flip `enabled` to true ; the id + secret come from `env()` so nothing credential-shaped is committed) or Authentication → Providers in a hosted project's dashboard.
+3. **The api** lists the slug in `AUTH_OAUTH_PROVIDERS`, which is what `auth.oauth.providers` returns to the sign-in page. A provider configured in Supabase but missing here renders no button ; one listed here but not configured in Supabase renders a button that fails at the provider.
+
+Per-vendor notes:
+
+| Provider | Slug     | Where                                      | Watch out for                                                                                                                                                                                              |
+| -------- | -------- | ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| GitHub   | `github` | Settings → Developer settings → OAuth Apps | An account whose primary address is unverified or private comes back without a verified email, and the callback refuses it with `email-unverified`. That's intended ; the user verifies with GitHub first. |
+
+GitHub is the only provider wired here. Google and Microsoft (`azure`) land as their own follow-up changes on top of this one — each is an entry in `OAUTH_PROVIDERS`, a label, a brand mark, a config stanza, and a row in this table, because none of the provisioning path is provider-specific.
+
+Apple is further out: it needs a paid developer account and a client secret that is a JWT requiring regeneration every six months, and it only returns the user's name on the _first_ authorization.
 
 ### Runtime topology
 
@@ -178,13 +212,14 @@ await assignRole({
 
 ## Feature flags
 
-Three flags owned by this module, all registered in [`@monark/feature-flags`](../feature-flags/src/contracts/flags.ts):
+Four flags owned by this module, all registered in [`@monark/feature-flags`](../feature-flags/src/contracts/flags.ts):
 
-| Flag                       | Default | Purpose                                                                                                                                                                                                                                  |
-| -------------------------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `auth.trusted-devices`     | on      | Kill switch for device tracking. When off, `auth.trustedDevices.recognize` short-circuits; no cookie is minted, no `TrustedDevice` row is written, no `trusted-device.added` event fires. `trustedDeviceId` is always `null` downstream. |
-| `auth.totp-trust-devices`  | on      | TOTP-skip policy. When off, `requiresTotpChallenge` always returns `true` for enrolled users; the `TrustedDevice.totpVerifiedAt` stamp is ignored as a skip signal.                                                                      |
-| `auth.totp-required-admin` | on      | Enforcement flag read by the admin route guard to soft-wall (day 1) / hard-wall (day 7) admins without TOTP enrolled. MVP defines the flag; the guard itself lands with the admin onboarding pass.                                       |
+| Flag                       | Default | Purpose                                                                                                                                                                                                                                                                                                  |
+| -------------------------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `auth.trusted-devices`     | on      | Kill switch for device tracking. When off, `auth.trustedDevices.recognize` short-circuits; no cookie is minted, no `TrustedDevice` row is written, no `trusted-device.added` event fires. `trustedDeviceId` is always `null` downstream.                                                                 |
+| `auth.totp-trust-devices`  | on      | TOTP-skip policy. When off, `requiresTotpChallenge` always returns `true` for enrolled users; the `TrustedDevice.totpVerifiedAt` stamp is ignored as a skip signal.                                                                                                                                      |
+| `auth.oauth`               | on      | Kill switch for social sign-in. Off ⇒ `auth.oauth.providers` returns `[]` so no buttons render, and `auth.oauth.provision` refuses with `disabled` so a round trip already in flight can't land an account. Which providers are offered when it's on is separately controlled by `AUTH_OAUTH_PROVIDERS`. |
+| `auth.totp-required-admin` | on      | Enforcement flag read by the admin route guard to soft-wall (day 1) / hard-wall (day 7) admins without TOTP enrolled. MVP defines the flag; the guard itself lands with the admin onboarding pass.                                                                                                       |
 
 The first two compose:
 
@@ -201,8 +236,8 @@ The first two compose:
 
 | Event                             | When                                                           | Status                                                                                              |
 | --------------------------------- | -------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| `user.signed-up`                  | every `signUpUser` call                                        | emitted                                                                                             |
-| `user.signed-in`                  | after `signInWithPassword` succeeds                            | emitted (via `emitSignedIn` from the web server action)                                             |
+| `user.signed-up`                  | every `signUpUser` call, and the first `provisionOAuthUser`    | emitted (social signups carry `provider`)                                                           |
+| `user.signed-in`                  | after `signInWithPassword` or the OAuth callback succeeds      | emitted (via `emitSignedIn` from `completeSignIn`)                                                  |
 | `user.signed-out`                 | `signOutAction`                                                | emitted                                                                                             |
 | `user.password-changed`           | password reset / account page password change                  | emitted (via `emitPasswordChanged` from the web server action through `auth.notifyPasswordChanged`) |
 | `user.email-verified`             | `/auth/confirm` successfully verified                          | emitted via `markEmailVerified`                                                                     |
@@ -232,4 +267,9 @@ The first two compose:
 - **180-day stale-device GC.** Background job to auto-revoke devices inactive beyond the window.
 - **Full auth-aesthetics styling.** The current forms are functional-minimum; the [`auth-aesthetics.md`](../../docs/features-planning/phase-1/auth-aesthetics.md) spec (two-column layout, ambient gradient, forced dark palette, polished typography) lands as a later pass.
 - **Active-org selection flow.** `user_metadata.active_organization_id` is the channel; the org switcher UI writes to it.
-- **OAuth / social login, passwordless / magic links, SSO, biometrics.** Not in Phase 1 scope.
+- **Unlinking a connected account.** `/account/security` lists the linked providers read-only. Unlinking is the operation that can lock someone out (drop your only provider with no password set and the account is unreachable), so it needs its own "you would have no way back in" guard rather than riding along with the list.
+- **Linking a provider to an existing session.** Today a provider gets linked only by Supabase's own verified-email matching at sign-in time. An explicit "connect this provider to my account" button from `/account/security` (Supabase's `linkIdentity`) is the natural next step, and it's what the `email-collision` refusal currently tells the user to go and do.
+- **Google and Microsoft (`azure`).** Land as their own follow-up changes stacked on this one ; the shared provisioning path here is provider-agnostic, so each is an `OAUTH_PROVIDERS` entry, a label, a brand mark, and a config stanza.
+- **Sign in with Apple.** Further out: a paid developer account, a client secret that is a JWT needing regeneration every six months, and a name that is only returned on the first authorization. Its own piece of work.
+- **TOTP gate on the email-confirmation path.** `/auth/confirm` still runs its own tail (verify, recognize device, consume invites) rather than `completeSignIn`, so it doesn't challenge TOTP. In practice a just-confirmed signup can't have TOTP enrolled yet ; converging the two paths is a cleanup, not a live hole.
+- **Passwordless / magic links, SSO, biometrics.** Not in Phase 1 scope.

@@ -206,6 +206,14 @@
     }
   },
   "auth": {
+    "oauth": {
+      "continueWith": "Continuer avec {provider}",
+      "starting": "Redirection…",
+      "divider": "ou",
+      "errors": {
+        "start": "Impossible de joindre {provider}. Réessayez."
+      }
+    },
     "signUp": {
       "title": "Créez votre compte",
       "subtitle": "Rejoignez la communauté {appName} en moins d'une minute.",
@@ -251,6 +259,18 @@
         "deletionScheduled": {
           "title": "Suppression planifiée",
           "subtitle": "Votre compte sera supprimé le {date}. Reconnectez-vous à tout moment d'ici-là pour annuler."
+        },
+        "oauthError": {
+          "title": "Connexion impossible",
+          "reasons": {
+            "cancelled": "Vous avez annulé la demande chez le fournisseur. Rien n'a été modifié.",
+            "no-email": "Ce compte fournisseur n'a aucune adresse courriel ; impossible de créer un compte à partir de celui-ci. Inscrivez-vous plutôt avec une adresse courriel.",
+            "email-unverified": "Votre fournisseur n'a pas encore vérifié cette adresse courriel. Vérifiez-la chez lui, puis réessayez.",
+            "email-collision": "Un compte existe déjà pour cette adresse courriel. Connectez-vous avec votre mot de passe, puis liez le fournisseur depuis les paramètres de votre compte.",
+            "disabled": "La connexion sociale est actuellement désactivée. Connectez-vous plutôt avec votre courriel et votre mot de passe.",
+            "exchange-failed": "Le lien de connexion a expiré avant que nous puissions l'utiliser. Réessayez.",
+            "fallback": "Un problème est survenu au retour du fournisseur. Réessayez."
+          }
         }
       }
     },
@@ -1940,7 +1960,15 @@
     "email": {
       "title": "Courriel",
       "subtitle": "L'adresse utilisée pour vous connecter et recevoir nos notifications.",
-      "currentLabel": "Courriel actuel"
+      "currentLabel": "Courriel actuel",
+      "needsPassword": "Définissez un mot de passe ci-dessous avant de changer votre adresse courriel ; le changement se confirme avec votre mot de passe actuel."
+    },
+    "connectedAccounts": {
+      "title": "Comptes liés",
+      "subtitle": "Les façons de vous connecter à ce compte.",
+      "connected": "Lié",
+      "notSet": "Non défini",
+      "password": "Courriel et mot de passe"
     },
     "emailChange": {
       "change": "Modifier le courriel",
@@ -1980,6 +2008,14 @@
       "title": "Mot de passe",
       "subtitle": "Modifier le mot de passe utilisé pour se connecter.",
       "change": "Modifier le mot de passe",
+      "set": {
+        "subtitle": "Vous vous connectez avec un compte lié. Ajoutez un mot de passe pour vous connecter aussi avec votre adresse courriel.",
+        "cta": "Définir un mot de passe",
+        "dialogTitle": "Définir un mot de passe",
+        "dialogSubtitle": "Choisissez un mot de passe pour votre adresse courriel. Vos comptes liés continuent de fonctionner.",
+        "submit": "Définir le mot de passe",
+        "success": "Mot de passe défini."
+      },
       "dialogTitle": "Modifier votre mot de passe",
       "dialogSubtitle": "Saisissez votre mot de passe actuel, puis un nouveau. Vous recevrez un courriel de confirmation après le changement.",
       "labels": {
@@ -1995,6 +2031,7 @@
       "success": "Mot de passe mis à jour.",
       "errors": {
         "invalidCurrentPassword": "Le mot de passe actuel est incorrect.",
+        "alreadySet": "Ce compte a déjà un mot de passe. Utilisez plutôt Modifier le mot de passe.",
         "weakPassword": "Le nouveau mot de passe est trop court.",
         "totpRequired": "Un code à deux facteurs est requis pour modifier le mot de passe.",
         "invalidTotpCode": "Ce code à deux facteurs est invalide ou a expiré.",

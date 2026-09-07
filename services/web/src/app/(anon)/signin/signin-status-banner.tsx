@@ -2,7 +2,24 @@
 
 import { useSearchParams } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
-import { CheckCircle2, Clock } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Clock } from "lucide-react";
+
+// Refusal reasons the /auth/callback handler can bounce back with. Any
+// other value (a provider-specific error code we don't recognise) falls
+// through to the generic message rather than rendering a raw key.
+const OAUTH_ERROR_KEYS = [
+  "cancelled",
+  "no-email",
+  "email-unverified",
+  "email-collision",
+  "disabled",
+  "exchange-failed",
+] as const;
+
+function oauthErrorKey(raw: string | null): string | null {
+  if (!raw) return null;
+  return (OAUTH_ERROR_KEYS as readonly string[]).includes(raw) ? raw : "fallback";
+}
 
 // Date is formatted in the user's app-preference locale (next-intl
 // `useLocale()`), not the runtime / browser default — a French user
@@ -31,6 +48,21 @@ export function SignInStatusBanner() {
   const emailChanged = params.get("emailChanged") === "1";
   const passwordReset = params.get("passwordReset") === "1";
   const deletionScheduledAt = params.get("deletionScheduledAt");
+  const oauthError = oauthErrorKey(params.get("oauthError"));
+
+  // Ranked first : it explains a round trip the user just watched fail,
+  // and the other banners describe flows that completed successfully.
+  if (oauthError) {
+    return (
+      <div className="mb-4 flex items-start gap-3 rounded-lg border border-destructive/40 bg-destructive/5 p-3">
+        <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" aria-hidden />
+        <div className="space-y-0.5">
+          <p className="text-sm font-medium text-destructive">{t("oauthError.title")}</p>
+          <p className="text-xs text-muted-foreground">{t(`oauthError.reasons.${oauthError}`)}</p>
+        </div>
+      </div>
+    );
+  }
 
   if (emailChanged) {
     return (

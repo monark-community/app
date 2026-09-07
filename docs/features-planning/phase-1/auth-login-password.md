@@ -17,7 +17,7 @@ This is the first thing a user actually sees, which means it's also the first th
 
 ## Non-goals
 
-- No OAuth / social login at Phase 1 launch. (Google / GitHub may land in Phase 2 if a concrete ask surfaces.)
+- No OAuth / social login at Phase 1 launch. **Shipped since**: GitHub landed as a follow-on pass ; see [packages/auth/README.md](../../../packages/auth/README.md) § Social sign-in setup. Google and Microsoft follow as their own changes ; Apple is still out.
 - No magic-link-only auth. Passwords stay.
 - No "remember me" nuance beyond Supabase's default session expiry; we cover that in `auth-trusted-devices.md`.
 - No CAPTCHA at launch. Added if abuse patterns emerge.
@@ -200,7 +200,7 @@ The referral module (phase 2) listens to `USER_SIGNED_UP` to attribute; the trus
 
 ## Out of scope
 
-- OAuth / social login (future)
+- OAuth / social login (**since shipped** for GitHub ; Google / Microsoft stacked behind it, Apple still future)
 - Passwordless / magic link (future)
 - SSO for enterprise (future)
 - Biometric / passkey (future; would land alongside trusted-devices work)
