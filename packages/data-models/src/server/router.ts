@@ -1538,7 +1538,7 @@ ${link}
 
 This link is unique to you and can be submitted once.`,
             html: `<p style="margin:0 0 12px 0;font-size:16px;color:#18181b;">You've been invited to fill out <strong>${form.name}</strong> on <strong>${BRANDING.appName}</strong>.</p>
-<p style="margin:0 0 24px 0;"><a href="${link}" style="display:inline-block;padding:12px 22px;background:#F0870C;color:#18181b;font-weight:700;text-decoration:none;border-radius:8px;">Open the form</a></p>
+<p style="margin:0 0 24px 0;"><a href="${link}" style="display:inline-block;padding:12px 22px;background:#18181b;color:#ffffff;font-weight:700;text-decoration:none;border-radius:8px;">Open the form</a></p>
 <p style="margin:0;color:#a1a1aa;font-size:12px;">This link is unique to you and can be submitted once.</p>`,
           }).catch(() => {});
           return serializeFormInvite(invite);

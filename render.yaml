@@ -140,6 +140,13 @@ services:
         sync: false
       - key: INITIAL_ORG_NAME
         sync: false
+      # Brand color for that org — this is what themes the running UI
+      # (buttons, focus rings, sidebar, first chart series). Leave unset
+      # to fall back to BRANDING_PRIMARY. QUOTE the hex in the Render
+      # dashboard : an unquoted leading `#` is read as a comment by
+      # Node's env-file parser and resolves to an empty string.
+      - key: INITIAL_ORG_PRIMARY_COLOR
+        sync: false
       # Error tracking (Sentry). Optional — unset = a complete no-op.
       # SENTRY_ENVIRONMENT tags events so prod + staging are
       # distinguishable in the Sentry UI. See observability.md.
@@ -153,7 +160,10 @@ services:
         sync: false
       # White-label branding is optional and set per deployment via the
       # BRANDING_* vars — add them here as `sync: false` if this deploy
-      # is not "Monark". See white-label.md.
+      # is not "Monark". Three surfaces are NOT env-driven and need a
+      # file edit before launch : the favicon, the three Supabase auth
+      # email templates, and the org logo (uploaded in-app). See
+      # white-label.md.
       - fromGroup: monark-cron-shared
 
   # ----- CRON : account-deletion sweep (production) -------------------------
@@ -274,6 +284,13 @@ services:
       - key: INITIAL_ORG_SLUG
         sync: false
       - key: INITIAL_ORG_NAME
+        sync: false
+      # Brand color for that org — this is what themes the running UI
+      # (buttons, focus rings, sidebar, first chart series). Leave unset
+      # to fall back to BRANDING_PRIMARY. QUOTE the hex in the Render
+      # dashboard : an unquoted leading `#` is read as a comment by
+      # Node's env-file parser and resolves to an empty string.
+      - key: INITIAL_ORG_PRIMARY_COLOR
         sync: false
       - key: SENTRY_DSN
         sync: false

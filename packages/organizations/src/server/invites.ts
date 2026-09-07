@@ -114,7 +114,7 @@ ${signUpUrl}
 This invite expires on ${expiresAt.toISOString().slice(0, 10)}.`,
     html: `${greetingHtml}<p style="margin:0 0 12px 0;font-size:16px;color:#18181b;"><strong>${org.displayName}</strong> has invited you to join <strong>${BRANDING.appName}</strong> as <strong>${role.name}</strong>.</p>
 <p style="margin:0 0 24px 0;color:#3f3f46;">Accept the invite by signing up below. This link expires on ${expiresAt.toISOString().slice(0, 10)}.</p>
-<p style="margin:0 0 24px 0;"><a href="${signUpUrl}" style="display:inline-block;padding:12px 22px;background:#F0870C;color:#18181b;font-weight:700;text-decoration:none;border-radius:8px;">Accept invite</a></p>
+<p style="margin:0 0 24px 0;"><a href="${signUpUrl}" style="display:inline-block;padding:12px 22px;background:#18181b;color:#ffffff;font-weight:700;text-decoration:none;border-radius:8px;">Accept invite</a></p>
 <p style="margin:0;color:#a1a1aa;font-size:12px;">If you weren't expecting this, you can safely ignore the email.</p>`,
   }).catch(() => {
     // Best-effort ; the row is already persisted so the admin can

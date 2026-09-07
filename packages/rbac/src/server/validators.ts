@@ -16,7 +16,7 @@ export function validateColor(color: string | null | undefined): string | null {
   const trimmed = color.trim();
   if (trimmed === "") return null;
   if (!HEX_RE.test(trimmed)) {
-    throw new ValidationError("Color must be a hex code like #F0870C or #fff.");
+    throw new ValidationError("Color must be a hex code like #2563EB or #fff.");
   }
   return trimmed;
 }
