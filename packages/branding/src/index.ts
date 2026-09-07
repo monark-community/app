@@ -63,7 +63,7 @@ export type Branding = {
 // identity via the `BRANDING_*` env vars below (see `.env.example` +
 // docs/technical-documentation/white-label.md). Do NOT hardcode a specific
 // business's name/colors/logo here — that's what the env overrides are for.
-const DEFAULT_BRANDING: Branding = {
+export const DEFAULT_BRANDING: Branding = {
   appName: "App",
   tagline: "A starter application.",
   supportEmail: "support@example.com",
@@ -89,23 +89,73 @@ const DEFAULT_BRANDING: Branding = {
  * surfaces in sync without the deployer having to think about runtime
  * boundaries.
  */
-function resolve<K extends keyof Branding>(key: K, envKey: string): Branding[K] {
-  const env = process.env[envKey] ?? process.env[`NEXT_PUBLIC_${envKey}`] ?? null;
-  if (env && env.length > 0) return env as Branding[K];
+/**
+ * Candidate env values per field, written as **literal**
+ * `process.env.X` member accesses.
+ *
+ * This shape is load-bearing, not stylistic. Next.js makes
+ * `NEXT_PUBLIC_*` variables available to the browser by statically
+ * replacing literal `process.env.NEXT_PUBLIC_FOO` expressions with their
+ * value at build time. A computed lookup — `process.env[someKey]` —
+ * is invisible to that transform: it survives into the client bundle as
+ * a real property read against Next's `process` shim, which carries
+ * nothing, so every field silently fell back to `DEFAULT_BRANDING` in
+ * the browser. Spelling each key out is what actually makes the
+ * `NEXT_PUBLIC_` duplicates work.
+ *
+ * The un-prefixed name is listed first so a server-side read wins ; on
+ * the client it is simply `undefined` (Next only inlines the public
+ * ones, which is also what keeps server-only values out of the bundle).
+ */
+const ENV_CANDIDATES: Record<keyof Branding, ReadonlyArray<string | undefined>> = {
+  appName: [process.env.BRANDING_APP_NAME, process.env.NEXT_PUBLIC_BRANDING_APP_NAME],
+  tagline: [process.env.BRANDING_TAGLINE, process.env.NEXT_PUBLIC_BRANDING_TAGLINE],
+  supportEmail: [
+    process.env.BRANDING_SUPPORT_EMAIL,
+    process.env.NEXT_PUBLIC_BRANDING_SUPPORT_EMAIL,
+  ],
+  totpIssuer: [process.env.BRANDING_TOTP_ISSUER, process.env.NEXT_PUBLIC_BRANDING_TOTP_ISSUER],
+  fromEmail: [process.env.BRANDING_FROM_EMAIL, process.env.NEXT_PUBLIC_BRANDING_FROM_EMAIL],
+  appUrl: [process.env.APP_URL, process.env.NEXT_PUBLIC_APP_URL],
+  brandPrimary: [process.env.BRANDING_PRIMARY, process.env.NEXT_PUBLIC_BRANDING_PRIMARY],
+  brandAccent: [process.env.BRANDING_ACCENT, process.env.NEXT_PUBLIC_BRANDING_ACCENT],
+  logoSrc: [process.env.BRANDING_LOGO_SRC, process.env.NEXT_PUBLIC_BRANDING_LOGO_SRC],
+};
+
+function resolve<K extends keyof Branding>(key: K): Branding[K] {
+  for (const candidate of ENV_CANDIDATES[key]) {
+    // Trim before the emptiness check : Node's `--env-file` parser turns
+    // an unquoted `KEY=#2563EB` into "" (it reads the `#` as a comment),
+    // and a stray-whitespace value is no more usable than a blank one.
+    const value = candidate?.trim();
+    if (value) return value as Branding[K];
+  }
   return DEFAULT_BRANDING[key];
 }
 
 export const BRANDING: Branding = {
-  appName: resolve("appName", "BRANDING_APP_NAME"),
-  tagline: resolve("tagline", "BRANDING_TAGLINE"),
-  supportEmail: resolve("supportEmail", "BRANDING_SUPPORT_EMAIL"),
-  totpIssuer: resolve("totpIssuer", "BRANDING_TOTP_ISSUER"),
-  fromEmail: resolve("fromEmail", "BRANDING_FROM_EMAIL"),
-  appUrl: resolve("appUrl", "APP_URL"),
-  brandPrimary: resolve("brandPrimary", "BRANDING_PRIMARY"),
-  brandAccent: resolve("brandAccent", "BRANDING_ACCENT"),
-  logoSrc: resolve("logoSrc", "BRANDING_LOGO_SRC"),
+  appName: resolve("appName"),
+  tagline: resolve("tagline"),
+  supportEmail: resolve("supportEmail"),
+  totpIssuer: resolve("totpIssuer"),
+  fromEmail: resolve("fromEmail"),
+  appUrl: resolve("appUrl"),
+  brandPrimary: resolve("brandPrimary"),
+  brandAccent: resolve("brandAccent"),
+  logoSrc: resolve("logoSrc"),
 };
+
+/**
+ * True when the deployment actually set this field, rather than falling
+ * through to the neutral default. Lets a consumer distinguish "the
+ * operator chose this" from "nobody configured anything" — the root
+ * layout uses it to decide whether `brandAccent` is a real second brand
+ * colour it must honour, or a placeholder it may replace with the org's
+ * own colour.
+ */
+export function isBrandingConfigured(key: keyof Branding): boolean {
+  return BRANDING[key] !== DEFAULT_BRANDING[key];
+}
 
 /**
  * The subset of branding values that are safe to interpolate into templated

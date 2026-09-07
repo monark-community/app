@@ -1,5 +1,21 @@
 import { z } from "zod";
 
+/**
+ * Treat an empty string as "unset".
+ *
+ * Node's `--env-file` parser strips an unquoted `#` as a comment marker,
+ * so `INITIAL_ORG_PRIMARY_COLOR=#2563EB` (the shape a deployer copies out
+ * of a design tool) resolves to `""` rather than the hex. Without this the
+ * value reaches a `.regex()` that `.optional()` cannot excuse — `""` is a
+ * present string — and the api hard-exits at boot on a variable it does
+ * not actually need. Collapsing `""` to `undefined` keeps a mis-quoted
+ * optional from taking the process down ; the operator gets the documented
+ * fallback instead of a crash.
+ */
+function optionalNonEmpty<T extends z.ZodTypeAny>(inner: T) {
+  return z.preprocess((v) => (v === "" ? undefined : v), inner.optional());
+}
+
 const schema = z.object({
   PORT: z.coerce.number().int().positive().default(4000),
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
@@ -55,17 +71,22 @@ const schema = z.object({
   // a second restart on a healthy install is a no-op. The "external
   // tool / system" the user manages writes these into the deployment
   // environment.
-  INITIAL_ORG_SLUG: z
-    .string()
-    .min(2)
-    .max(60)
-    .regex(/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/, "invalid INITIAL_ORG_SLUG")
-    .optional(),
-  INITIAL_ORG_NAME: z.string().trim().min(1).max(120).optional(),
-  INITIAL_ORG_PRIMARY_COLOR: z
-    .string()
-    .regex(/^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/, "invalid INITIAL_ORG_PRIMARY_COLOR")
-    .optional(),
+  INITIAL_ORG_SLUG: optionalNonEmpty(
+    z
+      .string()
+      .min(2)
+      .max(60)
+      .regex(/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/, "invalid INITIAL_ORG_SLUG"),
+  ),
+  INITIAL_ORG_NAME: optionalNonEmpty(z.string().trim().min(1).max(120)),
+  INITIAL_ORG_PRIMARY_COLOR: optionalNonEmpty(
+    z
+      .string()
+      .regex(
+        /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/,
+        'invalid INITIAL_ORG_PRIMARY_COLOR (hex like "#2563EB" ; quote it in .env — an unquoted leading # is read as a comment)',
+      ),
+  ),
 });
 
 const parsed = schema.safeParse(process.env);

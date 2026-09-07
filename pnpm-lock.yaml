@@ -1081,6 +1081,9 @@ importers:
       '@monark/automation':
         specifier: workspace:*
         version: link:../../packages/automation
+      '@monark/branding':
+        specifier: workspace:*
+        version: link:../../packages/branding
       '@monark/calendar':
         specifier: workspace:*
         version: link:../../packages/calendar

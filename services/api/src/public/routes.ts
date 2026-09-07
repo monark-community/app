@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { BRANDING } from "@monark/branding";
 import type { RouteDescriptor } from "@monark/public-api/server";
 import type { AppCaller } from "./caller";
 
@@ -67,8 +68,7 @@ export const V1_ROUTES: RouteDescriptor<AppCaller>[] = [
     mcp: {
       expose: {
         name: "monark_list_models",
-        description:
-          "List the organization's Data Models. Everything in Monark — projects, tasks, and any custom entity — is a Data Model ; start here to discover what data exists, then use its `key` with the record tools.",
+        description: `List the organization's Data Models. Everything in ${BRANDING.appName} — projects, tasks, and any custom entity — is a Data Model ; start here to discover what data exists, then use its \`key\` with the record tools.`,
       },
     },
     request: { query: listQuery },

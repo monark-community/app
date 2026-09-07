@@ -1,5 +1,5 @@
 {{/*
-  Monark — signup confirmation email.
+  Signup confirmation email.
 
   Branches on user_metadata.locale_preference (set by signUpUser at signup
   and refreshed by updateLocaleAction whenever the user toggles language in
@@ -10,6 +10,14 @@
   email clients). The wordmark is rendered as text + a brand-colour bar
   rather than the SVG logo, since Outlook desktop and parts of Gmail
   don't render SVG reliably.
+
+  White-label: this file ships BRAND-NEUTRAL — no product name, no
+  brand color, and no wordmark. Supabase renders
+  these templates itself and cannot reach the @monark/branding values,
+  so there is no env seam here : a deployment that wants its identity
+  in the auth emails fills the wordmark insertion point in these three
+  files (plus the `#18181b` accent) and the three `subject` lines in supabase/config.toml. See
+  docs/technical-documentation/white-label.md.
 */}}
 <!doctype html>
 <html lang="{{ if eq .Data.locale_preference "fr" }}fr{{ else }}en{{ end }}">
@@ -18,7 +26,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="light dark" />
     <meta name="supported-color-schemes" content="light dark" />
-    <title>{{ if eq .Data.locale_preference "fr" }}Confirmez votre compte Monark{{ else }}Confirm your Monark account{{ end }}</title>
+    <title>{{ if eq .Data.locale_preference "fr" }}Confirmez votre compte{{ else }}Confirm your account{{ end }}</title>
   </head>
   <body style="margin:0;padding:0;background-color:#f4f4f5;font-family:'Nunito Sans','Helvetica Neue',Helvetica,Arial,sans-serif;color:#18181b;">
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f4f4f5;">
@@ -26,22 +34,29 @@
         <td align="center" style="padding:32px 16px;">
           <table role="presentation" width="560" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;width:100%;background-color:#ffffff;border-radius:12px;border:1px solid #e4e4e7;">
             <tr>
-              <td style="background-color:#F0870C;height:4px;line-height:4px;font-size:0;">&nbsp;</td>
+              <td style="background-color:#18181b;height:4px;line-height:4px;font-size:0;">&nbsp;</td>
             </tr>
-            <tr>
-              <td style="padding:28px 32px 8px 32px;">
-                <img src="{{ .SiteURL }}/monark-logo.svg" alt="Monark" width="40" height="40" style="display:block;border:0;outline:none;text-decoration:none;width:40px;height:40px;" />
-                <span style="margin-top:8px;display:inline-block;font-size:22px;font-weight:800;color:#F0870C;letter-spacing:-0.02em;font-family:'Nunito Sans','Helvetica Neue',Helvetica,Arial,sans-serif;">Monark</span>
-              </td>
-            </tr>
+            <!--
+              White-label insertion point : your wordmark goes here.
+              Ships empty so no deployment sends mail signed by another
+              company's name. Prefer TEXT over an image — Outlook desktop
+              and parts of Gmail don't render SVG, and remote images are
+              blocked by default in most clients :
+
+              <tr>
+                <td style="padding:28px 32px 0 32px;">
+                  <span style="display:inline-block;font-size:22px;font-weight:800;color:#18181b;letter-spacing:-0.02em;font-family:'Nunito Sans','Helvetica Neue',Helvetica,Arial,sans-serif;">Your product</span>
+                </td>
+              </tr>
+            -->
             <tr>
               <td style="padding:8px 32px 0 32px;font-family:'Nunito Sans','Helvetica Neue',Helvetica,Arial,sans-serif;color:#18181b;font-size:16px;line-height:1.6;">
                 {{ if eq .Data.locale_preference "fr" }}
                 <h1 style="margin:0 0 16px 0;font-size:22px;font-weight:700;color:#18181b;letter-spacing:-0.01em;">Confirmez votre adresse e-mail</h1>
-                <p style="margin:0 0 24px 0;color:#3f3f46;">{{ if .Data.display_name }}Bonjour {{ .Data.display_name }},<br /><br />{{ end }}Merci d'avoir créé un compte Monark. Cliquez sur le bouton ci-dessous pour vérifier votre adresse e-mail.</p>
+                <p style="margin:0 0 24px 0;color:#3f3f46;">{{ if .Data.display_name }}Bonjour {{ .Data.display_name }},<br /><br />{{ end }}Merci d'avoir créé votre compte. Cliquez sur le bouton ci-dessous pour vérifier votre adresse e-mail.</p>
                 {{ else }}
                 <h1 style="margin:0 0 16px 0;font-size:22px;font-weight:700;color:#18181b;letter-spacing:-0.01em;">Confirm your email address</h1>
-                <p style="margin:0 0 24px 0;color:#3f3f46;">{{ if .Data.display_name }}Hi {{ .Data.display_name }},<br /><br />{{ end }}Thanks for creating a Monark account. Click the button below to verify your email.</p>
+                <p style="margin:0 0 24px 0;color:#3f3f46;">{{ if .Data.display_name }}Hi {{ .Data.display_name }},<br /><br />{{ end }}Thanks for creating your account. Click the button below to verify your email.</p>
                 {{ end }}
               </td>
             </tr>
@@ -49,8 +64,8 @@
               <td align="center" style="padding:0 32px 8px 32px;">
                 <table role="presentation" cellpadding="0" cellspacing="0" border="0">
                   <tr>
-                    <td align="center" bgcolor="#F0870C" style="border-radius:8px;">
-                      <a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=signup" target="_blank" style="display:inline-block;padding:14px 28px;font-family:'Nunito Sans','Helvetica Neue',Helvetica,Arial,sans-serif;font-size:15px;font-weight:700;color:#18181b;text-decoration:none;border-radius:8px;">{{ if eq .Data.locale_preference "fr" }}Vérifier mon adresse{{ else }}Verify my email{{ end }}</a>
+                    <td align="center" bgcolor="#18181b" style="border-radius:8px;">
+                      <a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=signup" target="_blank" style="display:inline-block;padding:14px 28px;font-family:'Nunito Sans','Helvetica Neue',Helvetica,Arial,sans-serif;font-size:15px;font-weight:700;color:#ffffff;text-decoration:none;border-radius:8px;">{{ if eq .Data.locale_preference "fr" }}Vérifier mon adresse{{ else }}Verify my email{{ end }}</a>
                     </td>
                   </tr>
                 </table>
@@ -76,14 +91,14 @@
                   {{ if eq .Data.locale_preference "fr" }}
                   Si vous n'êtes pas à l'origine de cette inscription, vous pouvez ignorer ce message en toute sécurité.
                   {{ else }}
-                  If you didn't try to sign up for Monark, you can safely ignore this email.
+                  If you didn't try to sign up, you can safely ignore this email.
                   {{ end }}
                 </p>
               </td>
             </tr>
           </table>
           <p style="margin:24px 0 0 0;font-family:'Nunito Sans','Helvetica Neue',Helvetica,Arial,sans-serif;color:#a1a1aa;font-size:12px;">
-            © Monark
+            {{ .SiteURL }}
           </p>
         </td>
       </tr>

@@ -1,5 +1,5 @@
 {{/*
-  Monark — email change confirmation.
+  Email change confirmation.
 
   Supabase sends this template to BOTH the old and new addresses when
   `double_confirm_changes = true` (config.toml [auth.email]). Each recipient
@@ -10,6 +10,14 @@
   for the link is /auth/confirm?type=email_change ; the route mirrors the
   rotation into our DB and forces a sign-out so the user re-authenticates
   with the new address.
+
+  White-label: this file ships BRAND-NEUTRAL — no product name, no
+  brand color, and no wordmark. Supabase renders
+  these templates itself and cannot reach the @monark/branding values,
+  so there is no env seam here : a deployment that wants its identity
+  in the auth emails fills the wordmark insertion point in these three
+  files (plus the `#18181b` accent) and the three `subject` lines in supabase/config.toml. See
+  docs/technical-documentation/white-label.md.
 */}}
 <!doctype html>
 <html lang="{{ if eq .Data.locale_preference "fr" }}fr{{ else }}en{{ end }}">
@@ -26,24 +34,31 @@
         <td align="center" style="padding:32px 16px;">
           <table role="presentation" width="560" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;width:100%;background-color:#ffffff;border-radius:12px;border:1px solid #e4e4e7;">
             <tr>
-              <td style="background-color:#F0870C;height:4px;line-height:4px;font-size:0;">&nbsp;</td>
+              <td style="background-color:#18181b;height:4px;line-height:4px;font-size:0;">&nbsp;</td>
             </tr>
-            <tr>
-              <td style="padding:28px 32px 8px 32px;">
-                <img src="{{ .SiteURL }}/monark-logo.svg" alt="Monark" width="40" height="40" style="display:block;border:0;outline:none;text-decoration:none;width:40px;height:40px;" />
-                <span style="margin-top:8px;display:inline-block;font-size:22px;font-weight:800;color:#F0870C;letter-spacing:-0.02em;font-family:'Nunito Sans','Helvetica Neue',Helvetica,Arial,sans-serif;">Monark</span>
-              </td>
-            </tr>
+            <!--
+              White-label insertion point : your wordmark goes here.
+              Ships empty so no deployment sends mail signed by another
+              company's name. Prefer TEXT over an image — Outlook desktop
+              and parts of Gmail don't render SVG, and remote images are
+              blocked by default in most clients :
+
+              <tr>
+                <td style="padding:28px 32px 0 32px;">
+                  <span style="display:inline-block;font-size:22px;font-weight:800;color:#18181b;letter-spacing:-0.02em;font-family:'Nunito Sans','Helvetica Neue',Helvetica,Arial,sans-serif;">Your product</span>
+                </td>
+              </tr>
+            -->
             <tr>
               <td style="padding:8px 32px 0 32px;font-family:'Nunito Sans','Helvetica Neue',Helvetica,Arial,sans-serif;color:#18181b;font-size:16px;line-height:1.6;">
                 {{ if eq .Data.locale_preference "fr" }}
                 <h1 style="margin:0 0 16px 0;font-size:22px;font-weight:700;color:#18181b;letter-spacing:-0.01em;">Confirmez votre nouvelle adresse e-mail</h1>
-                <p style="margin:0 0 16px 0;color:#3f3f46;">{{ if .Data.display_name }}Bonjour {{ .Data.display_name }},<br /><br />{{ end }}Vous avez demandé à changer l'adresse e-mail liée à votre compte Monark.</p>
+                <p style="margin:0 0 16px 0;color:#3f3f46;">{{ if .Data.display_name }}Bonjour {{ .Data.display_name }},<br /><br />{{ end }}Vous avez demandé à changer l'adresse e-mail liée à votre compte.</p>
                 <p style="margin:0 0 24px 0;color:#3f3f46;">Adresse actuelle&nbsp;: <strong style="color:#18181b;">{{ .Email }}</strong><br />Nouvelle adresse&nbsp;: <strong style="color:#18181b;">{{ .NewEmail }}</strong></p>
                 <p style="margin:0 0 24px 0;color:#3f3f46;">Pour finaliser le changement, ce lien doit être confirmé depuis chacune des deux adresses.</p>
                 {{ else }}
                 <h1 style="margin:0 0 16px 0;font-size:22px;font-weight:700;color:#18181b;letter-spacing:-0.01em;">Confirm your new email address</h1>
-                <p style="margin:0 0 16px 0;color:#3f3f46;">{{ if .Data.display_name }}Hi {{ .Data.display_name }},<br /><br />{{ end }}You requested to change the email on your Monark account.</p>
+                <p style="margin:0 0 16px 0;color:#3f3f46;">{{ if .Data.display_name }}Hi {{ .Data.display_name }},<br /><br />{{ end }}You requested to change the email on your account.</p>
                 <p style="margin:0 0 24px 0;color:#3f3f46;">Current address: <strong style="color:#18181b;">{{ .Email }}</strong><br />New address: <strong style="color:#18181b;">{{ .NewEmail }}</strong></p>
                 <p style="margin:0 0 24px 0;color:#3f3f46;">To complete the change, this link must be confirmed from both addresses.</p>
                 {{ end }}
@@ -53,8 +68,8 @@
               <td align="center" style="padding:0 32px 8px 32px;">
                 <table role="presentation" cellpadding="0" cellspacing="0" border="0">
                   <tr>
-                    <td align="center" bgcolor="#F0870C" style="border-radius:8px;">
-                      <a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=email_change" target="_blank" style="display:inline-block;padding:14px 28px;font-family:'Nunito Sans','Helvetica Neue',Helvetica,Arial,sans-serif;font-size:15px;font-weight:700;color:#18181b;text-decoration:none;border-radius:8px;">{{ if eq .Data.locale_preference "fr" }}Confirmer le changement{{ else }}Confirm the change{{ end }}</a>
+                    <td align="center" bgcolor="#18181b" style="border-radius:8px;">
+                      <a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=email_change" target="_blank" style="display:inline-block;padding:14px 28px;font-family:'Nunito Sans','Helvetica Neue',Helvetica,Arial,sans-serif;font-size:15px;font-weight:700;color:#ffffff;text-decoration:none;border-radius:8px;">{{ if eq .Data.locale_preference "fr" }}Confirmer le changement{{ else }}Confirm the change{{ end }}</a>
                     </td>
                   </tr>
                 </table>
@@ -87,7 +102,7 @@
             </tr>
           </table>
           <p style="margin:24px 0 0 0;font-family:'Nunito Sans','Helvetica Neue',Helvetica,Arial,sans-serif;color:#a1a1aa;font-size:12px;">
-            © Monark
+            {{ .SiteURL }}
           </p>
         </td>
       </tr>

@@ -340,7 +340,7 @@ export function RoleEditor(
               id="role-color"
               value={color}
               onChange={setColor}
-              placeholder="#F0870C"
+              placeholder="#2563EB"
               aria-label={t("colorLabel")}
             />
             <p className="text-xs text-muted-foreground">{t("colorHint")}</p>

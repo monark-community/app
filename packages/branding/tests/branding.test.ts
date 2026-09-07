@@ -1,5 +1,11 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { BRANDING, brandingTemplateVars } from "../src/index";
+import {
+  BRANDING,
+  brandingTemplateVars,
+  DEFAULT_BRANDING,
+  isBrandingConfigured,
+} from "../src/index";
 
 describe("branding/BRANDING", () => {
   it("declares every required field", () => {
@@ -72,5 +78,46 @@ describe("branding/brandingTemplateVars", () => {
     const b = brandingTemplateVars();
     expect(a).not.toBe(b);
     expect(a).toEqual(b);
+  });
+});
+
+describe("branding/env resolution", () => {
+  it("reads every NEXT_PUBLIC_ duplicate through a literal process.env access", () => {
+    // Next.js makes NEXT_PUBLIC_* available to the browser by statically
+    // replacing LITERAL `process.env.NEXT_PUBLIC_FOO` expressions at build
+    // time. A computed `process.env[key]` lookup is invisible to that
+    // transform and evaluates to undefined in the bundle, which silently
+    // falls every field back to DEFAULT_BRANDING on the client.
+    //
+    // Guard the shape rather than the behaviour : the failure is invisible
+    // at runtime on the server (where computed access works fine) and only
+    // shows up in a browser, so a unit test can't observe it directly.
+    const source = readFileSync(new URL("../src/index.ts", import.meta.url), "utf8");
+    // Strip comments first — the block comment above the resolver spells
+    // out `process.env[someKey]` as the thing NOT to do.
+    const code = source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
+
+    expect(/process\.env\s*\[/.test(code)).toBe(false);
+
+    for (const key of [
+      "NEXT_PUBLIC_BRANDING_APP_NAME",
+      "NEXT_PUBLIC_BRANDING_TAGLINE",
+      "NEXT_PUBLIC_BRANDING_SUPPORT_EMAIL",
+      "NEXT_PUBLIC_BRANDING_TOTP_ISSUER",
+      "NEXT_PUBLIC_BRANDING_FROM_EMAIL",
+      "NEXT_PUBLIC_APP_URL",
+      "NEXT_PUBLIC_BRANDING_PRIMARY",
+      "NEXT_PUBLIC_BRANDING_ACCENT",
+      "NEXT_PUBLIC_BRANDING_LOGO_SRC",
+    ]) {
+      expect(code).toContain(`process.env.${key}`);
+    }
+  });
+
+  it("reports whether a field was configured or fell back to the default", () => {
+    // Nothing is set in the test environment, so every field is a fallback.
+    for (const key of Object.keys(DEFAULT_BRANDING) as (keyof typeof DEFAULT_BRANDING)[]) {
+      expect(isBrandingConfigured(key)).toBe(BRANDING[key] !== DEFAULT_BRANDING[key]);
+    }
   });
 });

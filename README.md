@@ -64,7 +64,9 @@ Requires :
 pnpm bootstrap
 ```
 
-This runs : Node + pnpm + Docker preflight → copies `.env.example` → `.env` in every service that ships one (never overwrites operator-set values) → `pnpm install --frozen-lockfile` → `supabase start` → `pnpm db:migrate`. Idempotent ; safe to re-run on a healthy install.
+This runs : Node + pnpm + Docker preflight → copies `.env.example` → `.env` in every service that ships one (never overwrites operator-set values) → `pnpm install --frozen-lockfile` → `supabase start` → wires the copied `.env` files to the stack that just started (DB URL + Supabase keys read back from `supabase status` ; the three at-rest dev keys generated locally) → `pnpm db:migrate`. Idempotent ; safe to re-run on a healthy install, and it only ever fills values that are still blank.
+
+After it finishes, `pnpm dev` works. The values it can't know — SMTP credentials, a Sentry DSN, your [branding](docs/technical-documentation/white-label.md) — stay blank and fall back to documented defaults ; each `.env.example` describes them inline.
 
 If Docker isn't available and you want to bring your own Postgres :
 

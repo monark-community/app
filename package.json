@@ -9,7 +9,7 @@
     "node": ">=22"
   },
   "scripts": {
-    "bootstrap": "tsx tools/bootstrap.ts",
+    "bootstrap": "node --experimental-strip-types --no-warnings tools/bootstrap.ts",
     "prepare": "simple-git-hooks",
     "dev": "turbo run dev",
     "dev:tools": "tsx tools/open-tool.ts",

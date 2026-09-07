@@ -1089,7 +1089,7 @@
         "cancel": "Annuler",
         "saved": "Enregistré.",
         "saveError": "Impossible d'enregistrer les modifications.",
-        "invalidColor": "La couleur doit être un code hexadécimal comme #F0870C.",
+        "invalidColor": "La couleur doit être un code hexadécimal comme #2563EB.",
         "labels": {
           "displayName": "Nom affiché",
           "primaryColor": "Couleur de marque principale"
@@ -1097,7 +1097,7 @@
         "placeholders": {
           "displayName": "Le nom affiché de l'organisation"
         },
-        "primaryColorHint": "Code hexadécimal comme #F0870C. Laissez vide pour utiliser la couleur par défaut.",
+        "primaryColorHint": "Code hexadécimal comme #2563EB. Laissez vide pour utiliser la couleur de marque du déploiement.",
         "logoHint": "Recadrage carré, max 2 Mo. JPEG, PNG ou WebP.",
         "logoUploadAria": "Téléverser un logo d'organisation",
         "logoEditAria": "Changer le logo de l'organisation",
@@ -1161,7 +1161,7 @@
         "descriptionLabel": "Description",
         "descriptionPlaceholder": "Apparaît dans la liste des rôles.",
         "colorLabel": "Couleur",
-        "colorHint": "Code hex optionnel (ex. #F0870C) utilisé pour la pastille du rôle.",
+        "colorHint": "Code hex optionnel (ex. #2563EB) utilisé pour la pastille du rôle.",
         "identitySectionTitle": "Identité",
         "permissionsSectionSubtitle": "Cochez l'en-tête d'une catégorie pour accorder toutes ses permissions.",
         "permissionsLabel": "Permissions",
