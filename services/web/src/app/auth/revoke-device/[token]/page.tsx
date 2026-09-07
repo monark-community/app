@@ -22,12 +22,7 @@ export default async function RevokeDevicePage({ params }: Props) {
   const { token } = await params;
   const t = await getTranslations("auth.revokeDevice");
   return (
-    <AuthScreen>
-      <div className="mb-8 flex flex-col items-center text-center">
-        <BrandedAppLogo size={56} className="mb-4" />
-        <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
-        <p className="mt-1 text-sm text-muted-foreground">{t("subtitle")}</p>
-      </div>
+    <AuthScreen brand={<BrandedAppLogo size={36} />} title={t("title")} subtitle={t("subtitle")}>
       <RevokeDeviceForm token={token} />
     </AuthScreen>
   );

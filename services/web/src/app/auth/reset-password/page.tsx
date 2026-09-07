@@ -20,12 +20,11 @@ export default async function ResetPasswordPage() {
 
   if (error || !data.user) {
     return (
-      <AuthScreen>
-        <div className="mb-8 flex flex-col items-center text-center">
-          <BrandedAppLogo size={56} className="mb-4" />
-          <h1 className="text-2xl font-semibold tracking-tight">{t("expiredTitle")}</h1>
-          <p className="mt-1 text-sm text-muted-foreground">{t("expiredSubtitle")}</p>
-        </div>
+      <AuthScreen
+        brand={<BrandedAppLogo size={36} />}
+        title={t("expiredTitle")}
+        subtitle={t("expiredSubtitle")}
+      >
         <Button asChild variant="outline" className="w-full">
           <Link href="/forgot-password">{t("requestAgain")}</Link>
         </Button>
@@ -39,14 +38,11 @@ export default async function ResetPasswordPage() {
   if (!data.user.email) redirect("/account");
 
   return (
-    <AuthScreen>
-      <div className="mb-8 flex flex-col items-center text-center">
-        <BrandedAppLogo size={56} className="mb-4" />
-        <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {t("subtitle", { email: data.user.email })}
-        </p>
-      </div>
+    <AuthScreen
+      brand={<BrandedAppLogo size={36} />}
+      title={t("title")}
+      subtitle={t("subtitle", { email: data.user.email })}
+    >
       <ResetPasswordForm email={data.user.email} />
     </AuthScreen>
   );

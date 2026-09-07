@@ -3,7 +3,6 @@
 import { useState, useTransition, type FormEvent } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import {
   InputOTP,
   InputOTPGroup,
@@ -65,70 +64,66 @@ export function CheckEmailActions({ email }: { email: string | null }) {
         : null;
 
   return (
-    <Card className="shadow-none">
-      <CardContent className="flex flex-col gap-5 pt-6">
-        <form onSubmit={onVerify} className="flex flex-col items-center gap-3">
-          <p className="text-center text-xs uppercase tracking-wider text-muted-foreground">
-            {t("otpPrompt")}
+    <>
+      <form onSubmit={onVerify} className="flex flex-col items-center gap-3">
+        <p className="text-center text-xs uppercase tracking-wider text-muted-foreground">
+          {t("otpPrompt")}
+        </p>
+        <InputOTP
+          maxLength={6}
+          value={otp}
+          onChange={(value) => setOtp(value)}
+          autoComplete="one-time-code"
+          inputMode="numeric"
+        >
+          <InputOTPGroup>
+            <InputOTPSlot index={0} />
+            <InputOTPSlot index={1} />
+            <InputOTPSlot index={2} />
+          </InputOTPGroup>
+          <InputOTPSeparator />
+          <InputOTPGroup>
+            <InputOTPSlot index={3} />
+            <InputOTPSlot index={4} />
+            <InputOTPSlot index={5} />
+          </InputOTPGroup>
+        </InputOTP>
+        <Button
+          type="submit"
+          disabled={isVerifying || otp.length !== 6 || !email}
+          className="w-full"
+        >
+          {isVerifying ? t("verifying") : t("verify")}
+        </Button>
+        {otpErrorCode && <p className="text-sm text-destructive">{t(`errors.${otpErrorCode}`)}</p>}
+      </form>
+
+      <div className="flex items-center gap-3">
+        <Separator className="flex-1" />
+        <span className="text-xs uppercase tracking-wider text-muted-foreground">{t("or")}</span>
+        <Separator className="flex-1" />
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={onResend}
+          disabled={isResending || !email}
+          className="w-full"
+        >
+          {isResending ? t("resending") : t("resend")}
+        </Button>
+        {resendMessage && (
+          <p
+            className={
+              resendMessage.tone === "error" ? "text-sm text-destructive" : "text-sm text-primary"
+            }
+          >
+            {resendMessage.text}
           </p>
-          <InputOTP
-            maxLength={6}
-            value={otp}
-            onChange={(value) => setOtp(value)}
-            autoComplete="one-time-code"
-            inputMode="numeric"
-          >
-            <InputOTPGroup>
-              <InputOTPSlot index={0} />
-              <InputOTPSlot index={1} />
-              <InputOTPSlot index={2} />
-            </InputOTPGroup>
-            <InputOTPSeparator />
-            <InputOTPGroup>
-              <InputOTPSlot index={3} />
-              <InputOTPSlot index={4} />
-              <InputOTPSlot index={5} />
-            </InputOTPGroup>
-          </InputOTP>
-          <Button
-            type="submit"
-            disabled={isVerifying || otp.length !== 6 || !email}
-            className="w-full"
-          >
-            {isVerifying ? t("verifying") : t("verify")}
-          </Button>
-          {otpErrorCode && (
-            <p className="text-sm text-destructive">{t(`errors.${otpErrorCode}`)}</p>
-          )}
-        </form>
-
-        <div className="flex items-center gap-3">
-          <Separator className="flex-1" />
-          <span className="text-xs uppercase tracking-wider text-muted-foreground">{t("or")}</span>
-          <Separator className="flex-1" />
-        </div>
-
-        <div className="flex flex-col gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={onResend}
-            disabled={isResending || !email}
-            className="w-full"
-          >
-            {isResending ? t("resending") : t("resend")}
-          </Button>
-          {resendMessage && (
-            <p
-              className={
-                resendMessage.tone === "error" ? "text-sm text-destructive" : "text-sm text-primary"
-              }
-            >
-              {resendMessage.text}
-            </p>
-          )}
-        </div>
-      </CardContent>
-    </Card>
+        )}
+      </div>
+    </>
   );
 }

@@ -14,27 +14,28 @@ export default async function TotpChallengePage() {
   }
   const t = await getTranslations("auth.totpChallenge");
   return (
-    <AuthScreen>
-      <div className="mb-8 flex flex-col items-center text-center">
-        <BrandedAppLogo size={56} className="mb-4" />
-        <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
-        <p className="mt-1 text-sm text-muted-foreground">{t("subtitle")}</p>
-      </div>
-      <TotpForm />
-      <form
-        action={async () => {
-          "use server";
-          const { signOutAction } = await import("../actions");
-          await signOutAction("local");
-        }}
-      >
-        <button
-          type="submit"
-          className="mt-6 w-full cursor-pointer text-center text-sm text-muted-foreground hover:underline"
+    <AuthScreen
+      brand={<BrandedAppLogo size={36} />}
+      title={t("title")}
+      subtitle={t("subtitle")}
+      footer={
+        <form
+          action={async () => {
+            "use server";
+            const { signOutAction } = await import("../actions");
+            await signOutAction("local");
+          }}
         >
-          {t("cancel")}
-        </button>
-      </form>
+          <button
+            type="submit"
+            className="mt-6 w-full cursor-pointer text-center text-sm text-muted-foreground hover:underline"
+          >
+            {t("cancel")}
+          </button>
+        </form>
+      }
+    >
+      <TotpForm />
     </AuthScreen>
   );
 }
