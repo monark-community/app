@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { rewriteForCurrentHost } from "@/lib/dev-host-rewrite";
+import { rewriteForCurrentHost, swapLoopbackHost } from "@/lib/dev-host-rewrite";
 
 // The LAN-dev "swap loopback for the current host" helper. Branches: server-
 // side no-op, unparseable input, non-loopback (production) no-op, browser also
@@ -42,5 +42,44 @@ describe("rewriteForCurrentHost", () => {
     expect(rewriteForCurrentHost("http://localhost:4000")).toBe("http://10.0.0.42:4000");
     expect(rewriteForCurrentHost("http://127.0.0.1:54321")).toBe("http://10.0.0.42:54321");
     expect(info).toHaveBeenCalled();
+  });
+});
+
+// The pure core both the browser-side helper above and the server-side
+// `rewriteForRequestHost` delegate to. Tested directly because the server
+// twin feeds it a value derived from the request `Host` header, and the
+// loopback gate is what stops a spoofed header relocating a production URL.
+describe("swapLoopbackHost", () => {
+  it("relocates a loopback URL onto the host the user is actually on", () => {
+    expect(
+      swapLoopbackHost("http://127.0.0.1:54321/storage/v1/object/public/a.webp", "10.0.0.42"),
+    ).toBe("http://10.0.0.42:54321/storage/v1/object/public/a.webp");
+  });
+
+  it("preserves port, protocol, path and query", () => {
+    expect(swapLoopbackHost("http://localhost:54321/o/a.webp?v=123", "10.0.0.42")).toBe(
+      "http://10.0.0.42:54321/o/a.webp?v=123",
+    );
+  });
+
+  it("leaves a non-loopback URL alone even when asked to move it", () => {
+    // The production guard : a spoofed Host header must not be able to
+    // relocate an asset URL that points at a real origin.
+    expect(swapLoopbackHost("https://xyz.supabase.co/storage/a.webp", "evil.example")).toBe(
+      "https://xyz.supabase.co/storage/a.webp",
+    );
+  });
+
+  it("is a no-op when the user is also on loopback", () => {
+    expect(swapLoopbackHost("http://127.0.0.1:54321/a.webp", "localhost")).toBe(
+      "http://127.0.0.1:54321/a.webp",
+    );
+  });
+
+  it("is a no-op when the current host is empty or the input isn't a URL", () => {
+    expect(swapLoopbackHost("http://127.0.0.1:54321/a.webp", "")).toBe(
+      "http://127.0.0.1:54321/a.webp",
+    );
+    expect(swapLoopbackHost("not a url", "10.0.0.42")).toBe("not a url");
   });
 });

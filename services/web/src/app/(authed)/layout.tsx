@@ -8,6 +8,7 @@ import { GlobalSearchProvider } from "@/components/global-search";
 import { NavRail } from "@/components/nav-rail";
 import { RecoveryCodeReminder } from "@/components/recovery-code-reminder";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { rewriteForRequestHost } from "@/lib/request-host-rewrite";
 import { createServerTrpcClient } from "@/lib/trpc-server";
 import { isCurrentDeviceTrusted } from "@/lib/trusted-device-cookie";
 
@@ -124,7 +125,11 @@ export default async function AuthedLayout({ children }: { children: ReactNode }
     .organizations.bootstrapStatus.query()
     .catch(() => null);
   const brandedLogoData: BrandedAppLogoData = {
-    singletonLogoUrl: brandStatus?.singletonLogoUrl ?? null,
+    // Host-rewritten for the same reason as the pre-auth brand mark :
+    // this is server-rendered and handed to a client component as a
+    // prop, so nothing corrects a loopback URL later. See
+    // lib/request-host-rewrite.ts.
+    singletonLogoUrl: await rewriteForRequestHost(brandStatus?.singletonLogoUrl ?? null),
     singletonDisplayName: brandStatus?.singletonDisplayName ?? null,
     isSingleTenantBootstrapped:
       brandStatus?.mode === "single" && Boolean(brandStatus?.bootstrapped),

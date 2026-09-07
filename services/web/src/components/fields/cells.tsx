@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { Check, Link2, Mail, Minus, Paperclip } from "lucide-react";
 import { blocksToText } from "@monark/common/blocks";
 import { Badge } from "@/components/ui/badge";
+import { rewriteForCurrentHost } from "@/lib/dev-host-rewrite";
 import { cn } from "@/lib/utils";
 import { FieldAvatar } from "./field-avatar";
 import { htmlToText } from "./rich-text";
@@ -220,7 +221,16 @@ export function renderFieldValue(def: FieldDef, value: unknown, labels: CellLabe
           items={list.map((o) => ({
             key: o.id,
             label: o.label,
-            avatar: def.avatars ? { label: o.label, src: o.avatarUrl } : undefined,
+            // Host-rewritten so a relation avatar still resolves when the
+            // app is opened from another device on the LAN ; the stored
+            // URL is absolute against the (loopback, in dev) storage
+            // origin. No-op in production. See lib/dev-host-rewrite.ts.
+            avatar: def.avatars
+              ? {
+                  label: o.label,
+                  src: o.avatarUrl ? rewriteForCurrentHost(o.avatarUrl) : o.avatarUrl,
+                }
+              : undefined,
           }))}
         />
       );
