@@ -13,10 +13,11 @@ The guide is grouped below ; each page is structured top-to-bottom in the order 
 - **[Automations](automations.md)** ; building a flow (triggers, actions, wiring), running and testing it, run history + logs, and what a flow is allowed to do.
 - **[Using values in an automation](automation-variables.md)** ; the companion to the above : how a step reuses values from the trigger, earlier steps, and workflow variables (the variable picker, the value/variable toggle, reference names, the Set Variable step).
 - **[Using the public API](public-api.md)** ; for developers integrating with Monark (where the feature is enabled). Covers creating an API key (full or limited to a subset of your permissions), authenticating, the `/api/v1` endpoints + OpenAPI spec, rate limits, errors, and service accounts for shared integrations.
+- **[Achievements](achievements.md)** ; the badges your organization awards for using the app (where the feature is enabled) : where to find them, how the gallery reads, and how a badge gets awarded.
 
 ## Admin
 
-- **[Admin section](admin.md)** ; for operators and admins of an organization. Covers the `/admin` routes : managing users + invites, editing organizations, defining roles + permissions, webhooks, Data Models, Files, Secrets, service accounts, and what only system administrators can do.
+- **[Admin section](admin.md)** ; for operators and admins of an organization. Covers the `/admin` routes : managing users + invites, editing organizations, defining roles + permissions, webhooks, automation integrations, Data Models, Files, Secrets, service accounts, achievements, and what only system administrators can do.
 
 ## Extensions
 

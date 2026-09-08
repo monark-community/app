@@ -296,6 +296,20 @@ The list page shows every Data Model in the org ; **New model** creates one (nam
 
 Two layers. **Model-level** : each model auto-registers per-model record permissions (read / write / delete) that surface in the role editor, so a role can be granted just one model's records. **Record-level** : an individual record can be restricted to specific roles (a record with no restriction is visible to everyone who can access the model ; a restricted record is invisible (a 404) to others). Data admins (`data-models.manage-schema`, which built-in admins hold) bypass the record layer.
 
+### Public forms
+
+Where the `data-models.public-forms` flag is on, a model's editor grows a **Public forms** section : share a link so people who don't have an account can submit records to that model, without exposing the model itself.
+
+Creating a form asks for :
+
+- **Who can submit.** _Anyone with the link_ (one shareable URL, rate-limited) or _invited people only_ (each recipient gets a unique link and can submit once). Invited recipients are managed from the form's card.
+- **Which fields go on the form.** Only the fields you pick are shown and accepted ; everything else on the model stays private. Required fields have to be included.
+- Optional **intro** and **thank-you** text.
+
+A form can also publish a **public board** : a searchable, read-only list of approved entries, which is what turns this into a feature-request or bug-report inbox rather than a write-only form. You choose who can browse it (anyone with the link, or invited people only) and which fields are visible there ; the entry title always is. Two engagement toggles sit alongside it : **voting** (upvotes, with a top-sorted board) and **discussions** (comments, posted immediately, with admins able to hide or delete them).
+
+Deleting a form kills its link and any outstanding invites ; records already submitted through it are kept.
+
 ## Files
 
 `/admin/files`. Manage the org's uploaded files. Files are stored via a signed-upload flow (the server never handles the bytes) into private buckets ; a Data Model `FILE` / `ATTACHMENTS` field is the most common source. The page lists the org's files with size + type, offers a short-lived signed download link, and lets you remove a file (object deleted + row soft-deleted). Gated by the `files.enabled` flag ; actions gate on the `files.*` permissions.
