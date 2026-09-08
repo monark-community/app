@@ -127,7 +127,7 @@ describe("<TotpOnboardingPrompt>", () => {
 
     await user.click(screen.getByRole("button", { name: /set up two-factor/i }));
 
-    expect(mockPush).toHaveBeenCalledWith("/account/security");
+    expect(mockPush).toHaveBeenCalledWith("/account/security?enroll=totp");
     // Cache-only suppression : the modal goes away for this session, but
     // nothing is written, so an abandoned enrollment gets asked again.
     expect(cache).toEqual({ shouldPrompt: false });

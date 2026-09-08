@@ -81,7 +81,12 @@ export function TotpOnboardingPrompt() {
     // anyway, via `isTotpActive`.
     suppress();
     startNavigation(() => {
-      router.push("/account/security");
+      // `?enroll=totp` opens the enrollment wizard on arrival. Landing on
+      // the page and asking the user to find the button again is a second
+      // decision to make after they already said yes here ; the security
+      // page consumes the param and strips it so a refresh or a shared URL
+      // doesn't reopen the dialog.
+      router.push("/account/security?enroll=totp");
     });
   }
 
