@@ -51,3 +51,5 @@ coverage/
 # Supabase local state
 supabase/.branches/
 supabase/.temp/
+# agentkit: the operator's local overnight task list
+AGENT-QUEUE.md
