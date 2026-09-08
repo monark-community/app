@@ -29,6 +29,7 @@ Optional modules : each keeps its user guide **with the module** (so removing th
 
 ## What's _not_ documented here
 
+- Operator setup ; the first organization is provisioned from the deployment's configuration, not through the app. See [white-label.md](../technical-documentation/white-label.md).
 - Internal tools (the developer's console, the dev overlay) ; those are dev-only surfaces and live in [technical-documentation](../technical-documentation/).
 - Future modules listed in [features-planning/](../features-planning/) ; those are roadmaps, not shipped behaviour.
 

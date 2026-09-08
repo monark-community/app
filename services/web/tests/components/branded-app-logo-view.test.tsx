@@ -160,7 +160,7 @@ describe("<BrandedAppLogoView>", () => {
     });
   });
 
-  describe("no singleton (multi-tenant, /setup pending, api hiccup)", () => {
+  describe("no singleton (not yet provisioned, or an api hiccup)", () => {
     it("falls back to the starter-template logo from BRANDING", () => {
       renderWithIntl(<BrandedAppLogoView data={NO_SINGLETON} size={56} />);
       const fallback = screen.getByTestId("next-image");

@@ -67,7 +67,7 @@ const schema = z.object({
   PUBLIC_API_BURST: z.coerce.number().int().positive().default(20),
   // Single-tenant bootstrap : when the `tenancy.multi-tenant` flag is OFF
   // and zero organizations exist, the API boot hook reads these and
-  // creates the singleton org so the /setup gate can lift. Idempotent ;
+  // creates the singleton org the rest of the app needs. Idempotent ;
   // a second restart on a healthy install is a no-op. The "external
   // tool / system" the user manages writes these into the deployment
   // environment.

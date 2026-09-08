@@ -74,7 +74,7 @@ When you add or move a page, update `_index.md` so the index stays complete.
 
 ## What NOT to document here
 
-- The one-time `/setup` bootstrap wizard, and any dev-only surface (dev overlay, console) — those are internal.
+- Operator-only bootstrap surfaces (`pnpm provision:org`, `pnpm preflight`) and any dev-only surface (dev overlay, console) — those are internal.
 - Anything in `features-planning/` — those are roadmaps, not shipped behaviour.
 - Internal architecture, APIs, or data models — that's `technical-documentation/` and the module READMEs.
 
