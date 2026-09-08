@@ -1,14 +1,17 @@
 import { z } from "zod";
 import {
+  buildCompileFields,
   createDataRecord,
   findDataModelByKey,
   findDataRecordById,
   hardDeleteDataRecord,
   isDataRecordRoleAccessible,
-  listDataRecords,
+  listDataFields,
+  listDataRecordsWithQuery,
   softDeleteDataRecord,
   updateDataRecord,
 } from "@monark/data-models/server";
+import { fieldFiltersToFilterNode } from "@monark/data-models/contracts";
 import { getUserRoles, hasPermission } from "@monark/rbac/server";
 import type { NodeExecutionContext } from "../registry";
 import { defineNode } from "../registry";
@@ -210,15 +213,23 @@ export const dataFindRecordsNode = defineNode({
       hasPermission(ownerId, "data-models.manage-schema", ctx.organizationId),
     ]);
     ctx.log(`Querying "${model.name}" where ${config.field} ${config.match} "${config.value}".`);
-    const page = await listDataRecords({
+    // The node's simple match vocabulary maps onto the same legacy filter shape
+    // the list menu uses, then through the one translator into a query tree, so
+    // this node and the records list agree on what a predicate means.
+    const filter = fieldFiltersToFilterNode([
+      {
+        key: config.field,
+        type: MATCH_TO_FILTER_TYPE[config.match as MatchOp],
+        value: config.value,
+      },
+    ]);
+    if (!filter) throw new Error(`The value for "${config.field}" is empty, so nothing to match.`);
+    const fields = await listDataFields(model.id);
+    const page = await listDataRecordsWithQuery({
       dataModelId: model.id,
-      fieldFilters: [
-        {
-          key: config.field,
-          type: MATCH_TO_FILTER_TYPE[config.match as MatchOp],
-          value: config.value,
-        },
-      ],
+      filter,
+      fields: buildCompileFields(fields),
+      queryContext: { userId: ownerId, now: new Date() },
       roleIds: roles.map((r) => r.id),
       bypassRoleAccess: isAdmin,
       limit: config.limit ?? 10,

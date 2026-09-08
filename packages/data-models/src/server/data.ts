@@ -624,67 +624,10 @@ function recordRoleAccessWhere(opts: {
   };
 }
 
-/** A single field-value predicate from the records list filter menu. `value`
- *  is the raw filter-control value : a string for text/number/boolean/date/
- *  select, or a `string[]` for `selectAny` / multi-select. */
-export type RecordFieldFilter = {
-  /** The `DataField.key` to filter on (the JSONB `data` object's key). */
-  key: string;
-  type: "text" | "number" | "boolean" | "date" | "select" | "selectAny" | "multiSelect";
-  value: string | string[];
-};
-
-/** Translate one field filter into a Prisma `where` fragment against the JSONB
- *  `data` column (keyed by field key). Returns `null` for a neutral / empty
- *  value so it composes out of the `AND`. Text/date use substring match ;
- *  select/number/boolean use equality ; `selectAny` matches a scalar single-
- *  select against any of the chosen values ; multi-select matches records whose
- *  stored array contains any of the chosen values.
- *
- *  NOTE: JSON `string_contains` is case-sensitive (Postgres JSON paths take no
- *  `mode`). The baseline GIN index on `data` keeps these correct ; a fast plan
- *  on a hot field at scale is opt-in via `fields.requestIndex` (see indexing.ts). */
-function fieldFilterWhere(f: RecordFieldFilter): Prisma.DataRecordWhereInput | null {
-  const path = [f.key];
-  const asString = typeof f.value === "string" ? f.value.trim() : "";
-  switch (f.type) {
-    case "text":
-    case "date":
-      return asString ? { data: { path, string_contains: asString } } : null;
-    case "select":
-      return asString ? { data: { path, equals: asString } } : null;
-    case "selectAny": {
-      // A single-select field stores a scalar string, so "match any of these
-      // values" is an OR of equalities (not `array_contains`, which is for the
-      // multi-select `string[]` encoding).
-      const vals = (Array.isArray(f.value) ? f.value : [f.value]).filter((v) => v !== "");
-      if (vals.length === 0) return null;
-      return { OR: vals.map((v) => ({ data: { path, equals: v } })) };
-    }
-    case "number": {
-      if (asString === "") return null;
-      const n = Number(asString);
-      return Number.isFinite(n) ? { data: { path, equals: n } } : null;
-    }
-    case "boolean":
-      if (asString !== "true" && asString !== "false") return null;
-      return { data: { path, equals: asString === "true" } };
-    case "multiSelect": {
-      const vals = (Array.isArray(f.value) ? f.value : [f.value]).filter((v) => v !== "");
-      if (vals.length === 0) return null;
-      // OR = "matches any selected value" ; `array_contains: [v]` is Postgres
-      // `@>` containment against the stored `string[]`.
-      return { OR: vals.map((v) => ({ data: { path, array_contains: [v] } })) };
-    }
-  }
-}
-
 export type ListDataRecordsInput = PaginationArgs & {
   dataModelId: string;
   includeDeleted?: boolean;
   search?: string;
-  /** Per-field value predicates from the list filter menu (ANDed together). */
-  fieldFilters?: RecordFieldFilter[];
   /** Caller's role ids ; records are filtered to those the roles may access. */
   roleIds?: string[];
   /** When true (a data admin), the role-access filter is skipped. */
@@ -699,9 +642,6 @@ export async function listDataRecords(
 ): Promise<Paginated<DataRecordRow>> {
   const db = getDb();
   const search = input.search?.trim();
-  const fieldWheres = (input.fieldFilters ?? [])
-    .map(fieldFilterWhere)
-    .filter((w): w is Prisma.DataRecordWhereInput => w !== null);
   const where: Prisma.DataRecordWhereInput = {
     dataModelId: input.dataModelId,
     ...(input.includeDeleted ? {} : { deletedAt: null }),
@@ -716,7 +656,6 @@ export async function listDataRecords(
             },
           ]
         : []),
-      ...fieldWheres,
       ...(input.publishedForFormId
         ? [
             {

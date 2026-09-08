@@ -93,9 +93,18 @@ unchanged; the cursor row's sort key is resolved via a subquery so a bare id sta
 valid cursor. The role-access predicate mirrors `recordRoleAccessWhere` as SQL, so RBAC
 row-level scoping is identical to the structured path.
 
-The classic filter menu still runs the structured `listDataRecords` path; the query tree
-runs `listDataRecordsWithQuery`. Both return the same shape ; the menu is slated to
-converge onto the tree/compiler path, retiring the flat `fieldFilters` input.
+**Both front-ends now run the one compiler.** The classic filter menu's flat
+`fieldFilters` are translated into a `FilterNode` by `fieldFiltersToFilterNode`
+([`contracts/query.ts`](../../packages/data-models/src/contracts/query.ts)) and executed by
+`listDataRecordsWithQuery`, exactly like a query-bar tree; `listDataRecords` is now only the
+plain, unfiltered keyset list. There is no second filter implementation to keep in step, which
+matters because row-level access is applied in the compiled path and a divergence there is a
+silent authorization bug rather than a cosmetic one.
+
+Two semantics deliberately improved in that convergence, both of which only ever match _more_
+rows: menu text matching became case-insensitive (`string_contains` -> `ILIKE`), and menu date
+matching became a real same-calendar-day comparison (`::date = ::date`) instead of a substring
+match against the stored ISO string.
 
 ## Text DSL syntax
 
@@ -175,8 +184,8 @@ tree (with an optional share toggle).
 ## tRPC surface
 
 `dataModels.records.list` accepts an optional `filter` (the `filterQuerySchema` tree)
-alongside the legacy `fieldFilters`. When `filter` is present it takes precedence and
-runs the compiled raw-SQL path. Read-only ; no new permission/event/notification (the
+alongside the legacy `fieldFilters`. When `filter` is present it takes precedence; otherwise
+`fieldFilters` are translated into the same tree. Either way exactly one path runs. Read-only ; no new permission/event/notification (the
 existing `data-models.record-read` gate and record role-access still apply). Saved views
 live under `dataModels.views.*` (see above).
 
