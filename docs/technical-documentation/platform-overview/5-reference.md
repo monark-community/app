@@ -6,19 +6,18 @@
 
 ### 5.2 Feature flags (as-is defaults)
 
-| Flag                          | Default | Effect                                   |
-| ----------------------------- | ------- | ---------------------------------------- |
-| `tenancy.multi-tenant`        | off     | Multiple orgs vs single-tenant singleton |
-| `auth.trusted-devices`        | on      | Trusted-device recognition               |
-| `auth.totp-trust-devices`     | on      | Trusted devices skip the TOTP challenge  |
-| `auth.totp-required-admin`    | on      | Admins must enroll TOTP                  |
-| `data-models.query-language`  | off     | MQL query bar + saved views              |
-| `automation.enabled`          | on      | Automation nav/editor/engine/worker      |
-| `files.enabled`               | on      | `/admin/files`                           |
-| `public-api.enabled`          | off     | The `/api/v1` surface                    |
-| `public-api.service-accounts` | off     | Service-account keys                     |
-| `kanban.board`                | on      | Kanban section                           |
-| `kanban.query`                | off     | Kanban MQL board query bar               |
+| Flag                          | Default | Effect                                  |
+| ----------------------------- | ------- | --------------------------------------- |
+| `auth.trusted-devices`        | on      | Trusted-device recognition              |
+| `auth.totp-trust-devices`     | on      | Trusted devices skip the TOTP challenge |
+| `auth.totp-required-admin`    | on      | Admins must enroll TOTP                 |
+| `data-models.query-language`  | off     | MQL query bar + saved views             |
+| `automation.enabled`          | on      | Automation nav/editor/engine/worker     |
+| `files.enabled`               | on      | `/admin/files`                          |
+| `public-api.enabled`          | off     | The `/api/v1` surface                   |
+| `public-api.service-accounts` | off     | Service-account keys                    |
+| `kanban.board`                | on      | Kanban section                          |
+| `kanban.query`                | off     | Kanban MQL board query bar              |
 
 ### 5.3 Background workers & cron
 

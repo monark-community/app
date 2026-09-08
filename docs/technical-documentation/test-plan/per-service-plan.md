@@ -36,6 +36,6 @@ The right unit-of-test for a web page is the _server action_ (a pure async funct
     - `email-change-form.test.tsx` ; form → verify stage transition, OTP retry on the other inbox, dialog state persistence across stage flips.
     - `totp-section.test.tsx` ; the 2-step enroll wizard ; the disable + regenerate dialogs ; recovery codes copy ; secret codeblock copy.
     - `role-editor.test.tsx` ; create / edit / delete paths ; tri-state checkboxes (none / some / all) ; permission search auto-expands matching categories ; built-in ADMIN locks the grid.
-    - `roles-manager.test.tsx` ; search filter, click-row navigation, "New role" link carries the org id, single- vs multi-tenant org-picker visibility.
+    - `roles-manager.test.tsx` ; search filter, click-row navigation, "New role" link carries the org id.
     - `users-list.test.tsx` ; search, filter chips clear individually, invite dialog mount, paginated load-more.
 - **Coverage target** : 75 % overall ; 80 % on `src/app/(authed)/**/actions.ts` files specifically (those are the security-sensitive surface).

@@ -1,7 +1,5 @@
 # 3. Core capabilities
 
-
-
 ## In this section
 
 - **[3.1 User management (`@monark/users`)](31-user-management-monarkusers.md)**
@@ -18,13 +16,9 @@
 
 Owns `Organization` (`slug` unique, `displayName`, `logoUrl`, `primaryColor`, soft delete), `OrganizationMembership` (soft-leave via `leftAt`), `Invite` (SHA-256 token hash, 14-day TTL, role pre-assignment), `OrgSlugRedirect` (90-day window on slug rotation), and an org metadata sidecar.
 
-**Tenancy** is governed by the flag `tenancy.multi-tenant` (default **off**):
-
-- **Single-tenant (default)**: exactly one org is expected ; the api provisions it at boot from `INITIAL_ORG_*` env (or on demand via `pnpm provision:org`), and users are auto-granted membership on sign-up/sign-in (`ensureSingletonMembership`). There is no in-app setup wizard : provisioning is operator-driven, see [white-label.md](../../white-label/_index.md#provisioning-the-organization).
-- **Multi-tenant**: multiple orgs ; active org comes from the JWT claim.
+**Tenancy**: the app is single-tenant. Exactly one org is expected ; the api provisions it at boot from `INITIAL_ORG_*` env (or on demand via `pnpm provision:org`), and users are auto-granted membership on sign-up/sign-in (`ensureSingletonMembership`). There is no in-app setup wizard : provisioning is operator-driven, see [white-label.md](../../white-label/_index.md#provisioning-the-organization). Serving several businesses means running several instances, not one multi-tenant deploy — see [multi-instance.md](../../multi-instance/_index.md).
 
 tRPC (`organizations.*`): `current`, `mine`, `bootstrapStatus`, `ensureBootstrap`, admin org CRUD-ish (`adminList`/`adminGet`/`adminUpdate`), and an `invites.*` sub-router. Events: `organization.created`/`updated`/`member-joined`/`invite-sent`/`invite-accepted`. Consumes `user.signed-up` / `user.signed-in`.
-
 
 ### 3.7 Central event bus (`@monark/common`)
 

@@ -17,7 +17,6 @@ The role manager for one organization at a time.
 
 Top of the section :
 
-- **Organization picker** (multi-tenant only) : pick the org whose roles you want to manage. Single-tenant pins the singleton.
 - **Search** : filters the role list by name or key.
 - **New role** : links to the create-role page (see below).
 

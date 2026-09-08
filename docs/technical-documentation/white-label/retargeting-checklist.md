@@ -9,7 +9,8 @@
    a **square JPEG, PNG or WebP** (max 2 MB) (not SVG) and is stored per-org, so
    it also reaches the emails the app itself sends.
    `BRANDING_LOGO_SRC` is the fallback for surfaces rendered before an org logo
-   exists (multi-tenant, or a fresh deploy) ; point it at a file you drop into
+   exists — a fresh deploy, or the sign-in screen before provisioning ; point it
+   at a file you drop into
    `services/web/public/`.
 3. **Replace the favicon.** `services/web/src/app/favicon.ico` ships as a neutral
    placeholder generated from `public/logo.svg`. There is no env var for it ;
