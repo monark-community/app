@@ -6,4 +6,6 @@ On a desktop-width screen a slim vertical **navigation rail** is pinned to the l
 2. **Destination icons** : one per top-level product surface you have access to (Calendar, Kanban, Wiki, Automation, Data). Each is icon-only with a tooltip on hover ; the icon for the section you're in is highlighted. A destination only appears when its feature is enabled for you, so the rail shows exactly what you can reach.
 3. **Admin pin** at the bottom : a shield icon, only visible when you hold an admin or sysadmin role. Clicking it enters the admin section.
 
+![The rail down the left edge : the brand mark at the top, one icon per destination with the current section highlighted, and the admin shield pinned at the bottom.](../../assets/navigation-rail.png)
+
 On narrow (phone / small tablet) viewports the rail is hidden ; tapping the **brand mark** in the app bar (it carries a small menu badge) opens the same destinations as a slide-in drawer from the left. The drawer lists **Home** first, then the module destinations, with the admin pin as a filled button at the bottom. Close it with the X, the dimmed overlay, or Escape.

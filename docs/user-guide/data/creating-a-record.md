@@ -2,6 +2,8 @@
 
 Click **New**. A form opens with one input per field, matching each field's type :
 
+![The record form : one input per field, each rendered by its type ; text, number, date, select, relation and rich text all get the editor that suits them.](../../assets/record-form.png)
+
 - **Text / long text / rich text**, **number**, **checkbox**, **date / date-and-time**, **URL**, **email**.
 - **Select** (pick one) and **multi-select** (pick several) from the choices the admin defined.
 - **Relation** : link to a record in another model.
