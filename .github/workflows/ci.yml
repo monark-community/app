@@ -91,6 +91,9 @@ jobs:
       - name: Check public-API MCP visibility
         run: pnpm check:mcp
 
+      - name: Check changelog fragments
+        run: pnpm changelog:check
+
   # Migration ↔ schema drift. Replays every committed migration into a throwaway
   # Postgres and diffs the result against schema.prisma (modulo an allowlist of
   # raw-SQL divergences the Prisma datamodel can't express). Catches a modeled

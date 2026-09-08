@@ -35,6 +35,7 @@
     "coverage:merge": "tsx tools/merge-coverage.ts",
     "coverage:suggest": "tsx tools/merge-coverage.ts --suggest",
     "changelog:compile": "tsx tools/compile-changelog.ts",
+    "changelog:check": "tsx tools/compile-changelog.ts --validate",
     "gen": "pnpm gen:schema && pnpm gen:events && pnpm gen:routers",
     "gen:module": "tsx tools/gen-module.ts",
     "gen:schema": "tsx tools/gen-schema.ts",
