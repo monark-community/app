@@ -1,17 +1,42 @@
 import { cookies } from "next/headers";
 import { getRequestConfig } from "next-intl/server";
 import { BRANDING } from "@monark/branding";
+import { getBootstrapStatus } from "@/lib/bootstrap-gate";
 import { DEFAULT_LOCALE, isLocale } from "./config";
 
 // Reads the user's preferred locale from the `NEXT_LOCALE` cookie (set by the
 // locale switcher) and falls back to English. Called on every request by the
 // next-intl server runtime; results are cached per-request.
 
-const BRAND_PLACEHOLDERS: Record<string, string> = {
-  "{appName}": BRANDING.appName,
-  "{supportEmail}": BRANDING.supportEmail,
-  "{tagline}": BRANDING.tagline,
-};
+/**
+ * Built per request rather than once at module load, because `{orgName}`
+ * is not static config : it is the singleton organization's display
+ * name, read from the api.
+ *
+ * `{appName}` is the *product* ("Kestrel"), `{orgName}` is the
+ * deployment's own name for itself ("Kestrel Field Services"). Pre-auth
+ * copy that answers "what am I signing in to?" wants the latter — the
+ * organization is what the user recognises. Everything that names the
+ * software (the app-bar wordmark, page titles, the apps launcher) stays
+ * on `{appName}`.
+ *
+ * Falls back to `appName` when there is no singleton org: a multi-tenant
+ * deploy, a fresh install before provisioning, or a transient api
+ * failure. That keeps the copy grammatical in every case instead of
+ * rendering an empty string.
+ */
+function brandPlaceholders(orgName: string | null): Record<string, string> {
+  // Braces stripped, not escaped : the substituted string is handed to
+  // next-intl's ICU parser afterwards, so a brace surviving in an
+  // operator-entered name would read as a variable reference.
+  const safeOrgName = orgName?.replace(/[{}]/g, "").trim() ?? "";
+  return {
+    "{appName}": BRANDING.appName,
+    "{supportEmail}": BRANDING.supportEmail,
+    "{tagline}": BRANDING.tagline,
+    "{orgName}": safeOrgName.length > 0 ? safeOrgName : BRANDING.appName,
+  };
+}
 
 /**
  * Walks the loaded message tree and replaces brand placeholders with the
@@ -27,14 +52,20 @@ const BRAND_PLACEHOLDERS: Record<string, string> = {
  *
  * Pure ICU placeholders unrelated to branding (`{email}`, `{count}`,
  * `{date}`, …) flow through untouched because we only swap exact
- * matches against the keys in `BRAND_PLACEHOLDERS`. The values we
- * splice in come from a typed config module — no untrusted input — so
- * we don't need to escape ICU metacharacters.
+ * matches against the keys built by `brandPlaceholders`.
+ *
+ * `{appName}` / `{supportEmail}` / `{tagline}` come from a typed config
+ * module. `{orgName}` is operator-entered and therefore the one value
+ * here that isn't compile-time constant — see `brandPlaceholders`,
+ * which strips ICU braces from it, because substitution happens
+ * *before* next-intl parses the message: an org literally named
+ * `Acme {x}` would otherwise splice a variable reference into the
+ * catalog and every pre-auth page would throw `FORMATTING_ERROR`.
  */
-function substituteBranding(value: unknown): unknown {
+function substituteBranding(value: unknown, placeholders: Record<string, string>): unknown {
   if (typeof value === "string") {
     let out = value;
-    for (const [placeholder, replacement] of Object.entries(BRAND_PLACEHOLDERS)) {
+    for (const [placeholder, replacement] of Object.entries(placeholders)) {
       if (out.includes(placeholder)) {
         out = out.split(placeholder).join(replacement);
       }
@@ -42,12 +73,12 @@ function substituteBranding(value: unknown): unknown {
     return out;
   }
   if (Array.isArray(value)) {
-    return value.map((item) => substituteBranding(item));
+    return value.map((item) => substituteBranding(item, placeholders));
   }
   if (value && typeof value === "object") {
     const out: Record<string, unknown> = {};
     for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
-      out[key] = substituteBranding(child);
+      out[key] = substituteBranding(child, placeholders);
     }
     return out;
   }
@@ -60,7 +91,12 @@ export default getRequestConfig(async () => {
   const locale = isLocale(raw) ? raw : DEFAULT_LOCALE;
 
   const messages = (await import(`../messages/${locale}.json`)).default;
-  const branded = substituteBranding(messages) as typeof messages;
+  // `getBootstrapStatus` is React-`cache()`d per request, so the root
+  // layout's own call for the org brand color reuses this round trip
+  // rather than adding one. It already swallows api failures to null.
+  const status = await getBootstrapStatus();
+  const placeholders = brandPlaceholders(status?.singletonDisplayName ?? null);
+  const branded = substituteBranding(messages, placeholders) as typeof messages;
 
   return { locale, messages: branded };
 });

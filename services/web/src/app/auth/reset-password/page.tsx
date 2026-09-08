@@ -29,6 +29,12 @@ export default async function ResetPasswordPage() {
           <Button asChild variant="outline" className="w-full">
             <Link href="/forgot-password">{t("requestAgain")}</Link>
           </Button>
+          <p className="mt-6 text-center text-sm text-muted-foreground">
+            {t("backToSignIn")}{" "}
+            <Link href="/signin" className="font-medium text-primary hover:underline">
+              {t("signInLink")}
+            </Link>
+          </p>
         </div>
       </main>
     );
@@ -50,6 +56,24 @@ export default async function ResetPasswordPage() {
           </p>
         </div>
         <ResetPasswordForm email={data.user.email} />
+        {/* The recovery link drops the user straight here with a live
+            Supabase session, so this was a dead end : no app chrome to
+            navigate from, and no way to abandon the reset. Mirrors the
+            affordance on /forgot-password.
+
+            Points at sign-out-stale rather than /signin because the
+            recovery session is still live : `(anon)/layout` redirects
+            any session to `/`, which the (authed) gate would then bounce
+            to sign-out-stale anyway for want of a trusted-device cookie.
+            Going straight there drops the half-finished recovery session
+            deliberately instead of round-tripping through two redirects
+            to reach the same place. */}
+        <p className="mt-6 text-center text-sm text-muted-foreground">
+          {t("backToSignIn")}{" "}
+          <Link href="/auth/sign-out-stale" className="font-medium text-primary hover:underline">
+            {t("signInLink")}
+          </Link>
+        </p>
       </div>
     </main>
   );

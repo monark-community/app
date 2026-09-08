@@ -125,10 +125,23 @@ case, not an exotic one.
 A second local instance needs three edits in the second worktree :
 
 1. **`supabase/config.toml`** — a distinct `project_id` (this is what names the
-   Docker containers, so it's what actually keeps the two stacks apart) and a
-   shifted port block. Shift them all together, e.g. `54321`→`55321` :
-   `[api] port`, `[db] port` + `shadow_port`, `[db.pooler] port`,
-   `[studio] port`, `[inbucket] port` + `smtp_port`, `[analytics] port`.
+   Docker containers, so it's what actually keeps the two stacks apart), a
+   shifted port block, and `[auth] site_url`. Shift the ports all together, e.g.
+   `54321`→`55321` : `[api] port`, `[db] port` + `shadow_port`,
+   `[db.pooler] port`, `[studio] port`, `[inbucket] port` + `smtp_port`,
+   `[analytics] port`.
+
+   Don't skip `site_url`. Supabase builds the links in its own auth emails
+   (signup confirmation, password reset, email change) from it, so leaving it at
+   `http://localhost:3000` sends every recovery link to the _other_ instance —
+   which redeems it against a different Supabase project and shows the user
+   `Link expired`. Add the second instance's origin to
+   `additional_redirect_urls` too.
+
+   Changes here need `pnpm exec supabase stop && pnpm exec supabase start` to
+   take effect ; the email templates and subjects are read into the running
+   container at boot, so editing them alone does nothing until you restart.
+
 2. **`services/web/package.json`** — the `dev` script pins `--port 3000`. Change
    it to the second instance's port. It is a literal flag on purpose : Next
    resolves its port _before_ loading `.env`, so a `PORT=` line there is ignored,
