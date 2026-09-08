@@ -123,10 +123,33 @@ export function suggestName(
  * root, so `](../tools/foo.ts)` ends up pointing one level above the repo.
  * Easy to write, invisible once compiled. README.md is exempt : it is not
  * compiled anywhere, so its own `../` links are correct as written.
+ *
+ * Both CommonMark target forms count. The angle-bracket form is not an edge
+ * case here : it is what the house style uses for any path containing
+ * parentheses (`](<../services/web/src/app/(authed)/layout.tsx>)`), which is
+ * precisely where a stray `../` is most likely and hardest to spot. The
+ * original rule only matched the bare form, so six such links survived the
+ * first sweep and reached develop unnoticed.
  */
-export const ESCAPING_LINK_RE = /\]\((\.\.\/[^)]*)\)/g;
+// Two alternatives, because the two CommonMark target forms terminate
+// differently: the angle-bracket form ends at `>` and may contain `)` (which
+// is the whole reason it exists), while the bare form ends at the first `)`
+// and therefore cannot contain one.
+export const ESCAPING_LINK_RE = /\]\((?:<(\.\.\/[^>]*)>|(\.\.\/[^)]*))\)/g;
+
+/**
+ * Markdown code, where link syntax is text rather than a link. Stripped before
+ * scanning : an entry that documents this very rule quotes `](../x)` in
+ * backticks, and flagging that would be a false positive on exactly the kind
+ * of prose this repo writes a lot of. A link inside a code span cannot become
+ * a broken link in CHANGELOG.md, because it is not a link.
+ */
+const CODE_SPAN_RE = /```[\s\S]*?```|`[^`\n]*`/g;
 
 /** Every changelog.d-relative link in a fragment body, in source order. */
 export function escapingLinksOf(contents: string): string[] {
-  return [...contents.matchAll(ESCAPING_LINK_RE)].flatMap((m) => m[1] ?? []);
+  const prose = contents.replace(CODE_SPAN_RE, "");
+  // Group 1 is the angle-bracket form, group 2 the bare one ; exactly one of
+  // the two matches per hit.
+  return [...prose.matchAll(ESCAPING_LINK_RE)].flatMap((m) => m[1] ?? m[2] ?? []);
 }

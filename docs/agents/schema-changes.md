@@ -2,7 +2,7 @@
 
 How to change the database in this monorepo, for agents and humans. Read this before you touch a Prisma model or add a migration. The schema is **assembled by codegen** and guarded by CI, so the wrong move (hand-editing the generated file, or committing a drifted migration) fails the build.
 
-Operational commands live in the [development guide](../technical-documentation/development.md#database) ; this page is the _how to do it right_.
+Operational commands live in the [development guide](../technical-documentation/development/database.md) ; this page is the _how to do it right_.
 
 ## TL;DR
 
@@ -58,4 +58,4 @@ If you add another hand-written raw-SQL index that Prisma can't model, expect th
 
 - Don't edit the generated `schema.prisma` — your change is overwritten on the next `pnpm gen`, and CI fails on drift.
 - Don't edit a **migration that's already been applied in an environment** — migrations are an append-only history ; add a new one.
-- Don't reach into another module's models from an extended module ; compose via core read interfaces, the event bus, or the metadata sidecar (see [extensibility-contract.md](../technical-documentation/extensibility-contract.md)).
+- Don't reach into another module's models from an extended module ; compose via core read interfaces, the event bus, or the metadata sidecar (see [extensibility-contract.md](../technical-documentation/extensibility-contract/_index.md)).

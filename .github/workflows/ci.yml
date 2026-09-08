@@ -91,7 +91,10 @@ jobs:
       - name: Check public-API MCP visibility
         run: pnpm check:mcp
 
-      - name: Check changelog fragment naming
+      # Supersedes the `changelog:check` step added in #73 : this covers the
+      # same per-fragment link rule (shared with the compiler) plus the naming
+      # convention, and its per-file mode backs the pre-commit hook.
+      - name: Check changelog fragments
         run: pnpm check:changelog
 
       # Suites for the repo-level scripts in tools/. `pnpm test` is

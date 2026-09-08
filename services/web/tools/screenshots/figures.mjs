@@ -34,7 +34,22 @@ const FIGURES = [
     name: "records-table",
     story: "fields-table",
     viewport: { width: 1360, height: 420 },
-    doc: "docs/user-guide/data.md",
+    doc: "docs/user-guide/data/the-records-table.md",
+  },
+  {
+    name: "navigation-rail",
+    story: "figure-nav-rail",
+    // The rail is viewport-height and sits outside the story root's box, so
+    // an element clip would cut it off : shoot the viewport instead.
+    mode: "viewport",
+    viewport: { width: 900, height: 420 },
+    doc: "docs/user-guide/navigation/the-navigation-rail.md",
+  },
+  {
+    name: "record-form",
+    story: "fields-form",
+    viewport: { width: 760, height: 900 },
+    doc: "docs/user-guide/data/creating-a-record.md",
   },
   {
     name: "kanban-board",
@@ -103,9 +118,15 @@ try {
     await page.waitForTimeout(700);
 
     // Clip to the story's own box rather than the viewport, so the figure has
-    // no dead space under it.
-    const target = page.locator("#root");
-    await target.screenshot({ path: fileURLToPath(new URL(`${figure.name}.png`, outDir)) });
+    // no dead space under it. `mode: "viewport"` opts out, for a component
+    // positioned outside that box : a viewport-height rail or a fixed bar is
+    // not inside `#root`'s rect, so an element clip would cut it off.
+    const out = fileURLToPath(new URL(`${figure.name}.png`, outDir));
+    if (figure.mode === "viewport") {
+      await page.screenshot({ path: out });
+    } else {
+      await page.locator("#root").screenshot({ path: out });
+    }
 
     if (errors.length > 0) failures.push(`${figure.name}: ${errors.join(" | ")}`);
     console.log(`✓ docs/assets/${figure.name}.png  (${figure.doc})`);

@@ -46,7 +46,7 @@ Package source LOC: platform ≈ 11,960 (auth 2,449 ; notifications 2,456 ; webh
 
 1. **No billing/subscription** — zero stripe/checkout/invoice code anywhere. Critical if the SaaS-kernel identity wins ; N/A if the hub identity wins. The ambiguity itself is the problem.
 2. **No self-serve org creation / multi-tenant path** — every deploy is one org via env vars.
-3. **No audit log UI** — [user-guide/admin.md](../user-guide/admin.md) punts to "the operator's logging stack", yet no Sentry/ELK is wired either.
+3. **No audit log UI** — [user-guide/admin](../user-guide/admin/_index.md) punts to "the operator's logging stack", yet no Sentry/ELK is wired either.
 4. **No data export/import** — no CSV/JSON export anywhere ; GDPR portability requires raw DB access.
 5. **No API keys / public API** — webhooks are outbound-only ; the only bearer auths are Supabase user tokens and `CRON_SECRET`.
 6. **No global search / command palette** — cmdk is installed but only used in comboboxes.

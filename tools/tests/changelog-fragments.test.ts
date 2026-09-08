@@ -3,6 +3,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
+  escapingLinksOf,
   isEntryFile,
   isRealDate,
   parseFragmentName,
@@ -149,6 +150,48 @@ describe("suggestName", () => {
   it("always suggests something the validator accepts", () => {
     const suggestion = suggestName("Tooling_CI Gate.md", "2026-09-08", new Set());
     expect(validateFragment(suggestion, BODY("2026-09-08"))).toBeNull();
+  });
+});
+
+describe("escapingLinksOf", () => {
+  it("finds a bare changelog.d-relative link", () => {
+    expect(escapingLinksOf("see [x](../tools/foo.ts) here")).toEqual(["../tools/foo.ts"]);
+  });
+
+  // The form the house style uses for any path containing parentheses, and the
+  // one the original rule missed: six such links reached develop unnoticed.
+  it("finds the angle-bracket form", () => {
+    expect(escapingLinksOf("see [x](<../services/web/src/app/(authed)/layout.tsx>) here")).toEqual([
+      "../services/web/src/app/(authed)/layout.tsx",
+    ]);
+  });
+
+  it("finds every occurrence, in source order", () => {
+    expect(escapingLinksOf("[a](../one.ts) and [b](<../two.ts>) and [c](../three.ts)")).toEqual([
+      "../one.ts",
+      "../two.ts",
+      "../three.ts",
+    ]);
+  });
+
+  // An entry documenting this rule quotes the syntax ; that is prose, not a link.
+  it("ignores link syntax inside inline code", () => {
+    expect(escapingLinksOf("write `[x](../tools/foo.ts)` not that")).toEqual([]);
+    expect(escapingLinksOf("write `[x](<../tools/foo.ts>)` not that")).toEqual([]);
+  });
+
+  it("ignores link syntax inside a fenced block", () => {
+    expect(escapingLinksOf("text\n```\n[x](../tools/foo.ts)\n```\nmore")).toEqual([]);
+  });
+
+  it("still flags a real link on a line that also has code", () => {
+    expect(escapingLinksOf("`code` and [x](../tools/foo.ts)")).toEqual(["../tools/foo.ts"]);
+  });
+
+  it("leaves correct root-relative links alone, in both forms", () => {
+    expect(escapingLinksOf("[a](tools/foo.ts)")).toEqual([]);
+    expect(escapingLinksOf("[a](<services/web/src/app/(authed)/layout.tsx>)")).toEqual([]);
+    expect(escapingLinksOf("[a](https://example.com/../x)")).toEqual([]);
   });
 });
 

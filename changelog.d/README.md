@@ -51,7 +51,9 @@ pnpm check:changelog <paths…>   # just these (what the pre-commit hook runs)
 - **On commit**, through `lint-staged` on any staged `changelog.d/*.md`. The commit is rejected and the error prints the exact `git mv` to fix it, with the next free `NN` already worked out.
 - **In CI**, in the `repo-checks` job, which is the authoritative gate.
 
-The rule itself lives in [tools/lib/changelog-naming.ts](../tools/lib/changelog-naming.ts) as pure functions, covered by [tools/tests/changelog-naming.test.ts](../tools/tests/changelog-naming.test.ts) (`pnpm test:tools`). That suite also asserts every committed fragment conforms, so the directory can't drift back.
+It checks two things: the filename (above), and that no link is written relative to `changelog.d/` — see the link rule further up. Link syntax inside backticks or a fenced block is ignored, so an entry may quote the wrong form when explaining it.
+
+The rule itself lives in [tools/lib/changelog-fragments.ts](../tools/lib/changelog-fragments.ts) as pure functions, covered by [tools/tests/changelog-fragments.test.ts](../tools/tests/changelog-fragments.test.ts) (`pnpm test:tools`). That suite also asserts every committed fragment conforms, so the directory can't drift back.
 
 ## Compiling
 
