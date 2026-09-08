@@ -10,6 +10,8 @@ Your organization can have many boards. **New board** creates one (name, optiona
 
 Who can see a board is governed by role : a board with no role restriction is visible to everyone in the org ; once you grant specific roles, only they (plus board managers) can see it.
 
+![A board : one column per stage, cards showing assignees, priority, due date and subtask progress, and a column at its work-in-progress limit showing 3 / 2.](../../../docs/assets/kanban-board.png)
+
 ## Columns
 
 Columns are the stages across the board :

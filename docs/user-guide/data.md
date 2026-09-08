@@ -18,6 +18,10 @@ Records show up in a table :
 - **Search** (top of the table) matches against the title as you type.
 - **Prev / Next** page through the records ; the table shows a page at a time.
 
+![The records table : one row per record, with the title column pinned first and each field rendered by its type (money, checkbox, date, status chip, tags, people).](../assets/records-table.png)
+
+A model with many fields is wider than the screen ; the table scrolls sideways, and the title column stays pinned while it does.
+
 ### Filtering
 
 Two ways to narrow the list, depending on what your deploy has enabled :
