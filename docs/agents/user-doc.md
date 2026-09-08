@@ -51,7 +51,6 @@ Monark surfaces appear conditionally, and the guide must say so or it will descr
 
 - **Feature flags** — "visible where the feature is enabled", "where the query feature is on". Don't name the flag key.
 - **Permissions / roles** — "what you can do depends on your role", "where your role permits", "admins always see every record". Don't name the permission slug.
-- **Tenancy** — call out single- vs multi-tenant differences inline when a flow changes (see `admin.md`'s tenancy note for the pattern).
 
 ## Placement — core vs extended
 
