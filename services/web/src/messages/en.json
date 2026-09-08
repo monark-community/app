@@ -1727,7 +1727,8 @@
       "hardTitle": "Two-factor enrollment overdue",
       "hardSubtitle": "Your admin account has been overdue for {days, plural, =0 {less than a day} one {# day} other {# days}}. Sign-in is restricted to /account until you enroll TOTP.",
       "redirectToastTitle": "Admin access restricted",
-      "redirectToastSubtitle": "Re-enable two-factor authentication to regain access to admin surfaces."
+      "redirectToastSubtitle": "Re-enable two-factor authentication to regain access to admin surfaces.",
+      "cta": "Set up two-factor now"
     },
     "tabs": {
       "nav": "Account section",

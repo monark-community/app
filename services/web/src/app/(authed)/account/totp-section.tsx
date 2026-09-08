@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Check, Copy } from "lucide-react";
 import { toast } from "sonner";
@@ -69,6 +70,32 @@ export function TotpSection() {
   const [enrollOpen, setEnrollOpen] = useState(false);
   const [disableOpen, setDisableOpen] = useState(false);
   const [regenOpen, setRegenOpen] = useState(false);
+
+  // `?enroll=totp` opens the wizard on arrival. The admin-TOTP banner
+  // links here with it, so the prompt lands the user *in* the flow
+  // rather than on a page where they still have to find the button.
+  //
+  // Gated on `active` so a deep link can't reopen enrollment for someone
+  // who already finished, and waits for the status query so the check is
+  // made against real data rather than the undefined first render. The
+  // param is dropped afterwards (single-shot via the ref) so a refresh
+  // or a back-navigation doesn't reopen a dialog the user dismissed.
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+  const enrollParam = searchParams.get("enroll");
+  const paramsStr = searchParams.toString();
+  const consumedEnrollParam = useRef(false);
+  useEffect(() => {
+    if (enrollParam !== "totp" || consumedEnrollParam.current) return;
+    if (status.isPending) return;
+    consumedEnrollParam.current = true;
+    if (!active) setEnrollOpen(true);
+    const next = new URLSearchParams(paramsStr);
+    next.delete("enroll");
+    const query = next.toString();
+    router.replace(`${pathname}${query ? `?${query}` : ""}`, { scroll: false });
+  }, [enrollParam, status.isPending, active, paramsStr, pathname, router]);
 
   return (
     <PageSection title={t("title")} subtitle={active ? t("subtitleActive") : t("subtitleInactive")}>

@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc";
 
 // Surfaces when an admin lands on /account because /admin/** soft-walled
@@ -83,6 +85,13 @@ export function AdminTotpBanner() {
           <p className="text-sm text-muted-foreground">
             {mode === "hard" ? t("hardSubtitle", { days: daysOverdue }) : t("softSubtitle")}
           </p>
+          {/* The prompt used to describe the fix without offering it :
+              the user had to know that "enable TOTP" lives under
+              Account & security and then find the button. `?enroll=totp`
+              lands them in the wizard itself (see totp-section.tsx). */}
+          <Button asChild size="sm" variant={mode === "hard" ? "destructive" : "outline"}>
+            <Link href="/account/security?enroll=totp">{t("cta")}</Link>
+          </Button>
         </div>
       </div>
     </div>
