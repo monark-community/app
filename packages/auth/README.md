@@ -181,22 +181,9 @@ Pull all four values from `pnpm supabase status`. The server-only `SUPABASE_SECR
 
 ### Social sign-in setup
 
-Three moving parts have to agree before a "Continue with …" button appears and works:
+Registering the OAuth apps, where the credentials go, and the two traps that don't fail loudly all live in one operator runbook: [docs/technical-documentation/social-sign-in.md](../../docs/technical-documentation/social-sign-in.md). It carries the per-provider sections and a troubleshooting table keyed on the actual symptoms.
 
-1. **The vendor** issues a client id + secret and accepts our callback URL. The redirect URI you register with the vendor is **Supabase's**, not ours: `http://127.0.0.1:54321/auth/v1/callback` locally, `https://<project-ref>.supabase.co/auth/v1/callback` hosted. Supabase then bounces the browser to `<app-origin>/auth/callback`, which is the URL that has to appear in `additional_redirect_urls`.
-2. **Supabase** holds the credentials, through the `[auth.external.*]` stanzas in [`supabase/config.toml`](../../supabase/config.toml) locally (flip `enabled` to true ; the id + secret come from `env()` so nothing credential-shaped is committed) or Authentication → Providers in a hosted project's dashboard.
-3. **The api** lists the slug in `AUTH_OAUTH_PROVIDERS`, which is what `auth.oauth.providers` returns to the sign-in page. A provider configured in Supabase but missing here renders no button ; one listed here but not configured in Supabase renders a button that fails at the provider.
-
-Per-vendor notes:
-
-| Provider | Slug     | Where                                                                                             | Watch out for                                                                                                                                                                                                                                      |
-| -------- | -------- | ------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| GitHub   | `github` | Settings → Developer settings → OAuth Apps                                                        | An account whose primary address is unverified or private comes back without a verified email, and the callback refuses it with `email-unverified`. That's intended ; the user verifies with GitHub first.                                         |
-| Google   | `google` | Google Cloud console → OAuth consent screen, then Credentials → OAuth client ID (Web application) | App verification is only required for sensitive scopes ; the plain email + profile scopes used here need none. A local sign-in that fails on a nonce mismatch wants `skip_nonce_check = true` in the local config only, never in a hosted project. |
-
-Microsoft (`azure`) lands as its own change alongside this one — an entry in `OAUTH_PROVIDERS`, a label, a brand mark, a config stanza, and a row in this table, because none of the provisioning path is provider-specific.
-
-Apple is further out: it needs a paid developer account and a client secret that is a JWT requiring regeneration every six months, and it only returns the user's name on the _first_ authorization.
+The short version, because it's the part people get wrong: three things have to agree ; the **vendor** (redirect URI registered against _Supabase's_ callback, not ours), **Supabase** (`[auth.external.*]` in [supabase/config.toml](../../supabase/config.toml), credentials resolved by the CLI from a **root `.env`**, never `services/api/.env`), and **the api** (`AUTH_OAUTH_PROVIDERS` listing the slug). All providers ship disabled.
 
 ### Runtime topology
 

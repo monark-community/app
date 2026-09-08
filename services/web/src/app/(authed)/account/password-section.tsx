@@ -127,7 +127,13 @@ export function PasswordSection() {
   }
 
   return (
-    <PageSection title={t("title")} subtitle={hasPassword ? t("subtitle") : t("set.subtitle")}>
+    // `id` is the anchor the Connected accounts card links to when the
+    // account has no password yet ; both cards live on /account/security.
+    <PageSection
+      id="password"
+      title={t("title")}
+      subtitle={hasPassword ? t("subtitle") : t("set.subtitle")}
+    >
       {identities.isLoading ? (
         <Skeleton className="h-9 w-40" />
       ) : (

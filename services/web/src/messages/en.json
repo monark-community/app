@@ -1969,9 +1969,8 @@
     },
     "connectedAccounts": {
       "title": "Connected accounts",
-      "subtitle": "The ways you can sign in to this account.",
+      "subtitle": "How you sign in. A second method is an optional backup.",
       "connected": "Connected",
-      "notSet": "Not set",
       "password": "Email and password",
       "connect": "Connect",
       "connecting": "Redirecting…",
@@ -1979,17 +1978,19 @@
       "notConnected": "Not connected",
       "cancel": "Cancel",
       "confirmTitle": "Disconnect this account?",
-      "confirmBody": "You'll no longer be able to sign in with {provider}. Your other sign-in methods keep working, and you can reconnect it any time.",
-      "lastMethodHint": "Set a password first — this is your only way to sign in.",
+      "confirmBody": "You won't be able to sign in with {provider} any more. Your other methods keep working, and you can reconnect it any time.",
       "linkedToast": "{provider} connected.",
       "unlinkedToast": "{provider} disconnected.",
       "errors": {
         "notLinked": "That account isn't connected.",
-        "lastMethod": "That's your only way to sign in. Set a password first, then disconnect it.",
+        "lastMethod": "That's your only way to sign in. Add another one first.",
         "linkFailed": "Couldn't connect {provider}. It may already be linked to another account.",
         "totpPending": "Finish the two-factor challenge first.",
         "upstream": "Something went wrong. Try again."
-      }
+      },
+      "onlyWayIn": "Your only way in",
+      "passwordWhy": "Sign in without a provider",
+      "setPassword": "Set a password"
     },
     "emailChange": {
       "change": "Change email",

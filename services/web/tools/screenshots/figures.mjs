@@ -57,6 +57,18 @@ const FIGURES = [
     viewport: { width: 1400, height: 560 },
     doc: "packages/kanban/docs/user-guide.md",
   },
+  {
+    name: "connected-accounts",
+    story: "connected-accounts-figure",
+    viewport: { width: 760, height: 360 },
+    doc: "docs/technical-documentation/social-sign-in.md",
+  },
+  {
+    name: "connected-accounts-only-method",
+    story: "connected-accounts-only-method",
+    viewport: { width: 760, height: 360 },
+    doc: "docs/technical-documentation/social-sign-in.md",
+  },
 ];
 
 const outDir = new URL("../../../../docs/assets/", import.meta.url);
