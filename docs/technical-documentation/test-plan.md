@@ -4,7 +4,7 @@ How we cover the system from unit through e2e, with a 75 % minimum statement / b
 
 This document is a working plan : it inventories what's there, defines what each layer is responsible for, lists the suites we still need to write, and wires the whole thing into GitHub Actions. New modules should land against the gate, not after it.
 
-> **Status: forward-looking plan, partly realized.** The layer seams + the 75 % coverage gate are in force. The per-package "what exists today" inventory further down predates most of the shipped modules and their test suites — for what's actually tested now, read each module's `README.md` and [platform-overview.md](platform-overview.md). References below to `phase-2/` feature modules (community, contributions, voting) are original examples ; the extended modules that actually shipped are `calendar` and `kanban`.
+> **Status: forward-looking plan, partly realized.** The layer seams + the 75 % coverage gate are in force. The per-package "what exists today" inventory further down predates most of the shipped modules and their test suites ; for what's actually tested now, read each module's `README.md` and [platform-overview.md](platform-overview.md). References below to `phase-2/` feature modules (community, contributions, voting) are original examples ; the extended modules that actually shipped are `calendar` and `kanban`.
 
 ## Goals
 
@@ -35,11 +35,11 @@ The four layers compose : a unit test catches arithmetic / parsing / regex bugs 
 ## Tooling
 
 - **Unit + integration + component** : [vitest](https://vitest.dev/) + [@vitest/coverage-v8](https://vitest.dev/guide/coverage.html). Already wired in every package's `package.json`. Coverage uses Node's built-in V8 reporter (no Istanbul instrumentation overhead).
-- **Component DOM** : [@testing-library/react](https://testing-library.com/docs/react-testing-library/intro/) + [@testing-library/jest-dom](https://github.com/testing-library/jest-dom) + [@testing-library/user-event](https://testing-library.com/docs/user-event/intro/). Mounts components inside vitest's jsdom environment. The shared `<TestIntlProvider>` + `renderWithIntl` helpers live in [services/web/tests/test-utils.tsx](../../services/web/tests/test-utils.tsx) ; every component test imports from there so `useTranslations` finds the real production catalog. tRPC client calls are stubbed per test via `vi.mock("@/lib/trpc", …)` returning the minimal `useQuery` / `useMutation` shape the component touches — see [account-sidebar.test.tsx](../../services/web/tests/components/account-sidebar.test.tsx) for the canonical pattern.
+- **Component DOM** : [@testing-library/react](https://testing-library.com/docs/react-testing-library/intro/) + [@testing-library/jest-dom](https://github.com/testing-library/jest-dom) + [@testing-library/user-event](https://testing-library.com/docs/user-event/intro/). Mounts components inside vitest's jsdom environment. The shared `<TestIntlProvider>` + `renderWithIntl` helpers live in [services/web/tests/test-utils.tsx](../../services/web/tests/test-utils.tsx) ; every component test imports from there so `useTranslations` finds the real production catalog. tRPC client calls are stubbed per test via `vi.mock("@/lib/trpc", …)` returning the minimal `useQuery` / `useMutation` shape the component touches ; see [account-sidebar.test.tsx](../../services/web/tests/components/account-sidebar.test.tsx) for the canonical pattern.
 - **tRPC stubs in component tests** : [msw](https://mswjs.io/) intercepts the tRPC HTTP transport with deterministic JSON responses. Avoids spinning up a real Express + Postgres for every component test.
 - **i18n in component tests** : a tiny `<TestIntlProvider>` wrapper that mounts `NextIntlClientProvider` with the messages JSON loaded from disk. So `t("…")` works ; we never render placeholder keys.
 - **DB integration** : [Testcontainers Postgres](https://testcontainers.com/modules/postgresql/) for `@monark/db` + every package that exercises it (rbac, organizations, notifications, users). Each suite creates a fresh container, runs the Prisma migrations, then runs against it. Containers are reused across tests in a single file via vitest's `globalSetup`.
-- **SMTP integration** : [smtp-tester](https://www.npmjs.com/package/smtp-tester) — a stub SMTP server we boot inside the test runner. Captures `sendMail` calls so we can assert subject, recipient, body. Faster + more deterministic than running Mailpit + polling its inbox API.
+- **SMTP integration** : [smtp-tester](https://www.npmjs.com/package/smtp-tester) ; a stub SMTP server we boot inside the test runner. Captures `sendMail` calls so we can assert subject, recipient, body. Faster + more deterministic than running Mailpit + polling its inbox API.
 - **e2e** : [Playwright](https://playwright.dev/), already configured. Existing config runs Chromium only ; we add Firefox + WebKit projects and run them in CI on the same job.
 - **Coverage thresholds** : per-package vitest config sets `coverage.thresholds.lines / branches / functions / statements: 75`. The `pnpm test` task fails the build the moment any threshold is missed.
 
@@ -224,7 +224,7 @@ The CI job spins up :
 
 #### Add (Phase-2 ; per module as it ships)
 
-Each extended module ships its own e2e spec at land-time (`calendar` and `kanban` today ; future community / voting / contribution modules the same). The pattern is the same — happy path + the scary failure modes.
+Each extended module ships its own e2e spec at land-time (`calendar` and `kanban` today ; future community / voting / contribution modules the same). The pattern is the same ; happy path + the scary failure modes.
 
 ### Cross-browser
 
@@ -266,9 +266,9 @@ test: {
 
 Special-case overrides :
 
-- `@monark/db` — 50 % overall (most code is generated).
-- `services/api` — 70 % overall (a lot of the surface is Express plumbing).
-- `services/web/src/app/(authed)/**/actions.ts` — 80 % (security-sensitive).
+- `@monark/db` ; 50 % overall (most code is generated).
+- `services/api` ; 70 % overall (a lot of the surface is Express plumbing).
+- `services/web/src/app/(authed)/**/actions.ts` ; 80 % (security-sensitive).
 
 ### Aggregated coverage
 
@@ -276,7 +276,7 @@ The CI job uploads each package's `coverage/lcov.info` to [Codecov](https://abou
 
 ### Local dev
 
-`pnpm test --coverage` from any package prints the threshold report to the terminal. Devs see "lines coverage 73.4 % / threshold 75 %" before pushing — same gate CI uses.
+`pnpm test --coverage` from any package prints the threshold report to the terminal. Devs see "lines coverage 73.4 % / threshold 75 %" before pushing ; same gate CI uses.
 
 ## CI integration
 
@@ -336,7 +336,7 @@ jobs:
 
 Two separate jobs : `verify` (lint / typecheck / unit + integration) is fast (~3 min) and gates the merge ; `e2e` is slower (~10 min) and runs in parallel after `verify` passes.
 
-The 75 % threshold gate fires inside `pnpm test` itself — if any package drops below, vitest exits non-zero and the job fails.
+The 75 % threshold gate fires inside `pnpm test` itself : if any package drops below, vitest exits non-zero and the job fails.
 
 ## Phasing
 

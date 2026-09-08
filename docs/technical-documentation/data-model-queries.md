@@ -1,13 +1,13 @@
 # Data Model query language (MonarkQL)
 
 A structured filter language over Data Model records, parallel to (and reusing) the
-existing filter menu. Two front-ends — the declarative filter menu and a text query
-bar — read and write **one canonical query tree**, which the server compiles to SQL.
+existing filter menu. Two front-ends ; the declarative filter menu and a text query
+bar : read and write **one canonical query tree**, which the server compiles to SQL.
 GitHub / Notion / Linear ship the same shape: a structured predicate tree, with the
 text box as a serialization of it.
 
-> **Where the code lives.** The generic, schema-agnostic language — the AST, operator /
-> `FilterableKind` taxonomy, text DSL, and `@variables` — was extracted into the shared
+> **Where the code lives.** The generic, schema-agnostic language ; the AST, operator /
+> `FilterableKind` taxonomy, text DSL, and `@variables` ; was extracted into the shared
 > **[`@monark/query`](../../packages/query/src/contracts)** library (also used by kanban).
 > `@monark/data-models` depends on it and adds only the Data-Model binding: the
 > `DataFieldType → FilterableKind` bridge (`filterableKindOf`, in its
@@ -19,7 +19,7 @@ text box as a serialization of it.
 This is deliberately **separate** from the [`FORMULA` field engine](../../packages/data-models/src/contracts/formula.ts).
 A formula is a per-record _compute_ (one scalar out of one loaded record, evaluated in
 JS); a query is a _set selector_ (a predicate over the whole table, compiled to SQL).
-They don't share a grammar — one runs in JS over a single record, the other compiles to
+They don't share a grammar ; one runs in JS over a single record, the other compiles to
 a `WHERE` Postgres runs over every row.
 
 ## The three pieces
@@ -78,13 +78,13 @@ reasons:
 1. **Case-insensitive text** needs `ILIKE`, which the structured JSON filter has no
    `mode` for.
 2. The opt-in per-field indexes in [`indexing.ts`](../../packages/data-models/src/server/indexing.ts)
-   are **expression indexes** — `((data->>'key')::numeric)`, `::timestamptz`, GIN on
+   are **expression indexes** : `((data->>'key')::numeric)`, `::timestamptz`, GIN on
    `data->'key'`. Only a query written against the _same_ expressions uses them; Prisma's
    `data: { path, gt }` form generates a different extraction and misses them.
 
 Field keys are interpolated as identifiers (Postgres can't bind a json path key), which
 is safe because a `DataField.key` is validated once at creation (`^[a-z][a-z0-9_]*$`) and
-is immutable — the same guarantee `indexing.ts` relies on to build raw DDL. Every _value_
+is immutable : the same guarantee `indexing.ts` relies on to build raw DDL. Every _value_
 is bound as a parameter, never interpolated.
 
 `listDataRecordsWithQuery` keeps the shared **keyset pagination** contract (`updatedAt
@@ -94,7 +94,7 @@ valid cursor. The role-access predicate mirrors `recordRoleAccessWhere` as SQL, 
 row-level scoping is identical to the structured path.
 
 The classic filter menu still runs the structured `listDataRecords` path; the query tree
-runs `listDataRecordsWithQuery`. Both return the same shape — the menu is slated to
+runs `listDataRecordsWithQuery`. Both return the same shape ; the menu is slated to
 converge onto the tree/compiler path, retiring the flat `fieldFilters` input.
 
 ## Text DSL syntax
@@ -123,8 +123,8 @@ field's kind is a `QuerySyntaxError`. The pair is a true inverse on normalized t
 
 A value may be a `@variable` ([`query/contracts/query-variables.ts`](../../packages/query/src/contracts/query-variables.ts)), resolved at **compile time** against a `QueryContext` (`{ userId, now }`) so a saved query means the right thing for whoever runs it, whenever:
 
-- `@me` — the caller's user id (use on a relation / user field: `assignee:@me`).
-- `@now`, `@today`, `@yesterday`, `@tomorrow`, `@startOfWeek`, `@endOfWeek`, `@startOfMonth`, `@endOfMonth`, `@startOfYear`, `@endOfYear` — UTC date anchors. Compose a relative range with `between`: `due:@startOfWeek..@endOfWeek`.
+- `@me` ; the caller's user id (use on a relation / user field: `assignee:@me`).
+- `@now`, `@today`, `@yesterday`, `@tomorrow`, `@startOfWeek`, `@endOfWeek`, `@startOfMonth`, `@endOfMonth`, `@startOfYear`, `@endOfYear` ; UTC date anchors. Compose a relative range with `between`: `due:@startOfWeek..@endOfWeek`.
 
 The AST stores the raw `@token` string (the parser/printer treat it like any value); the compiler swaps it for a concrete bound value via `resolveQueryVariable`, and an unknown or unsupplied-context variable is a 400. The router supplies `{ userId: ctx.userId, now: new Date() }`.
 
@@ -136,7 +136,7 @@ the record list falls back to the classic filter menu.
 ## Relation traversal
 
 A dotted field filters through a relation : `assignee.title:alice` matches records whose
-related record satisfies the sub-condition. The AST needs no new shape — the leaf's
+related record satisfies the sub-condition. The AST needs no new shape ; the leaf's
 `field` is just `"assignee.title"`; the compiler splits on the dot. It compiles to an
 `EXISTS` over the target model's `DataRecord`s:
 
@@ -153,7 +153,7 @@ The column root is parameterized (`r.data` for the outer record, `t.data` inside
 subquery) so the outer relation value stays unambiguous under the alias shadow. Safety:
 the router (`buildRelationTargets`) only resolves DATA_MODEL relations in the caller's
 org, requires the caller can **read** the target model (else 403), and threads the
-target's **row-level** role-access into the subquery — so a traversal can't reveal a
+target's **row-level** role-access into the subquery ; so a traversal can't reveal a
 related record the caller couldn't open directly. **One level only** (`a.b`, not
 `a.b.c`); SYSTEM_MODEL relation targets aren't traversable. The web query bar gets the
 dotted fields as "virtual" entries from `dataModels.records.queryFields`, so they parse +
@@ -161,14 +161,14 @@ autocomplete like any field.
 
 ## Saved views
 
-A saved view is a named query tree per model (`DataRecordView` — a core table under the
+A saved view is a named query tree per model (`DataRecordView` ; a core table under the
 data-models banner in `base.prisma`, migration `20260802140000_add_data_record_views`).
 Personal by default (`createdBy` is the owner); `shared = true` makes it visible to
 everyone with read access to the model. The tRPC surface `dataModels.views.{list, create,
 update, delete}` gates reading on `data-models.record-read` and scopes editing to the
 owner (a shared view is still only editable by its creator). The stored `query` is
 validated with `filterQuerySchema` on write; a view that references a since-removed field
-simply errors when the compiler rejects it at run time — nothing to migrate. The web
+simply errors when the compiler rejects it at run time ; nothing to migrate. The web
 `ViewsMenu` loads a view by printing its tree back to query text, and saves the current
 tree (with an optional share toggle).
 
@@ -176,15 +176,15 @@ tree (with an optional share toggle).
 
 `dataModels.records.list` accepts an optional `filter` (the `filterQuerySchema` tree)
 alongside the legacy `fieldFilters`. When `filter` is present it takes precedence and
-runs the compiled raw-SQL path. Read-only — no new permission/event/notification (the
+runs the compiled raw-SQL path. Read-only ; no new permission/event/notification (the
 existing `data-models.record-read` gate and record role-access still apply). Saved views
 live under `dataModels.views.*` (see above).
 
 ## Tests
 
-- `tests/query.test.ts` — taxonomy + schema (unit).
-- `tests/query-dsl.test.ts` — parser, printer, round-trip (unit).
-- `tests/integration/query-language.test.ts` — every operator family, groups, negation,
+- `tests/query.test.ts` ; taxonomy + schema (unit).
+- `tests/query-dsl.test.ts` ; parser, printer, round-trip (unit).
+- `tests/integration/query-language.test.ts` ; every operator family, groups, negation,
   and the keyset pagination contract against a real Postgres testcontainer.
 
 ## Deferred

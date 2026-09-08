@@ -1,24 +1,24 @@
-# Deploy checklist — Vercel (web) + Render (api)
+# Deploy checklist : Vercel (web) + Render (api)
 
 Step-by-step walkthrough for a fresh production deploy. Assumes a single-tenant launch ; multi-tenant has additional setup not covered here.
 
-> This walkthrough sets up **production** (branch `main`). For the full two-environment model — a **staging** environment that auto-deploys from `develop` alongside production — see [environments.md](environments.md) ; it reuses these same steps against a separate Supabase project + the `*-staging` Render services.
+> This walkthrough sets up **production** (branch `main`). For the full two-environment model ; a **staging** environment that auto-deploys from `develop` alongside production : see [environments.md](environments.md) ; it reuses these same steps against a separate Supabase project + the `*-staging` Render services.
 
 The dependency graph forces this order :
 
-1. **Supabase production project** — Auth + Postgres. Both web and api read its keys.
-2. **SMTP provider** — Resend / Postmark / SES. The api's outbound mail.
-3. **Render** (api + crons) — needs production Postgres + SMTP + secrets ; produces the api URL.
-4. **Vercel** (web) — needs the api URL.
-5. **Loop back to Render** — update `WEB_ORIGIN` / `APP_URL` to the real Vercel URL.
-6. **Smoke test** — sign up flow end-to-end.
-7. **Custom domains** (optional) — once smoke passes.
+1. **Supabase production project** : Auth + Postgres. Both web and api read its keys.
+2. **SMTP provider** : Resend / Postmark / SES. The api's outbound mail.
+3. **Render** (api + crons) : needs production Postgres + SMTP + secrets ; produces the api URL.
+4. **Vercel** (web) : needs the api URL.
+5. **Loop back to Render** : update `WEB_ORIGIN` / `APP_URL` to the real Vercel URL.
+6. **Smoke test** : sign up flow end-to-end.
+7. **Custom domains** (optional) : once smoke passes.
 
 Allow ~60 min the first time. Re-deploys after this take ~5 min each.
 
 ---
 
-## Phase 0 — Prerequisites
+## Phase 0 : Prerequisites
 
 ### 0.1 Generate the deploy-time secrets
 
@@ -31,7 +31,7 @@ openssl rand -hex 32   # → SECRETS_ENCRYPTION_KEY (org-secrets store ; separat
 openssl rand -hex 32   # → CRON_SECRET
 ```
 
-These are operator secrets — never commit, never share over chat. Rotating `TOTP_ENCRYPTION_KEY` invalidates every existing TOTP enrollment ; rotating `SECRETS_ENCRYPTION_KEY` invalidates every stored org secret (webhook + integration credentials must be re-entered) ; rotating `CRON_SECRET` is harmless mid-month.
+These are operator secrets ; never commit, never share over chat. Rotating `TOTP_ENCRYPTION_KEY` invalidates every existing TOTP enrollment ; rotating `SECRETS_ENCRYPTION_KEY` invalidates every stored org secret (webhook + integration credentials must be re-entered) ; rotating `CRON_SECRET` is harmless mid-month.
 
 ### 0.2 Create a production Supabase project
 
@@ -52,22 +52,22 @@ Pick a provider. Resend is the simplest :
 2. Add a verified sender domain (DNS DKIM + SPF records).
 3. The SMTP URL format is `smtps://resend:<API_KEY>@smtp.resend.com:465`.
 
-Postmark / SES / Brevo / Mailgun all work the same way — `smtps://username:password@host:port` (or `smtp://...` on port 587 if you prefer STARTTLS).
+Postmark / SES / Brevo / Mailgun all work the same way ; `smtps://username:password@host:port` (or `smtp://...` on port 587 if you prefer STARTTLS).
 
 ---
 
-## Phase 1 — Render : api + cron services
+## Phase 1 : Render : api + cron services
 
 ### 1.1 Connect the GitHub repo to Render
 
 [render.com](https://render.com) → New → Blueprint. Pick this repo.
 
-Render reads [`render.yaml`](../../render.yaml) at the repo root, which defines **both** environments — production services on `branch: main` and mirror `*-staging` services on `branch: develop`. It lists six services + two env-var groups :
+Render reads [`render.yaml`](../../render.yaml) at the repo root, which defines **both** environments ; production services on `branch: main` and mirror `*-staging` services on `branch: develop`. It lists six services + two env-var groups :
 
 - **Production** (`main`) : `monark-api`, `monark-cron-deletions`, `monark-cron-webhook-sweep`, and the `monark-cron-shared` group.
 - **Staging** (`develop`) : `monark-api-staging`, `monark-cron-deletions-staging`, `monark-cron-webhook-sweep-staging`, and the `monark-cron-shared-staging` group.
 
-For this production walkthrough, fill only the **production** services + `monark-cron-shared` below ; leave the `*-staging` ones for when you stand up staging (see [environments.md](environments.md)). Don't click "Apply" yet — open the env-var prompts first.
+For this production walkthrough, fill only the **production** services + `monark-cron-shared` below ; leave the `*-staging` ones for when you stand up staging (see [environments.md](environments.md)). Don't click "Apply" yet ; open the env-var prompts first.
 
 ### 1.2 Fill the `monark-cron-shared` env-var group
 
@@ -76,7 +76,7 @@ For this production walkthrough, fill only the **production** services + `monark
 | `CRON_SECRET` | the secret from 0.1                                                                         |
 | `API_URL`     | `https://monark-api.onrender.com` ← placeholder for now ; we'll update once the api is live |
 
-The api service inherits both via `fromGroup: monark-cron-shared` — no need to duplicate.
+The api service inherits both via `fromGroup: monark-cron-shared` ; no need to duplicate.
 
 ### 1.3 Fill `monark-api` env vars
 
@@ -94,11 +94,11 @@ Most are operator-set (`sync: false` in [render.yaml](../../render.yaml)). Rende
 | `SMTP_URL`                  | from 0.3                                                                   |
 | `SMTP_FROM`                 | `Monark <noreply@yourdomain.com>`                                          |
 | `TOTP_ENCRYPTION_KEY`       | from 0.1                                                                   |
-| `SECRETS_ENCRYPTION_KEY`    | from 0.1 (org-secrets store — required once any secret-using module is on) |
+| `SECRETS_ENCRYPTION_KEY`    | from 0.1 (org-secrets store ; required once any secret-using module is on) |
 | `INITIAL_ORG_SLUG`          | `monark` (or whatever slug your singleton org should have)                 |
 | `INITIAL_ORG_NAME`          | `Monark` (or your display name)                                            |
-| `INITIAL_ORG_PRIMARY_COLOR` | `"#2563EB"` — your brand color, **quoted**. Themes the whole running UI    |
-| `WEBHOOK_SECRETS_JSON`      | leave blank for now — fill once you create webhook endpoints               |
+| `INITIAL_ORG_PRIMARY_COLOR` | `"#2563EB"` ; your brand color, **quoted**. Themes the whole running UI    |
+| `WEBHOOK_SECRETS_JSON`      | leave blank for now ; fill once you create webhook endpoints               |
 
 > **Quote any value that starts with `#`.** Node's `--env-file` parser reads an
 > unquoted leading `#` as a comment, so `INITIAL_ORG_PRIMARY_COLOR=#2563EB`
@@ -106,8 +106,8 @@ Most are operator-set (`sync: false` in [render.yaml](../../render.yaml)). Rende
 
 Optional, depending on your setup :
 
-- **Error tracking** — set `SENTRY_DSN` to turn on server-side Sentry (a complete no-op if unset). See [observability.md](./observability.md).
-- **White-label branding** — set the `BRANDING_*` vars (`BRANDING_APP_NAME`, `BRANDING_TAGLINE`, `BRANDING_SUPPORT_EMAIL`, `BRANDING_PRIMARY`, `BRANDING_FROM_EMAIL`, `BRANDING_TOTP_ISSUER`, …) to your product's identity ; each is optional and falls back to the neutral starter default. See [white-label.md](./white-label.md). Three surfaces are **not** covered by env and need a file edit before launch : the favicon, the three Supabase auth email templates, and the org logo (uploaded in-app). white-label.md's retargeting checklist walks all of them.
+- **Error tracking** : set `SENTRY_DSN` to turn on server-side Sentry (a complete no-op if unset). See [observability.md](./observability.md).
+- **White-label branding** : set the `BRANDING_*` vars (`BRANDING_APP_NAME`, `BRANDING_TAGLINE`, `BRANDING_SUPPORT_EMAIL`, `BRANDING_PRIMARY`, `BRANDING_FROM_EMAIL`, `BRANDING_TOTP_ISSUER`, …) to your product's identity ; each is optional and falls back to the neutral starter default. See [white-label.md](./white-label.md). Three surfaces are **not** covered by env and need a file edit before launch : the favicon, the three Supabase auth email templates, and the org logo (uploaded in-app). white-label.md's retargeting checklist walks all of them.
 
 ### 1.4 Click "Apply"
 
@@ -121,9 +121,9 @@ Expected milestones in the api log :
 
 The `/health` endpoint should respond 200 ; Render's health check runs every 60 s.
 
-If `prisma migrate deploy` fails, the deploy aborts cleanly — fix the schema / DB credentials and push again.
+If `prisma migrate deploy` fails, the deploy aborts cleanly ; fix the schema / DB credentials and push again.
 
-The singleton org is provisioned at api boot from `INITIAL_ORG_*` (idempotent — a restart on a healthy install is a no-op). To (re)provision without a restart — e.g. from a Render Shell with `DATABASE_URL` set — run `pnpm provision:org` (reads the same `INITIAL_ORG_*` env, or takes `--slug` / `--name` / `--color` flags).
+The singleton org is provisioned at api boot from `INITIAL_ORG_*` (idempotent : a restart on a healthy install is a no-op). To (re)provision without a restart ; e.g. from a Render Shell with `DATABASE_URL` set : run `pnpm provision:org` (reads the same `INITIAL_ORG_*` env, or takes `--slug` / `--name` / `--color` flags).
 
 ### 1.5 Copy the api URL
 
@@ -133,7 +133,7 @@ Update `monark-cron-shared.API_URL` to this value. The two cron services pick it
 
 ---
 
-## Phase 2 — Vercel : web
+## Phase 2 : Vercel : web
 
 ### 2.1 Import the repo
 
@@ -156,12 +156,12 @@ Add these in the import dialog before clicking Deploy :
 | `NEXT_PUBLIC_API_URL`                  | the api URL from 1.5                                                           |
 | `NEXT_PUBLIC_APP_URL`                  | placeholder for now ; we'll update in Phase 3 once we know the real Vercel URL |
 
-Don't add `SUPABASE_SECRET_KEY` here — the web service must NEVER read the service-role key.
+Don't add `SUPABASE_SECRET_KEY` here : the web service must NEVER read the service-role key.
 
 Optional :
 
-- **Error tracking** — `NEXT_PUBLIC_SENTRY_DSN` turns on browser + web-server Sentry. For readable production stack traces, also set `SENTRY_ORG`, `SENTRY_PROJECT`, and `SENTRY_AUTH_TOKEN` (source-map upload at build time ; a build without the token still succeeds). See [observability.md](./observability.md).
-- **White-label branding** — mirror the api's `BRANDING_*` vars with the `NEXT_PUBLIC_BRANDING_*` duplicates (`NEXT_PUBLIC_BRANDING_APP_NAME`, `NEXT_PUBLIC_BRANDING_PRIMARY`, …) so the browser bundle picks them up. See [white-label.md](./white-label.md).
+- **Error tracking** : `NEXT_PUBLIC_SENTRY_DSN` turns on browser + web-server Sentry. For readable production stack traces, also set `SENTRY_ORG`, `SENTRY_PROJECT`, and `SENTRY_AUTH_TOKEN` (source-map upload at build time ; a build without the token still succeeds). See [observability.md](./observability.md).
+- **White-label branding** : mirror the api's `BRANDING_*` vars with the `NEXT_PUBLIC_BRANDING_*` duplicates (`NEXT_PUBLIC_BRANDING_APP_NAME`, `NEXT_PUBLIC_BRANDING_PRIMARY`, …) so the browser bundle picks them up. See [white-label.md](./white-label.md).
 
 ### 2.3 Pin the region
 
@@ -184,11 +184,11 @@ Expected milestones :
 - "Building Next.js..." (~1 min)
 - "Compiled successfully" + the deploy URL
 
-Once green, copy the Vercel URL — `https://monark-<hash>.vercel.app` initially, or your project's primary URL.
+Once green, copy the Vercel URL ; `https://monark-<hash>.vercel.app` initially, or your project's primary URL.
 
 ---
 
-## Phase 3 — Loop back : update the api's web origin
+## Phase 3 : Loop back : update the api's web origin
 
 ### 3.1 Update Render env vars
 
@@ -222,16 +222,16 @@ Save. The change is live immediately ; no Supabase redeploy needed.
 
 ---
 
-## Phase 4 — Smoke test
+## Phase 4 : Smoke test
 
 Hit the deployed app from a browser :
 
 1. Open `https://monark.vercel.app`. The (anon) layout sees no session and lands you on `/signin`.
 2. Click "Create account". Fill an email + password. Submit.
-3. Wait 5–10 s for the verification email. Check the inbox of the email you signed up with — Resend / Postmark dashboards also show outbound mail logs.
+3. Wait 5–10 s for the verification email. Check the inbox of the email you signed up with ; Resend / Postmark dashboards also show outbound mail logs.
 4. Click the verification link. Lands on `/account` with a confirmed account.
 5. The first user to sign up + confirm gets `bootstrap` admin (per the api's `maybeBootstrapSingletonOrg` hook). Visit `/admin` to confirm.
-6. Open `https://monark-api.onrender.com/health` directly — should return `{ "ok": true, "service": "api" }`.
+6. Open `https://monark-api.onrender.com/health` directly : should return `{ "ok": true, "service": "api" }`.
 7. (Optional) Test a webhook : `/admin/webhooks` → New endpoint pointing at `https://webhook.site/<your-uuid>` → trigger an event (toggle a feature flag in `/admin/feature-flags`) → check webhook.site for the delivery + the `Webhook-Signature` header.
 
 If any step fails :
@@ -243,7 +243,7 @@ If any step fails :
 
 ---
 
-## Phase 5 — Custom domains (optional, do this once smoke passes)
+## Phase 5 : Custom domains (optional, do this once smoke passes)
 
 ### 5.1 Vercel : `app.yourdomain.com`
 
@@ -292,8 +292,8 @@ Run Phase 4 again against the custom domain to confirm everything still works en
 
 ## What's NOT in this checklist
 
-- **Multi-tenant mode.** The `tenancy.multi-tenant` feature flag is OFF by default. Flip it on only after the org-selector UI is wired (currently incomplete — see backlog).
+- **Multi-tenant mode.** The `tenancy.multi-tenant` feature flag is OFF by default. Flip it on only after the org-selector UI is wired (currently incomplete ; see backlog).
 - **Backups.** Supabase auto-snapshots production projects daily ; verify the schedule in Supabase → Database → Backups. Render Postgres (if you ever swap off Supabase) needs explicit backup config.
 - **Log retention.** Render's free tier retains ~7 days of logs ; Vercel keeps ~3 days. For longer retention, ship to Logtail / Datadog / etc.
-- **Error tracking IS wired** — Sentry, opt-in per deployment via `SENTRY_DSN` (api) / `NEXT_PUBLIC_SENTRY_DSN` (web) ; see [observability.md](./observability.md). **Uptime / latency monitoring is NOT** — add UptimeRobot / Better Uptime / Pingdom against `https://api.yourdomain.com/health` and the web URL.
+- **Error tracking IS wired** : Sentry, opt-in per deployment via `SENTRY_DSN` (api) / `NEXT_PUBLIC_SENTRY_DSN` (web) ; see [observability.md](./observability.md). **Uptime / latency monitoring is NOT** ; add UptimeRobot / Better Uptime / Pingdom against `https://api.yourdomain.com/health` and the web URL.
 - **CDN / caching.** Vercel's edge handles the web ; the api has no caching layer yet (every request hits the api process). Add a CDN (Cloudflare, etc.) only if you start serving heavy public-asset endpoints.

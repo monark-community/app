@@ -5,7 +5,7 @@ per-organization, encrypted-at-rest `key → value` store (`@monark/secrets`), a
 server-only read path on the automation node-execution context
 (`ctx.getSecret`), and a shared guarded-outbound-HTTP helper
 (`@monark/common/http`). It is the enabling primitive for future integration
-modules (social posting, GitHub issue creation, etc.) — those register their own
+modules (social posting, GitHub issue creation, etc.) ; those register their own
 automation nodes and, from a node's `execute`, read the org's stored access
 tokens without any of them ever crossing the tRPC boundary.
 
@@ -18,16 +18,16 @@ tokens without any of them ever crossing the tRPC boundary.
 | Node read path        | [`ctx.getSecret`](../../packages/automation/src/server/registry.ts)                                    | Added to `NodeExecutionContext`; wired in [`engine.ts`](../../packages/automation/src/server/engine.ts) to `getSecretValue(org, name)`.                   |
 | `secret` config field | [`AutomationNodeConfigFieldType`](../../packages/automation/src/contracts/nodes.ts)                    | A node config field whose stored value is the secret's **name** (a reference), never the value.                                                           |
 | Editor picker         | [`automation-editor.tsx`](<../../services/web/src/app/(authed)/automation/[id]/automation-editor.tsx>) | Renders a `secret` field as a name dropdown (backed by `automation.secrets.list`), empty-state links to `/admin/secrets`.                                 |
-| Guarded fetch         | [`@monark/common/http`](../../packages/common/src/http.ts)                                             | `assertOutboundUrlSafe(url)` + `safeFetch(url, opts)` — the scheme/host guard + abort-timeout wrapper reused by the webhook node and the webhooks module. |
+| Guarded fetch         | [`@monark/common/http`](../../packages/common/src/http.ts)                                             | `assertOutboundUrlSafe(url)` + `safeFetch(url, opts)` ; the scheme/host guard + abort-timeout wrapper reused by the webhook node and the webhooks module. |
 
 ## Security model
 
 - **Write-only surface.** The plaintext value never crosses tRPC. There is **no
-  read-value procedure at all** — `adminList` returns names + metadata,
+  read-value procedure at all** ; `adminList` returns names + metadata,
   `adminSet` accepts a new value, `adminDelete` removes one. The admin UI can
   replace a value but never displays it.
 - **Encrypted at rest.** AES-256-GCM (12-byte IV, 16-byte tag) keyed by
-  `SECRETS_ENCRYPTION_KEY` — 32 bytes hex, **separate** from
+  `SECRETS_ENCRYPTION_KEY` ; 32 bytes hex, **separate** from
   `TOTP_ENCRYPTION_KEY` so a leak of one key doesn't expose the other. Loaded
   lazily (fail-closed): unset ⇒ any set/read throws; a deploy that never touches
   secrets doesn't need it.
@@ -69,7 +69,7 @@ registerAutomationNodes("github", {
           /* … */
         }),
       });
-      // Return only non-sensitive result data — never the token.
+      // Return only non-sensitive result data ; never the token.
       return { status: res.status };
     },
   }),

@@ -10,7 +10,7 @@ An org owns many **boards** ; a board owns ordered **columns** ; a column owns
 ordered **cards**. Cards drag between columns. Like the calendar, the module
 owns its Prisma models directly in the shared `schema.prisma` under the
 `// ── MODULE: kanban ──` banner (`KanbanBoard`, `KanbanBoardRoleAccess`,
-`KanbanColumn`, `KanbanCard` — migrations `20260725200201_add_kanban`,
+`KanbanColumn`, `KanbanCard` ; migrations `20260725200201_add_kanban`,
 `20260726023411_kanban_card_fields`, `20260726040000_kanban_card_multi_assignee`,
 `20260727150000_kanban_card_multi_reviewer`, `20260727170000_kanban_card_subtasks`,
 `20260808020000_kanban_card_blocks`, `20260808030000_kanban_drop_subtasks`).
@@ -20,13 +20,13 @@ columns hard-delete and cascade their cards.
 A **card** carries `title`, `description` (a BlockNote **block array**, `Json`) +
 `descriptionText` (its plain-text projection via `blocksToText`, kept in sync on
 write so the query language filters on it), `assigneeIds` / `reviewerIds` (text
-arrays — a card can have **many** assignees and **many** reviewers ; org-member
+arrays : a card can have **many** assignees and **many** reviewers ; org-member
 userIds, not FKs), `dueAt?`,
 `priority?` (`KanbanCardPriority` : LOW / MEDIUM /
-HIGH / CRITICAL — a severity-graded colour, `KANBAN_PRIORITY_COLOR` in
+HIGH / CRITICAL : a severity-graded colour, `KANBAN_PRIORITY_COLOR` in
 `contracts/types.ts` driving a faded-tint badge on the card + in the editor
 picker, matching the Data-Models select badges), and `estimate?` (Int). A card's
-**checklist lives in the block body** now (BlockNote `checkListItem` blocks) —
+**checklist lives in the block body** now (BlockNote `checkListItem` blocks) :
 the old dedicated `subtasks` column was dropped. Estimate + priority render as
 chips on the card, and **checklist progress** renders as a thin **progress bar
 flush with the card's bottom edge** (blue while in progress, green when complete ;
@@ -42,7 +42,7 @@ editor on click.
 > and every reader coerces it (the block editor casts to `Block[]`, the card face
 > reads it through `checklistProgress`). Drag activation is input-aware : a `MouseSensor` starts on a 6px move
 > (so a click stays a click), while a `TouchSensor` needs a ~250ms **long-press**
-> before dragging — a quick touch swipe pans/scrolls the board instead (the card
+> before dragging : a quick touch swipe pans/scrolls the board instead (the card
 > sets no `touch-action: none`, so the browser owns the gesture until the press
 > delay elapses). This is the fix for "I tried to scroll and moved a card" on
 > mobile, where horizontal space is tight.
@@ -71,20 +71,20 @@ its `position` in one transaction ; the source column keeps its (harmless) gaps.
 
 Registered at api boot in [`services/api/src/server.ts`](../../services/api/src/server.ts):
 
-- **RBAC** — `registerKanbanPermissions()` → `kanban.{view,create,edit,delete,manage}`.
+- **RBAC** : `registerKanbanPermissions()` → `kanban.{view,create,edit,delete,manage}`.
   Every mutation guards with `requirePermission(ctx, "kanban.<key>", org.id)`.
   Per-board access via `KanbanBoardRoleAccess` (empty = everyone ; `kanban.manage`
   bypasses), mirroring `CalendarRoleAccess`.
-- **Event bus** — every mutation emits a `KanbanEvents` member
+- **Event bus** : every mutation emits a `KanbanEvents` member
   (`board-created` / `column-created` / `card-created` / `card-updated` /
   `card-moved` / `card-deleted` / `card-assigned`).
-- **Webhooks** — free : `registerKanbanEventTypes()` registers the operator
+- **Webhooks** : free : `registerKanbanEventTypes()` registers the operator
   descriptions, making every event subscribable.
-- **Notifications** — `registerKanbanNotificationKinds()` +
+- **Notifications** : `registerKanbanNotificationKinds()` +
   `registerKanbanNotificationSubscriber()`. The subscriber reacts to
   `kanban.card-assigned` and `notify()`s the assignee (`kanban.card.assigned`
   kind, in-app default-on + email opt-in, en + fr). Self-assignment is skipped.
-- **Feature flags** — `registerKanbanFeatureFlags()` → `kanban.board` (default-on).
+- **Feature flags** : `registerKanbanFeatureFlags()` → `kanban.board` (default-on).
   The [route](<../../services/web/src/app/(authed)/kanban/page.tsx>) 404s and the
   [primary-nav](../../services/web/src/config/primary-nav.ts) entry hides when it
   resolves `false` (the nav reads it via `featureFlags.getAllForSession`).
@@ -93,7 +93,7 @@ Registered at api boot in [`services/api/src/server.ts`](../../services/api/src/
 
 [`services/web/src/app/(authed)/kanban/`](<../../services/web/src/app/(authed)/kanban>):
 `page.tsx` (server: auth + flag gate + board/permission load), `kanban-shell.tsx`
-(URL `?board=<id>` state, dialogs, and the compact **board combo** — a single
+(URL `?board=<id>` state, dialogs, and the compact **board combo** ; a single
 control whose name + chevron open the board switcher while an inline pen opens
 the board settings ; there is no separate columns / edit-board toolbar button),
 `kanban-board-view.tsx` (the `@dnd-kit` board: one `DndContext`, a vertical
@@ -124,7 +124,7 @@ Behind the `kanban.query` flag, the board toolbar shows the shared `QueryBar`
 procedure ; `@variables` (`@me`, `@today`) resolve server-side. Queryable fields
 
 - their kinds live in [`contracts/query-fields.ts`](../../packages/kanban/src/contracts/query-fields.ts)
-  (`priority` is an **orderedSelect** — `priority:>=HIGH` expands to a value set).
+  (`priority` is an **orderedSelect** : `priority:>=HIGH` expands to a value set).
   The web builds the field list (labels + per-board options) client-side from the
   board's columns + org members. Saved views + a list view are the planned
   follow-ups.
@@ -140,13 +140,13 @@ procedure ; `@variables` (`@me`, `@today`) resolve server-side. Queryable fields
 
 Two suites :
 
-- **Unit** (`pnpm --filter @monark/kanban test`, no Docker) — the MonarkQL
+- **Unit** (`pnpm --filter @monark/kanban test`, no Docker) : the MonarkQL
   filter compiler (`tests/query-compiler.test.ts`, incl. the `description` filter
   now targeting the `descriptionText` projection) and the query-fields kind map.
   (The card's checklist derivation is unit-tested at its source, `checklistProgress`
   in `@monark/common`.)
 - **Integration** (`pnpm --filter @monark/kanban test:integration`, needs Docker)
-  — two files against a Postgres testcontainer :
+  ; two files against a Postgres testcontainer :
   - `kanban-data.test.ts` (data layer) : default-column seeding (names,
     gaps-of-10 positions, colours), column reorder, cross-column `moveCard`
     reindex, `searchCards` scoping/soft-delete, multi-assignee + multi-reviewer
@@ -155,12 +155,12 @@ Two suites :
     status-change move (`updateCard({ columnId })` appends to the target column).
   - `kanban-router.test.ts` (tRPC procedures, via `t.createCallerFactory`) :
     RBAC guards (`kanban.view`/`edit` deny/allow), per-board **role access**
-    (`requireAccessibleBoard` — restricted board hidden from a viewer, visible to
+    (`requireAccessibleBoard` ; restricted board hidden from a viewer, visible to
     the gated role, bypassed by `kanban.manage`), and **event emission +
     change-detection** captured off the bus (`on(WILDCARD_EVENT_TYPE)`) :
     `card-created` + one `card-assigned` per assignee, an update's `changed`
     array + `card-assigned` only for _newly-added_ assignees, a status change
     emitting `card-moved`, and a single-field change emitting no false
     assignee/move events. This mirrors data-models' `authorization.test.ts` and
-    stays self-contained (public `createRole`/`assignRole` + the caller factory —
+    stays self-contained (public `createRole`/`assignRole` + the caller factory :
     no shared harness, no core-module change).

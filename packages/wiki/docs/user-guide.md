@@ -1,4 +1,4 @@
-# Wiki — user guide
+# Wiki : user guide
 
 End-user guide for the Wiki module (`@monark/wiki`, an extended module). It lives with the package on purpose : remove the module and its docs go with it. It's linked from the central [user guide index](../../../docs/user-guide/_index.md) ; developer details are in the [module README](../README.md).
 
