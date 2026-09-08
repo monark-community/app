@@ -168,6 +168,12 @@ related record the caller couldn't open directly. **One level only** (`a.b`, not
 dotted fields as "virtual" entries from `dataModels.records.queryFields`, so they parse +
 autocomplete like any field.
 
+## Record scopes
+
+The same tree also powers **authorization**: a `DataModelRoleScope` grants a role "the records matching
+this query" on a model, and the scope is AND-ed into the very filter this page describes, so there is one
+compiler and no second enforcement path to keep in step. See [record-scopes.md](record-scopes.md).
+
 ## Saved views
 
 A saved view is a named query tree per model (`DataRecordView` ; a core table under the

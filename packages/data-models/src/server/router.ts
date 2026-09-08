@@ -72,6 +72,15 @@ import {
   type FilterableKind,
   type FilterNode,
 } from "../contracts/query";
+import {
+  andFilters,
+  deleteScope,
+  ENFORCED_SCOPE_VERBS,
+  isScopableRole,
+  listScopesForModel,
+  resolveRecordScope,
+  upsertScope,
+} from "./scopes";
 import type { RelationTargets } from "./query-compiler";
 import type {
   DataFormEntryPublishedEvent,
@@ -92,6 +101,7 @@ import {
   findDataModelByKey,
   findDataRecordById,
   getDataRecordRoleAccess,
+  dataRecordMatchesFilter,
   isDataRecordRoleAccessible,
   setDataRecordRoleAccess,
   findFreeDataFieldKey,
@@ -240,18 +250,67 @@ async function requireModelAccess(
   return org.id;
 }
 
-// Row-level access context for record reads : the caller's role ids, plus a
-// bypass for holders of `data-models.view-all-records` (which ADMIN/SYSADMIN
-// short-circuit). Layered on top of the model-level `requireModelAccess`.
+// Row-level access context for record reads : the caller's role ids, a bypass
+// for holders of `data-models.view-all-records` (which ADMIN/SYSADMIN
+// short-circuit), and the caller's effective MQL READ scope for this model.
+// Layered on top of the model-level `requireModelAccess`.
+//
+// `readScope` is `undefined` when unrestricted, a tree every visible record
+// must satisfy, or `null` meaning DENY EVERYTHING (a stored scope that failed
+// to parse fails closed rather than silently ceasing to filter).
+type RecordAccess = {
+  /** The caller, kept so a scope's `@me` resolves to the right person. */
+  userId: string;
+  roleIds: string[];
+  bypass: boolean;
+  readScope: FilterNode | undefined | null;
+};
+
 async function recordAccessContext(
   userId: string,
   orgId: string,
-): Promise<{ roleIds: string[]; bypass: boolean }> {
+  model?: DataModelRow,
+): Promise<RecordAccess> {
   const [roles, bypass] = await Promise.all([
     getUserRoles(userId, orgId),
     hasPermission(userId, "data-models.view-all-records", orgId),
   ]);
-  return { roleIds: roles.map((r) => r.id), bypass };
+  const roleIds = roles.map((r) => r.id);
+  // A bypassing caller is never scoped, and without a model there is nothing
+  // to scope against (the cross-model search path resolves scopes per model).
+  if (bypass || !model) return { userId, roleIds, bypass, readScope: undefined };
+  const readScope = await resolveRecordScope({
+    roleIds,
+    dataModelId: model.id,
+    modelKey: model.key,
+    verb: "READ",
+  });
+  return { userId, roleIds, bypass, readScope };
+}
+
+// A record is visible when the row-level ACL allows it AND it satisfies the
+// caller's READ scope. Both hide with a 404 rather than a 403, so neither the
+// record's existence nor the shape of the scope leaks.
+async function assertRecordVisible(
+  recordId: string,
+  access: RecordAccess,
+  model: DataModelRow,
+): Promise<void> {
+  if (!(await isDataRecordRoleAccessible(recordId, access))) {
+    throw new NotFoundError("DataRecord", recordId);
+  }
+  if (access.bypass) return;
+  // Fail closed on an unparseable stored scope.
+  if (access.readScope === null) throw new NotFoundError("DataRecord", recordId);
+  if (!access.readScope) return;
+  const fields = await listDataFields(model.id);
+  const ok = await dataRecordMatchesFilter({
+    recordId,
+    filter: access.readScope,
+    fields: buildCompileFields(fields),
+    queryContext: { userId: access.userId, now: new Date() },
+  });
+  if (!ok) throw new NotFoundError("DataRecord", recordId);
 }
 
 // ── Public form helpers ──────────────────────────────────────
@@ -990,14 +1049,26 @@ export const dataModelsRouter = router({
         if (!ctx.userId) throw new UnauthorizedError();
         const model = await requireModelById(input.dataModelId);
         const orgId = await requireModelAccess(ctx, model, "data-models.record-read");
-        const access = await recordAccessContext(ctx.userId, orgId);
+        const access = await recordAccessContext(ctx.userId, orgId, model);
+        // Fail closed: an unparseable stored scope denies rather than silently
+        // ceasing to filter.
+        if (access.readScope === null) {
+          return { items: [], nextCursor: null, total: 0 };
+        }
         // One filter implementation. An explicit `filter` tree wins ; otherwise
         // the legacy filter-menu `fieldFilters` are translated into the same
-        // tree, so both front-ends run through the one compiler.
-        const filter = input.filter ?? fieldFiltersToFilterNode(input.fieldFilters);
+        // tree, so both front-ends run through the one compiler. The caller's
+        // READ scope is then AND-ed in, so a scope is simply one more predicate
+        // on the single execution path rather than a second enforcement layer.
+        const requested = input.filter ?? fieldFiltersToFilterNode(input.fieldFilters);
+        const filter = andFilters(requested, access.readScope ?? undefined);
         if (filter) {
           const fields = await listDataFields(input.dataModelId);
-          const relationTargets = await buildRelationTargets(ctx, model, fields, filter, access);
+          // Only the caller's own filter may traverse ; scopes are validated
+          // traversal-free at save time, so nothing to resolve for them.
+          const relationTargets = requested
+            ? await buildRelationTargets(ctx, model, fields, requested, access)
+            : undefined;
           const page = await listDataRecordsWithQuery({
             dataModelId: input.dataModelId,
             includeDeleted: input.includeDeleted ?? false,
@@ -1073,10 +1144,8 @@ export const dataModelsRouter = router({
         // Row-level : a record restricted to certain roles is a 404 (not 403)
         // for callers whose roles aren't on the list, so we don't leak that a
         // record they can't see exists.
-        const access = await recordAccessContext(ctx.userId, orgId);
-        if (!(await isDataRecordRoleAccessible(record.id, access))) {
-          throw new NotFoundError("DataRecord", input.id);
-        }
+        const access = await recordAccessContext(ctx.userId, orgId, model);
+        await assertRecordVisible(record.id, access, model);
         return serializeRecord(record);
       }),
 
@@ -1130,10 +1199,8 @@ export const dataModelsRouter = router({
         const model = await requireModelById(existing.dataModelId);
         const orgId = await requireModelAccess(ctx, model, "data-models.record-write");
         // Row-level : can't edit a record your roles can't see.
-        const access = await recordAccessContext(ctx.userId, orgId);
-        if (!(await isDataRecordRoleAccessible(existing.id, access))) {
-          throw new NotFoundError("DataRecord", input.id);
-        }
+        const access = await recordAccessContext(ctx.userId, orgId, model);
+        await assertRecordVisible(existing.id, access, model);
 
         const updated = await updateDataRecord(input.id, {
           slug: input.slug,
@@ -1198,11 +1265,9 @@ export const dataModelsRouter = router({
         await requirePermission(ctx, "data-models.record-bulk-write", orgId);
 
         // Row-level : can't touch a record your roles can't see.
-        const access = await recordAccessContext(ctx.userId, orgId);
+        const access = await recordAccessContext(ctx.userId, orgId, model);
         for (const rec of records) {
-          if (!(await isDataRecordRoleAccessible(rec.id, access))) {
-            throw new NotFoundError("DataRecord", rec.id);
-          }
+          await assertRecordVisible(rec.id, access, model);
         }
 
         // Not one transaction — updateDataRecord merges + re-validates +
@@ -1238,10 +1303,8 @@ export const dataModelsRouter = router({
         const model = await requireModelById(existing.dataModelId);
         const orgId = await requireModelAccess(ctx, model, "data-models.record-delete");
         // Row-level : can't delete a record your roles can't see.
-        const access = await recordAccessContext(ctx.userId, orgId);
-        if (!(await isDataRecordRoleAccessible(existing.id, access))) {
-          throw new NotFoundError("DataRecord", input.id);
-        }
+        const access = await recordAccessContext(ctx.userId, orgId, model);
+        await assertRecordVisible(existing.id, access, model);
 
         const hard = input.hard ?? false;
         if (hard) {
@@ -1276,10 +1339,8 @@ export const dataModelsRouter = router({
         // projects.restore / industries.restore, which gate on the write
         // permission (undoing a delete reads as an edit, not a deletion).
         const orgId = await requireModelAccess(ctx, model, "data-models.record-write");
-        const access = await recordAccessContext(ctx.userId, orgId);
-        if (!(await isDataRecordRoleAccessible(existing.id, access))) {
-          throw new NotFoundError("DataRecord", input.id);
-        }
+        const access = await recordAccessContext(ctx.userId, orgId, model);
+        await assertRecordVisible(existing.id, access, model);
         if (!existing.deletedAt) {
           throw new ValidationError("Data Record is not deleted.");
         }
@@ -1326,10 +1387,8 @@ export const dataModelsRouter = router({
         if (!record) throw new NotFoundError("DataRecord", input.id);
         const model = await requireModelById(record.dataModelId);
         const orgId = await requireModelAccess(ctx, model, "data-models.record-read");
-        const access = await recordAccessContext(ctx.userId, orgId);
-        if (!(await isDataRecordRoleAccessible(record.id, access))) {
-          throw new NotFoundError("DataRecord", input.id);
-        }
+        const access = await recordAccessContext(ctx.userId, orgId, model);
+        await assertRecordVisible(record.id, access, model);
         return { watching: await isWatchingRecord(record.id, ctx.userId) };
       }),
 
@@ -1341,10 +1400,8 @@ export const dataModelsRouter = router({
         if (!record) throw new NotFoundError("DataRecord", input.id);
         const model = await requireModelById(record.dataModelId);
         const orgId = await requireModelAccess(ctx, model, "data-models.record-read");
-        const access = await recordAccessContext(ctx.userId, orgId);
-        if (!(await isDataRecordRoleAccessible(record.id, access))) {
-          throw new NotFoundError("DataRecord", input.id);
-        }
+        const access = await recordAccessContext(ctx.userId, orgId, model);
+        await assertRecordVisible(record.id, access, model);
         await setRecordWatch(record.id, ctx.userId, input.watching);
         return { watching: input.watching };
       }),
@@ -1417,6 +1474,115 @@ export const dataModelsRouter = router({
         await requireOwnedView(input.id, ctx.userId);
         await deleteDataRecordView(input.id);
         return { id: input.id };
+      }),
+  }),
+
+  // MQL-scoped record permissions : "this role may read the records matching
+  // this query".
+  //
+  // Gated on `manage-record-scopes`, deliberately NOT on `manage-schema`.
+  // A scope is an authorization control, so whoever can delete one can widen
+  // their own access ; letting a data steward do that would undo the very
+  // separation `view-all-records` established. Admins hold it by short-circuit.
+  scopes: router({
+    list: publicProcedure
+      .input(z.object({ dataModelId: z.string().min(1) }))
+      .query(async ({ ctx, input }) => {
+        if (!ctx.userId) throw new UnauthorizedError();
+        const model = await requireModelById(input.dataModelId);
+        const org = await requireOrg({
+          userId: ctx.userId,
+          activeOrganizationId: ctx.activeOrganizationId,
+        });
+        if (model.organizationId !== org.id) throw new NotFoundError("DataModel", model.id);
+        await requirePermission(ctx, "data-models.manage-record-scopes", org.id);
+        const rows = await listScopesForModel(model.id);
+        return rows.map((r) => ({
+          roleId: r.roleId,
+          verb: r.verb,
+          query: r.query,
+          updatedAt: r.updatedAt,
+        }));
+      }),
+
+    set: publicProcedure
+      .input(
+        z.object({
+          dataModelId: z.string().min(1),
+          roleId: z.string().min(1),
+          verb: z.enum(ENFORCED_SCOPE_VERBS),
+          query: filterQuerySchema,
+        }),
+      )
+      .mutation(async ({ ctx, input }) => {
+        if (!ctx.userId) throw new UnauthorizedError();
+        const model = await requireModelById(input.dataModelId);
+        const org = await requireOrg({
+          userId: ctx.userId,
+          activeOrganizationId: ctx.activeOrganizationId,
+        });
+        if (model.organizationId !== org.id) throw new NotFoundError("DataModel", model.id);
+        await requirePermission(ctx, "data-models.manage-record-scopes", org.id);
+        // The role must belong to this org (or be a global built-in), so a
+        // scope can't be attached to another tenant's role.
+        if (!(await isScopableRole(input.roleId, org.id))) {
+          throw new NotFoundError("Role", input.roleId);
+        }
+        const row = await upsertScope({
+          roleId: input.roleId,
+          dataModelId: model.id,
+          verb: input.verb,
+          query: input.query,
+          createdBy: ctx.userId,
+        });
+        await emit({
+          type: "data-models.record-scope-set",
+          occurredAt: new Date(),
+          organizationId: org.id,
+          dataModelId: model.id,
+          dataModelKey: model.key,
+          roleId: input.roleId,
+          verb: input.verb,
+          actorId: ctx.userId,
+        });
+        return { roleId: row.roleId, verb: row.verb, query: row.query };
+      }),
+
+    clear: publicProcedure
+      .input(
+        z.object({
+          dataModelId: z.string().min(1),
+          roleId: z.string().min(1),
+          verb: z.enum(ENFORCED_SCOPE_VERBS),
+        }),
+      )
+      .mutation(async ({ ctx, input }) => {
+        if (!ctx.userId) throw new UnauthorizedError();
+        const model = await requireModelById(input.dataModelId);
+        const org = await requireOrg({
+          userId: ctx.userId,
+          activeOrganizationId: ctx.activeOrganizationId,
+        });
+        if (model.organizationId !== org.id) throw new NotFoundError("DataModel", model.id);
+        await requirePermission(ctx, "data-models.manage-record-scopes", org.id);
+        const cleared = await deleteScope({
+          roleId: input.roleId,
+          dataModelId: model.id,
+          verb: input.verb,
+        });
+        if (cleared) {
+          await emit({
+            type: "data-models.record-scope-cleared",
+            occurredAt: new Date(),
+            organizationId: org.id,
+            dataModelId: model.id,
+            dataModelKey: model.key,
+            roleId: input.roleId,
+            verb: input.verb,
+            actorId: ctx.userId,
+          });
+        }
+        return { cleared };
       }),
   }),
 

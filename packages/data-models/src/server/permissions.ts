@@ -35,6 +35,11 @@ const DATA_MODELS_PERMISSIONS = {
     description: "Soft-delete or hard-delete Data Records.",
     category: "data-models",
   },
+  "manage-record-scopes": {
+    description:
+      "Attach or remove a MonarkQL scope on a role, limiting which records that role may read. Deliberately separate from manage-schema: a scope is an authorization control, so whoever can remove one can widen their own access.",
+    category: "data-models",
+  },
   "view-all-records": {
     description:
       "See every Data Record, ignoring per-record role restrictions. Held by admins by default. Revoke it from a role that should design schemas but not read restricted rows (HR, payroll, legal).",

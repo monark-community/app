@@ -127,6 +127,38 @@ const DATA_MODELS_EVENT_TYPES = {
       },
     ],
   },
+  "data-models.record-scope-set": {
+    description:
+      "A MonarkQL record scope was attached to a role, limiting which of a model's records that role may read.",
+    fields: [
+      { key: "dataModelId", type: "string", description: "The scoped data model." },
+      { key: "dataModelKey", type: "string", description: "The data model's key." },
+      { key: "roleId", type: "string", description: "The role the scope applies to." },
+      { key: "verb", type: "string", description: "The record operation the scope constrains." },
+      { key: "actorId", type: "string", description: "The admin who set the scope." },
+      {
+        key: "organizationId",
+        type: "string",
+        description: "The model's org scope, or null for platform-tier.",
+      },
+    ],
+  },
+  "data-models.record-scope-cleared": {
+    description:
+      "A MonarkQL record scope was removed from a role, widening which of a model's records that role may read.",
+    fields: [
+      { key: "dataModelId", type: "string", description: "The scoped data model." },
+      { key: "dataModelKey", type: "string", description: "The data model's key." },
+      { key: "roleId", type: "string", description: "The role the scope applied to." },
+      { key: "verb", type: "string", description: "The record operation the scope constrained." },
+      { key: "actorId", type: "string", description: "The admin who removed the scope." },
+      {
+        key: "organizationId",
+        type: "string",
+        description: "The model's org scope, or null for platform-tier.",
+      },
+    ],
+  },
 } as const;
 
 export function registerDataModelsEventTypes(): void {

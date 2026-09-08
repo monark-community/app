@@ -87,6 +87,29 @@ export type DataRecordCommentedEvent = DomainEventBase & {
   organizationId: string | null;
 };
 
+// A role's record scope changed. Authorization-relevant, so it is emitted for
+// audit: an operator subscribing to these sees every widening or narrowing of
+// who can read which records, without polling the table.
+export type DataRecordScopeSetEvent = DomainEventBase & {
+  type: "data-models.record-scope-set";
+  dataModelId: string;
+  dataModelKey: string;
+  roleId: string;
+  verb: string;
+  actorId: string;
+  organizationId: string | null;
+};
+
+export type DataRecordScopeClearedEvent = DomainEventBase & {
+  type: "data-models.record-scope-cleared";
+  dataModelId: string;
+  dataModelKey: string;
+  roleId: string;
+  verb: string;
+  actorId: string;
+  organizationId: string | null;
+};
+
 export type DataModelsEvents =
   | DataModelSchemaChangedEvent
   | DataModelRecordCreatedEvent
@@ -94,4 +117,6 @@ export type DataModelsEvents =
   | DataModelRecordDeletedEvent
   | DataFormSubmittedEvent
   | DataFormEntryPublishedEvent
-  | DataRecordCommentedEvent;
+  | DataRecordCommentedEvent
+  | DataRecordScopeSetEvent
+  | DataRecordScopeClearedEvent;
