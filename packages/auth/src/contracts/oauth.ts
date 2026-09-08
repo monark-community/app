@@ -1,5 +1,5 @@
 /**
- * Social sign-in ("continue with GitHub / Google").
+ * Social sign-in ("continue with GitHub / Google / Microsoft").
  *
  * The ids below are **Supabase's own provider slugs**, not names we
  * picked ; they travel verbatim into `supabase.auth.signInWithOAuth({
@@ -13,7 +13,7 @@
  * and an `[auth.external.<slug>]` stanza in supabase/config.toml.
  * Nothing in the provisioning path is provider-specific.
  */
-export const OAUTH_PROVIDERS = ["github", "google"] as const;
+export const OAUTH_PROVIDERS = ["github", "google", "azure"] as const;
 
 export type OAuthProvider = (typeof OAUTH_PROVIDERS)[number];
 
@@ -29,6 +29,8 @@ export function isOAuthProvider(value: string): value is OAuthProvider {
 export const OAUTH_PROVIDER_LABELS: Record<OAuthProvider, string> = {
   github: "GitHub",
   google: "Google",
+  // Supabase calls it `azure` ; users know it as Microsoft.
+  azure: "Microsoft",
 };
 
 /**

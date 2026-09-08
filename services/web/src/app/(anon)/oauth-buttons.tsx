@@ -16,6 +16,18 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
  */
 function ProviderIcon({ provider }: { provider: OAuthProvider }) {
   const common = { width: 18, height: 18, viewBox: "0 0 18 18", "aria-hidden": true } as const;
+  if (provider === "azure") {
+    // Microsoft's four-square mark. The colours are mandated by their
+    // brand guidelines, so this one ignores `currentColor`.
+    return (
+      <svg {...common}>
+        <path fill="#F25022" d="M0 0h8.5v8.5H0z" />
+        <path fill="#7FBA00" d="M9.5 0H18v8.5H9.5z" />
+        <path fill="#00A4EF" d="M0 9.5h8.5V18H0z" />
+        <path fill="#FFB900" d="M9.5 9.5H18V18H9.5z" />
+      </svg>
+    );
+  }
   if (provider === "google") {
     // Google's four-colour "G". The colours are mandated by their brand
     // guidelines, so this one ignores `currentColor`.
