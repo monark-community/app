@@ -408,8 +408,8 @@ function startBackgroundWork(): void {
 // Single-tenant bootstrap. When the deploy is missing its singleton
 // organization, read the INITIAL_ORG_* env vars and provision the row. Idempotent : a
 // re-run on a healthy install short-circuits inside the helper. Failures
-// here are logged but don't crash the API process — the /setup page
-// surfaces the still-stuck state and the operator can fix the env
+// here are logged but don't crash the API process ; `pnpm preflight`
+// reports the still-stuck state and the operator can fix the env
 // without a container restart loop.
 //
 // Explicit logging at every decision point so an operator looking at
@@ -451,13 +451,13 @@ export async function maybeBootstrapSingletonOrg(): Promise<void> {
         hasSlug: Boolean(env.INITIAL_ORG_SLUG),
         hasName: Boolean(env.INITIAL_ORG_NAME),
       },
-      "Single-tenant bootstrap : INITIAL_ORG_SLUG / INITIAL_ORG_NAME not set, /setup will stay stuck",
+      "Single-tenant bootstrap : INITIAL_ORG_SLUG / INITIAL_ORG_NAME not set, no organization will be provisioned (see `pnpm preflight`)",
     );
     return;
   }
   logger.error(
     { reason: result.reason, detail },
-    "Single-tenant bootstrap failed ; /setup will stay stuck",
+    "Single-tenant bootstrap failed ; no organization was provisioned (see `pnpm preflight`)",
   );
 }
 

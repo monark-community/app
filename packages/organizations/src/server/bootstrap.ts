@@ -12,11 +12,11 @@ const HEX_RE = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
 export type BootstrapStatus = {
   /**
    * True iff the system is ready to serve requests : exactly one
-   * non-deleted Organization row exists. Every app route gates on this
-   * and sends the operator to `/setup` until it flips.
+   * non-deleted Organization row exists. Provisioned from `INITIAL_ORG_*`
+   * at api boot, or on demand with `pnpm provision:org`.
    */
   bootstrapped: boolean;
-  /** Count of non-deleted organizations. Surfaces to the /setup page. */
+  /** Count of non-deleted organizations. */
   organizationCount: number;
   /**
    * Id of the singleton organization. Null before bootstrap, or in the
@@ -105,15 +105,14 @@ export type EnsureBootstrapResult =
 // Same semantics as the API server's boot-time hook ; pulled into the
 // organizations package so the same code path is reachable both at
 // module-load (server.ts) and through the tRPC `bootstrapFromEnv`
-// mutation the /setup page calls on each stuck-poll. Self-healing :
-// if the boot-time hook silently failed (timing race, swallowed
-// import error, container restarted before env was set), the /setup
-// page's polling drives recovery without an operator restart.
+// mutation callers use to retry. Self-healing : if the boot-time hook
+// silently failed (timing race, swallowed import error, container
+// restarted before env was set), calling this again drives recovery
+// without an operator restart.
 //
 // Validation runs in this function (slug shape + color shape) so a
-// typo in the env var lands as a structured `reason` the /setup page
-// can surface, instead of throwing a Prisma constraint deep in the
-// stack.
+// typo in the env var lands as a structured `reason` the caller can
+// surface, instead of throwing a Prisma constraint deep in the stack.
 export async function ensureSingletonOrganizationFromInput(input: {
   slug?: string | null;
   displayName?: string | null;
