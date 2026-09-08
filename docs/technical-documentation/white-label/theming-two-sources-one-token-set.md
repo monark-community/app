@@ -9,8 +9,8 @@ Brand color arrives from two places, and they feed **the same token set** ;
 - **The singleton organization's `primaryColor`** (runtime : set in-app, or at
   provisioning via `INITIAL_ORG_PRIMARY_COLOR`) wins when it is set.
 - **`BRANDING_PRIMARY`** (deploy time, via env) is used when it isn't. This is
-  what themes a multi-tenant deploy, and a single-tenant one before its org is
-  provisioned.
+  what themes a deploy before its organization is provisioned, and every
+  pre-auth surface that renders without one.
 
 Either way the foreground painted on top is computed from WCAG relative
 luminance, so a light or pastel brand color still yields legible buttons.

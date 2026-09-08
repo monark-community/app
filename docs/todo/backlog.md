@@ -85,7 +85,7 @@ Deferred from the 2026-07-29 full-branch security audit (the High/Medium/Low fix
 
 - [ ] **[2026-05-05] Email-CTA wording sweep across security templates.** Each kind has its own CTA copy + footer treatment (new-device uses muted-trailing-paragraph, password-changed uses inline numbered steps, totp-disabled now matches new-device's pattern). Worth a once-over before phase-2 ships more kinds so the family stays uniform — pick a canonical structure (probably new-device's) and align the others.
 
-## Multi-tenant readiness
+## Tenancy
 
 - [x] **[2026-05-05] No write path persists `active_organization_id` on the Supabase session.** ~~Multi-tenant deploys need a `setActiveOrg` mutation, a sign-in side-effect pinning the claim, and an org-switcher.~~ Closed 2026-09-08 : multi-tenancy was removed, so there is no second org for the claim to point at. [`getCurrentOrg`](../../packages/organizations/src/server/read.ts) falling back to the singleton is now the whole story, not a single-tenant special case.
 
