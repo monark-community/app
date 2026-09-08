@@ -41,6 +41,12 @@ function RelationControl({
   const idsKey = ids.join(",");
 
   const [cache, setCache] = useState<Record<string, RelationOption>>({});
+  // Ids the source could not resolve. Almost always a permission boundary: the
+  // related record exists and its id is stored on THIS record, but the viewer
+  // may not read it (model permission, per-record ACL, or an MQL scope). Held
+  // separately from `cache` so the chip can say so instead of sitting on
+  // "Loading…" forever, which is what it used to do.
+  const [unresolved, setUnresolved] = useState<Set<string>>(new Set());
   const [open, setOpen] = useState(false);
   const [rawQuery, setRawQuery] = useState("");
   const query = useDebounced(rawQuery.trim(), 250);
@@ -56,12 +62,25 @@ function RelationControl({
       .loadByIds(missing)
       .then((opts) => {
         if (cancelled) return;
+        const found = new Set(opts.map((o) => o.id));
         setCache((prev) => ({
           ...prev,
           ...Object.fromEntries(opts.map((o) => [o.id, o])),
         }));
+        // Anything asked for and not returned is unreadable to this viewer.
+        setUnresolved((prev) => {
+          const next = new Set(prev);
+          for (const id of missing) {
+            if (found.has(id)) next.delete(id);
+            else next.add(id);
+          }
+          return next;
+        });
       })
-      .catch(() => {});
+      .catch(() => {
+        // The whole batch failed (network, not permissions) ; leave the ids
+        // pending rather than mislabelling them as restricted.
+      });
     return () => {
       cancelled = true;
     };
@@ -157,24 +176,31 @@ function RelationControl({
             {def.placeholder ?? labels.selectPlaceholder}
           </span>
         ) : null}
-        {ids.map((id) => (
-          <Chip
-            key={id}
-            label={cache[id]?.label ?? labels.loading}
-            removeLabel={labels.remove(cache[id]?.label ?? id)}
-            onRemove={() => remove(id)}
-            disabled={def.disabled}
-            leading={
-              def.avatars ? (
-                <FieldAvatar
-                  label={cache[id]?.label ?? id}
-                  src={cache[id]?.avatarUrl}
-                  className="h-4 w-4"
-                />
-              ) : undefined
-            }
-          />
-        ))}
+        {ids.map((id) => {
+          const restricted = !cache[id] && unresolved.has(id);
+          return (
+            <Chip
+              key={id}
+              // A restricted link is shown, not hidden : the viewer should know
+              // something is linked here, without learning what it is.
+              label={cache[id]?.label ?? (restricted ? labels.restricted : labels.loading)}
+              tone={restricted ? "outline" : undefined}
+              title={restricted ? labels.restrictedHint : undefined}
+              removeLabel={labels.remove(cache[id]?.label ?? id)}
+              onRemove={() => remove(id)}
+              disabled={def.disabled}
+              leading={
+                def.avatars && !restricted ? (
+                  <FieldAvatar
+                    label={cache[id]?.label ?? id}
+                    src={cache[id]?.avatarUrl}
+                    className="h-4 w-4"
+                  />
+                ) : undefined
+              }
+            />
+          );
+        })}
         {!def.disabled && !atCapacity ? (
           <Popover
             open={open}
@@ -200,7 +226,12 @@ function RelationControl({
     );
   }
 
-  const selectedLabel = ids[0] ? (cache[ids[0]]?.label ?? labels.loading) : null;
+  // Single-value variant : same rule as the chips above.
+  const singleId = ids[0];
+  const singleRestricted = singleId != null && !cache[singleId] && unresolved.has(singleId);
+  const selectedLabel = singleId
+    ? (cache[singleId]?.label ?? (singleRestricted ? labels.restricted : labels.loading))
+    : null;
   return (
     <div className="flex items-center gap-1">
       <Popover

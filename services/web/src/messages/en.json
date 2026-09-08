@@ -94,7 +94,9 @@
       "unlink": "Remove link",
       "linkUrlPlaceholder": "Paste a link…",
       "linkApply": "Apply"
-    }
+    },
+    "restricted": "Restricted",
+    "restrictedHint": "Linked to a record you do not have access to."
   },
   "common": {
     "appName": "{appName}",

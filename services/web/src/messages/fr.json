@@ -94,7 +94,9 @@
       "unlink": "Retirer le lien",
       "linkUrlPlaceholder": "Collez un lien…",
       "linkApply": "Appliquer"
-    }
+    },
+    "restricted": "Restreint",
+    "restrictedHint": "Lié à un enregistrement auquel vous n'avez pas accès."
   },
   "common": {
     "appName": "{appName}",
