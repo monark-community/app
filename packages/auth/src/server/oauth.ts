@@ -1,7 +1,11 @@
 import { emit, logger, UnauthorizedError } from "@monark/common";
 import { getDb } from "@monark/db";
 import { getById } from "@monark/users/server";
-import type { UserSignedUpEvent } from "../contracts/events";
+import type {
+  OAuthProviderLinkedEvent,
+  OAuthProviderUnlinkedEvent,
+  UserSignedUpEvent,
+} from "../contracts/events";
 import {
   isOAuthProvider,
   type IdentityStatus,
@@ -255,6 +259,74 @@ export async function provisionOAuthUser(input: {
   await markEmailVerified(input.userId);
 
   return { ok: true, created: true, provider: profile.provider };
+}
+
+/**
+ * Whether the account can afford to lose this provider.
+ *
+ * **This is a footgun guard, not a security boundary.** The browser
+ * holds a live Supabase session, so a determined user can call
+ * `supabase.auth.unlinkIdentity` from the console whatever we say here.
+ * The only hard floor is Supabase's own refusal to remove a user's last
+ * identity. What this adds is a *useful* floor: Supabase counts
+ * identities, while we care about the sign-in methods our own UI
+ * exposes, and it can explain the refusal instead of surfacing an
+ * opaque upstream error.
+ *
+ * Refuses when removing the provider would leave the account with no
+ * method we'd render on /account/security — i.e. it was the only
+ * provider and no password exists. A user in that position sets a
+ * password first, which the same page offers.
+ */
+export async function assertCanUnlinkProvider(input: {
+  userId: string;
+  provider: OAuthProvider;
+}): Promise<{ ok: true } | { ok: false; reason: "not-linked" | "last-method" }> {
+  const status = await readIdentityStatus(input.userId);
+  if (!status.providers.includes(input.provider)) {
+    return { ok: false, reason: "not-linked" };
+  }
+  const remaining = status.providers.filter((p) => p !== input.provider);
+  if (remaining.length === 0 && !status.hasPassword) {
+    return { ok: false, reason: "last-method" };
+  }
+  return { ok: true };
+}
+
+/**
+ * Emitted after the web layer has actually performed the link/unlink
+ * through the user's own Supabase session. Same split as
+ * `notifySignedIn`: Supabase owns the state change, we own the domain
+ * event. Reads the post-change identity state rather than trusting the
+ * caller to describe it.
+ */
+export async function emitProviderUnlinked(input: {
+  userId: string;
+  provider: OAuthProvider;
+}): Promise<void> {
+  const status = await readIdentityStatus(input.userId);
+  const event: OAuthProviderUnlinkedEvent = {
+    type: "oauth.provider-unlinked",
+    userId: input.userId,
+    provider: input.provider,
+    remainingProviders: status.providers.length,
+    hasPassword: status.hasPassword,
+    occurredAt: new Date(),
+  };
+  await emit(event);
+}
+
+export async function emitProviderLinked(input: {
+  userId: string;
+  provider: OAuthProvider;
+}): Promise<void> {
+  const event: OAuthProviderLinkedEvent = {
+    type: "oauth.provider-linked",
+    userId: input.userId,
+    provider: input.provider,
+    occurredAt: new Date(),
+  };
+  await emit(event);
 }
 
 /**

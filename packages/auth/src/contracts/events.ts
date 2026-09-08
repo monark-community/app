@@ -91,6 +91,26 @@ export type TotpRecoveryCodesRegeneratedEvent = DomainEventBase & {
   count: number;
 };
 
+export type OAuthProviderLinkedEvent = DomainEventBase & {
+  type: "oauth.provider-linked";
+  userId: string;
+  /** Supabase provider slug (`github`, `google`, `azure`). */
+  provider: string;
+};
+
+export type OAuthProviderUnlinkedEvent = DomainEventBase & {
+  type: "oauth.provider-unlinked";
+  userId: string;
+  provider: string;
+  /**
+   * How the account can still be reached afterwards, so a subscriber
+   * (or an operator reading a webhook) can tell a routine cleanup from
+   * a user who just narrowed themselves down to a single method.
+   */
+  remainingProviders: number;
+  hasPassword: boolean;
+};
+
 export type AuthEvents =
   | UserSignedUpEvent
   | UserSignedInEvent
@@ -103,4 +123,6 @@ export type AuthEvents =
   | TotpEnabledEvent
   | TotpDisabledEvent
   | TotpRecoveryCodeUsedEvent
-  | TotpRecoveryCodesRegeneratedEvent;
+  | TotpRecoveryCodesRegeneratedEvent
+  | OAuthProviderLinkedEvent
+  | OAuthProviderUnlinkedEvent;

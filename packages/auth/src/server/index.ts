@@ -11,8 +11,20 @@ import { checkPassword } from "./password";
 import { markEmailVerified, recordResendAttempt, type ResendResult } from "./email-verification";
 import { emitPasswordChanged, emitSignedIn, emitSignedOut } from "./events";
 import { signUpUser, signUpInputSchema } from "./signup";
-import { configuredOAuthProviders, provisionOAuthUser, readIdentityStatus } from "./oauth";
-import type { IdentityStatus, OAuthProvider, OAuthProvisionResult } from "../contracts/oauth";
+import {
+  assertCanUnlinkProvider,
+  configuredOAuthProviders,
+  emitProviderLinked,
+  emitProviderUnlinked,
+  provisionOAuthUser,
+  readIdentityStatus,
+} from "./oauth";
+import {
+  OAUTH_PROVIDERS,
+  type IdentityStatus,
+  type OAuthProvider,
+  type OAuthProvisionResult,
+} from "../contracts/oauth";
 import { verifyEmailActionToken } from "./email-action-token";
 import {
   findCurrentDeviceId,
@@ -22,6 +34,11 @@ import {
   revokeTrustedDevice,
   type TrustedDeviceRow,
 } from "./trusted-devices";
+import {
+  dismissTotpOnboarding,
+  getTotpOnboardingStatus,
+  type TotpOnboardingStatus,
+} from "./totp-onboarding";
 import {
   acknowledgeRecoveryCodeUse,
   beginTotpEnrollment,
@@ -212,6 +229,20 @@ const totpRouter = router({
       });
     }),
 
+  // Drives the post-verification enrollment nudge. Anon-safe (returns
+  // "don't prompt") so the layout can mount the modal unconditionally.
+  onboardingStatus: publicProcedure.query(async ({ ctx }): Promise<TotpOnboardingStatus> => {
+    if (!ctx.userId) return { shouldPrompt: false };
+    return getTotpOnboardingStatus(ctx.userId);
+  }),
+
+  // "Not now". Permanent : /account/security keeps the enrollment path
+  // open, and a nudge that reappears is a nag.
+  dismissOnboarding: publicProcedure.mutation(async ({ ctx }) => {
+    if (!ctx.userId) throw new UnauthorizedError();
+    await dismissTotpOnboarding(ctx.userId);
+  }),
+
   // Read by /admin route guards + the /account banner. Returns enforcement
   // mode (soft/hard) when the signed-in admin must enroll TOTP.
   adminEnforcement: publicProcedure.query(async ({ ctx }) => {
@@ -390,6 +421,34 @@ const oauthRouter = router({
     if (!ctx.userId) return { hasPassword: false, providers: [] };
     return readIdentityStatus(ctx.userId);
   }),
+
+  // Preflight for the unlink button : lets the UI disable it and say
+  // why, instead of firing a request that Supabase rejects opaquely.
+  // The web action re-checks this before unlinking — see
+  // `assertCanUnlinkProvider` on why neither is a security boundary.
+  canUnlink: publicProcedure
+    .input(z.object({ provider: z.enum(OAUTH_PROVIDERS) }))
+    .query(async ({ ctx, input }) => {
+      if (!ctx.userId) throw new UnauthorizedError();
+      return assertCanUnlinkProvider({ userId: ctx.userId, provider: input.provider });
+    }),
+
+  // Emitted after the web layer performed the change through the user's
+  // own Supabase session. Same split as `notifySignedIn` : Supabase owns
+  // the state, we own the domain event.
+  notifyUnlinked: publicProcedure
+    .input(z.object({ provider: z.enum(OAUTH_PROVIDERS) }))
+    .mutation(async ({ ctx, input }) => {
+      if (!ctx.userId) throw new UnauthorizedError();
+      await emitProviderUnlinked({ userId: ctx.userId, provider: input.provider });
+    }),
+
+  notifyLinked: publicProcedure
+    .input(z.object({ provider: z.enum(OAUTH_PROVIDERS) }))
+    .mutation(async ({ ctx, input }) => {
+      if (!ctx.userId) throw new UnauthorizedError();
+      await emitProviderLinked({ userId: ctx.userId, provider: input.provider });
+    }),
 });
 
 export const authRouter = router({
@@ -615,10 +674,18 @@ export {
   provisionOAuthUser,
   readIdentityStatus,
   configuredOAuthProviders,
+  assertCanUnlinkProvider,
+  emitProviderLinked,
+  emitProviderUnlinked,
   extractOAuthProfile,
   type OAuthAuthUserLike,
   type OAuthProfile,
 } from "./oauth";
+export {
+  getTotpOnboardingStatus,
+  dismissTotpOnboarding,
+  type TotpOnboardingStatus,
+} from "./totp-onboarding";
 export { hardDeleteUser, processExpiredDeletions } from "./account-lifecycle";
 export { getSupabaseAdmin } from "./supabase-admin";
 export { registerAuthFeatureFlags } from "./flags";

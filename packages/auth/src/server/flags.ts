@@ -21,6 +21,11 @@ const AUTH_FLAGS = {
       "Social sign-in through Supabase Auth's OAuth providers. Off ⇒ the provider buttons disappear from /signin and /signup and the callback refuses to provision, so an in-flight round trip can't land an account. Which providers are offered is separately controlled by the api's AUTH_OAUTH_PROVIDERS env.",
     defaultOn: true,
   },
+  "totp-onboarding-prompt": {
+    description:
+      "Offer two-factor enrollment once a user's email is verified. Off ⇒ no prompt ; users can still enroll from /account/security. Turning this on for an existing deployment shows the nudge once to every not-yet-enrolled user, so it is a deliberate operator decision rather than a silent rollout.",
+    defaultOn: true,
+  },
   "totp-required-admin": {
     description: "Enforce TOTP enrollment for admin roles within 7 days of first sign-in.",
     defaultOn: true,

@@ -796,7 +796,11 @@
         "createCta": "New secret",
         "searchPlaceholder": "Search by name or description…",
         "searchAria": "Search secrets",
-        "columns": { "key": "Name", "lastUsed": "Last used", "updated": "Updated" },
+        "columns": {
+          "key": "Name",
+          "lastUsed": "Last used",
+          "updated": "Updated"
+        },
         "never": "Never",
         "empty": "No secrets yet.",
         "panelCreateTitle": "New secret",
@@ -1968,7 +1972,24 @@
       "subtitle": "The ways you can sign in to this account.",
       "connected": "Connected",
       "notSet": "Not set",
-      "password": "Email and password"
+      "password": "Email and password",
+      "connect": "Connect",
+      "connecting": "Redirecting…",
+      "disconnect": "Disconnect",
+      "notConnected": "Not connected",
+      "cancel": "Cancel",
+      "confirmTitle": "Disconnect this account?",
+      "confirmBody": "You'll no longer be able to sign in with {provider}. Your other sign-in methods keep working, and you can reconnect it any time.",
+      "lastMethodHint": "Set a password first — this is your only way to sign in.",
+      "linkedToast": "{provider} connected.",
+      "unlinkedToast": "{provider} disconnected.",
+      "errors": {
+        "notLinked": "That account isn't connected.",
+        "lastMethod": "That's your only way to sign in. Set a password first, then disconnect it.",
+        "linkFailed": "Couldn't connect {provider}. It may already be linked to another account.",
+        "totpPending": "Finish the two-factor challenge first.",
+        "upstream": "Something went wrong. Try again."
+      }
     },
     "emailChange": {
       "change": "Change email",
@@ -2106,6 +2127,10 @@
         "emailChange": {
           "title": "Confirm email change",
           "description": "Enter the 6-digit code from your authenticator app to send the confirmation emails."
+        },
+        "providerUnlink": {
+          "title": "Confirm disconnect",
+          "description": "Enter the 6-digit code from your authenticator app to disconnect this account."
         }
       },
       "reminder": {
@@ -2201,6 +2226,12 @@
         "notAuthenticated": "Sign in again and retry.",
         "upstream": "Could not schedule deletion. Try again."
       }
+    },
+    "totpOnboarding": {
+      "title": "Protect your account",
+      "body": "Two-factor authentication means a stolen password isn't enough to sign in.",
+      "enable": "Set up two-factor",
+      "notNow": "Not now"
     }
   },
   "devOverlay": {
@@ -2902,7 +2933,13 @@
         "onDay": "On day",
         "lastDay": "Last day",
         "onThe": "On the",
-        "nth": { "1": "first", "2": "second", "3": "third", "4": "fourth", "last": "last" },
+        "nth": {
+          "1": "first",
+          "2": "second",
+          "3": "third",
+          "4": "fourth",
+          "last": "last"
+        },
         "nextRun": "Next run: {time}",
         "nextRunNone": "No upcoming run"
       },

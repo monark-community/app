@@ -796,7 +796,11 @@
         "createCta": "Nouveau secret",
         "searchPlaceholder": "Rechercher par nom ou description…",
         "searchAria": "Rechercher des secrets",
-        "columns": { "key": "Nom", "lastUsed": "Dernière utilisation", "updated": "Modifié" },
+        "columns": {
+          "key": "Nom",
+          "lastUsed": "Dernière utilisation",
+          "updated": "Modifié"
+        },
         "never": "Jamais",
         "empty": "Aucun secret pour l'instant.",
         "panelCreateTitle": "Nouveau secret",
@@ -1968,7 +1972,24 @@
       "subtitle": "Les façons de vous connecter à ce compte.",
       "connected": "Lié",
       "notSet": "Non défini",
-      "password": "Courriel et mot de passe"
+      "password": "Courriel et mot de passe",
+      "connect": "Connecter",
+      "connecting": "Redirection…",
+      "disconnect": "Déconnecter",
+      "notConnected": "Non connecté",
+      "cancel": "Annuler",
+      "confirmTitle": "Déconnecter ce compte ?",
+      "confirmBody": "Vous ne pourrez plus vous connecter avec {provider}. Vos autres méthodes de connexion continuent de fonctionner et vous pouvez le reconnecter à tout moment.",
+      "lastMethodHint": "Définissez d'abord un mot de passe ; c'est votre seule façon de vous connecter.",
+      "linkedToast": "{provider} connecté.",
+      "unlinkedToast": "{provider} déconnecté.",
+      "errors": {
+        "notLinked": "Ce compte n'est pas connecté.",
+        "lastMethod": "C'est votre seule façon de vous connecter. Définissez d'abord un mot de passe, puis déconnectez-le.",
+        "linkFailed": "Impossible de connecter {provider}. Il est peut-être déjà lié à un autre compte.",
+        "totpPending": "Terminez d'abord la vérification à deux facteurs.",
+        "upstream": "Un problème est survenu. Réessayez."
+      }
     },
     "emailChange": {
       "change": "Modifier le courriel",
@@ -2106,6 +2127,10 @@
         "emailChange": {
           "title": "Confirmer le changement de courriel",
           "description": "Saisissez le code à 6 chiffres de votre application d'authentification pour envoyer les courriels de confirmation."
+        },
+        "providerUnlink": {
+          "title": "Confirmer la déconnexion",
+          "description": "Saisissez le code à 6 chiffres de votre application d'authentification pour déconnecter ce compte."
         }
       },
       "reminder": {
@@ -2201,6 +2226,12 @@
         "notAuthenticated": "Reconnectez-vous et réessayez.",
         "upstream": "Impossible de planifier la suppression. Réessayez."
       }
+    },
+    "totpOnboarding": {
+      "title": "Protégez votre compte",
+      "body": "L'authentification à deux facteurs fait qu'un mot de passe volé ne suffit plus pour se connecter.",
+      "enable": "Configurer",
+      "notNow": "Plus tard"
     }
   },
   "devOverlay": {

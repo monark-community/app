@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { pickLocaleFromHeader } from "@monark/auth/contracts";
 import { completeSignIn } from "@/lib/complete-sign-in";
+import { consumeOAuthLinkIntent } from "@/lib/oauth-link-cookie";
 import { getRequestOrigin } from "@/lib/request-origin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createServerTrpcClient } from "@/lib/trpc-server";
@@ -47,6 +48,24 @@ export async function GET(request: NextRequest) {
 
   const accessToken = data.session.access_token;
   const api = createServerTrpcClient(accessToken);
+
+  // Connecting a provider to an account that is already signed in, not a
+  // sign-in. Single-use HTTP-only cookie set by `beginProviderLinkAction`
+  // — see `oauth-link-cookie.ts` for why this isn't a query parameter.
+  // `completeSignIn` is deliberately skipped: the session predates this
+  // round trip and already cleared the TOTP gate, so re-running it would
+  // bounce the user to /signin/totp mid-settings-change.
+  const linkIntent = await consumeOAuthLinkIntent();
+  if (linkIntent) {
+    // Still provision : idempotent, and it backfills profile fields the
+    // newly linked provider may know about.
+    await api.auth.oauth.provision.mutate({}).catch(() => null);
+    await api.auth.oauth.notifyLinked.mutate({ provider: linkIntent }).catch(() => {});
+    return NextResponse.redirect(
+      new URL(`/account/security?linked=${encodeURIComponent(linkIntent)}`, origin),
+      { headers: noReferrer },
+    );
+  }
 
   // Create (or backfill) the shadow `User` row before anything else
   // touches the session. Supabase made the auth user while the browser

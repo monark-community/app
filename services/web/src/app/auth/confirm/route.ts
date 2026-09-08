@@ -1,8 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { completeSignIn } from "@/lib/complete-sign-in";
 import { getRequestOrigin } from "@/lib/request-origin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createServerTrpcClient } from "@/lib/trpc-server";
-import { recognizeDeviceAfterAuth } from "@/lib/trusted-device-cookie";
 
 // Two possible arrival shapes:
 //   1. `?token_hash=...&type=...` ; direct link from a custom email template.
@@ -76,13 +76,17 @@ export async function GET(request: NextRequest) {
     }
 
     await api.auth.markOwnEmailVerified.mutate().catch(() => {
-      // Best-effort shadow-table update.
+      // Best-effort shadow-table update. Runs before `completeSignIn`
+      // so the page the user lands on already sees a verified account.
     });
-    await recognizeDeviceAfterAuth(accessToken);
-    // Auto-accept any pending invites that target this verified address.
-    // Best-effort ; failures don't block the user from reaching /account.
-    await api.organizations.invites.consumePending.mutate().catch(() => {});
-    return NextResponse.redirect(new URL("/account", origin), { headers: noReferrer });
+    // Everything after verification is the shared post-auth sequence —
+    // device recognition, the TOTP challenge, `user.signed-in`, pending
+    // invites, the deletion-grace bounce. This route used to run its own
+    // shorter tail, which meant confirming an email established a
+    // session without ever challenging an enrolled authenticator.
+    return NextResponse.redirect(new URL(await completeSignIn(accessToken), origin), {
+      headers: noReferrer,
+    });
   }
 
   // No token in the URL; Supabase already verified server-side and set the
@@ -112,7 +116,8 @@ export async function GET(request: NextRequest) {
 
   const api = createServerTrpcClient(accessToken);
   await api.auth.markOwnEmailVerified.mutate().catch(() => {});
-  await recognizeDeviceAfterAuth(accessToken);
-  await api.organizations.invites.consumePending.mutate().catch(() => {});
-  return NextResponse.redirect(new URL("/account", origin), { headers: noReferrer });
+  // Same shared tail as the token-hash branch above.
+  return NextResponse.redirect(new URL(await completeSignIn(accessToken), origin), {
+    headers: noReferrer,
+  });
 }

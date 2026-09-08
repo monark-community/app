@@ -7,6 +7,7 @@ import { ChatProvider } from "@/components/chat";
 import { GlobalSearchProvider } from "@/components/global-search";
 import { NavRail } from "@/components/nav-rail";
 import { RecoveryCodeReminder } from "@/components/recovery-code-reminder";
+import { TotpOnboardingPrompt } from "@/components/totp-onboarding-prompt";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { rewriteForRequestHost } from "@/lib/request-host-rewrite";
 import { createServerTrpcClient } from "@/lib/trpc-server";
@@ -162,6 +163,11 @@ export default async function AuthedLayout({ children }: { children: ReactNode }
             count. State lives server-side so closing the tab without
             handling it re-prompts on the next sign-in. */}
         <RecoveryCodeReminder />
+        {/* One-time "turn on two-factor?" nudge for verified users who
+            haven't enrolled. Mounted alongside the recovery reminder so
+            both share the same server-owned-state approach ; gated by
+            the `auth.totp-onboarding-prompt` flag server-side. */}
+        <TotpOnboardingPrompt />
       </ChatProvider>
     </GlobalSearchProvider>
   );
