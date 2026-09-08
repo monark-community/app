@@ -9,3 +9,8 @@ pnpm-lock.yaml
 # Supabase email templates use Go-template `{{ }}` interpolation inside HTML,
 # which prettier's HTML parser can't parse (hard error, not a style issue).
 supabase/templates
+# agentkit is vendored verbatim from the kit it is installed from (see
+# .claude/agentkit/README pointer in CLAUDE.md § Parallel work). Formatting it
+# here would make every kit upgrade land as a reformat diff on top of the real
+# change ; leave it byte-identical to its source.
+.claude/agentkit
