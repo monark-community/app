@@ -10,12 +10,16 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
-# CI is split into four parallel jobs (lint+typecheck, unit, integration,
-# repo-checks) plus a final coverage-upload job that depends on the two
-# test jobs. Wall time is the slowest leg + the upload step, instead of
-# the sum of every step in one job. The integration leg dominates at
-# ~3 min ; everything else clears in under 2 min, so the verify gate
-# closes in ~3:30.
+# CI is split into five parallel legs (lint+typecheck, repo-checks,
+# migration-drift, unit, integration) plus a coverage-upload job that
+# depends on the two test jobs. Wall time is the slowest leg + the upload
+# step, instead of the sum of every step in one job. The integration leg
+# dominates at ~3 min ; everything else clears in under 2 min, so the
+# verify gate closes in ~3:30.
+#
+# `ci-ok` at the bottom fans every leg back in and is the single context
+# branch protection requires ; see the comment above that job before
+# adding, renaming or removing a leg.
 #
 # End-to-end Playwright tests are NOT auto-run on push / PR — they live
 # in [.github/workflows/e2e.yml](./e2e.yml) and are triggered manually
@@ -275,3 +279,49 @@ jobs:
           disable_search: true
           fail_ci_if_error: false
           token: ${{ secrets.CODECOV_TOKEN }}
+
+  # ── The single required check ────────────────────────────────────────────
+  #
+  # Every leg above feeds into this one job, and `ci-ok` is the ONLY context
+  # branch protection requires on `develop` / `main`. That indirection exists
+  # because a required context is matched by NAME against the checks a run
+  # actually reported, and a pull request whose branch predates a new job never
+  # reports it — GitHub then waits forever on a check no run will ever produce.
+  # That is exactly how the whole Dependabot backlog ended up unmergeable when
+  # `migration-drift` was added: every visible check green, `mergeable_state:
+  # blocked`, no way out but a rebase of every open PR.
+  #
+  # With one stable aggregate context, adding, renaming, splitting or removing
+  # a leg is a pure edit to this file ; in-flight PRs pick it up on their next
+  # run and nothing is ever stranded. So: add new jobs to `needs` here, and
+  # never add a second required context to the ruleset.
+  #
+  # `if: always()` so the job runs even when an upstream leg failed or was
+  # skipped ; without it the job would itself be skipped and report nothing,
+  # recreating the same stuck state it exists to prevent. The step then fails
+  # unless every dependency's result is exactly `success` — `failure`,
+  # `cancelled` and `skipped` all block the merge.
+  ci-ok:
+    name: ci-ok
+    runs-on: ubuntu-latest
+    if: always()
+    needs:
+      - lint-typecheck
+      - repo-checks
+      - migration-drift
+      - unit-tests
+      - integration-tests
+      - coverage-upload
+    steps:
+      - name: Verify every CI leg succeeded
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: |
+          echo "$NEEDS"
+          not_ok=$(echo "$NEEDS" | jq -r 'to_entries[] | select(.value.result != "success") | "  \(.key): \(.value.result)"')
+          if [ -n "$not_ok" ]; then
+            echo "::error::CI did not fully pass:"
+            echo "$not_ok"
+            exit 1
+          fi
+          echo "All CI legs succeeded."
