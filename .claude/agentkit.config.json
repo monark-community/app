@@ -1,0 +1,63 @@
+{
+  "registryDir": "../.agentkit",
+  "worktrees": {
+    "dir": "../app-worktrees",
+    "baseBranch": "develop",
+    "branchPrefixes": ["feat", "fix", "docs", "test", "chore", "refactor", "tooling"],
+    "postCreate": ["pnpm install --prefer-offline"]
+  },
+  "protectedBranches": ["main", "master"],
+  "ports": {
+    "stride": 10,
+    "maxSlots": 40,
+    "services": {
+      "web": 3000,
+      "api": 4000
+    },
+    "env": [
+      {
+        "file": "services/api/.env",
+        "vars": {
+          "PORT": "{api}",
+          "WEB_ORIGIN": "http://localhost:{web}",
+          "APP_URL": "http://localhost:{web}"
+        }
+      },
+      {
+        "file": "services/web/.env.local",
+        "vars": {
+          "PORT": "{web}",
+          "NEXT_PUBLIC_APP_URL": "http://localhost:{web}",
+          "NEXT_PUBLIC_API_URL": "http://localhost:{api}"
+        }
+      }
+    ],
+    "seedFrom": {
+      "services/api/.env": "services/api/.env.example",
+      "services/web/.env.local": "services/web/.env.example"
+    }
+  },
+  "identity": {
+    "name": "Chrysa",
+    "email": "317500139+monark-agent@users.noreply.github.com",
+    "tokenEnv": "MONARK_AGENT_TOKEN",
+    "repo": "monark-community/app",
+    "host": "github.com",
+    "scope": "local"
+  },
+  "checks": [
+    "pnpm gen",
+    "pnpm typecheck",
+    "pnpm lint",
+    "pnpm test",
+    "pnpm check:tiers",
+    "pnpm check:modules",
+    "pnpm check:i18n",
+    "pnpm check:mcp"
+  ],
+  "night": {
+    "queue": "AGENT-QUEUE.md",
+    "maxParallel": 3,
+    "logDir": "../.agentkit/logs"
+  }
+}

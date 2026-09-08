@@ -17,7 +17,7 @@ import { createServer } from "vite";
 
 const outUrl = (name) => new URL(`./out/${name}`, import.meta.url);
 
-const ALL_STORIES = ["fields-form", "fields-table", "fields-gallery"];
+const ALL_STORIES = ["fields-form", "fields-table", "fields-gallery", "connected-accounts"];
 const VIEWPORTS = {
   mobile: { width: 390, height: 844 },
   desktop: { width: 1280, height: 900 },
