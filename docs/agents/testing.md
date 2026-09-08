@@ -1,6 +1,6 @@
 # Testing guidelines
 
-How to write and run tests in this monorepo, for agents and humans. Read this before you add a test or a package. The commands are in the [development guide](../technical-documentation/development.md#test) ; the _strategy_ (layer responsibilities, what to write) is in [test-plan.md](../technical-documentation/test-plan.md). This page is the practical "how the harness works + how to add a test."
+How to write and run tests in this monorepo, for agents and humans. Read this before you add a test or a package. The commands are in the [development guide](../technical-documentation/development/test.md) ; the _strategy_ (layer responsibilities, what to write) is in [test-plan.md](../technical-documentation/test-plan/_index.md). This page is the practical "how the harness works + how to add a test."
 
 ## TL;DR
 

@@ -1,0 +1,3 @@
+# Secrets
+
+`/admin/secrets`. A per-organization encrypted **key → value** store for external tokens and API keys, encrypted at rest (AES-256-GCM). It is **write-only over the wire** : you add or replace a secret by name, but the value is never displayed again and there is no "reveal" ; the plaintext is readable only server-side, on the trusted automation-node path (`ctx.getSecret`). The page lists secret **names** + metadata (description, last-used) only. Add / edit gates on `secrets.manage` ; the list on `secrets.read`. This is what lets an Automation node reach an external system without an author ever seeing the credential.

@@ -41,7 +41,7 @@ Expected result: `packages/auth/` exists with `src/{server,client,contracts}/`, 
 
 ## Extension points for non-core modules
 
-The platform exposes five extension points that let extended modules add their own flags, permissions, notification kinds, per-user / per-org metadata, and event subscribers without modifying core code. The full contract is in [docs/technical-documentation/extensibility-contract.md](../../technical-documentation/extensibility-contract.md) ; the short version :
+The platform exposes five extension points that let extended modules add their own flags, permissions, notification kinds, per-user / per-org metadata, and event subscribers without modifying core code. The full contract is in [docs/technical-documentation/extensibility-contract.md](../../technical-documentation/extensibility-contract/_index.md) ; the short version :
 
 - **Feature flags** : `registerFlags("<module>", { ... })` from `@monark/feature-flags/server`.
 - **Permissions** : `registerPermissions("<module>", { ... })` from `@monark/rbac/server`.

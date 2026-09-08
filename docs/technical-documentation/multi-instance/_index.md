@@ -1,0 +1,119 @@
+# Running multiple isolated instances
+
+The app is a **single-tenant** product: one deployment serves one business (one
+organization). To serve many businesses you run **many independent instances** ;
+each with its own database, its own domain, and its own branding ; rather than
+one multi-tenant deployment. This fits everything the starter already does: the
+`BRANDING_*` env seam, the `provision:org` CLI, and the singleton-org bootstrap
+are all per-deployment.
+
+```
+Cloudflare (DNS + proxy/TLS/WAF per domain)
+   ├── acme.com        → instance A : api + web + Supabase-A   (org "Acme")
+   ├── globex.io       → instance B : api + web + Supabase-B   (org "Globex")
+   └── …               → instance N : …
+```
+
+Each instance is a normal production deploy (the [deploy-checklist.md](../deploy-checklist/_index.md)
+walkthrough); this doc is what's _different_ when you run several. The api ships
+as a container so instance N is "same image, different env file."
+
+## In this section
+
+- **[What differs per instance](what-differs-per-instance.md)**
+- **[Two instances on one dev machine](two-instances-on-one-dev-machine.md)**
+
+## The API image
+
+[`services/api/Dockerfile`](../../../services/api/Dockerfile) builds one
+**env-agnostic** image : it bakes in no secrets and runs no migrations on boot,
+so the _same_ image runs staging, production, and every client. Build it once
+(context = repo root):
+
+```sh
+docker build -f services/api/Dockerfile -t registry/monark-api:<version> .
+docker push registry/monark-api:<version>
+```
+
+Run an instance by pointing that image at one client's env:
+
+```sh
+docker run --rm --env-file clients/acme.env -p 4000:4000 registry/monark-api:<version>
+```
+
+This is the **build-once, promote-the-same-artifact** model: the image you smoke
+on staging is the exact bytes you run for every client. Run it anywhere that
+takes a container : Render (Docker runtime), Fly, Railway, Cloud Run, ECS, k8s,
+or a plain VPS.
+
+> The image is the "no bundle" build (full workspace + `tsx`), so it's large
+> (~1 GB). A bundled / `pnpm deploy --prod`-pruned image is the size follow-up;
+> it doesn't change how you run instances.
+
+
+## Migrations per instance
+
+Run migrations against each client's DB as a **release step**, using the same
+image with that client's `DATABASE_URL`/`DIRECT_URL`:
+
+```sh
+docker run --rm --env-file clients/acme.env registry/monark-api:<version> \
+  pnpm --filter @monark/db exec prisma migrate deploy
+```
+
+`migrate deploy` is idempotent, so re-running on an up-to-date DB is a no-op. Do
+this before rolling the new image so a bad migration never reaches a live
+container. (On Render this is the service's `preDeployCommand`; on k8s an init
+container / Job.)
+
+
+## The org
+
+Each instance is single-tenant. Its org is provisioned from `INITIAL_ORG_*` at
+api boot, or on demand with `pnpm provision:org` (see
+[tools/provision-org.ts](../../../tools/provision-org.ts)) ; run it in the container
+the same way as the migrate step. Idempotent per instance.
+
+
+## Cloudflare (per client)
+
+Cloudflare is the DNS + proxy/TLS/WAF layer in front of each instance; it's
+agnostic to how the origin runs. Per client domain:
+
+1. Add the domain (or a subdomain of yours) as a Cloudflare zone.
+2. Point records at the instance's origins ; e.g. `app.acme.com` → the web
+   origin and `api.acme.com` → the api origin ; **proxied** (orange cloud) so
+   Cloudflare terminates TLS and fronts the CDN/WAF.
+3. Match the app's config to the domain: set the instance's `WEB_ORIGIN` /
+   `APP_URL` to `https://app.acme.com`, the web's `NEXT_PUBLIC_API_URL` to
+   `https://api.acme.com`, and the client's **Supabase → Auth → URL
+   Configuration** Site URL + redirect URLs to the client domain.
+
+The api's CORS + trusted-device cookie gate on `WEB_ORIGIN`, so it must be the
+real client domain, not the origin host.
+
+
+## The web side
+
+Two options per instance:
+
+- **Vercel project per client** : simplest today. One project per client with
+  its own `NEXT_PUBLIC_*` env (client branding + client api + client Supabase),
+  its domain added in Vercel, and Cloudflare in front. Reuses the existing web
+  deploy path.
+- **Self-hosted web container** : a Next.js `output: "standalone"` image so web +
+  api both run as containers on your infra (fuller self-host, one platform). Not
+  built yet; it's the natural next step if you move web off Vercel.
+
+
+## Provisioning a new instance ; checklist
+
+1. Create the client's **Supabase** project; copy URL + keys.
+2. Write `clients/<client>.env` from the table above (fresh crypto keys).
+3. **Migrate**: run `prisma migrate deploy` with that env (above).
+4. **Run** the api image with that env; **deploy the web** (Vercel project or web
+   container) with the matching `NEXT_PUBLIC_*`.
+5. **Cloudflare**: add the domain, point `app.*`/`api.*` at the origins (proxied).
+6. Set the client Supabase **Auth URL config** to the client domain.
+7. Boot provisions the org from `INITIAL_ORG_*` (or run `provision:org`).
+8. Smoke-test against the client domain ([deploy-checklist.md](../deploy-checklist/_index.md) Phase 4).
