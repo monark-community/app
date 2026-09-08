@@ -372,7 +372,6 @@ export {
   type InitialOrgInput,
 } from "./bootstrap";
 export { isMember } from "./data";
-export { registerOrganizationsFeatureFlags } from "./flags";
 export { registerOrganizationsPermissions } from "./permissions";
 export { registerOrganizationsEventTypes } from "./event-types";
 export { ensureSingletonMembership, registerOrganizationsSubscribers } from "./auto-membership";

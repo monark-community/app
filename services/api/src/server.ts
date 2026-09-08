@@ -25,7 +25,6 @@ import {
 import {
   ensureSingletonOrganizationFromInput,
   registerOrganizationsEventTypes,
-  registerOrganizationsFeatureFlags,
   registerOrganizationsPermissions,
   registerOrganizationsSubscribers,
 } from "@monark/organizations/server";
@@ -167,7 +166,6 @@ registerGithubFeatureFlags();
 registerDiscordFeatureFlags();
 registerTelegramFeatureFlags();
 registerTwitterFeatureFlags();
-registerOrganizationsFeatureFlags();
 registerPublicApiFeatureFlags();
 
 registerAutomationPermissions();
@@ -407,9 +405,8 @@ function startBackgroundWork(): void {
   );
 }
 
-// Single-tenant bootstrap. When the `tenancy.multi-tenant` flag is OFF
-// (default) and the deploy is missing its singleton organization, read
-// the INITIAL_ORG_* env vars and provision the row. Idempotent : a
+// Single-tenant bootstrap. When the deploy is missing its singleton
+// organization, read the INITIAL_ORG_* env vars and provision the row. Idempotent : a
 // re-run on a healthy install short-circuits inside the helper. Failures
 // here are logged but don't crash the API process — the /setup page
 // surfaces the still-stuck state and the operator can fix the env
@@ -417,8 +414,7 @@ function startBackgroundWork(): void {
 //
 // Explicit logging at every decision point so an operator looking at
 // `pnpm dev:api` output can tell why a bootstrap was a no-op (env
-// missing? feature flag flipped? org already there?) without strapping
-// on a debugger.
+// missing? org already there?) without strapping on a debugger.
 export async function maybeBootstrapSingletonOrg(): Promise<void> {
   logger.info(
     {
@@ -449,12 +445,6 @@ export async function maybeBootstrapSingletonOrg(): Promise<void> {
     return;
   }
   const detail = "detail" in result ? result.detail : undefined;
-  if (result.reason === "already-multi-tenant") {
-    logger.info(
-      "Single-tenant bootstrap : tenancy.multi-tenant is ON, skipping env-driven provision",
-    );
-    return;
-  }
   if (result.reason === "env-not-set") {
     logger.warn(
       {

@@ -47,7 +47,7 @@ export type BrandedAppLogoData = {
   singletonLogoUrl: string | null;
   singletonDisplayName: string | null;
   /** True when single-tenant + bootstrapped (i.e. exactly one org exists). */
-  isSingleTenantBootstrapped: boolean;
+  isBootstrapped: boolean;
 };
 
 export function BrandedAppLogoView({
@@ -59,7 +59,7 @@ export function BrandedAppLogoView({
   size?: number;
   className?: string;
 }) {
-  const { singletonLogoUrl, singletonDisplayName, isSingleTenantBootstrapped } = data;
+  const { singletonLogoUrl, singletonDisplayName, isBootstrapped } = data;
 
   if (singletonLogoUrl) {
     return (
@@ -74,7 +74,7 @@ export function BrandedAppLogoView({
     );
   }
 
-  if (isSingleTenantBootstrapped && !isBrandingConfigured("logoSrc")) {
+  if (isBootstrapped && !isBrandingConfigured("logoSrc")) {
     return (
       <span
         className={cn(

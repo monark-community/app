@@ -1024,8 +1024,7 @@
         "revokeAria": "Revoke {role}",
         "addCta": "Add new role",
         "dialogTitle": "Assign a role",
-        "dialogSubtitle": "Pick the scope and the role to grant.",
-        "dialogSubtitleSingle": "Pick the role to grant.",
+        "dialogSubtitle": "Pick the role to grant.",
         "dialogCancel": "Cancel",
         "roleLabel": "Role",
         "rolePlaceholder": "Pick a role",
@@ -1149,8 +1148,7 @@
       "placeholder": "Role assignment lands here.",
       "sysadmins": {
         "title": "System administrators",
-        "subtitle": "Platform-tier accounts that hold every permission across every organization.",
-        "subtitleSingle": "Accounts that hold every permission.",
+        "subtitle": "Accounts that hold every permission.",
         "empty": "No system administrators are currently active.",
         "grantedAt": "Since {date}"
       },

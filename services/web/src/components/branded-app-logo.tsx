@@ -37,7 +37,7 @@ export async function BrandedAppLogo({
     // element when the app is opened from a phone on the LAN.
     singletonLogoUrl: await rewriteForRequestHost(status?.singletonLogoUrl ?? null),
     singletonDisplayName: status?.singletonDisplayName ?? null,
-    isSingleTenantBootstrapped: status?.mode === "single" && Boolean(status?.bootstrapped),
+    isBootstrapped: Boolean(status?.bootstrapped),
   };
   return <BrandedAppLogoView data={data} size={size} className={className} />;
 }

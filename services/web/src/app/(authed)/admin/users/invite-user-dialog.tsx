@@ -49,30 +49,18 @@ export function InviteUserDialog({
     refetchOnWindowFocus: false,
     staleTime: Infinity,
   });
-  const isSingleTenant = status.data?.mode !== "multi";
   const singletonId = status.data?.singletonOrganizationId ?? null;
-
-  // Multi-tenant org picker is fed by the same admin list the orgs
-  // page uses ; capped at 100 pre-typeahead.
-  const orgsQuery = trpc.organizations.adminList.useQuery(
-    { limit: 100 },
-    {
-      refetchOnWindowFocus: false,
-      enabled: !isSingleTenant,
-    },
-  );
 
   const [email, setEmail] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [roleId, setRoleId] = useState("");
   const [orgId, setOrgId] = useState("");
 
-  // Single-tenant : pin the org to the singleton so the rest of the
-  // flow doesn't have to branch. Cleared (and never used) in
-  // multi-tenant where the picker drives it.
+  // The app serves one organization, so the invite is always scoped to
+  // the singleton ; pin it rather than asking the admin to pick.
   useEffect(() => {
-    if (isSingleTenant && singletonId) setOrgId(singletonId);
-  }, [isSingleTenant, singletonId]);
+    if (singletonId) setOrgId(singletonId);
+  }, [singletonId]);
 
   // Roles available within the chosen org : built-in ADMIN +
   // org-scoped custom roles. Re-fetches when `orgId` changes ; until
@@ -172,23 +160,6 @@ export function InviteUserDialog({
               </SelectContent>
             </Select>
           </div>
-          {!isSingleTenant && (
-            <div className="grid gap-2">
-              <Label htmlFor="invite-org">{t("orgLabel")}</Label>
-              <Select value={orgId} onValueChange={setOrgId}>
-                <SelectTrigger id="invite-org" className="w-full">
-                  <SelectValue placeholder={t("orgPlaceholder")} />
-                </SelectTrigger>
-                <SelectContent>
-                  {(orgsQuery.data?.items ?? []).map((org) => (
-                    <SelectItem key={org.id} value={org.id}>
-                      {org.displayName}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
         </div>
         <DialogFooter>
           <Button

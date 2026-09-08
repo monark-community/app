@@ -39,15 +39,6 @@ export function OrganizationDetail({
   });
 
   // Tenancy mode drives single-tenant UX adaptations on this page :
-  // the back link is hidden when there's nowhere meaningful to go back
-  // to (single-tenant has only one org and the sidebar already lands on
-  // this page directly).
-  const bootstrapStatus = trpc.organizations.bootstrapStatus.useQuery(undefined, {
-    refetchOnWindowFocus: false,
-    staleTime: Infinity,
-  });
-  const isSingleTenant = bootstrapStatus.data?.mode === "single";
-
   // Controlled inputs ; resync from the row whenever the underlying
   // query result rotates so a save (or another admin's change) doesn't
   // leave the form pointing at stale values.
@@ -127,12 +118,7 @@ export function OrganizationDetail({
     return (
       <section className="space-y-8">
         {!inPanel && (
-          <PageHeader
-            title={t("title")}
-            subtitle={t("subtitle")}
-            backHref={!isSingleTenant ? "/admin/organizations" : undefined}
-            backLabel={t("backAria")}
-          />
+          <PageHeader title={t("title")} subtitle={t("subtitle")} backLabel={t("backAria")} />
         )}
         <div className="space-y-3">
           <Skeleton className="h-6 w-48" />
@@ -147,12 +133,7 @@ export function OrganizationDetail({
     return (
       <section className="space-y-8">
         {!inPanel && (
-          <PageHeader
-            title={t("title")}
-            subtitle={t("subtitle")}
-            backHref={!isSingleTenant ? "/admin/organizations" : undefined}
-            backLabel={t("backAria")}
-          />
+          <PageHeader title={t("title")} subtitle={t("subtitle")} backLabel={t("backAria")} />
         )}
         <p className="rounded-md border border-dashed border-border px-4 py-10 text-center text-sm text-muted-foreground">
           {t("loadError")}
@@ -166,12 +147,7 @@ export function OrganizationDetail({
       {inPanel ? (
         <h2 className="text-lg font-semibold tracking-tight">{t("title")}</h2>
       ) : (
-        <PageHeader
-          title={t("title")}
-          subtitle={t("subtitle")}
-          backHref={!isSingleTenant ? "/admin/organizations" : undefined}
-          backLabel={t("backAria")}
-        />
+        <PageHeader title={t("title")} subtitle={t("subtitle")} backLabel={t("backAria")} />
       )}
 
       <div className="space-y-5">

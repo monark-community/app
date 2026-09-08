@@ -5,7 +5,6 @@ import { useTranslations } from "next-intl";
 import { Plus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   CreateFab,
   DataTable,
@@ -25,19 +24,10 @@ import {
   type PrimaryColumnDef,
   type TableToolsLabels,
 } from "@/components/patterns";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { SheetTitle } from "@/components/ui/sheet";
 import { trpc } from "@/lib/trpc";
 import { useTableEmptyLabels } from "@/lib/use-table-empty-labels";
 import { WebhookEditor } from "./webhook-editor";
-
-const PLATFORM_VALUE = "__platform__";
 
 type StatusFilter = "all" | "active" | "disabled" | "failing";
 
@@ -59,31 +49,16 @@ export function WebhooksManager() {
     refetchOnWindowFocus: false,
     staleTime: Infinity,
   });
-  const isSingleTenant = status.data?.mode !== "multi";
   const singletonId = status.data?.singletonOrganizationId ?? null;
 
-  const orgsQuery = trpc.organizations.adminList.useQuery(
-    { limit: 100 },
-    {
-      enabled: !isSingleTenant,
-      refetchOnWindowFocus: false,
-    },
-  );
-
-  // Picker value : `__platform__` for null-org endpoints, or an org id.
+  // Endpoints are always listed for the one organization the app serves.
   const [selectedOrgValue, setSelectedOrgValue] = useState("");
   useEffect(() => {
     if (selectedOrgValue !== "") return;
-    if (isSingleTenant && singletonId) {
-      setSelectedOrgValue(singletonId);
-      return;
-    }
-    const first = orgsQuery.data?.items[0];
-    if (first) setSelectedOrgValue(first.id);
-  }, [isSingleTenant, singletonId, orgsQuery.data, selectedOrgValue]);
+    if (singletonId) setSelectedOrgValue(singletonId);
+  }, [singletonId, selectedOrgValue]);
 
-  const selectedOrgId = selectedOrgValue === PLATFORM_VALUE ? null : selectedOrgValue || null;
-  const showOrgPicker = !isSingleTenant && (orgsQuery.data?.items.length ?? 0) > 0;
+  const selectedOrgId = selectedOrgValue || null;
 
   const endpointsQuery = trpc.webhooks.list.useQuery(
     { organizationId: selectedOrgId },
@@ -115,13 +90,6 @@ export function WebhooksManager() {
       );
     });
   }, [allEndpoints, trimmedSearch, statusFilter]);
-
-  // Informational scope label passed to the create form (shown to
-  // sysadmins who can create either platform-tier or org-scoped endpoints).
-  const scopeLabel =
-    selectedOrgValue === PLATFORM_VALUE
-      ? t("orgPicker.platform")
-      : (orgsQuery.data?.items.find((o) => o.id === selectedOrgValue)?.displayName ?? "");
 
   type EndpointRow = (typeof allEndpoints)[number];
 
@@ -208,30 +176,6 @@ export function WebhooksManager() {
 
   return (
     <div className="space-y-4">
-      {showOrgPicker && (
-        <Card className="bg-transparent shadow-none">
-          <CardHeader>
-            <CardTitle>{t("orgPicker.title")}</CardTitle>
-            <CardDescription>{t("orgPicker.subtitle")}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Select value={selectedOrgValue} onValueChange={setSelectedOrgValue}>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder={t("orgPicker.placeholder")} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={PLATFORM_VALUE}>{t("orgPicker.platform")}</SelectItem>
-                {(orgsQuery.data?.items ?? []).map((org) => (
-                  <SelectItem key={org.id} value={org.id}>
-                    {org.displayName}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </CardContent>
-        </Card>
-      )}
-
       <FilterBar
         search={
           <FilterBarSearch
@@ -308,7 +252,6 @@ export function WebhooksManager() {
                   key="new"
                   mode="create"
                   organizationId={selectedOrgId}
-                  scopeLabel={scopeLabel}
                   containment="container"
                   onClose={panel.close}
                   onCreated={panel.open}

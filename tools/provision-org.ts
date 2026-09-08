@@ -40,8 +40,6 @@ function arg(name: string): string | undefined {
 }
 
 const FAILURE_HELP: Record<string, string> = {
-  "already-multi-tenant":
-    "tenancy.multi-tenant is ON — organizations are created by users, not provisioned.",
   "already-bootstrapped": "the system is already bootstrapped.",
   "env-not-set": "provide --slug and --name (or set INITIAL_ORG_SLUG / INITIAL_ORG_NAME).",
   "invalid-slug": "slug must be lowercase alphanumeric + hyphens, 2–60 chars.",
