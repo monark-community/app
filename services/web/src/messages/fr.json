@@ -1024,8 +1024,7 @@
         "revokeAria": "Révoquer {role}",
         "addCta": "Ajouter un rôle",
         "dialogTitle": "Assigner un rôle",
-        "dialogSubtitle": "Choisissez la portée et le rôle à accorder.",
-        "dialogSubtitleSingle": "Choisissez le rôle à accorder.",
+        "dialogSubtitle": "Choisissez le rôle à accorder.",
         "dialogCancel": "Annuler",
         "roleLabel": "Rôle",
         "rolePlaceholder": "Choisissez un rôle",
@@ -1149,8 +1148,7 @@
       "placeholder": "L'assignation des rôles sera ajoutée ici.",
       "sysadmins": {
         "title": "Administrateurs système",
-        "subtitle": "Comptes au niveau plateforme qui détiennent toutes les permissions dans chaque organisation.",
-        "subtitleSingle": "Comptes qui détiennent toutes les permissions.",
+        "subtitle": "Comptes qui détiennent toutes les permissions.",
         "empty": "Aucun administrateur système actif pour le moment.",
         "grantedAt": "Depuis le {date}"
       },

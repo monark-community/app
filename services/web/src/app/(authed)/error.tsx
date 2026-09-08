@@ -38,7 +38,7 @@ export default function AuthedError({
           data={{
             singletonLogoUrl: null,
             singletonDisplayName: null,
-            isSingleTenantBootstrapped: false,
+            isBootstrapped: false,
           }}
           size={48}
           className="mx-auto"

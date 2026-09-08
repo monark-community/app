@@ -1,15 +1,5 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { getDb } from "@monark/db";
-
-// `ensureSingletonOrganizationFromInput` short-circuits on
-// `tenancy.multi-tenant` ; stub the flag module so the integration
-// test isn't dependent on a flag-eval service. Default-OFF mirrors
-// the production single-tenant default ; a test that needs the flag
-// ON overrides via `mockResolvedValueOnce`.
-const isEnabledMock = vi.fn(async () => false);
-vi.mock("@monark/feature-flags/server", () => ({
-  isEnabled: (...args: unknown[]) => isEnabledMock(...(args as [])),
-}));
 
 import {
   bootstrapSingletonOrganization,
@@ -31,8 +21,6 @@ async function resetOrgTables(): Promise<void> {
 }
 
 beforeEach(async () => {
-  isEnabledMock.mockReset();
-  isEnabledMock.mockResolvedValue(false);
   await resetOrgTables();
 });
 
@@ -42,7 +30,6 @@ describe("getBootstrapStatus", () => {
   it("reports single-tenant + not bootstrapped when no orgs exist", async () => {
     const status = await getBootstrapStatus();
     expect(status).toEqual({
-      mode: "single",
       bootstrapped: false,
       organizationCount: 0,
       singletonOrganizationId: null,
@@ -95,14 +82,6 @@ describe("getBootstrapStatus", () => {
     });
     const status = await getBootstrapStatus();
     expect(status.organizationCount).toBe(2);
-    expect(status.bootstrapped).toBe(true);
-    expect(status.singletonOrganizationId).toBeNull();
-  });
-
-  it("reports multi-tenant + always-bootstrapped when the flag is ON", async () => {
-    isEnabledMock.mockResolvedValue(true);
-    const status = await getBootstrapStatus();
-    expect(status.mode).toBe("multi");
     expect(status.bootstrapped).toBe(true);
     expect(status.singletonOrganizationId).toBeNull();
   });
@@ -168,18 +147,6 @@ describe("ensureSingletonOrganizationFromInput — happy path", () => {
 });
 
 describe("ensureSingletonOrganizationFromInput — guards", () => {
-  it("short-circuits with already-multi-tenant when the flag is ON", async () => {
-    isEnabledMock.mockResolvedValue(true);
-    const result = await ensureSingletonOrganizationFromInput({
-      slug: "anything",
-      displayName: "Anything",
-      actorId: "system:bootstrap",
-    });
-    expect(result).toEqual({ ok: false, reason: "already-multi-tenant" });
-    const db = getDb();
-    expect(await db.organization.count()).toBe(0);
-  });
-
   it("returns env-not-set when slug or displayName is missing", async () => {
     const noSlug = await ensureSingletonOrganizationFromInput({
       slug: null,

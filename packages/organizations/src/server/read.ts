@@ -1,5 +1,4 @@
 import { NotFoundError } from "@monark/common";
-import { isEnabled } from "@monark/feature-flags/server";
 import {
   countActiveOrganizations,
   findById,
@@ -55,8 +54,6 @@ export async function getCurrentOrg(ctx: OrgSessionContext): Promise<Organizatio
     if (!alive) return null;
     return findById(ctx.activeOrganizationId);
   }
-  const multi = await isEnabled("tenancy.multi-tenant").catch(() => false);
-  if (multi) return null;
   if ((await countActiveOrganizations()) !== 1) return null;
   return findOnlyActiveOrganization();
 }

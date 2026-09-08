@@ -5,7 +5,6 @@ import { useTranslations } from "next-intl";
 import { Lock, Plus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   CreateFab,
   DataTable,
@@ -22,13 +21,6 @@ import {
   type PrimaryColumnDef,
   type TableToolsLabels,
 } from "@/components/patterns";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { SheetTitle } from "@/components/ui/sheet";
 import { trpc } from "@/lib/trpc";
 import { useTableEmptyLabels } from "@/lib/use-table-empty-labels";
@@ -57,30 +49,13 @@ export function RolesManager() {
     refetchOnWindowFocus: false,
     staleTime: Infinity,
   });
-  const isSingleTenant = status.data?.mode !== "multi";
   const singletonId = status.data?.singletonOrganizationId ?? null;
 
-  const orgsQuery = trpc.organizations.adminList.useQuery(
-    { limit: 100 },
-    {
-      enabled: !isSingleTenant,
-      refetchOnWindowFocus: false,
-    },
-  );
-
+  // Roles are always scoped to the one organization the app serves.
   const [selectedOrgId, setSelectedOrgId] = useState("");
-  // Single-tenant : pin to the singleton automatically.
   useEffect(() => {
-    if (isSingleTenant && singletonId) setSelectedOrgId(singletonId);
-  }, [isSingleTenant, singletonId]);
-  // Multi-tenant : when the orgs list resolves, default to the first
-  // entry so the manager is immediately useful.
-  useEffect(() => {
-    if (selectedOrgId !== "") return;
-    if (isSingleTenant) return;
-    const first = orgsQuery.data?.items[0];
-    if (first) setSelectedOrgId(first.id);
-  }, [isSingleTenant, orgsQuery.data, selectedOrgId]);
+    if (singletonId) setSelectedOrgId(singletonId);
+  }, [singletonId]);
 
   const rolesQuery = trpc.rbac.adminListRoles.useQuery(
     { organizationId: selectedOrgId },
@@ -92,7 +67,6 @@ export function RolesManager() {
   // be over-engineered. Case-insensitive match against name + key.
   const [search, setSearch] = useState("");
   const trimmedSearch = search.trim().toLowerCase();
-  const orgs = orgsQuery.data?.items ?? [];
   const allRoles = rolesQuery.data ?? [];
   const visibleRoles = useMemo(() => {
     if (trimmedSearch === "") return allRoles;
@@ -102,7 +76,6 @@ export function RolesManager() {
         role.key.toLowerCase().includes(trimmedSearch),
     );
   }, [allRoles, trimmedSearch]);
-  const showOrgPicker = !isSingleTenant && orgs.length > 0;
 
   type RoleRow = (typeof allRoles)[number];
 
@@ -166,29 +139,6 @@ export function RolesManager() {
 
   return (
     <div className="space-y-4">
-      {showOrgPicker && (
-        <Card className="bg-transparent shadow-none">
-          <CardHeader>
-            <CardTitle>{t("orgPicker.title")}</CardTitle>
-            <CardDescription>{t("orgPicker.subtitle")}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Select value={selectedOrgId} onValueChange={setSelectedOrgId}>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder={t("orgPicker.placeholder")} />
-              </SelectTrigger>
-              <SelectContent>
-                {orgs.map((org) => (
-                  <SelectItem key={org.id} value={org.id}>
-                    {org.displayName}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </CardContent>
-        </Card>
-      )}
-
       <p className="text-sm text-muted-foreground">{t("listSubtitle")}</p>
 
       <FilterBar

@@ -26,15 +26,12 @@ export default async function AdminRbacNewRolePage({
   const orgParam = typeof params.org === "string" ? params.org.trim() : "";
 
   // Even when the operator types the URL by hand, we want to confirm
-  // the org exists before the form opens. Bootstrap status carries
-  // the singleton id in single-tenant deploys ; multi-tenant requires
-  // an explicit `?org=` (the manager always sends one).
+  // the org exists before the form opens. Bootstrap status carries the
+  // singleton id ; an explicit `?org=` still wins (the manager always
+  // sends one).
   const api = createServerTrpcClient();
   const status = await api.organizations.bootstrapStatus.query().catch(() => null);
-  const fallbackOrgId =
-    status?.mode !== "multi" && status?.singletonOrganizationId
-      ? status.singletonOrganizationId
-      : null;
+  const fallbackOrgId = status?.singletonOrganizationId ?? null;
 
   const orgId = orgParam || fallbackOrgId;
 

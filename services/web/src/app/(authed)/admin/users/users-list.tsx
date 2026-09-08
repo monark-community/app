@@ -106,9 +106,8 @@ export function UsersList() {
     staleTime: Infinity,
   });
   const singletonOrgId = bootstrapStatus.data?.singletonOrganizationId ?? null;
-  // Single-tenant: don't append the org name to an invite row — there's only
-  // one org, so the scope is implied.
-  const isSingleTenant = bootstrapStatus.data?.mode !== "multi";
+  // Invite rows don't append the org name : there's only ever one org,
+  // so the scope is implied.
   const rolesQuery = trpc.rbac.adminListRoles.useQuery(
     { organizationId: singletonOrgId ?? "" },
     {
@@ -304,9 +303,7 @@ export function UsersList() {
       row.kind === "invite" ? row.invite.email : (row.user.displayName ?? row.user.email),
     subtext: (row) =>
       row.kind === "invite"
-        ? isSingleTenant
-          ? row.invite.role.name
-          : `${row.invite.role.name} · ${row.invite.organization.displayName}`
+        ? row.invite.role.name
         : row.user.displayName
           ? row.user.email
           : undefined,

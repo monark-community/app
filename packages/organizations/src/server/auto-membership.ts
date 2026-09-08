@@ -1,7 +1,6 @@
 import { emit, logger, on } from "@monark/common";
 import type { UserSignedInEvent, UserSignedUpEvent } from "@monark/auth/contracts";
 import { getDb } from "@monark/db";
-import { isEnabled } from "@monark/feature-flags/server";
 import { countActiveOrganizations, findOnlyActiveOrganization } from "./data";
 import type { MemberJoinedEvent } from "../contracts/events";
 
@@ -28,9 +27,6 @@ let registered = false;
  * `(userId, organizationId)`.
  */
 export async function ensureSingletonMembership(userId: string): Promise<boolean> {
-  const multi = await isEnabled("tenancy.multi-tenant");
-  if (multi) return false;
-
   const orgCount = await countActiveOrganizations();
   if (orgCount !== 1) return false;
 

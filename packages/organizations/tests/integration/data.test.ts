@@ -107,7 +107,7 @@ describe("organizations/data findOnlyActiveOrganization", () => {
     expect(found?.id).toBe(seeded.id);
   });
 
-  it("returns null when more than one row exists (multi-tenant signal)", async () => {
+  it("returns null when more than one row exists", async () => {
     await seedOrg({ slug: "a" });
     await seedOrg({ slug: "b" });
     expect(await findOnlyActiveOrganization()).toBeNull();
