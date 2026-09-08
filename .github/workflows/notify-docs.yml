@@ -1,0 +1,68 @@
+name: Notify docs site
+
+# Tells monark-community/app-docs that this repo's published documentation
+# changed, so the site can pull it in immediately instead of waiting for its
+# own daily sweep.
+#
+# The site is the consumer of a subset of docs/ (see its sync-docs workflow
+# and scripts/sync-docs.ts): the user guide, each extended module's user
+# guide, and the technical documentation. Planning specs, the archive, and
+# docs/agents aren't published, so they don't fire this.
+#
+# This workflow is an optimisation, not a dependency. app-docs syncs on a
+# schedule regardless — if the App token below isn't configured, or lapses,
+# the docs still land within a day and nothing here breaks. That's why the
+# dispatch step is tolerant of a missing secret rather than failing the run.
+
+on:
+  push:
+    branches: [develop]
+    paths:
+      - "docs/user-guide/**"
+      - "docs/technical-documentation/**"
+      - "packages/*/docs/**"
+  workflow_dispatch:
+
+concurrency:
+  # A burst of doc merges only needs to tell the site once; the site always
+  # syncs from the tip of develop, not from a specific commit.
+  group: notify-docs
+  cancel-in-progress: true
+
+# The App token carries its own permissions ; GITHUB_TOKEN needs none.
+permissions: {}
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      # Scoped to app-docs only: `repositories` limits the installation token
+      # to that repo, so a leak of this token can't touch this one. The App
+      # needs "Contents: read & write" on app-docs (a repository_dispatch is
+      # a write to that repo).
+      - name: Mint a GitHub App token for the docs site
+        id: app-token
+        continue-on-error: true
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ secrets.DOCS_SYNC_APP_ID }}
+          private-key: ${{ secrets.DOCS_SYNC_APP_PRIVATE_KEY }}
+          owner: monark-community
+          repositories: app-docs
+
+      - name: Dispatch to monark-community/app-docs
+        if: steps.app-token.outputs.token != ''
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          gh api repos/monark-community/app-docs/dispatches \
+            --method POST \
+            --field event_type=docs-updated \
+            --field 'client_payload[ref]=develop'
+          echo "Asked app-docs to sync from develop."
+
+      - name: Note when the token isn't configured
+        if: steps.app-token.outputs.token == ''
+        run: |
+          echo "::notice::DOCS_SYNC_APP_ID / DOCS_SYNC_APP_PRIVATE_KEY not set — skipping."
+          echo "The docs site will still pick these changes up on its daily schedule."
