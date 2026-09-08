@@ -6,9 +6,9 @@ Everything that touches your personal account : the sign-up + sign-in flows, the
 
 Visit the sign-up page. You'll be asked for :
 
-- **Email** — used as your sign-in identifier and as the address every notification goes to.
-- **Password** — the strength meter scores it as you type. The app refuses passwords that include your email or your display name, that appear in known-breach lists, or that fall below the minimum strength score.
-- **Display name** (optional) — the name shown next to your avatar across the app. You can leave it blank and add it later from your profile.
+- **Email** : used as your sign-in identifier and as the address every notification goes to.
+- **Password** : the strength meter scores it as you type. The app refuses passwords that include your email or your display name, that appear in known-breach lists, or that fall below the minimum strength score.
+- **Display name** (optional) : the name shown next to your avatar across the app. You can leave it blank and add it later from your profile.
 
 Submitting the form sends you a confirmation email. Click the link inside to verify the address ; if the link gives you trouble, the email also contains a 6-digit code you can paste into the confirmation form on the website. Once verified, you're signed in.
 
@@ -19,14 +19,14 @@ Already have an account ? Use the **Sign in** link on the sign-up page to land o
 Two fields, email + password. Three things that can happen after you submit :
 
 1. **You're signed in.** You land on the home page.
-2. **You're enrolled in two-factor.** A 6-digit code form appears. Enter the current code from your authenticator app and you're in. If you've lost the authenticator, click "Use a recovery code" — each code works once.
+2. **You're enrolled in two-factor.** A 6-digit code form appears. Enter the current code from your authenticator app and you're in. If you've lost the authenticator, click "Use a recovery code" ; each code works once.
 3. **Your account is in deletion grace.** You land directly on the **Danger zone** tab so you can cancel the scheduled deletion if that wasn't your intent.
 
 Banners on the sign-in page :
 
-- **Email updated** — shown after the email-change flow logs you out. Sign in with the new address.
-- **Password updated** — shown after a password reset. Sign in with the new password.
-- **Deletion scheduled** — shown after you request deletion ; lists the date the deletion completes, with one click back into your account if you want to cancel.
+- **Email updated** : shown after the email-change flow logs you out. Sign in with the new address.
+- **Password updated** : shown after a password reset. Sign in with the new password.
+- **Deletion scheduled** : shown after you request deletion ; lists the date the deletion completes, with one click back into your account if you want to cancel.
 
 ## Forgot password
 
@@ -50,11 +50,11 @@ The account sidebar pinned to the left shows the same entries on wide viewports 
 
 ### Profile
 
-- **Avatar + banner** — click either to upload a new image. Both are cropped + compressed automatically. Up to 5 MB per image. Once a banner or avatar is set, clicking re-opens a small menu with **Replace** and **Remove**.
-- **Display name** — saves on blur. Empty values are allowed ; the app falls back to your email address everywhere a name would otherwise show.
-- **Bio** — short free-form text, also saves on blur.
-- **Language** — pick **English** or **Français**. The choice mirrors into your session cookie so the next page renders in the new language without a sign-out cycle. Emails the app sends you also follow this preference.
-- **Theme** — Light / Dark / System. Saves immediately ; the page recolours without a reload.
+- **Avatar + banner** : click either to upload a new image. Both are cropped + compressed automatically. Up to 5 MB per image. Once a banner or avatar is set, clicking re-opens a small menu with **Replace** and **Remove**.
+- **Display name** : saves on blur. Empty values are allowed ; the app falls back to your email address everywhere a name would otherwise show.
+- **Bio** : short free-form text, also saves on blur.
+- **Language** : pick **English** or **Français**. The choice mirrors into your session cookie so the next page renders in the new language without a sign-out cycle. Emails the app sends you also follow this preference.
+- **Theme** : Light / Dark / System. Saves immediately ; the page recolours without a reload.
 
 While your account is in the deletion-grace window every field on this tab is locked read-only. A banner at the top of the section explains why and links to the danger tab where you can cancel.
 
@@ -66,14 +66,14 @@ The security tab gathers everything that protects sign-ins : email, password, TO
 
 Click **Change email**. A modal opens with two fields :
 
-- **New email** — the address you want to switch to.
-- **Current password** — to prove the change is intentional.
+- **New email** : the address you want to switch to.
+- **Current password** : to prove the change is intentional.
 
 If you have TOTP enrolled, a second dialog asks for a 6-digit code before the request goes out.
 
 The app sends a confirmation email to **both** your current and your new address. Click the link in either email _or_ paste the 6-digit code shown in either email back into the dialog. Once one side confirms, the dialog updates : "First side confirmed, now enter the code from {your other inbox}". When both sides have confirmed, the email rotates : you're signed out and bounced to the sign-in page with an "Email updated" banner ; sign back in with the new address.
 
-You can keep the dialog open while waiting for the email — it remembers your progress.
+You can keep the dialog open while waiting for the email ; it remembers your progress.
 
 #### Change your password
 
@@ -83,22 +83,22 @@ Click **Change password**. A modal asks for :
 - **New password**
 - **Confirm new password**
 
-Same strength rules as sign-up. If you have TOTP enrolled, a second dialog asks for a 6-digit code. On success a toast confirms the change, and you receive a notification email — both an in-app entry and an outbound email — letting you know the password rotated. Inside the email, a clear "If this wasn't you" path explains how to lock the account down.
+Same strength rules as sign-up. If you have TOTP enrolled, a second dialog asks for a 6-digit code. On success a toast confirms the change, and you receive a notification email (both an in-app entry and an outbound email) letting you know the password rotated. Inside the email, a clear "If this wasn't you" path explains how to lock the account down.
 
 #### Two-factor authentication (TOTP)
 
 The TOTP card surfaces three actions depending on whether you're already enrolled.
 
-**Configure TOTP** — opens a 2-step wizard :
+**Configure TOTP** : opens a 2-step wizard :
 
 1. **Step 1 ; Scan the QR code.** Open your authenticator app (Google Authenticator, 1Password, Authy, …) and add a new account by scanning the QR. If the camera is unavailable, click **Can't scan?** to expand a copy-button-equipped codeblock with the secret string ; paste it into the app's manual-entry field.
 2. **Step 2 ; Confirm with a code.** Enter the 6-digit code your authenticator currently shows. The button is **Back** if you want to re-check the QR.
 
 Once confirmed, the modal switches to the **recovery codes** view : 10 single-use codes you should save somewhere outside the app (a password manager note works). The codes are your way back in if you lose access to the authenticator. There's a copy button at the top-right of the codeblock and an **I saved them** acknowledgement to close the dialog.
 
-**Disable TOTP** — opens a single-step modal asking for a current 6-digit code. Confirming switches you back to password-only sign-ins and emails you a notification.
+**Disable TOTP** : opens a single-step modal asking for a current 6-digit code. Confirming switches you back to password-only sign-ins and emails you a notification.
 
-**Regenerate recovery codes** — also asks for a 6-digit code, then displays a fresh batch of 10. The previous codes stop working immediately.
+**Regenerate recovery codes** : also asks for a 6-digit code, then displays a fresh batch of 10. The previous codes stop working immediately.
 
 After you sign in, the app may pop up a small **recovery codes reminder** dialog if your stored count drops below the safety threshold (or hits zero). Acknowledge or rotate from there ; there's no way to dismiss the "must regenerate" mode without rotating.
 
@@ -106,9 +106,9 @@ After you sign in, the app may pop up a small **recovery codes reminder** dialog
 
 Each browser you use to sign in records a row : a friendly label (the model, when the browser sends one), location (country, when the hosting platform supplies it), and last-seen timestamp. Two affordances :
 
-- **Rename** — click the pencil next to a row to update its label. Useful when "K" appears for a Pixel because Chrome reduces the User-Agent string ; rename it "My phone" so you recognize it next time.
-- **Revoke** — kicks the matching session. The current device is marked so you can't accidentally lock yourself out ; revoking it requires the **Revoke all** button instead.
-- **Revoke all** — ends every session including yours. Useful as a panic button. You're signed out everywhere and have to sign back in (which will require TOTP if enrolled).
+- **Rename** : click the pencil next to a row to update its label. Useful when "K" appears for a Pixel because Chrome reduces the User-Agent string ; rename it "My phone" so you recognize it next time.
+- **Revoke** : kicks the matching session. The current device is marked so you can't accidentally lock yourself out ; revoking it requires the **Revoke all** button instead.
+- **Revoke all** : ends every session including yours. Useful as a panic button. You're signed out everywhere and have to sign back in (which will require TOTP if enrolled).
 
 When TOTP is on, the trusted-device row remembers that the device cleared the TOTP gate. Future sign-ins from the same device skip the 6-digit prompt. New devices always get challenged.
 
@@ -141,7 +141,7 @@ While the request is pending :
 - Your sidebar collapses to **Profile** (read-only) + **Danger zone**.
 - Every other page in the app redirects you back here.
 - A banner on the profile tab explains why fields are locked.
-- You can sign out and back in any time within the 14-day window — you'll land directly on this tab.
+- You can sign out and back in any time within the 14-day window ; you'll land directly on this tab.
 
 #### Cancel a pending deletion
 
@@ -149,7 +149,7 @@ Inside the 14-day window, the danger zone shows **Cancel scheduled deletion**. C
 
 #### Permanent deletion (typed-email gate)
 
-Click **Delete my account** to bring up a typed-email confirmation modal. You must type your email address verbatim before the **Delete** button enables. Confirming triggers the immediate hard delete — there's no grace period for this path. You're signed out and your row is anonymized + Supabase-deleted in one shot.
+Click **Delete my account** to bring up a typed-email confirmation modal. You must type your email address verbatim before the **Delete** button enables. Confirming triggers the immediate hard delete ; there's no grace period for this path. You're signed out and your row is anonymized + Supabase-deleted in one shot.
 
 This path is final ; the request-deletion grace flow is the path you want for almost every case.
 

@@ -16,15 +16,15 @@ module fragment (fragments are for extended modules).
 
 The API is authoritative but never handles the bytes:
 
-1. **`files.createUpload`** — validates the request against the `FileBucket`
+1. **`files.createUpload`** : validates the request against the `FileBucket`
    policy (`fileSizeLimit`, `allowedMimeTypes`), computes the object key
    `{organizationId}/{fileId}-{sanitizeFilename(name)}`, writes a `PENDING`
    `StoredFile`, and asks storage for a one-shot **signed upload URL**
    (`createSignedUploadUrl`). Returns `{ fileId, bucket, key, token, signedUrl }`.
-2. **Browser upload** — the web `useFileUpload` hook uploads the `File` straight
+2. **Browser upload** : the web `useFileUpload` hook uploads the `File` straight
    to Supabase with `supabase.storage.from(bucket).uploadToSignedUrl(key, token,
 file)` (the bytes never touch the API).
-3. **`files.finalize`** — confirms the object exists (`getObjectInfo`, capturing
+3. **`files.finalize`** : confirms the object exists (`getObjectInfo`, capturing
    the real size), flips the row to `READY`, and emits `files.file-uploaded`.
 
 Only `READY` files appear in `files.list`. A `PENDING` row whose upload never
@@ -35,7 +35,7 @@ completes is a harmless orphan (a future sweep can prune it).
 A Supabase bucket is project-level, so `FileBucket` is **global infra** ;
 multi-tenancy comes from the **key prefix** (`{organizationId}/…`) and the
 `StoredFile.organizationId` column, and every read/write is org-scoped through
-`requireOrg` + `requirePermission`. Buckets are created **private** — the signed
+`requireOrg` + `requirePermission`. Buckets are created **private** ; the signed
 upload/download URL (minted with the service key) is the gate, so no per-bucket
 RLS policy is needed (unlike the older avatar path). Public buckets are supported
 (`isPublic`) and then `downloadUrl` returns the public URL.
@@ -52,12 +52,12 @@ implementation of the same interface.
 
 Registered at api boot in [`services/api/src/server.ts`](../../services/api/src/server.ts):
 
-- **RBAC** — `files.{view, upload, delete, manage-buckets}`, guarded on every
+- **RBAC** : `files.{view, upload, delete, manage-buckets}`, guarded on every
   mutation.
-- **Event bus** — `files.{bucket-created, file-uploaded, file-deleted}`.
-- **Webhooks** — free : `registerFilesEventTypes()` makes every event subscribable.
-- **Feature flags** — `files.enabled` (default-on) gates the `/admin/files` page.
-- **Notifications** — N/A for now (a conscious choice).
+- **Event bus** : `files.{bucket-created, file-uploaded, file-deleted}`.
+- **Webhooks** : free : `registerFilesEventTypes()` makes every event subscribable.
+- **Feature flags** : `files.enabled` (default-on) gates the `/admin/files` page.
+- **Notifications** : N/A for now (a conscious choice).
 
 ## Web
 
@@ -70,9 +70,9 @@ files with Download + Delete row actions. Registered in `admin-tabs.ts`.
 
 ## Testing
 
-- **Unit** (`pnpm --filter @monark/files test`) — `sanitizeFilename` /
+- **Unit** (`pnpm --filter @monark/files test`) : `sanitizeFilename` /
   `buildObjectKey` (path-traversal + collision safety).
-- **Integration** (`pnpm --filter @monark/files test:integration`, Docker) — the
+- **Integration** (`pnpm --filter @monark/files test:integration`, Docker) : the
   data layer (bucket CRUD, pending→ready, READY-only + paginated list,
   soft-delete) and the **router** via `t.createCallerFactory` with a fake
   `FileStorage` : RBAC deny/allow, `createUpload` policy rejection (over-size /

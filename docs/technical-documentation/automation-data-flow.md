@@ -9,15 +9,15 @@ excludes `-`, so a `{{ n-a1b2.field }}` token never resolved) ; the regex now
 allows `-`, and `executionOrder` pulls a referenced value source into the run +
 orders it before its consumer via a `{{ }}` reference, not only via a `field:`
 edge. Phase 4: the data-wire authoring path was **removed** (option a below, not
-the option-b sugar this doc originally leaned toward) — no more `field:` ports,
+the option-b sugar this doc originally leaned toward) ; no more `field:` ports,
 per-field expose toggle, or data edges in the editor ; data flows only through
 `{{ }}` references + the picker. Legacy `field:` edges in already-saved graphs
 still resolve at run time (the engine keeps that branch) and the editor rewrites
 them to references on load, so old automations run unchanged and self-migrate on
-the next save. Phase 5: **workflow variables** — a run-global `vars` scope
+the next save. Phase 5: **workflow variables** ; a run-global `vars` scope
 (`{{ vars.<name> }}`) plus a Set Variable node that writes into it, distinct from
 per-step outputs and durable across a suspend. Phase 3: **stable-name
-addressing** — every node has a unique, editable slug and its output is addressed
+addressing** : every node has a unique, editable slug and its output is addressed
 as `{{ steps.<slug>.field }}` (the engine still resolves the legacy `{{ <nodeId> }}`
 form, and the editor rewrites old graphs on load). Owner: automation module.
 Related: [automation.md](automation.md).
@@ -67,7 +67,7 @@ redundancy. Worse, neither path is complete, and they fail in opposite ways:
 | Tool              | Data model                                                          | How you address a value                                                           | Insert UX                                                            | Control vs data                                      |
 | ----------------- | ------------------------------------------------------------------- | --------------------------------------------------------------------------------- | -------------------------------------------------------------------- | ---------------------------------------------------- |
 | Unreal Blueprints | typed data **pins**, wired                                          | wire pin to pin ; named variables as Get/Set nodes ; literals on unconnected pins | drag a wire                                                          | fully separate: white exec wire vs colored data pins |
-| n8n               | wire carries the item stream (`$json`) ; expressions reach sideways | `{{ $json.x }}`, `{{ $node["Find Record"].json.x }}` — by **name**                | expression editor with autocomplete + drag-from-input-schema         | main line (data + control fused) + expressions       |
+| n8n               | wire carries the item stream (`$json`) ; expressions reach sideways | `{{ $json.x }}`, `{{ $node["Find Record"].json.x }}` ; by **name**                | expression editor with autocomplete + drag-from-input-schema         | main line (data + control fused) + expressions       |
 | Make              | linear route ; **every field is an expression**                     | click a token (`{{ 2.email }}`, shown with a friendly label)                      | a **mapping panel** lists all upstream outputs, click into any field | route = control ; mapping = data                     |
 
 Two observations. First, all three separate control flow from data flow, which
@@ -80,7 +80,7 @@ winning ingredient is the picker + names + declared shapes, not the wiring.
 
 ## Decision
 
-Converge on **one runtime concept — references** — and fix the authoring surface,
+Converge on **one runtime concept (references**) and fix the authoring surface,
 instead of maintaining two half-built paths.
 
 - **Control flow stays as wires.** Run order, branching, and error paths are a
@@ -111,7 +111,7 @@ At run time the resolution scope for a node is:
 
 `trigger` and `steps.<slug>` are read-only records of what already ran ; `vars` is
 the run-global workflow state. A node's output is addressed by its stable
-`steps.<slug>` alias (phase 3) — the readable, hand-writable, picker-friendly
+`steps.<slug>` alias (phase 3) : the readable, hand-writable, picker-friendly
 form ; the raw `<nodeId>` key stays in scope so graphs saved before slugs (and any
 un-migrated `{{ <nodeId> }}` reference) still resolve. The editor assigns a slug
 to every node, keeps it unique, lets the author edit it (rewriting references to
@@ -145,7 +145,7 @@ remove field-wires**, for two reasons that only became clear once phases 1–2
 shipped. First, the real blocker was never the wiring model ; it was that node
 references were silently broken (the hyphen-regex bug) and had no picker. Once
 click-to-insert + output schemas made references usable everywhere, a wire was
-pure redundancy — a second, coarser way to do what the picker already does
+pure redundancy : a second, coarser way to do what the picker already does
 cleanly. Second, keeping wires as sugar (b) still means rendering, hit-testing,
 and validating a second port type per field for no capability the picker lacks.
 So the editor now has **one** data-authoring surface (references via the picker),
@@ -187,7 +187,7 @@ direction can be validated before committing to 3–5.
    node's display _name_ does not touch its slug (slug is the stable address,
    edited explicitly).
 
-4. **Remove field-wires (option a — shipped).** Drop the data-authoring path
+4. **Remove field-wires (option a : shipped).** Drop the data-authoring path
    from the editor entirely: no `field:` ports on the node face, no per-field
    "expose as input" toggle, no data edges. Data comes only from the picker /
    `{{ }}` references. The engine keeps its `field:` resolution branch so
@@ -203,7 +203,7 @@ direction can be validated before committing to 3–5.
    literal "global variable" the original design intended, distinct from per-step
    outputs: set it on either arm of a branch and read it after the branches
    converge, or give a value a stable readable name. The write is durable across a
-   suspend — the engine rebuilds `vars` on resume by replaying each node's
+   suspend : the engine rebuilds `vars` on resume by replaying each node's
    `collectVars(output)` from its persisted step (in `sequence` order), a generic
    seam ([registry.ts](../../packages/automation/src/server/registry.ts)) any node
    may implement, not just Set Variable. Computed values (a running total) compose
@@ -214,7 +214,7 @@ direction can be validated before committing to 3–5.
 ## Consequences
 
 - One runtime path for data ; the redundancy is gone.
-- References are usable everywhere via the picker, not just for the trigger —
+- References are usable everywhere via the picker, not just for the trigger ;
   including non-text fields (dropdown / switch / number), which get a small
   value↔variable toggle that swaps the native control for a `{{ }}` text box
   (forced on when the stored value is already an expression, so a saved reference

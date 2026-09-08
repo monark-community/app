@@ -1,8 +1,8 @@
 # Running multiple isolated instances
 
 The app is a **single-tenant** product: one deployment serves one business (one
-organization). To serve many businesses you run **many independent instances** —
-each with its own database, its own domain, and its own branding — rather than
+organization). To serve many businesses you run **many independent instances** ;
+each with its own database, its own domain, and its own branding ; rather than
 one multi-tenant deployment. This fits everything the starter already does: the
 `BRANDING_*` env seam, the `provision:org` CLI, and the singleton-org bootstrap
 are all per-deployment.
@@ -21,7 +21,7 @@ as a container so instance N is "same image, different env file."
 ## The API image
 
 [`services/api/Dockerfile`](../../services/api/Dockerfile) builds one
-**env-agnostic** image — it bakes in no secrets and runs no migrations on boot,
+**env-agnostic** image : it bakes in no secrets and runs no migrations on boot,
 so the _same_ image runs staging, production, and every client. Build it once
 (context = repo root):
 
@@ -38,7 +38,7 @@ docker run --rm --env-file clients/acme.env -p 4000:4000 registry/monark-api:<ve
 
 This is the **build-once, promote-the-same-artifact** model: the image you smoke
 on staging is the exact bytes you run for every client. Run it anywhere that
-takes a container — Render (Docker runtime), Fly, Railway, Cloud Run, ECS, k8s,
+takes a container : Render (Docker runtime), Fly, Railway, Cloud Run, ECS, k8s,
 or a plain VPS.
 
 > The image is the "no bundle" build (full workspace + `tsx`), so it's large
@@ -47,7 +47,7 @@ or a plain VPS.
 
 ## What differs per instance
 
-Everything an instance needs comes from **runtime env** — one env file per
+Everything an instance needs comes from **runtime env** ; one env file per
 client. The keys that MUST differ:
 
 | Group             | Keys                                                                                                                                  | Per-client value                                                  |
@@ -57,7 +57,7 @@ client. The keys that MUST differ:
 | **URLs**          | `WEB_ORIGIN`, `APP_URL`                                                                                                               | the client's domain (`https://app.acme.com`)                      |
 | **Org**           | `INITIAL_ORG_SLUG`, `INITIAL_ORG_NAME`                                                                                                | the client's org                                                  |
 | **Mail**          | `SMTP_URL`, `SMTP_FROM`                                                                                                               | the client's sending domain                                       |
-| **Crypto**        | `TOTP_ENCRYPTION_KEY`, `SECRETS_ENCRYPTION_KEY`, `CRON_SECRET`                                                                        | **fresh per instance** — never reuse across clients               |
+| **Crypto**        | `TOTP_ENCRYPTION_KEY`, `SECRETS_ENCRYPTION_KEY`, `CRON_SECRET`                                                                        | **fresh per instance** ; never reuse across clients               |
 | **Observability** | `SENTRY_DSN`, `SENTRY_ENVIRONMENT`                                                                                                    | e.g. `production` tagged with the client, or a per-client project |
 
 Keep each client's env file in a secret store (not the repo). The web app needs
@@ -83,7 +83,7 @@ container / Job.)
 
 Each instance is single-tenant. Its org is provisioned from `INITIAL_ORG_*` at
 api boot, or on demand with `pnpm provision:org` (see
-[tools/provision-org.ts](../../tools/provision-org.ts)) — run it in the container
+[tools/provision-org.ts](../../tools/provision-org.ts)) ; run it in the container
 the same way as the migrate step. Idempotent per instance.
 
 ## Cloudflare (per client)
@@ -92,8 +92,8 @@ Cloudflare is the DNS + proxy/TLS/WAF layer in front of each instance; it's
 agnostic to how the origin runs. Per client domain:
 
 1. Add the domain (or a subdomain of yours) as a Cloudflare zone.
-2. Point records at the instance's origins — e.g. `app.acme.com` → the web
-   origin and `api.acme.com` → the api origin — **proxied** (orange cloud) so
+2. Point records at the instance's origins ; e.g. `app.acme.com` → the web
+   origin and `api.acme.com` → the api origin ; **proxied** (orange cloud) so
    Cloudflare terminates TLS and fronts the CDN/WAF.
 3. Match the app's config to the domain: set the instance's `WEB_ORIGIN` /
    `APP_URL` to `https://app.acme.com`, the web's `NEXT_PUBLIC_API_URL` to
@@ -107,11 +107,11 @@ real client domain, not the origin host.
 
 Two options per instance:
 
-- **Vercel project per client** — simplest today. One project per client with
+- **Vercel project per client** : simplest today. One project per client with
   its own `NEXT_PUBLIC_*` env (client branding + client api + client Supabase),
   its domain added in Vercel, and Cloudflare in front. Reuses the existing web
   deploy path.
-- **Self-hosted web container** — a Next.js `output: "standalone"` image so web +
+- **Self-hosted web container** : a Next.js `output: "standalone"` image so web +
   api both run as containers on your infra (fuller self-host, one platform). Not
   built yet; it's the natural next step if you move web off Vercel.
 
@@ -119,31 +119,31 @@ Two options per instance:
 
 Everything above is about production. Locally, the constraint is different :
 every instance wants the _same_ fixed ports, and `CLAUDE.md` asks each agent to
-work in its own worktree — so running two checkouts side by side is the normal
+work in its own worktree ; so running two checkouts side by side is the normal
 case, not an exotic one.
 
 A second local instance needs three edits in the second worktree :
 
-1. **`supabase/config.toml`** — a distinct `project_id` (this is what names the
+1. **`supabase/config.toml`** : a distinct `project_id` (this is what names the
    Docker containers, so it's what actually keeps the two stacks apart) and a
    shifted port block. Shift them all together, e.g. `54321`→`55321` :
    `[api] port`, `[db] port` + `shadow_port`, `[db.pooler] port`,
    `[studio] port`, `[inbucket] port` + `smtp_port`, `[analytics] port`.
-2. **`services/web/package.json`** — the `dev` script pins `--port 3000`. Change
+2. **`services/web/package.json`** : the `dev` script pins `--port 3000`. Change
    it to the second instance's port. It is a literal flag on purpose : Next
    resolves its port _before_ loading `.env`, so a `PORT=` line there is ignored,
    and passing `PORT` through the environment instead leaks into the api's
    process too (Node's `--env-file` does not override an already-set variable),
    which lands both services on the same port.
-3. **The `.env` files** — `PORT` for the api, and `WEB_ORIGIN` / `APP_URL` /
+3. **The `.env` files** : `PORT` for the api, and `WEB_ORIGIN` / `APP_URL` /
    `NEXT_PUBLIC_API_URL` / `NEXT_PUBLIC_APP_URL` / the `SUPABASE_URL` pair /
    `SMTP_URL` to match the shifted ports. `pnpm bootstrap` fills the DB URL and
    Supabase keys from whatever `supabase status` reports, so it picks up the
    shift on its own ; the origin URLs are yours to set.
 
-The first two are local-only edits — don't commit them.
+The first two are local-only edits ; don't commit them.
 
-## Provisioning a new instance — checklist
+## Provisioning a new instance ; checklist
 
 1. Create the client's **Supabase** project; copy URL + keys.
 2. Write `clients/<client>.env` from the table above (fresh crypto keys).

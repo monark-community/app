@@ -9,7 +9,7 @@ per-export reference lives in the [module README](../../packages/chat/README.md)
 We already expose Monark to _external_ AI agents (Claude Desktop, Cursor) via
 `@monark/mcp`, a stdio MCP server that authenticates with a static `mrk_` API key
 and calls the public `/api/v1` surface. It is tempting to point the in-app agent
-at the same server — but that is the wrong fit on every axis:
+at the same server ; but that is the wrong fit on every axis:
 
 - **Identity.** MCP acts as one fixed key principal. An in-app assistant must act
   as the _logged-in user_, so RBAC, per-record access, and audit reflect the real
@@ -27,7 +27,7 @@ verbatim.
 
 ## One tool registry, two adapters
 
-The valuable reuse isn't the transport — it's the **tool definitions**. Both the
+The valuable reuse isn't the transport ; it's the **tool definitions**. Both the
 MCP server and the in-app agent derive their tools from the SAME
 `V1_ROUTES` descriptors (`services/api/src/public/routes.ts`):
 
@@ -46,12 +46,12 @@ A route is thus the single source of truth for both external and in-app tools.
 ## In-app-only tools (beyond the public API)
 
 Some surfaces are deliberately kept OFF the public API / MCP but still given to
-the in-app agent — automations are the first (an internal power-user surface we
+the in-app agent : automations are the first (an internal power-user surface we
 don't want exposed to external agents). These live in
 `services/api/src/chat/automation-tools.ts` as `InAppTool` defs (name,
 description, a zod `inputSchema`, `mutates`, and a `run(caller, input)` closure);
 `buildChatToolset` merges them alongside the route-derived tools. They call
-`caller.automation.*` directly — same in-process caller, same per-procedure RBAC
+`caller.automation.*` directly : same in-process caller, same per-procedure RBAC
 (`automation.view` / `.create` / `.manage` / `.run`), same confirm-gate for
 mutations. The tool set is discovery + whole-graph write: `automation_list` /
 `_get` / `_list_node_types` / `_list_trigger_events` (reads), then
@@ -88,7 +88,7 @@ requested tool call:
 
 The UI then calls `chat.toolCalls.confirm` / `.reject`, which resolve the call and
 simply call `advanceConversation` again. Because the loop reloads state, resume is
-free — there's no in-memory turn state to reconstruct. Every message and tool call
+free : there's no in-memory turn state to reconstruct. Every message and tool call
 (input, status, result) is persisted for replay + audit.
 
 `buildLlmMessages` maps stored rows to the provider-agnostic message list; an
@@ -118,8 +118,8 @@ cacheable size just isn't cached (no error).
 
 Mounted once in `(authed)/layout.tsx` via `ChatProvider` (like
 `GlobalSearchProvider`), so the docked panel persists across navigation. It's a
-non-modal right-side `Sheet` (full-screen on mobile) with two screens —
-conversation list → thread — and inline confirm/reject cards for gated tool
+non-modal right-side `Sheet` (full-screen on mobile) with two screens ;
+conversation list → thread ; and inline confirm/reject cards for gated tool
 calls. `messages.send` carries an optional page `context` (route + focused
 model/record) that's folded into the system prompt so the agent can interpret
 "this record".
@@ -127,7 +127,7 @@ model/record) that's folded into the system prompt so the agent can interpret
 ## Streaming (SSE)
 
 The assistant's reply streams token-by-token over a dedicated **`POST /chat/stream`**
-Server-Sent Events endpoint (`services/api/src/server.ts`), not tRPC — the
+Server-Sent Events endpoint (`services/api/src/server.ts`), not tRPC : the
 app-wide tRPC client is httpBatch-only, so chat streaming rides its own fetch to
 keep the shared client untouched. The endpoint authenticates with the same
 Supabase bearer (`createContext`) and calls the shared `sendMessage(ctx, input,
@@ -139,7 +139,7 @@ appending tokens to a live bubble, then refetches the persisted messages on
 `done`. `confirmToolCall` / `rejectToolCall` remain non-streamed (tRPC mutations
 
 - refetch), so the assistant's _post-confirmation_ reply appears on refetch
-  rather than streaming — a reasonable v1 seam.
+  rather than streaming : a reasonable v1 seam.
 
 ## Not yet / deferred
 
@@ -150,6 +150,6 @@ appending tokens to a live bubble, then refetches the persisted messages on
 ## Trust boundary
 
 Any tool the agent can call runs as the user through that procedure's own
-permission gate — chat adds no bypass. A user can therefore only ever read or
+permission gate : chat adds no bypass. A user can therefore only ever read or
 change what they're already allowed to. The `chat.ai-agent` flag is an
 org/user-level kill switch for the LLM-backed path.

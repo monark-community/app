@@ -1,6 +1,6 @@
 # Admin section
 
-For operators of an organization — anyone with a Monark `ADMIN` (org-tier) or `SYSADMIN` (platform-tier) role. Visible to non-admins as a missing affordance : the admin pin doesn't appear in the primary navigation drawer, and `/admin` URLs redirect to the home page.
+For operators of an organization ; anyone with a Monark `ADMIN` (org-tier) or `SYSADMIN` (platform-tier) role. Visible to non-admins as a missing affordance : the admin pin doesn't appear in the primary navigation drawer, and `/admin` URLs redirect to the home page.
 
 The admin section lives at `/admin/*` and ships eight tabs : **Organizations**, **Users**, **Roles & permissions**, **Webhooks**, **Data Models**, **Files**, **Secrets**, and **Service accounts**. Some tabs are gated by a feature flag and only appear when it's turned on for the deploy.
 
@@ -16,8 +16,8 @@ The admin layout pins a sidebar with the tab links. On wide viewports it sits to
 
 The admin UX adapts to the deploy's tenancy mode :
 
-- **Single-tenant** (default) — exactly one organization exists. The Organizations tab redirects directly to that organization's edit page ; no list view. The role manager auto-selects the singleton org. User-side flows that would ask you to pick an org collapse to nothing.
-- **Multi-tenant** (operator opt-in via the `tenancy.multi-tenant` feature flag) — multiple organizations live side by side. Admin surfaces grow org pickers ; the Organizations tab renders a paginated list.
+- **Single-tenant** (default) : exactly one organization exists. The Organizations tab redirects directly to that organization's edit page ; no list view. The role manager auto-selects the singleton org. User-side flows that would ask you to pick an org collapse to nothing.
+- **Multi-tenant** (operator opt-in via the `tenancy.multi-tenant` feature flag) : multiple organizations live side by side. Admin surfaces grow org pickers ; the Organizations tab renders a paginated list.
 
 This guide notes per-mode differences inline.
 
@@ -29,8 +29,8 @@ This guide notes per-mode differences inline.
 
 A paginated card list. Top of the page :
 
-- **Search** — filters by display name or slug as you type (debounced).
-- **Load more** — appears when there are more rows than the current page can show.
+- **Search** : filters by display name or slug as you type (debounced).
+- **Load more** : appears when there are more rows than the current page can show.
 
 Each row is a clickable card with the org's logo, display name, slug, primary-color swatch, and a chevron pointing into the detail page.
 
@@ -38,10 +38,10 @@ Each row is a clickable card with the org's logo, display name, slug, primary-co
 
 The single edit surface for an organization :
 
-- **Logo** — click to upload (or replace / remove if a logo is already set). Square JPEG, PNG or WebP up to 2 MB ; cropped + compressed automatically (SVG isn't accepted). This is the mark shown on the sign-in page, in the nav rail, and at the top of the emails the app sends.
-- **Display name** — what shows everywhere a user sees the org's name. Saves on blur.
-- **Slug** — the URL-safe identifier. 2–60 characters, lowercase letters / digits / dashes only. Saves on blur ; trying to use a slug that's already taken surfaces a clean error toast. **Renaming a slug** doesn't break old links — the previous slug is recorded with a 90-day redirect so anything pointing at the old URL still resolves.
-- **Primary color** — hex code (e.g. `#2563EB`) ; the live swatch next to the input previews the value as you type. Themes the whole app for that org — buttons, focus rings, the sidebar accent, the first chart series — plus its transactional emails. Text painted on top flips between black and white automatically so a light or pastel color stays readable. Leave it blank to fall back to the color the deployment was configured with.
+- **Logo** : click to upload (or replace / remove if a logo is already set). Square JPEG, PNG or WebP up to 2 MB ; cropped + compressed automatically (SVG isn't accepted). This is the mark shown on the sign-in page, in the nav rail, and at the top of the emails the app sends.
+- **Display name** : what shows everywhere a user sees the org's name. Saves on blur.
+- **Slug** : the URL-safe identifier. 2–60 characters, lowercase letters / digits / dashes only. Saves on blur ; trying to use a slug that's already taken surfaces a clean error toast. **Renaming a slug** doesn't break old links ; the previous slug is recorded with a 90-day redirect so anything pointing at the old URL still resolves.
+- **Primary color** : hex code (e.g. `#2563EB`) ; the live swatch next to the input previews the value as you type. Themes the whole app for that org (buttons, focus rings, the sidebar accent, the first chart series) plus its transactional emails. Text painted on top flips between black and white automatically so a light or pastel color stays readable. Leave it blank to fall back to the color the deployment was configured with.
 
 Saving any field emits a domain event so downstream listeners (notification fan-out, audit log) record what changed.
 
@@ -53,9 +53,9 @@ Saving any field emits a domain event so downstream listeners (notification fan-
 
 The list is a paginated table-like view. The header row holds :
 
-- **Search** — debounced match against display name + email.
-- **Filter** (funnel icon) — opens a dropdown with submenus for **Role**, **Status**, **Joined**, **Email-verified**. Each filter is a radio choice ; the default is "All".
-- **Invite user** — opens the invite dialog (see below).
+- **Search** : debounced match against display name + email.
+- **Filter** (funnel icon) : opens a dropdown with submenus for **Role**, **Status**, **Joined**, **Email-verified**. Each filter is a radio choice ; the default is "All".
+- **Invite user** : opens the invite dialog (see below).
 
 Active filters render as small chips ("Role : Administrator", "Status : Pending deletion", …) right after the search bar. Each chip has an × to clear that one filter.
 
@@ -65,10 +65,10 @@ Pending invites render at the top of the list with a yellow **Pending** pill and
 
 The **Invite user** button opens a dialog with :
 
-- **Email** — required.
-- **Role** — pick from the org's available roles (built-in admin + custom roles in the role manager).
-- **Organization** (multi-tenant only) — the org the invite scopes to. Single-tenant pins this automatically.
-- **Full name** (optional) — pre-fills the recipient's display name on signup ; also used to address them in the invite email's greeting.
+- **Email** : required.
+- **Role** : pick from the org's available roles (built-in admin + custom roles in the role manager).
+- **Organization** (multi-tenant only) : the org the invite scopes to. Single-tenant pins this automatically.
+- **Full name** (optional) : pre-fills the recipient's display name on signup ; also used to address them in the invite email's greeting.
 
 Submitting sends an invite email with a unique link. The invite expires after 14 days. The email's greeting reads the optional full name when present ; otherwise generic.
 
@@ -94,8 +94,8 @@ The user's role assignments render as a flex-wrap of removable chips (color-tint
 
 A dashed-border **+ Add new role** chip at the end opens the assign dialog :
 
-- **Organization** (multi-tenant only) — the org to scope the role to. Single-tenant pins the singleton.
-- **Role** — pick from the org's role list. Built-in admin + every custom role created in the role manager.
+- **Organization** (multi-tenant only) : the org to scope the role to. Single-tenant pins the singleton.
+- **Role** : pick from the org's role list. Built-in admin + every custom role created in the role manager.
 
 The dialog wipes its selections each time it opens.
 
@@ -111,9 +111,9 @@ The same toggle matrix the user sees on their own preferences page, but applied 
 
 Three buttons :
 
-- **Request deletion** — schedules the standard 14-day grace deletion against the target. The user receives the same notification email + can cancel themselves. You can't request your own deletion from here ; use your own `/account/danger` for that.
-- **Cancel scheduled deletion** — only visible when the user is mid-grace.
-- **Delete permanently** — opens a typed-email confirmation dialog. You must type the user's email address verbatim before the **Delete** button enables. Confirming hard-deletes the row + removes the Supabase auth user. No grace period for this path. You can't hard-delete yourself.
+- **Request deletion** : schedules the standard 14-day grace deletion against the target. The user receives the same notification email + can cancel themselves. You can't request your own deletion from here ; use your own `/account/danger` for that.
+- **Cancel scheduled deletion** : only visible when the user is mid-grace.
+- **Delete permanently** : opens a typed-email confirmation dialog. You must type the user's email address verbatim before the **Delete** button enables. Confirming hard-deletes the row + removes the Supabase auth user. No grace period for this path. You can't hard-delete yourself.
 
 ## Roles & permissions
 
@@ -124,7 +124,7 @@ Three buttons :
 Read-only roster of every account holding the platform-tier `SYSADMIN` role. Each row shows :
 
 - Avatar + name + email.
-- "Since {date}" — when the assignment was granted.
+- "Since {date}" : when the assignment was granted.
 
 `SYSADMIN` is the highest tier in the system : holds every permission across every organization, can override any org-tier admin. The roster is read-only on purpose ; granting and revoking sysadmin happens via the `pnpm sysadmin` CLI tool the operator runs from their workstation, not from the UI. The card is here so any admin can see who has the power to override them.
 
@@ -134,9 +134,9 @@ The role manager for one organization at a time.
 
 Top of the section :
 
-- **Organization picker** (multi-tenant only) — pick the org whose roles you want to manage. Single-tenant pins the singleton.
-- **Search** — filters the role list by name or key.
-- **New role** — links to the create-role page (see below).
+- **Organization picker** (multi-tenant only) : pick the org whose roles you want to manage. Single-tenant pins the singleton.
+- **Search** : filters the role list by name or key.
+- **New role** : links to the create-role page (see below).
 
 Below that, a list of every role available within the selected org :
 
@@ -151,14 +151,14 @@ Reached via **New role** (create) or by clicking a row (edit). A full page so th
 
 Top fields :
 
-- **Name** — the friendly display name. Required. The internal key used for code-side guards is auto-derived from the name (you don't see or pick it). If a role with that derived key already exists, the save surfaces a clean validation error.
-- **Description** — optional ; surfaces on the role list to remind operators what the role is for.
-- **Color** — optional hex code. The live swatch next to the input previews the value. Drives the chip color across the user-detail roles surface and the role list.
+- **Name** : the friendly display name. Required. The internal key used for code-side guards is auto-derived from the name (you don't see or pick it). If a role with that derived key already exists, the save surfaces a clean validation error.
+- **Description** : optional ; surfaces on the role list to remind operators what the role is for.
+- **Color** : optional hex code. The live swatch next to the input previews the value. Drives the chip color across the user-detail roles surface and the role list.
 
 Permission section :
 
-- **Search bar** at the top — filters across keys + descriptions of every permission.
-- **Categories** — collapsible sections (Organization, Users, Roles & permissions, Platform). Each category has :
+- **Search bar** at the top : filters across keys + descriptions of every permission.
+- **Categories** : collapsible sections (Organization, Users, Roles & permissions, Platform). Each category has :
   - A **tri-state checkbox** in the header (none / some / all). Click to bulk toggle every permission in that category. "Some" jumps to "all" so partial-fill → grant-rest is a single click.
   - A **count pill** showing `selected/total`.
   - A list of the category's permissions when expanded ; each is a checkbox + the permission key + a one-line description.
@@ -167,9 +167,9 @@ When you start typing in the search box, every category that has matches auto-ex
 
 Page footer :
 
-- **Cancel** — discards changes and returns to the manager.
-- **Save** / **Create role** — depending on the mode.
-- **Delete role** — only visible when editing a non-built-in role. Confirms via a browser dialog ; deleting also drops every assignment of that role.
+- **Cancel** : discards changes and returns to the manager.
+- **Save** / **Create role** : depending on the mode.
+- **Delete role** : only visible when editing a non-built-in role. Confirms via a browser dialog ; deleting also drops every assignment of that role.
 
 ### What's a permission
 
@@ -180,7 +180,7 @@ Each permission carries a stable key (`organizations:read`, `users:invite`, …)
 Admins have to enrol in two-factor authentication within 7 days of signing in. Two visible tiers :
 
 - **Soft wall** (within the 7-day window) : amber banner across the top of every `/account` page. Other admin routes still work. The banner says "Two-factor required for admin access ; enable TOTP below."
-- **Hard wall** (overdue) : red banner with a count of days overdue. Every route outside `/account` redirects you back here ; clicking an admin link triggers a toast saying "Admin access restricted — re-enable two-factor authentication to regain access."
+- **Hard wall** (overdue) : red banner with a count of days overdue. Every route outside `/account` redirects you back here ; clicking an admin link triggers a toast saying "Admin access restricted ; re-enable two-factor authentication to regain access."
 
 Once you enrol the banners disappear immediately and admin routes unlock without a refresh.
 
@@ -280,21 +280,35 @@ Endpoints can be scoped to a single organization or to the entire platform :
 
 ## Data Models
 
-`/admin/data-models`. Define your own record types at runtime — no code change, no deploy. This is Monark's general-purpose database layer (Notion-databases style) ; the records themselves are browsed and edited by end users at `/data/models/<model-key>`.
+`/admin/data-models`. Define your own record types at runtime ; no code change, no deploy. This is Monark's general-purpose database layer (Notion-databases style) ; the records themselves are browsed and edited by end users at `/data/models/<model-key>`.
 
 ### Schema builder
 
 The list page shows every Data Model in the org ; **New model** creates one (name, an immutable URL-safe key, optional icon). Opening a model gives you its field editor :
 
-- **Add field** — pick a type (text, long text, rich text, number, boolean, date, date-time, single-select, multi-select, relation, URL, email, formula, file, attachments) and its per-type options (select choices, relation target, formula expression, allowed file formats, …). A field's **key is immutable** after creation (it's the stored property name) ; only its label is editable later.
+- **Add field** : pick a type (text, long text, rich text, number, boolean, date, date-time, single-select, multi-select, relation, URL, email, formula, file, attachments) and its per-type options (select choices, relation target, formula expression, allowed file formats, …). A field's **key is immutable** after creation (it's the stored property name) ; only its label is editable later.
 - **Reorder** fields by dragging ; **archive** a field to hide it from forms while keeping old values readable.
 - Every model automatically owns a reserved required **title** field.
 - **Request an index** on a hot field for faster filtering at scale (provisioned in the background).
-- **Integrations** — map the model's fields onto another module's needs (e.g. Calendar's "time" + "calendar" slots) so records materialize into that module.
+- **Integrations** : map the model's fields onto another module's needs (e.g. Calendar's "time" + "calendar" slots) so records materialize into that module.
 
 ### Access
 
-Two layers. **Model-level** : each model auto-registers per-model record permissions (read / write / delete) that surface in the role editor, so a role can be granted just one model's records. **Record-level** : an individual record can be restricted to specific roles (a record with no restriction is visible to everyone who can access the model ; a restricted record is invisible — a 404 — to others). Data admins (`data-models.manage-schema`, which built-in admins hold) bypass the record layer.
+Two layers. **Model-level** : each model auto-registers per-model record permissions (read / write / delete) that surface in the role editor, so a role can be granted just one model's records. **Record-level** : an individual record can be restricted to specific roles (a record with no restriction is visible to everyone who can access the model ; a restricted record is invisible (a 404) to others). Data admins (`data-models.manage-schema`, which built-in admins hold) bypass the record layer.
+
+### Public forms
+
+Where the `data-models.public-forms` flag is on, a model's editor grows a **Public forms** section : share a link so people who don't have an account can submit records to that model, without exposing the model itself.
+
+Creating a form asks for :
+
+- **Who can submit.** _Anyone with the link_ (one shareable URL, rate-limited) or _invited people only_ (each recipient gets a unique link and can submit once). Invited recipients are managed from the form's card.
+- **Which fields go on the form.** Only the fields you pick are shown and accepted ; everything else on the model stays private. Required fields have to be included.
+- Optional **intro** and **thank-you** text.
+
+A form can also publish a **public board** : a searchable, read-only list of approved entries, which is what turns this into a feature-request or bug-report inbox rather than a write-only form. You choose who can browse it (anyone with the link, or invited people only) and which fields are visible there ; the entry title always is. Two engagement toggles sit alongside it : **voting** (upvotes, with a top-sorted board) and **discussions** (comments, posted immediately, with admins able to hide or delete them).
+
+Deleting a form kills its link and any outstanding invites ; records already submitted through it are kept.
 
 ## Files
 
@@ -302,15 +316,31 @@ Two layers. **Model-level** : each model auto-registers per-model record permiss
 
 ## Secrets
 
-`/admin/secrets`. A per-organization encrypted **key → value** store for external tokens and API keys, encrypted at rest (AES-256-GCM). It is **write-only over the wire** : you add or replace a secret by name, but the value is never displayed again and there is no "reveal" — the plaintext is readable only server-side, on the trusted automation-node path (`ctx.getSecret`). The page lists secret **names** + metadata (description, last-used) only. Add / edit gates on `secrets.manage` ; the list on `secrets.read`. This is what lets an Automation node reach an external system without an author ever seeing the credential.
+`/admin/secrets`. A per-organization encrypted **key → value** store for external tokens and API keys, encrypted at rest (AES-256-GCM). It is **write-only over the wire** : you add or replace a secret by name, but the value is never displayed again and there is no "reveal" ; the plaintext is readable only server-side, on the trusted automation-node path (`ctx.getSecret`). The page lists secret **names** + metadata (description, last-used) only. Add / edit gates on `secrets.manage` ; the list on `secrets.read`. This is what lets an Automation node reach an external system without an author ever seeing the credential.
 
 ## Service accounts
 
-`/admin/service-accounts`. Machine principals for the public API — an org-owned "user" (of kind `SERVICE`) that a script, agent, or integration authenticates as, with its own admin-assigned roles. From here you **create** a service account, **assign / change its roles** (which is its least-privilege knob), **disable** it (instantly kills its keys), and manage its **API keys** (minted once, shown once). Gated by the `public-api.service-accounts` feature flag and the `api-keys.manage-service-accounts` permission. Personal (human) API keys live separately under [your account](account.md), not here. See the [public API guide](public-api.md) for how keys authenticate.
+`/admin/service-accounts`. Machine principals for the public API ; an org-owned "user" (of kind `SERVICE`) that a script, agent, or integration authenticates as, with its own admin-assigned roles. From here you **create** a service account, **assign / change its roles** (which is its least-privilege knob), **disable** it (instantly kills its keys), and manage its **API keys** (minted once, shown once). Gated by the `public-api.service-accounts` feature flag and the `api-keys.manage-service-accounts` permission. Personal (human) API keys live separately under [your account](account.md), not here. See the [public API guide](public-api.md) for how keys authenticate.
+
+## Automation integrations
+
+`/admin/automation`. The per-organization connection config for every service your automations trigger on or act through : **GitHub**, **Telegram**, **X (Twitter)**, and **Discord**, one tab each. They live here rather than as top-level destinations because connecting an account is an org-wide, admin-caliber setting, not a place you work day to day.
+
+Each tab is independently gated. A service whose feature flag is off shows a short "this integration is disabled" note naming the flag instead of its form, and a service you lack the `<service>.manage` permission for is read-only. The section as a whole is hidden (and the page 404s) when `automation.enabled` is off.
+
+What you connect here is what an automation's trigger and action nodes can then reach ; the flows themselves are built in [Automations](automations.md), not here.
+
+## Achievements
+
+`/admin/achievements`. Define the achievements users can earn and the conditions that award them. An achievement carries a name, description, icon, and point value, and can be enabled or disabled without deleting it.
+
+Each achievement holds a list of **conditions**. A condition names a domain event to watch (`kanban.card-created`, `wiki.page-created`, and so on), how many matching events are needed, and which field of the event payload names the user to credit ; it can also carry equality matchers on the payload, so "moved a card into Done" is a different condition from "moved a card". An achievement with no conditions can never be earned, and the editor says so. Awarding is automatic from there : the module counts progress per user on the event bus, so nothing is granted by hand.
+
+Gated by the `achievements.enabled` feature flag. The user-facing gallery is reached from the account menu, not from a nav entry.
 
 ## Audit + observability
 
-Every admin write — role assigned, role revoked, user deletion requested, organization renamed, invite sent / revoked — emits a domain event. Today the event hits the notifications subscriber + the application logs. Phase-2 wires an admin-side audit log surface ; until then, the operator's logging stack (ELK, Sentry, etc.) is the system of record.
+Every admin write : role assigned, role revoked, user deletion requested, organization renamed, invite sent / revoked ; emits a domain event. Today the event hits the notifications subscriber + the application logs. Phase-2 wires an admin-side audit log surface ; until then, the operator's logging stack (ELK, Sentry, etc.) is the system of record.
 
 ## What admins _can't_ do today
 
