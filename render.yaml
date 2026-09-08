@@ -158,12 +158,29 @@ services:
       # webhook-secret-resolver.md.
       - key: WEBHOOK_SECRETS_JSON
         sync: false
-      # White-label branding is optional and set per deployment via the
-      # BRANDING_* vars — add them here as `sync: false` if this deploy
-      # is not "Monark". Three surfaces are NOT env-driven and need a
-      # file edit before launch : the favicon, the three Supabase auth
-      # email templates, and the org logo (uploaded in-app). See
+      # White-label branding. Declared here so every deploy sets its own
+      # identity explicitly rather than inheriting a default. QUOTE the
+      # hex values in the Render dashboard — an unquoted leading `#` is
+      # read as a comment and resolves to an empty string. The web side
+      # needs the NEXT_PUBLIC_ mirrors on Vercel (see
+      # services/web/DEPLOY.md). Three surfaces are NOT env-driven and
+      # need a file edit before launch : the favicon, the three Supabase
+      # auth email templates, and the org logo (uploaded in-app). See
       # white-label.md.
+      - key: BRANDING_APP_NAME
+        sync: false
+      - key: BRANDING_TAGLINE
+        sync: false
+      - key: BRANDING_SUPPORT_EMAIL
+        sync: false
+      - key: BRANDING_TOTP_ISSUER
+        sync: false
+      - key: BRANDING_FROM_EMAIL
+        sync: false
+      - key: BRANDING_PRIMARY
+        sync: false
+      - key: BRANDING_ACCENT
+        sync: false
       - fromGroup: monark-cron-shared
 
   # ----- CRON : account-deletion sweep (production) -------------------------

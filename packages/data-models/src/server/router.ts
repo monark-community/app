@@ -10,7 +10,7 @@ import {
 import { MAX_PAGE_SIZE } from "@monark/common/pagination";
 import { checkRateLimit } from "@monark/common/rate-limit";
 import { isEnabled } from "@monark/feature-flags/server";
-import { sendMail } from "@monark/notifications/server";
+import { renderBrandedEmail, sendMail } from "@monark/notifications/server";
 import { BRANDING } from "@monark/branding";
 import { requireOrg } from "@monark/organizations/server";
 import {
@@ -1528,18 +1528,25 @@ export const dataModelsRouter = router({
             displayName: input.displayName ?? null,
           });
           const link = absoluteFormUrl(input.appUrl, form.token, plaintext);
+          const inviteSubject = `You're invited to submit "${form.name}"`;
           await sendMail({
             to: invite.email,
-            subject: `You're invited to submit "${form.name}"`,
+            subject: inviteSubject,
             text: `You've been invited to fill out the form "${form.name}" for ${model.name} on ${BRANDING.appName}.
 
 Open your personal form link:
 ${link}
 
 This link is unique to you and can be submitted once.`,
-            html: `<p style="margin:0 0 12px 0;font-size:16px;color:#18181b;">You've been invited to fill out <strong>${form.name}</strong> on <strong>${BRANDING.appName}</strong>.</p>
-<p style="margin:0 0 24px 0;"><a href="${link}" style="display:inline-block;padding:12px 22px;background:#18181b;color:#ffffff;font-weight:700;text-decoration:none;border-radius:8px;">Open the form</a></p>
+            // Shared branded shell : same reason as the org invite —
+            // the recipient has no account, so `notify()` can't address
+            // them, but the email should still carry the org's identity.
+            html: await renderBrandedEmail({
+              subject: inviteSubject,
+              bodyHtml: `<p style="margin:0 0 12px 0;font-size:16px;color:#18181b;">You've been invited to fill out <strong>${form.name}</strong> on <strong>${BRANDING.appName}</strong>.</p>
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 24px 0;"><tr><td align="center" bgcolor="{{ brandPrimary }}" style="border-radius:8px;"><a href="${link}" target="_blank" style="display:inline-block;padding:12px 22px;font-family:'Nunito Sans','Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;font-weight:700;color:{{ onBrandPrimary }};text-decoration:none;border-radius:8px;">Open the form</a></td></tr></table>
 <p style="margin:0;color:#a1a1aa;font-size:12px;">This link is unique to you and can be submitted once.</p>`,
+            }),
           }).catch(() => {});
           return serializeFormInvite(invite);
         }),

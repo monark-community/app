@@ -9,7 +9,7 @@ const messages: KindMessages = {
       <p style="margin:0 0 24px 0;color:#3f3f46;">You have {{ remainingCodes }} recovery code(s) left. If you're running low, generate a fresh set so you don't get locked out.</p>
       <table role="presentation" cellpadding="0" cellspacing="0" border="0">
         <tr><td align="center" bgcolor="{{ brandPrimary }}" style="border-radius:8px;">
-          <a href="{{ securityLink }}" target="_blank" style="display:inline-block;padding:12px 22px;font-family:'Nunito Sans','Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;font-weight:700;color:#18181b;text-decoration:none;border-radius:8px;">Manage two-factor authentication</a>
+          <a href="{{ securityLink }}" target="_blank" style="display:inline-block;padding:12px 22px;font-family:'Nunito Sans','Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;font-weight:700;color:{{ onBrandPrimary }};text-decoration:none;border-radius:8px;">Manage two-factor authentication</a>
         </td></tr>
       </table>
       <p style="margin:24px 0 0 0;color:#a1a1aa;font-size:13px;">If this wasn't you, change your password immediately ; someone may have access to your recovery codes.</p>`,
@@ -34,7 +34,7 @@ If this wasn't you, change your password immediately.`,
       <p style="margin:0 0 24px 0;color:#3f3f46;">Il vous reste {{ remainingCodes }} code(s) de récupération. S'il vous en reste peu, générez-en de nouveaux pour ne pas être bloqué.</p>
       <table role="presentation" cellpadding="0" cellspacing="0" border="0">
         <tr><td align="center" bgcolor="{{ brandPrimary }}" style="border-radius:8px;">
-          <a href="{{ securityLink }}" target="_blank" style="display:inline-block;padding:12px 22px;font-family:'Nunito Sans','Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;font-weight:700;color:#18181b;text-decoration:none;border-radius:8px;">Gérer l'authentification à deux facteurs</a>
+          <a href="{{ securityLink }}" target="_blank" style="display:inline-block;padding:12px 22px;font-family:'Nunito Sans','Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;font-weight:700;color:{{ onBrandPrimary }};text-decoration:none;border-radius:8px;">Gérer l'authentification à deux facteurs</a>
         </td></tr>
       </table>
       <p style="margin:24px 0 0 0;color:#a1a1aa;font-size:13px;">Si ce n'était pas vous, changez votre mot de passe immédiatement ; quelqu'un a peut-être accès à vos codes de récupération.</p>`,

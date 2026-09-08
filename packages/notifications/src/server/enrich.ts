@@ -1,4 +1,5 @@
 import { brandingTemplateVars } from "@monark/branding";
+import { pickContrastForeground } from "@monark/common/color";
 import { getDb } from "@monark/db";
 import { WEBHOOK_DELIVERY_FAILURE_LIMIT } from "@monark/webhooks/contracts";
 import type { TemplateVars } from "./template";
@@ -107,6 +108,16 @@ function buildLogoHtml(logoUrl: string, appName: string): string {
 // passes `overrides.{logoUrl, primaryColor}` from the singleton org.
 // Re-read on every call so tests that mutate `process.env.APP_URL`
 // see the new value.
+/**
+ * The shell/brand variables every email gets, independent of any
+ * notification kind. Exported so one-off emails addressed to someone
+ * who is not a User (invites) can render in the same shell — see
+ * [standalone.ts](./standalone.ts).
+ */
+export function baseTemplateVars(locale: "en" | "fr" = "en"): TemplateVars {
+  return { ...globalVars(), locale };
+}
+
 function globalVars(): TemplateVars {
   const base = resolveAppUrl();
   const brand = brandingTemplateVars();
@@ -115,6 +126,12 @@ function globalVars(): TemplateVars {
     // Email-specific neutral default ; org's primaryColor overrides
     // when configured (see `enrichVars`).
     brandPrimary: "#000000",
+    // Label colour for anything painted ON `brandPrimary` (the CTA
+    // buttons). Computed rather than hardcoded : the templates used to
+    // pin a near-black `#18181b` label, which on the neutral `#000000`
+    // default rendered black-on-black — an invisible CTA on every
+    // deploy whose org hasn't set a primaryColor.
+    onBrandPrimary: pickContrastForeground("#000000"),
     appUrl: base,
     // The deletion-scheduled email surfaces `accountLink` as the
     // "cancel deletion" CTA, so it points straight at the danger
@@ -196,6 +213,7 @@ export function enrichVars<K extends NotificationKind>(
   }
   if (typeof overrides?.primaryColor === "string" && overrides.primaryColor.length > 0) {
     out.brandPrimary = overrides.primaryColor;
+    out.onBrandPrimary = pickContrastForeground(overrides.primaryColor);
   }
 
   for (const [key, value] of Object.entries(data as Record<string, unknown>)) {

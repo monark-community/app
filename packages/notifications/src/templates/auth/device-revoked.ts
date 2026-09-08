@@ -13,7 +13,7 @@ const messages: KindMessages = {
       <p style="margin:0 0 24px 0;color:#3f3f46;">If you did this from your account settings, no further action is needed. If you didn't, change your password immediately.</p>
       <table role="presentation" cellpadding="0" cellspacing="0" border="0">
         <tr><td align="center" bgcolor="{{ brandPrimary }}" style="border-radius:8px;">
-          <a href="{{ securityLink }}" target="_blank" style="display:inline-block;padding:12px 22px;font-family:'Nunito Sans','Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;font-weight:700;color:#18181b;text-decoration:none;border-radius:8px;">Review your active sessions</a>
+          <a href="{{ securityLink }}" target="_blank" style="display:inline-block;padding:12px 22px;font-family:'Nunito Sans','Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;font-weight:700;color:{{ onBrandPrimary }};text-decoration:none;border-radius:8px;">Review your active sessions</a>
         </td></tr>
       </table>`,
     text: `One device was signed out of your {{ appName }} account.
@@ -42,7 +42,7 @@ Review your active sessions: {{ securityLink }}`,
       <p style="margin:0 0 24px 0;color:#3f3f46;">Si vous l'avez fait depuis vos paramètres de compte, aucune action n'est requise. Sinon, changez votre mot de passe immédiatement.</p>
       <table role="presentation" cellpadding="0" cellspacing="0" border="0">
         <tr><td align="center" bgcolor="{{ brandPrimary }}" style="border-radius:8px;">
-          <a href="{{ securityLink }}" target="_blank" style="display:inline-block;padding:12px 22px;font-family:'Nunito Sans','Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;font-weight:700;color:#18181b;text-decoration:none;border-radius:8px;">Vérifier vos sessions actives</a>
+          <a href="{{ securityLink }}" target="_blank" style="display:inline-block;padding:12px 22px;font-family:'Nunito Sans','Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;font-weight:700;color:{{ onBrandPrimary }};text-decoration:none;border-radius:8px;">Vérifier vos sessions actives</a>
         </td></tr>
       </table>`,
     text: `Un appareil a été déconnecté de votre compte {{ appName }}.

@@ -1,7 +1,7 @@
 import { createHash, randomBytes } from "node:crypto";
 import { BRANDING } from "@monark/branding";
 import { emit, NotFoundError, ValidationError } from "@monark/common";
-import { sendMail } from "@monark/notifications/server";
+import { renderBrandedEmail, sendMail } from "@monark/notifications/server";
 import { findRoleById } from "@monark/rbac/server";
 import type { InviteAcceptedEvent, InviteSentEvent } from "../contracts/events";
 import {
@@ -103,19 +103,27 @@ export async function createInvite(input: CreateInviteInput): Promise<CreateInvi
     ? `<p style="margin:0 0 12px 0;font-size:16px;color:#18181b;">Hi ${displayName},</p>`
     : "";
   const greetingText = displayName ? `Hi ${displayName},\n\n` : "";
+  const inviteSubject = `You're invited to ${org.displayName} on ${BRANDING.appName}`;
   await sendMail({
     to: email,
-    subject: `You're invited to ${org.displayName} on ${BRANDING.appName}`,
+    subject: inviteSubject,
     text: `${greetingText}${org.displayName} has invited you to join ${BRANDING.appName} as ${role.name}.
 
 Accept the invite by signing up at:
 ${signUpUrl}
 
 This invite expires on ${expiresAt.toISOString().slice(0, 10)}.`,
-    html: `${greetingHtml}<p style="margin:0 0 12px 0;font-size:16px;color:#18181b;"><strong>${org.displayName}</strong> has invited you to join <strong>${BRANDING.appName}</strong> as <strong>${role.name}</strong>.</p>
+    // Rendered in the shared branded shell so the invite carries the
+    // org's logo + colour like every other outbound email. It can't go
+    // through `notify()` — that is addressed to a User, and an invite
+    // recipient has no account yet. See notifications/standalone.ts.
+    html: await renderBrandedEmail({
+      subject: inviteSubject,
+      bodyHtml: `${greetingHtml}<p style="margin:0 0 12px 0;font-size:16px;color:#18181b;"><strong>${org.displayName}</strong> has invited you to join <strong>${BRANDING.appName}</strong> as <strong>${role.name}</strong>.</p>
 <p style="margin:0 0 24px 0;color:#3f3f46;">Accept the invite by signing up below. This link expires on ${expiresAt.toISOString().slice(0, 10)}.</p>
-<p style="margin:0 0 24px 0;"><a href="${signUpUrl}" style="display:inline-block;padding:12px 22px;background:#18181b;color:#ffffff;font-weight:700;text-decoration:none;border-radius:8px;">Accept invite</a></p>
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 24px 0;"><tr><td align="center" bgcolor="{{ brandPrimary }}" style="border-radius:8px;"><a href="${signUpUrl}" target="_blank" style="display:inline-block;padding:12px 22px;font-family:'Nunito Sans','Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;font-weight:700;color:{{ onBrandPrimary }};text-decoration:none;border-radius:8px;">Accept invite</a></td></tr></table>
 <p style="margin:0;color:#a1a1aa;font-size:12px;">If you weren't expecting this, you can safely ignore the email.</p>`,
+    }),
   }).catch(() => {
     // Best-effort ; the row is already persisted so the admin can
     // re-send by recreating the invite. Logging happens inside sendMail.

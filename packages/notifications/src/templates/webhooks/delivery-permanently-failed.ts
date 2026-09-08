@@ -15,7 +15,7 @@ const messages: KindMessages = {
       </table>
       <table role="presentation" cellpadding="0" cellspacing="0" border="0">
         <tr><td align="center" bgcolor="{{ brandPrimary }}" style="border-radius:8px;">
-          <a href="{{ webhookDeliveriesLink }}" target="_blank" style="display:inline-block;padding:12px 22px;font-family:'Nunito Sans','Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;font-weight:700;color:#18181b;text-decoration:none;border-radius:8px;">Inspect deliveries</a>
+          <a href="{{ webhookDeliveriesLink }}" target="_blank" style="display:inline-block;padding:12px 22px;font-family:'Nunito Sans','Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;font-weight:700;color:{{ onBrandPrimary }};text-decoration:none;border-radius:8px;">Inspect deliveries</a>
         </td></tr>
       </table>
       <p style="margin:24px 0 0 0;color:#a1a1aa;font-size:13px;">If the receiver is intentionally down (deploy in progress, planned maintenance), no action is needed. Otherwise check the receiver's logs for the error above.</p>`,
@@ -50,7 +50,7 @@ Inspect deliveries: {{ webhookDeliveriesLink }}`,
       </table>
       <table role="presentation" cellpadding="0" cellspacing="0" border="0">
         <tr><td align="center" bgcolor="{{ brandPrimary }}" style="border-radius:8px;">
-          <a href="{{ webhookDeliveriesLink }}" target="_blank" style="display:inline-block;padding:12px 22px;font-family:'Nunito Sans','Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;font-weight:700;color:#18181b;text-decoration:none;border-radius:8px;">Inspecter les livraisons</a>
+          <a href="{{ webhookDeliveriesLink }}" target="_blank" style="display:inline-block;padding:12px 22px;font-family:'Nunito Sans','Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;font-weight:700;color:{{ onBrandPrimary }};text-decoration:none;border-radius:8px;">Inspecter les livraisons</a>
         </td></tr>
       </table>
       <p style="margin:24px 0 0 0;color:#a1a1aa;font-size:13px;">Si le destinataire est volontairement hors-ligne (déploiement, maintenance planifiée), aucune action n'est requise. Sinon, vérifiez les journaux du destinataire pour l'erreur ci-dessus.</p>`,

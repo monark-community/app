@@ -9,7 +9,7 @@ const messages: KindMessages = {
       <p style="margin:0 0 24px 0;color:#3f3f46;">Until then, you can sign in and cancel the deletion at any time. After that date, your account and personal data will be removed.</p>
       <table role="presentation" cellpadding="0" cellspacing="0" border="0">
         <tr><td align="center" bgcolor="{{ brandPrimary }}" style="border-radius:8px;">
-          <a href="{{ accountLink }}" target="_blank" style="display:inline-block;padding:12px 22px;font-family:'Nunito Sans','Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;font-weight:700;color:#18181b;text-decoration:none;border-radius:8px;">Cancel deletion</a>
+          <a href="{{ accountLink }}" target="_blank" style="display:inline-block;padding:12px 22px;font-family:'Nunito Sans','Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;font-weight:700;color:{{ onBrandPrimary }};text-decoration:none;border-radius:8px;">Cancel deletion</a>
         </td></tr>
       </table>`,
     text: `Your {{ appName }} account is scheduled for permanent deletion on {{ completesAtFormatted }}.
@@ -30,7 +30,7 @@ Until then, you can sign in and cancel the deletion at any time:
       <p style="margin:0 0 24px 0;color:#3f3f46;">Jusqu'à cette date, vous pouvez vous connecter et annuler la suppression à tout moment. Passé ce délai, votre compte et vos données personnelles seront effacés.</p>
       <table role="presentation" cellpadding="0" cellspacing="0" border="0">
         <tr><td align="center" bgcolor="{{ brandPrimary }}" style="border-radius:8px;">
-          <a href="{{ accountLink }}" target="_blank" style="display:inline-block;padding:12px 22px;font-family:'Nunito Sans','Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;font-weight:700;color:#18181b;text-decoration:none;border-radius:8px;">Annuler la suppression</a>
+          <a href="{{ accountLink }}" target="_blank" style="display:inline-block;padding:12px 22px;font-family:'Nunito Sans','Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;font-weight:700;color:{{ onBrandPrimary }};text-decoration:none;border-radius:8px;">Annuler la suppression</a>
         </td></tr>
       </table>`,
     text: `Votre compte {{ appName }} sera définitivement supprimé le {{ completesAtFormatted }}.

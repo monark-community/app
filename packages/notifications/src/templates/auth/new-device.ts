@@ -13,7 +13,7 @@ const messages: KindMessages = {
       </table>
       <table role="presentation" cellpadding="0" cellspacing="0" border="0">
         <tr><td align="center" bgcolor="{{ brandPrimary }}" style="border-radius:8px;">
-          <a href="{{ revokeLink }}" target="_blank" style="display:inline-block;padding:12px 22px;font-family:'Nunito Sans','Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;font-weight:700;color:#18181b;text-decoration:none;border-radius:8px;">If that wasn't you, revoke this device</a>
+          <a href="{{ revokeLink }}" target="_blank" style="display:inline-block;padding:12px 22px;font-family:'Nunito Sans','Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;font-weight:700;color:{{ onBrandPrimary }};text-decoration:none;border-radius:8px;">If that wasn't you, revoke this device</a>
         </td></tr>
       </table>
       <p style="margin:24px 0 0 0;color:#a1a1aa;font-size:13px;">If you recognise this sign-in, you can safely ignore this email.</p>`,
@@ -43,7 +43,7 @@ If that wasn't you, revoke this device immediately:
       </table>
       <table role="presentation" cellpadding="0" cellspacing="0" border="0">
         <tr><td align="center" bgcolor="{{ brandPrimary }}" style="border-radius:8px;">
-          <a href="{{ revokeLink }}" target="_blank" style="display:inline-block;padding:12px 22px;font-family:'Nunito Sans','Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;font-weight:700;color:#18181b;text-decoration:none;border-radius:8px;">Si ce n'était pas vous, révoquez cet appareil</a>
+          <a href="{{ revokeLink }}" target="_blank" style="display:inline-block;padding:12px 22px;font-family:'Nunito Sans','Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;font-weight:700;color:{{ onBrandPrimary }};text-decoration:none;border-radius:8px;">Si ce n'était pas vous, révoquez cet appareil</a>
         </td></tr>
       </table>
       <p style="margin:24px 0 0 0;color:#a1a1aa;font-size:13px;">Si vous reconnaissez cette connexion, vous pouvez ignorer ce message.</p>`,
