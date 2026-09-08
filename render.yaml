@@ -194,6 +194,7 @@ services:
     branch: main
     rootDir: .
     schedule: "0 3 * * *"
+    autoDeploy: true
     # Render requires a buildCommand for cron services ; these one-liners
     # only need Node's built-in fetch, so `:` keeps the build instant.
     buildCommand: ":"
@@ -226,6 +227,7 @@ services:
     branch: main
     rootDir: .
     schedule: "*/5 * * * *"
+    autoDeploy: true
     buildCommand: ":"
     startCommand: &cron-webhook |
       node -e "
@@ -326,6 +328,7 @@ services:
     branch: develop
     rootDir: .
     schedule: "0 3 * * *"
+    autoDeploy: true
     buildCommand: ":"
     startCommand: *cron-deletions
     envVars:
@@ -340,6 +343,7 @@ services:
     branch: develop
     rootDir: .
     schedule: "*/5 * * * *"
+    autoDeploy: true
     buildCommand: ":"
     startCommand: *cron-webhook
     envVars:

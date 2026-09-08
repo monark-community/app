@@ -1,0 +1,171 @@
+name: Deploy api
+
+# Deploys the Render side of the app after CI goes green, so a merge to
+# `develop` or `main` lands on the running environment without anyone
+# clicking anything.
+#
+# Why this exists when render.yaml already sets `autoDeploy: true` :
+#
+#   1. Render's own trigger fires on PUSH, not on green. A merge that
+#      breaks the build still deploys, and you find out from the running
+#      service rather than from CI.
+#   2. It is invisible from this repo. When the backend doesn't follow a
+#      merge there is nothing here to look at — no run, no log, no failed
+#      check. This workflow makes "did the backend deploy, and did it
+#      work" a visible part of the commit's history.
+#
+# Both mechanisms can run at once ; you just get two deploys per push.
+# Once this workflow is wired up (see the secret below), set
+# `autoDeploy: false` on the services in render.yaml and re-sync the
+# blueprint so this is the single path.
+#
+# ── Setup ────────────────────────────────────────────────────────────
+# One secret: `RENDER_API_KEY` (Render dashboard → Account Settings →
+# API Keys). Services are resolved BY NAME from render.yaml's naming
+# convention, so no per-service id secrets are needed and adding a
+# service to the blueprint doesn't mean adding another secret here.
+#
+# Without the secret this workflow no-ops with a notice rather than
+# failing — a fork, or this repo before the key is added, shouldn't see
+# a red X for a deploy it was never going to do.
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+    branches: [main, develop]
+  # Manual re-deploy, for when a deploy failed for an environment reason
+  # rather than a code one.
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Which environment to deploy"
+        required: true
+        type: choice
+        options: [staging, production]
+
+concurrency:
+  # Never cancel a deploy in flight — a half-applied release is worse
+  # than a queued one. Later pushes wait their turn.
+  group: deploy-api-${{ github.event.workflow_run.head_branch || inputs.environment }}
+  cancel-in-progress: false
+
+permissions: {}
+
+jobs:
+  deploy:
+    # Only deploy green commits. `workflow_run` fires on every CI
+    # completion including failures and cancellations.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Resolve the target environment
+        id: target
+        env:
+          BRANCH: ${{ github.event.workflow_run.head_branch }}
+          INPUT_ENV: ${{ inputs.environment }}
+        run: |
+          set -euo pipefail
+          if [ -n "${INPUT_ENV:-}" ]; then
+            case "$INPUT_ENV" in
+              production) branch=main   ;;
+              staging)    branch=develop ;;
+              *) echo "::error::unknown environment '$INPUT_ENV'"; exit 1 ;;
+            esac
+          else
+            branch="$BRANCH"
+          fi
+
+          # render.yaml names production services bare and staging ones
+          # with a `-staging` suffix ; keep the two in step.
+          case "$branch" in
+            main)    suffix=""         ; env_name=production ;;
+            develop) suffix="-staging" ; env_name=staging    ;;
+            *) echo "::notice::'$branch' is not a deploy branch — nothing to do."; exit 0 ;;
+          esac
+
+          {
+            echo "branch=$branch"
+            echo "suffix=$suffix"
+            echo "environment=$env_name"
+          } >> "$GITHUB_OUTPUT"
+          echo "Deploying **$env_name** from \`$branch\`." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Trigger the Render deploys
+        if: steps.target.outputs.branch != ''
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          SUFFIX: ${{ steps.target.outputs.suffix }}
+          ENVIRONMENT: ${{ steps.target.outputs.environment }}
+          COMMIT: ${{ github.event.workflow_run.head_sha || github.sha }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${RENDER_API_KEY:-}" ]; then
+            echo "::notice::RENDER_API_KEY is not set — skipping the deploy."
+            echo "Add it in Settings → Secrets → Actions to enable deploy-on-green." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          api="https://api.render.com/v1"
+          auth="Authorization: Bearer $RENDER_API_KEY"
+
+          # 20 minutes per service. Long enough for a cold api build,
+          # short enough that a wedged deploy fails the check the same
+          # morning rather than sitting on GitHub's 6h job ceiling.
+          POLL_SECONDS=15
+          MAX_POLLS=80
+
+          # The api first : the crons call it, so deploying them against a
+          # stale api would run new job code against an old contract.
+          services="monark-api${SUFFIX} monark-cron-deletions${SUFFIX} monark-cron-webhook-sweep${SUFFIX}"
+
+          failed=0
+          for name in $services; do
+            id=$(curl -fsS -H "$auth" "$api/services?name=$name&limit=1" \
+                 | jq -r '.[0].service.id // empty')
+            if [ -z "$id" ]; then
+              echo "::warning::no Render service named '$name' — skipping."
+              echo "- \`$name\` : not found on Render" >> "$GITHUB_STEP_SUMMARY"
+              continue
+            fi
+
+            deploy=$(curl -fsS -X POST -H "$auth" -H "Content-Type: application/json" \
+                     -d '{"clearCache":"do_not_clear"}' "$api/services/$id/deploys")
+            deploy_id=$(echo "$deploy" | jq -r '.id')
+            echo "$name → deploy $deploy_id"
+
+            # Poll to a terminal state so the check reflects the deploy's
+            # real outcome. A green tick on "we asked Render to deploy" is
+            # exactly the blind spot this workflow exists to remove — which
+            # is also why running out of polls counts as a failure rather
+            # than falling through as one.
+            settled=""
+            for _ in $(seq 1 "$MAX_POLLS"); do
+              sleep "$POLL_SECONDS"
+              status=$(curl -fsS -H "$auth" "$api/services/$id/deploys/$deploy_id" | jq -r '.status')
+              case "$status" in
+                live|deactivated)
+                  echo "- \`$name\` : $status" >> "$GITHUB_STEP_SUMMARY"
+                  settled=ok; break ;;
+                build_failed|update_failed|canceled|pre_deploy_failed)
+                  echo "::error::$name deploy $status"
+                  echo "- \`$name\` : **$status**" >> "$GITHUB_STEP_SUMMARY"
+                  settled=bad; failed=1; break ;;
+                *) : ;;   # created / queued / building / updating — keep waiting
+              esac
+            done
+
+            if [ -z "$settled" ]; then
+              echo "::error::$name deploy $deploy_id still '$status' after $(( MAX_POLLS * POLL_SECONDS / 60 ))m — giving up on watching it"
+              echo "- \`$name\` : **timed out** watching \`$deploy_id\` (last seen: $status)" >> "$GITHUB_STEP_SUMMARY"
+              failed=1
+            fi
+          done
+
+          if [ "$failed" -ne 0 ]; then
+            echo "::error::one or more Render deploys failed for $ENVIRONMENT ($COMMIT)"
+            exit 1
+          fi
