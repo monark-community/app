@@ -1,6 +1,7 @@
 {
   "chat": {
     "launcherAria": "Ouvrir {name}",
+    "assistantFallbackName": "Assistant",
     "conversationsTitle": "Conversations",
     "newConversation": "Nouvelle discussion",
     "back": "Retour aux conversations",
@@ -1118,12 +1119,14 @@
         "invalidColor": "La couleur doit être un code hexadécimal comme #2563EB.",
         "labels": {
           "displayName": "Nom affiché",
+          "assistantName": "Nom de l'assistant IA",
           "primaryColor": "Couleur de marque principale"
         },
         "placeholders": {
           "displayName": "Le nom affiché de l'organisation"
         },
         "primaryColorHint": "Code hexadécimal comme #2563EB. Laissez vide pour utiliser la couleur de marque du déploiement.",
+        "assistantNameHint": "Le nom de l'assistant IA de cette organisation, dans le clavardage et dans ses propres réponses. Laissez vide pour utiliser la valeur par défaut du déploiement ({defaultName}).",
         "logoHint": "Recadrage carré, max 2 Mo. JPEG, PNG ou WebP.",
         "logoUploadAria": "Téléverser un logo d'organisation",
         "logoEditAria": "Changer le logo de l'organisation",

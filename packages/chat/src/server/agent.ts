@@ -157,7 +157,11 @@ export async function advanceConversation(
   const toolSpecs = executor.listSpecs();
   // Static (cacheable) system prompt; the per-turn page context rides the user
   // message instead (see injectContext) so it never busts the prompt cache.
-  const system = systemPrompt(getAssistantName());
+  // Stable per org — the name only moves when an admin renames the assistant,
+  // so the cache still holds across a conversation.
+  const system = systemPrompt(
+    await getAssistantName({ organizationId: ctx.organizationId, userId: ctx.userId }),
+  );
   const contextText = contextPrompt(context);
 
   for (let step = 0; step < MAX_STEPS; step++) {

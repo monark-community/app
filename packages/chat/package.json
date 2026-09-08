@@ -20,6 +20,7 @@
     "@anthropic-ai/sdk": "^0.115.0",
     "@monark/common": "workspace:*",
     "@monark/db": "workspace:*",
+    "@monark/feature-flags": "workspace:*",
     "@monark/organizations": "workspace:*",
     "@monark/rbac": "workspace:*",
     "zod": "^3.23.0"
