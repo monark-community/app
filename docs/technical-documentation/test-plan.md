@@ -216,7 +216,7 @@ The CI job spins up :
 - `admin-users-invite.spec.ts` ; admin invites a user → recipient signs up via the link → joins with the right role.
 - `admin-rbac-create-role.spec.ts` ; admin creates a custom role → assigns it to a user → user shows the role chip in their detail page.
 - `admin-webhooks.spec.ts` ; create an endpoint → trigger a subscribed event → the delivery lands with a signature.
-- `a11y.spec.ts` ; axe sweep over the main surfaces (see [Accessibility](#accessibility) below).
+- `a11y.spec.ts` ; axe sweep (`@axe-core/playwright`) over the main surfaces. Runs with the rest of `pnpm test:e2e`, or on its own with `pnpm --filter web test:e2e tests/e2e/a11y.spec.ts`.
 
 #### Still to add (Phase-1 closure)
 
