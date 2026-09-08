@@ -149,10 +149,10 @@ importers:
         version: link:../test-utils
       '@vitest/coverage-v8':
         specifier: ^3.2.7
-        version: 3.2.7(vitest@3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.49.2)(tsx@4.21.0)(yaml@2.8.4))
+        version: 3.2.7(vitest@3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.51.2)(tsx@4.21.0)(yaml@2.8.4))
       vitest:
         specifier: ^3.2.6
-        version: 3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.49.2)(tsx@4.21.0)(yaml@2.8.4)
+        version: 3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.51.2)(tsx@4.21.0)(yaml@2.8.4)
 
   packages/api-keys:
     dependencies:
@@ -180,10 +180,10 @@ importers:
         version: link:../test-utils
       '@vitest/coverage-v8':
         specifier: ^3.2.7
-        version: 3.2.7(vitest@3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.49.2)(tsx@4.21.0)(yaml@2.8.4))
+        version: 3.2.7(vitest@3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.51.2)(tsx@4.21.0)(yaml@2.8.4))
       vitest:
         specifier: ^3.2.6
-        version: 3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.49.2)(tsx@4.21.0)(yaml@2.8.4)
+        version: 3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.51.2)(tsx@4.21.0)(yaml@2.8.4)
 
   packages/auth:
     dependencies:
@@ -235,10 +235,10 @@ importers:
         version: 1.5.6
       '@vitest/coverage-v8':
         specifier: ^3.2.7
-        version: 3.2.7(vitest@3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.49.2)(tsx@4.21.0)(yaml@2.8.4))
+        version: 3.2.7(vitest@3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.51.2)(tsx@4.21.0)(yaml@2.8.4))
       vitest:
         specifier: ^3.2.6
-        version: 3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.49.2)(tsx@4.21.0)(yaml@2.8.4)
+        version: 3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.51.2)(tsx@4.21.0)(yaml@2.8.4)
 
   packages/automation:
     dependencies:
@@ -278,19 +278,19 @@ importers:
         version: link:../test-utils
       '@vitest/coverage-v8':
         specifier: ^3.2.7
-        version: 3.2.7(vitest@3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.49.2)(tsx@4.21.0)(yaml@2.8.4))
+        version: 3.2.7(vitest@3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.51.2)(tsx@4.21.0)(yaml@2.8.4))
       vitest:
         specifier: ^3.2.6
-        version: 3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.49.2)(tsx@4.21.0)(yaml@2.8.4)
+        version: 3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.51.2)(tsx@4.21.0)(yaml@2.8.4)
 
   packages/branding:
     devDependencies:
       '@vitest/coverage-v8':
         specifier: ^3.2.7
-        version: 3.2.7(vitest@3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.49.2)(tsx@4.21.0)(yaml@2.8.4))
+        version: 3.2.7(vitest@3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.51.2)(tsx@4.21.0)(yaml@2.8.4))
       vitest:
         specifier: ^3.2.6
-        version: 3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.49.2)(tsx@4.21.0)(yaml@2.8.4)
+        version: 3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.51.2)(tsx@4.21.0)(yaml@2.8.4)
 
   packages/calendar:
     dependencies:
@@ -336,13 +336,13 @@ importers:
         version: 19.2.18
       '@vitest/coverage-v8':
         specifier: ^3.2.7
-        version: 3.2.7(vitest@3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.49.2)(tsx@4.21.0)(yaml@2.8.4))
+        version: 3.2.7(vitest@3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.51.2)(tsx@4.21.0)(yaml@2.8.4))
       react:
         specifier: ^19.2.8
         version: 19.2.8
       vitest:
         specifier: ^3.2.6
-        version: 3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.49.2)(tsx@4.21.0)(yaml@2.8.4)
+        version: 3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.51.2)(tsx@4.21.0)(yaml@2.8.4)
 
   packages/chat:
     dependencies:
@@ -370,10 +370,10 @@ importers:
         version: link:../test-utils
       '@vitest/coverage-v8':
         specifier: ^3.2.7
-        version: 3.2.7(vitest@3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.49.2)(tsx@4.21.0)(yaml@2.8.4))
+        version: 3.2.7(vitest@3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.51.2)(tsx@4.21.0)(yaml@2.8.4))
       vitest:
         specifier: ^3.2.6
-        version: 3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.49.2)(tsx@4.21.0)(yaml@2.8.4)
+        version: 3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.51.2)(tsx@4.21.0)(yaml@2.8.4)
 
   packages/common:
     dependencies:
@@ -392,10 +392,10 @@ importers:
     devDependencies:
       '@vitest/coverage-v8':
         specifier: ^3.2.7
-        version: 3.2.7(vitest@3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@6.0.3))(terser@5.49.2)(tsx@4.21.0)(yaml@2.8.4))
+        version: 3.2.7(vitest@3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@6.0.3))(terser@5.51.2)(tsx@4.21.0)(yaml@2.8.4))
       vitest:
         specifier: ^3.2.6
-        version: 3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@6.0.3))(terser@5.49.2)(tsx@4.21.0)(yaml@2.8.4)
+        version: 3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@6.0.3))(terser@5.51.2)(tsx@4.21.0)(yaml@2.8.4)
 
   packages/components:
     dependencies:
@@ -457,10 +457,10 @@ importers:
         version: link:../test-utils
       '@vitest/coverage-v8':
         specifier: ^3.2.7
-        version: 3.2.7(vitest@3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.49.2)(tsx@4.21.0)(yaml@2.8.4))
+        version: 3.2.7(vitest@3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.51.2)(tsx@4.21.0)(yaml@2.8.4))
       vitest:
         specifier: ^3.2.6
-        version: 3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.49.2)(tsx@4.21.0)(yaml@2.8.4)
+        version: 3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.51.2)(tsx@4.21.0)(yaml@2.8.4)
 
   packages/db:
     dependencies:
@@ -495,10 +495,10 @@ importers:
     devDependencies:
       '@vitest/coverage-v8':
         specifier: ^3.2.7
-        version: 3.2.7(vitest@3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.49.2)(tsx@4.21.0)(yaml@2.8.4))
+        version: 3.2.7(vitest@3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.51.2)(tsx@4.21.0)(yaml@2.8.4))
       vitest:
         specifier: ^3.2.6
-        version: 3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.49.2)(tsx@4.21.0)(yaml@2.8.4)
+        version: 3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.51.2)(tsx@4.21.0)(yaml@2.8.4)
 
   packages/feature-flags:
     dependencies:
@@ -523,13 +523,13 @@ importers:
         version: 19.2.18
       '@vitest/coverage-v8':
         specifier: ^3.2.7
-        version: 3.2.7(vitest@3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.49.2)(tsx@4.21.0)(yaml@2.8.4))
+        version: 3.2.7(vitest@3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.51.2)(tsx@4.21.0)(yaml@2.8.4))
       react:
         specifier: ^19.2.8
         version: 19.2.8
       vitest:
         specifier: ^3.2.6
-        version: 3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.49.2)(tsx@4.21.0)(yaml@2.8.4)
+        version: 3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.51.2)(tsx@4.21.0)(yaml@2.8.4)
 
   packages/files:
     dependencies:
@@ -560,10 +560,10 @@ importers:
         version: link:../test-utils
       '@vitest/coverage-v8':
         specifier: ^3.2.7
-        version: 3.2.7(vitest@3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.49.2)(tsx@4.21.0)(yaml@2.8.4))
+        version: 3.2.7(vitest@3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.51.2)(tsx@4.21.0)(yaml@2.8.4))
       vitest:
         specifier: ^3.2.6
-        version: 3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.49.2)(tsx@4.21.0)(yaml@2.8.4)
+        version: 3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.51.2)(tsx@4.21.0)(yaml@2.8.4)
 
   packages/github:
     dependencies:
@@ -600,10 +600,10 @@ importers:
         version: link:../test-utils
       '@vitest/coverage-v8':
         specifier: ^3.2.7
-        version: 3.2.7(vitest@3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.49.2)(tsx@4.21.0)(yaml@2.8.4))
+        version: 3.2.7(vitest@3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.51.2)(tsx@4.21.0)(yaml@2.8.4))
       vitest:
         specifier: ^3.2.6
-        version: 3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.49.2)(tsx@4.21.0)(yaml@2.8.4)
+        version: 3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.51.2)(tsx@4.21.0)(yaml@2.8.4)
 
   packages/integration-kit:
     dependencies:
@@ -628,10 +628,10 @@ importers:
         version: link:../test-utils
       '@vitest/coverage-v8':
         specifier: ^3.2.7
-        version: 3.2.7(vitest@3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.49.2)(tsx@4.21.0)(yaml@2.8.4))
+        version: 3.2.7(vitest@3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.51.2)(tsx@4.21.0)(yaml@2.8.4))
       vitest:
         specifier: ^3.2.6
-        version: 3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.49.2)(tsx@4.21.0)(yaml@2.8.4)
+        version: 3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.51.2)(tsx@4.21.0)(yaml@2.8.4)
 
   packages/kanban:
     dependencies:
@@ -671,13 +671,13 @@ importers:
         version: 19.2.18
       '@vitest/coverage-v8':
         specifier: ^3.2.7
-        version: 3.2.7(vitest@3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.49.2)(tsx@4.21.0)(yaml@2.8.4))
+        version: 3.2.7(vitest@3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.51.2)(tsx@4.21.0)(yaml@2.8.4))
       react:
         specifier: ^19.2.8
         version: 19.2.8
       vitest:
         specifier: ^3.2.6
-        version: 3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.49.2)(tsx@4.21.0)(yaml@2.8.4)
+        version: 3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.51.2)(tsx@4.21.0)(yaml@2.8.4)
 
   packages/notifications:
     dependencies:
@@ -723,13 +723,13 @@ importers:
         version: 19.2.18
       '@vitest/coverage-v8':
         specifier: ^3.2.7
-        version: 3.2.7(vitest@3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.49.2)(tsx@4.21.0)(yaml@2.8.4))
+        version: 3.2.7(vitest@3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.51.2)(tsx@4.21.0)(yaml@2.8.4))
       react:
         specifier: ^19.2.8
         version: 19.2.8
       vitest:
         specifier: ^3.2.6
-        version: 3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.49.2)(tsx@4.21.0)(yaml@2.8.4)
+        version: 3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.51.2)(tsx@4.21.0)(yaml@2.8.4)
 
   packages/organizations:
     dependencies:
@@ -766,10 +766,10 @@ importers:
         version: link:../test-utils
       '@vitest/coverage-v8':
         specifier: ^3.2.7
-        version: 3.2.7(vitest@3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.49.2)(tsx@4.21.0)(yaml@2.8.4))
+        version: 3.2.7(vitest@3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.51.2)(tsx@4.21.0)(yaml@2.8.4))
       vitest:
         specifier: ^3.2.6
-        version: 3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.49.2)(tsx@4.21.0)(yaml@2.8.4)
+        version: 3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.51.2)(tsx@4.21.0)(yaml@2.8.4)
 
   packages/public-api:
     dependencies:
@@ -785,10 +785,10 @@ importers:
     devDependencies:
       '@vitest/coverage-v8':
         specifier: ^3.2.7
-        version: 3.2.7(vitest@3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.49.2)(tsx@4.21.0)(yaml@2.8.4))
+        version: 3.2.7(vitest@3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.51.2)(tsx@4.21.0)(yaml@2.8.4))
       vitest:
         specifier: ^3.2.6
-        version: 3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.49.2)(tsx@4.21.0)(yaml@2.8.4)
+        version: 3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.51.2)(tsx@4.21.0)(yaml@2.8.4)
 
   packages/query:
     dependencies:
@@ -798,10 +798,10 @@ importers:
     devDependencies:
       '@vitest/coverage-v8':
         specifier: ^3.2.7
-        version: 3.2.7(vitest@3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.49.2)(tsx@4.21.0)(yaml@2.8.4))
+        version: 3.2.7(vitest@3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.51.2)(tsx@4.21.0)(yaml@2.8.4))
       vitest:
         specifier: ^3.2.6
-        version: 3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.49.2)(tsx@4.21.0)(yaml@2.8.4)
+        version: 3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.51.2)(tsx@4.21.0)(yaml@2.8.4)
 
   packages/rbac:
     dependencies:
@@ -820,10 +820,10 @@ importers:
         version: link:../test-utils
       '@vitest/coverage-v8':
         specifier: ^3.2.7
-        version: 3.2.7(vitest@3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.49.2)(tsx@4.21.0)(yaml@2.8.4))
+        version: 3.2.7(vitest@3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.51.2)(tsx@4.21.0)(yaml@2.8.4))
       vitest:
         specifier: ^3.2.6
-        version: 3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.49.2)(tsx@4.21.0)(yaml@2.8.4)
+        version: 3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.51.2)(tsx@4.21.0)(yaml@2.8.4)
 
   packages/search:
     dependencies:
@@ -839,10 +839,10 @@ importers:
         version: link:../test-utils
       '@vitest/coverage-v8':
         specifier: ^3.2.7
-        version: 3.2.7(vitest@3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.49.2)(tsx@4.21.0)(yaml@2.8.4))
+        version: 3.2.7(vitest@3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.51.2)(tsx@4.21.0)(yaml@2.8.4))
       vitest:
         specifier: ^3.2.6
-        version: 3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.49.2)(tsx@4.21.0)(yaml@2.8.4)
+        version: 3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.51.2)(tsx@4.21.0)(yaml@2.8.4)
 
   packages/secrets:
     dependencies:
@@ -867,16 +867,16 @@ importers:
         version: link:../test-utils
       '@vitest/coverage-v8':
         specifier: ^3.2.7
-        version: 3.2.7(vitest@3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.49.2)(tsx@4.21.0)(yaml@2.8.4))
+        version: 3.2.7(vitest@3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.51.2)(tsx@4.21.0)(yaml@2.8.4))
       vitest:
         specifier: ^3.2.6
-        version: 3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.49.2)(tsx@4.21.0)(yaml@2.8.4)
+        version: 3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.51.2)(tsx@4.21.0)(yaml@2.8.4)
 
   packages/shared:
     devDependencies:
       vitest:
         specifier: ^3.2.6
-        version: 3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.49.2)(tsx@4.21.0)(yaml@2.8.4)
+        version: 3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.51.2)(tsx@4.21.0)(yaml@2.8.4)
 
   packages/telegram:
     dependencies:
@@ -913,10 +913,10 @@ importers:
         version: link:../test-utils
       '@vitest/coverage-v8':
         specifier: ^3.2.7
-        version: 3.2.7(vitest@3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.49.2)(tsx@4.21.0)(yaml@2.8.4))
+        version: 3.2.7(vitest@3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.51.2)(tsx@4.21.0)(yaml@2.8.4))
       vitest:
         specifier: ^3.2.6
-        version: 3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.49.2)(tsx@4.21.0)(yaml@2.8.4)
+        version: 3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.51.2)(tsx@4.21.0)(yaml@2.8.4)
 
   packages/test-utils:
     dependencies:
@@ -935,7 +935,7 @@ importers:
         version: 25.9.5
       vitest:
         specifier: ^3.2.6
-        version: 3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.49.2)(tsx@4.21.0)(yaml@2.8.4)
+        version: 3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.51.2)(tsx@4.21.0)(yaml@2.8.4)
 
   packages/twitter:
     dependencies:
@@ -972,10 +972,10 @@ importers:
         version: link:../test-utils
       '@vitest/coverage-v8':
         specifier: ^3.2.7
-        version: 3.2.7(vitest@3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.49.2)(tsx@4.21.0)(yaml@2.8.4))
+        version: 3.2.7(vitest@3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.51.2)(tsx@4.21.0)(yaml@2.8.4))
       vitest:
         specifier: ^3.2.6
-        version: 3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.49.2)(tsx@4.21.0)(yaml@2.8.4)
+        version: 3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.51.2)(tsx@4.21.0)(yaml@2.8.4)
 
   packages/users:
     dependencies:
@@ -997,10 +997,10 @@ importers:
         version: link:../test-utils
       '@vitest/coverage-v8':
         specifier: ^3.2.7
-        version: 3.2.7(vitest@3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.49.2)(tsx@4.21.0)(yaml@2.8.4))
+        version: 3.2.7(vitest@3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.51.2)(tsx@4.21.0)(yaml@2.8.4))
       vitest:
         specifier: ^3.2.6
-        version: 3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.49.2)(tsx@4.21.0)(yaml@2.8.4)
+        version: 3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.51.2)(tsx@4.21.0)(yaml@2.8.4)
 
   packages/webhooks:
     dependencies:
@@ -1025,13 +1025,13 @@ importers:
         version: 19.2.18
       '@vitest/coverage-v8':
         specifier: ^3.2.7
-        version: 3.2.7(vitest@3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.49.2)(tsx@4.21.0)(yaml@2.8.4))
+        version: 3.2.7(vitest@3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.51.2)(tsx@4.21.0)(yaml@2.8.4))
       react:
         specifier: ^19.2.8
         version: 19.2.8
       vitest:
         specifier: ^3.2.6
-        version: 3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.49.2)(tsx@4.21.0)(yaml@2.8.4)
+        version: 3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.51.2)(tsx@4.21.0)(yaml@2.8.4)
 
   packages/wiki:
     dependencies:
@@ -1062,10 +1062,10 @@ importers:
         version: link:../test-utils
       '@vitest/coverage-v8':
         specifier: ^3.2.7
-        version: 3.2.7(vitest@3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.49.2)(tsx@4.21.0)(yaml@2.8.4))
+        version: 3.2.7(vitest@3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.51.2)(tsx@4.21.0)(yaml@2.8.4))
       vitest:
         specifier: ^3.2.6
-        version: 3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.49.2)(tsx@4.21.0)(yaml@2.8.4)
+        version: 3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.51.2)(tsx@4.21.0)(yaml@2.8.4)
 
   services/api:
     dependencies:
@@ -1192,7 +1192,7 @@ importers:
         version: 6.0.3
       '@vitest/coverage-v8':
         specifier: ^3.2.7
-        version: 3.2.7(vitest@3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.49.2)(tsx@4.21.0)(yaml@2.8.4))
+        version: 3.2.7(vitest@3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.51.2)(tsx@4.21.0)(yaml@2.8.4))
       supertest:
         specifier: ^7.0.0
         version: 7.2.2
@@ -1204,7 +1204,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^3.2.6
-        version: 3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.49.2)(tsx@4.21.0)(yaml@2.8.4)
+        version: 3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.51.2)(tsx@4.21.0)(yaml@2.8.4)
 
   services/mcp:
     dependencies:
@@ -1220,7 +1220,7 @@ importers:
         version: 25.9.5
       '@vitest/coverage-v8':
         specifier: ^3.2.7
-        version: 3.2.7(vitest@3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.49.2)(tsx@4.21.0)(yaml@2.8.4))
+        version: 3.2.7(vitest@3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.51.2)(tsx@4.21.0)(yaml@2.8.4))
       esbuild:
         specifier: ^0.28.1
         version: 0.28.1
@@ -1232,7 +1232,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^3.2.6
-        version: 3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.49.2)(tsx@4.21.0)(yaml@2.8.4)
+        version: 3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.51.2)(tsx@4.21.0)(yaml@2.8.4)
 
   services/web:
     dependencies:
@@ -1334,7 +1334,7 @@ importers:
         version: 1.2.11(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       '@sentry/nextjs':
         specifier: ^10.69.0
-        version: 10.69.0(@opentelemetry/core@2.10.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.10.0(@opentelemetry/api@1.9.1))(next@15.5.22(@babel/core@8.0.1)(@opentelemetry/api@1.9.1)(@playwright/test@1.59.1)(@types/node@25.9.5)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react@19.2.8)(webpack@5.109.2(lightningcss@1.33.0)(postcss@8.5.18))
+        version: 10.69.0(@opentelemetry/core@2.10.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.10.0(@opentelemetry/api@1.9.1))(next@15.5.22(@babel/core@8.0.1)(@opentelemetry/api@1.9.1)(@playwright/test@1.59.1)(@types/node@25.9.5)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react@19.2.8)(webpack@5.109.2(lightningcss@1.33.0)(postcss@8.5.23)(sharp@0.35.3(@types/node@25.9.5)))
       '@supabase/ssr':
         specifier: ^0.5.2
         version: 0.5.2(@supabase/supabase-js@2.105.3)
@@ -1467,10 +1467,10 @@ importers:
         version: 19.2.4(@types/react@19.2.18)
       '@vitejs/plugin-react':
         specifier: ^4.3.0
-        version: 4.7.0(vite@7.3.6(@types/node@25.9.5)(jiti@2.7.0)(lightningcss@1.33.0)(terser@5.49.2)(tsx@4.21.0)(yaml@2.8.4))
+        version: 4.7.0(vite@7.3.6(@types/node@25.9.5)(jiti@2.7.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.21.0)(yaml@2.8.4))
       '@vitest/coverage-v8':
         specifier: ^3.2.7
-        version: 3.2.7(vitest@3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.49.2)(tsx@4.21.0)(yaml@2.8.4))
+        version: 3.2.7(vitest@3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.51.2)(tsx@4.21.0)(yaml@2.8.4))
       jsdom:
         specifier: ^25.0.0
         version: 25.0.1
@@ -1478,8 +1478,8 @@ importers:
         specifier: ^2.14.5
         version: 2.14.5(@types/node@25.9.5)(typescript@5.9.3)
       postcss:
-        specifier: 8.5.18
-        version: 8.5.18
+        specifier: ^8.5.23
+        version: 8.5.23
       tailwindcss:
         specifier: ^4.1.0
         version: 4.2.4
@@ -1488,10 +1488,10 @@ importers:
         version: 5.9.3
       vite:
         specifier: ^7.3.5
-        version: 7.3.6(@types/node@25.9.5)(jiti@2.7.0)(lightningcss@1.33.0)(terser@5.49.2)(tsx@4.21.0)(yaml@2.8.4)
+        version: 7.3.6(@types/node@25.9.5)(jiti@2.7.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.21.0)(yaml@2.8.4)
       vitest:
         specifier: ^3.2.6
-        version: 3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.49.2)(tsx@4.21.0)(yaml@2.8.4)
+        version: 3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.51.2)(tsx@4.21.0)(yaml@2.8.4)
 
 packages:
 
@@ -4577,6 +4577,11 @@ packages:
     engines: {node: '>=0.4.0'}
     hasBin: true
 
+  acorn@8.18.0:
+    resolution: {integrity: sha512-lGq+9yr1/GuAWaVYIHRjvvySG5/4VfKIvC8EWxStPdcDh/Ka7FG3twP6v4d5BkravUilhIAsG4Qj83t02LWUPQ==}
+    engines: {node: '>=0.4.0'}
+    hasBin: true
+
   agent-base@6.0.2:
     resolution: {integrity: sha512-RZNwNclF7+MS/8bDg70amg32dyeZGZxiDuQmZxKLAlQjr3jGyLx+4Kkk58UO7D2QdgFIQCovuSuZESne6RG6XQ==}
     engines: {node: '>= 6.0.0'}
@@ -4760,6 +4765,11 @@ packages:
     engines: {node: '>=6.0.0'}
     hasBin: true
 
+  baseline-browser-mapping@2.11.21:
+    resolution: {integrity: sha512-uh8vpY/1/YyFkunIDFH/12p7/7VdPKA1hejMVEbdkEaWnUz0Hesvx5EbiU6XxjyHZIOju+ZMbQJkRh+es3/spQ==}
+    engines: {node: '>=6.0.0'}
+    hasBin: true
+
   bcrypt-pbkdf@1.0.2:
     resolution: {integrity: sha512-qeFIXtP4MSoi6NLqO12WfqARWWuCKi2Rn/9hJLEmtB5yTNr9DqFWkJRCf2qShWzPeAMRnOgCrq0sg/KLv5ES9w==}
 
@@ -4787,6 +4797,11 @@ packages:
 
   browserslist@4.28.2:
     resolution: {integrity: sha512-48xSriZYYg+8qXna9kwqjIVzuQxi+KYWp2+5nCYnYKPTr0LvD89Jqk2Or5ogxz0NUMfIjhh2lIUX/LyX9B4oIg==}
+    engines: {node: ^6 || ^7 || ^8 || ^9 || ^10 || ^11 || ^12 || >=13.7}
+    hasBin: true
+
+  browserslist@4.28.9:
+    resolution: {integrity: sha512-EWazOblFYUvlGZcfGhPUPmYh3nikUxBVb+y9MJun5f3hBi812X+8MSQTujLBtgK3cf51fJWbWfOjyeO954d+Eg==}
     engines: {node: ^6 || ^7 || ^8 || ^9 || ^10 || ^11 || ^12 || >=13.7}
     hasBin: true
 
@@ -4841,6 +4856,9 @@ packages:
 
   caniuse-lite@1.0.30001790:
     resolution: {integrity: sha512-bOoxfJPyYo+ds6W0YfptaCWbFnJYjh2Y1Eow5lRv+vI2u8ganPZqNm1JwNh0t2ELQCqIWg4B3dWEusgAmsoyOw==}
+
+  caniuse-lite@1.0.30001810:
+    resolution: {integrity: sha512-TITQPUkaz+aVk5GL6NhOdwk1aEaNTSDPsGFWrTuhKGtjTF70jL/Oht2W4c6rXUe5fu7Ie19VIahAXHIIiWWNeg==}
 
   ccount@2.0.1:
     resolution: {integrity: sha512-eyrF0jiFpY+3drT6383f1qhkbGsLSifNAjA61IUjZjmLCWjItY6LB9ft9YhoDgwfmclB2zhu51Lc7+95b8NRAg==}
@@ -5199,6 +5217,9 @@ packages:
   electron-to-chromium@1.5.351:
     resolution: {integrity: sha512-9D7Iqx8RImSvCnOsj86rCH6eQjZFQoM04Jn6HnZVM0Nu/G58/gmKYQ1d12MZTbjQbQSTGI8nwEy07ErsA2slLA==}
 
+  electron-to-chromium@1.5.423:
+    resolution: {integrity: sha512-rRZfTSY8ptHYMQxa+uIycJMFKmY1T0GIApNMXJYGehguTZa56TEEl19pKPCoBqk5Gpf7QizZn/jt7xur+DYxag==}
+
   emoji-mart@5.6.0:
     resolution: {integrity: sha512-eJp3QRe79pjwa+duv+n7+5YsNhRcMl812EcFVwrnRvYKoNPoQb5qxU8DG6Bgwji0akHdp6D4Ln6tYLG58MFSow==}
 
@@ -5251,6 +5272,9 @@ packages:
 
   es-module-lexer@2.3.1:
     resolution: {integrity: sha512-shc1dbU90Yl/xq1QrC7QRtfcwURZuVRfPhZbDoldJ1cn1gzDvBaBWlv0eFolj5+0znnPJz5TXLxsN77X/12KTA==}
+
+  es-module-lexer@2.3.2:
+    resolution: {integrity: sha512-poHGpORABojJJucnV9KbOavETW8lBVnphkW77ER5/BQ5Fz7oXSoCNek7IH3vR5nRjdsEz926ibFYX8KtLQmdyw==}
 
   es-object-atoms@1.1.1:
     resolution: {integrity: sha512-FGgH2h8zKNim9ljj7dankFPcICIK9Cp5bm+c2gQSYePhpaG5+esrLODihIorn+Pe6FGJzWhXQotPv73jTaldXA==}
@@ -6252,11 +6276,12 @@ packages:
   minimist@1.2.8:
     resolution: {integrity: sha512-2yyAR8qBkN3YuheJanUpWC5U3bb5osDywNB8RzDVlDwDHbocAJveqqj1u8+SVD7jkWT4yvsHCpWqqWqAxb0zCA==}
 
-  minimizer-webpack-plugin@5.6.1:
-    resolution: {integrity: sha512-DoeAZz8Q1C1znwsUzej1fdoi4jCf7/+Em27ouLqfK/+3m8G+D7yDhUwrc3CNhjSzGUN1kn7Iv4sWmjflQHenpw==}
+  minimizer-webpack-plugin@5.10.0:
+    resolution: {integrity: sha512-2//60T4S0X1Ug/dqLDOgDaGlZsN1Lv8hf8oB0NOV/KIHSaXlPwXBBIbim79dE2Z7NEs52ES8YHoSv6Lmsk+XNg==}
     engines: {node: '>= 10.13.0'}
     peerDependencies:
       '@minify-html/node': '*'
+      '@napi-rs/image': '*'
       '@swc/core': '*'
       '@swc/css': '*'
       '@swc/html': '*'
@@ -6265,12 +6290,17 @@ packages:
       csso: '*'
       esbuild: '*'
       html-minifier-terser: '*'
+      imagemin: '*'
       lightningcss: '*'
       postcss: '*'
+      sharp: '*'
+      svgo: '*'
       uglify-js: '*'
       webpack: ^5.1.0
     peerDependenciesMeta:
       '@minify-html/node':
+        optional: true
+      '@napi-rs/image':
         optional: true
       '@swc/core':
         optional: true
@@ -6288,9 +6318,15 @@ packages:
         optional: true
       html-minifier-terser:
         optional: true
+      imagemin:
+        optional: true
       lightningcss:
         optional: true
       postcss:
+        optional: true
+      sharp:
+        optional: true
+      svgo:
         optional: true
       uglify-js:
         optional: true
@@ -6336,6 +6372,11 @@ packages:
 
   nanoid@3.3.16:
     resolution: {integrity: sha512-bzlKTyNJ7+LdGIIwy8ijFpIqEQIvafahV7eYykJ8Cvh42EdJeODoJ6gUJXpQJvej1BddH8OqTXZNE/KfbWAu8Q==}
+    engines: {node: ^10 || ^12 || ^13.7 || ^14 || >=15.0.1}
+    hasBin: true
+
+  nanoid@3.3.18:
+    resolution: {integrity: sha512-DTg4MJbGMWkfi6VZFdNt2/caMbQy4Ou+Op/hJQvGEWcnVfoA1QA+xzRKAzw9jD6+GVOOeYr/mIcuDSdug6F6+w==}
     engines: {node: ^10 || ^12 || ^13.7 || ^14 || >=15.0.1}
     hasBin: true
 
@@ -6419,6 +6460,10 @@ packages:
 
   node-releases@2.0.38:
     resolution: {integrity: sha512-3qT/88Y3FbH/Kx4szpQQ4HzUbVrHPKTLVpVocKiLfoYvw9XSGOX2FmD2d6DrXbVYyAQTF2HeF6My8jmzx7/CRw==}
+
+  node-releases@2.0.54:
+    resolution: {integrity: sha512-YHs7BmmcsdAI5Ozuf8JZo6PT0mv2GIWC9vMfvUC3dp65M8hn7Ux8CPL+2oBI7juNuj9d0ndhTcznq2ODBps9cQ==}
+    engines: {node: '>=18'}
 
   nodemailer@9.0.3:
     resolution: {integrity: sha512-n+YP+NKwR5zRWa60k3GiQ6Q3B4KXCoAw40dAKeCtYn020iNN74aWK2liXIC3ZEATeGql7we3tE3t8QwhY0eskw==}
@@ -6608,6 +6653,10 @@ packages:
 
   postcss@8.5.18:
     resolution: {integrity: sha512-xdB1oSLHbz1vRWgCDalrCqEFTWzFlhqFC5tIHLMOSUIjhm3XXQ1qrFy8S/ESr1JYRRXqM3c1QFiMZUJdUTqyMQ==}
+    engines: {node: ^10 || ^12 || >=14}
+
+  postcss@8.5.23:
+    resolution: {integrity: sha512-g50586zr4bZmwFiTlflMu8E0bDTb5I5gertgwAKmsdUlTQIhZtunzUlD1WSzwcVWPoAVpsrA6vlfCD7oXvRwgg==}
     engines: {node: ^10 || ^12 || >=14}
 
   prelude-ls@1.2.1:
@@ -7271,8 +7320,8 @@ packages:
   temporal-utils@1.0.1:
     resolution: {integrity: sha512-HAixuesxFQIUaQk3ptX2jhfO/FsOkgVkDDMawvp6n/fkB1q6BKfs3lURw9I+pK/2e2e/q/vrLrxmeqauBoyGMQ==}
 
-  terser@5.49.2:
-    resolution: {integrity: sha512-rGbJiKeQ4WDe3EXlDAIaQcwftVfv2Q8o1awFNfvXolJYKkb1AuZY1RTOmqx4LJXZENbWZA7eIsYGHuEzHsi1nQ==}
+  terser@5.51.2:
+    resolution: {integrity: sha512-bWnjSNscmuI+GJze6ZupnHP8G/cTcsJF+bXCeQknk2SHQsgbNJnLrqiH9jZ2W4STPVXH2mDKKRX3iwPhc9Cn/Q==}
     engines: {node: '>=10'}
     hasBin: true
 
@@ -7483,6 +7532,12 @@ packages:
 
   update-browserslist-db@1.2.3:
     resolution: {integrity: sha512-Js0m9cx+qOgDxo0eMiFGEueWztz+d4+M3rGlmKPT+T4IS/jP4ylw3Nwpu6cpTTP8R1MAC1kF4VbdLt3ARf209w==}
+    hasBin: true
+    peerDependencies:
+      browserslist: '>= 4.21.0'
+
+  update-browserslist-db@1.3.2:
+    resolution: {integrity: sha512-UQ+MSxlhRm1bzjhU+DcuXfjFO1FzNtqhK5+9Yvlp90ItDLk5vT932A0rFu619nf7RVS+Y/VeaUW1jaRDqZ8VJw==}
     hasBin: true
     peerDependencies:
       browserslist: '>= 4.21.0'
@@ -9661,7 +9716,7 @@ snapshots:
       - encoding
       - supports-color
 
-  '@sentry/bundler-plugins@10.69.0(rollup@4.62.4)(webpack@5.109.2(lightningcss@1.33.0)(postcss@8.5.18))':
+  '@sentry/bundler-plugins@10.69.0(rollup@4.62.4)(webpack@5.109.2(lightningcss@1.33.0)(postcss@8.5.23)(sharp@0.35.3(@types/node@25.9.5)))':
     dependencies:
       '@babel/core': 8.0.1
       '@sentry/cli': 2.58.6
@@ -9672,7 +9727,7 @@ snapshots:
       magic-string: 0.30.21
     optionalDependencies:
       rollup: 4.62.4
-      webpack: 5.109.2(lightningcss@1.33.0)(postcss@8.5.18)
+      webpack: 5.109.2(lightningcss@1.33.0)(postcss@8.5.23)(sharp@0.35.3(@types/node@25.9.5))
     transitivePeerDependencies:
       - encoding
       - supports-color
@@ -9731,7 +9786,7 @@ snapshots:
     dependencies:
       '@sentry/core': 10.69.0
 
-  '@sentry/nextjs@10.69.0(@opentelemetry/core@2.10.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.10.0(@opentelemetry/api@1.9.1))(next@15.5.22(@babel/core@8.0.1)(@opentelemetry/api@1.9.1)(@playwright/test@1.59.1)(@types/node@25.9.5)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react@19.2.8)(webpack@5.109.2(lightningcss@1.33.0)(postcss@8.5.18))':
+  '@sentry/nextjs@10.69.0(@opentelemetry/core@2.10.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.10.0(@opentelemetry/api@1.9.1))(next@15.5.22(@babel/core@8.0.1)(@opentelemetry/api@1.9.1)(@playwright/test@1.59.1)(@types/node@25.9.5)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react@19.2.8)(webpack@5.109.2(lightningcss@1.33.0)(postcss@8.5.23)(sharp@0.35.3(@types/node@25.9.5)))':
     dependencies:
       '@opentelemetry/api': 1.9.1
       '@rollup/plugin-commonjs': 28.0.1(rollup@4.62.4)
@@ -9744,7 +9799,7 @@ snapshots:
       '@sentry/react': 10.69.0(react@19.2.8)
       '@sentry/server-utils': 10.69.0
       '@sentry/vercel-edge': 10.69.0
-      '@sentry/webpack-plugin': 5.4.0(rollup@4.62.4)(webpack@5.109.2(lightningcss@1.33.0)(postcss@8.5.18))
+      '@sentry/webpack-plugin': 5.4.0(rollup@4.62.4)(webpack@5.109.2(lightningcss@1.33.0)(postcss@8.5.23)(sharp@0.35.3(@types/node@25.9.5)))
       next: 15.5.22(@babel/core@8.0.1)(@opentelemetry/api@1.9.1)(@playwright/test@1.59.1)(@types/node@25.9.5)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       rollup: 4.62.4
       stacktrace-parser: 0.1.11
@@ -9825,10 +9880,10 @@ snapshots:
       '@opentelemetry/api': 1.9.1
       '@sentry/core': 10.69.0
 
-  '@sentry/webpack-plugin@5.4.0(rollup@4.62.4)(webpack@5.109.2(lightningcss@1.33.0)(postcss@8.5.18))':
+  '@sentry/webpack-plugin@5.4.0(rollup@4.62.4)(webpack@5.109.2(lightningcss@1.33.0)(postcss@8.5.23)(sharp@0.35.3(@types/node@25.9.5)))':
     dependencies:
-      '@sentry/bundler-plugins': 10.69.0(rollup@4.62.4)(webpack@5.109.2(lightningcss@1.33.0)(postcss@8.5.18))
-      webpack: 5.109.2(lightningcss@1.33.0)(postcss@8.5.18)
+      '@sentry/bundler-plugins': 10.69.0(rollup@4.62.4)(webpack@5.109.2(lightningcss@1.33.0)(postcss@8.5.23)(sharp@0.35.3(@types/node@25.9.5)))
+      webpack: 5.109.2(lightningcss@1.33.0)(postcss@8.5.23)(sharp@0.35.3(@types/node@25.9.5))
     transitivePeerDependencies:
       - encoding
       - rollup
@@ -10711,7 +10766,7 @@ snapshots:
 
   '@ungap/structured-clone@1.3.3': {}
 
-  '@vitejs/plugin-react@4.7.0(vite@7.3.6(@types/node@25.9.5)(jiti@2.7.0)(lightningcss@1.33.0)(terser@5.49.2)(tsx@4.21.0)(yaml@2.8.4))':
+  '@vitejs/plugin-react@4.7.0(vite@7.3.6(@types/node@25.9.5)(jiti@2.7.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.21.0)(yaml@2.8.4))':
     dependencies:
       '@babel/core': 8.0.1
       '@babel/plugin-transform-react-jsx-self': 7.27.1(@babel/core@8.0.1)
@@ -10719,9 +10774,9 @@ snapshots:
       '@rolldown/pluginutils': 1.0.0-beta.27
       '@types/babel__core': 7.20.5
       react-refresh: 0.17.0
-      vite: 7.3.6(@types/node@25.9.5)(jiti@2.7.0)(lightningcss@1.33.0)(terser@5.49.2)(tsx@4.21.0)(yaml@2.8.4)
+      vite: 7.3.6(@types/node@25.9.5)(jiti@2.7.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.21.0)(yaml@2.8.4)
 
-  '@vitest/coverage-v8@3.2.7(vitest@3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.49.2)(tsx@4.21.0)(yaml@2.8.4))':
+  '@vitest/coverage-v8@3.2.7(vitest@3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.51.2)(tsx@4.21.0)(yaml@2.8.4))':
     dependencies:
       '@ampproject/remapping': 2.3.0
       '@bcoe/v8-coverage': 1.0.2
@@ -10736,11 +10791,11 @@ snapshots:
       std-env: 3.10.0
       test-exclude: 7.0.2
       tinyrainbow: 2.0.0
-      vitest: 3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.49.2)(tsx@4.21.0)(yaml@2.8.4)
+      vitest: 3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.51.2)(tsx@4.21.0)(yaml@2.8.4)
     transitivePeerDependencies:
       - supports-color
 
-  '@vitest/coverage-v8@3.2.7(vitest@3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@6.0.3))(terser@5.49.2)(tsx@4.21.0)(yaml@2.8.4))':
+  '@vitest/coverage-v8@3.2.7(vitest@3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@6.0.3))(terser@5.51.2)(tsx@4.21.0)(yaml@2.8.4))':
     dependencies:
       '@ampproject/remapping': 2.3.0
       '@bcoe/v8-coverage': 1.0.2
@@ -10755,7 +10810,7 @@ snapshots:
       std-env: 3.10.0
       test-exclude: 7.0.2
       tinyrainbow: 2.0.0
-      vitest: 3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@6.0.3))(terser@5.49.2)(tsx@4.21.0)(yaml@2.8.4)
+      vitest: 3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@6.0.3))(terser@5.51.2)(tsx@4.21.0)(yaml@2.8.4)
     transitivePeerDependencies:
       - supports-color
 
@@ -10767,23 +10822,23 @@ snapshots:
       chai: 5.3.3
       tinyrainbow: 2.0.0
 
-  '@vitest/mocker@3.2.7(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(vite@7.3.6(@types/node@25.9.5)(jiti@2.7.0)(lightningcss@1.33.0)(terser@5.49.2)(tsx@4.21.0)(yaml@2.8.4))':
+  '@vitest/mocker@3.2.7(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(vite@7.3.6(@types/node@25.9.5)(jiti@2.7.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.21.0)(yaml@2.8.4))':
     dependencies:
       '@vitest/spy': 3.2.7
       estree-walker: 3.0.3
       magic-string: 0.30.21
     optionalDependencies:
       msw: 2.14.5(@types/node@25.9.5)(typescript@5.9.3)
-      vite: 7.3.6(@types/node@25.9.5)(jiti@2.7.0)(lightningcss@1.33.0)(terser@5.49.2)(tsx@4.21.0)(yaml@2.8.4)
+      vite: 7.3.6(@types/node@25.9.5)(jiti@2.7.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.21.0)(yaml@2.8.4)
 
-  '@vitest/mocker@3.2.7(msw@2.14.5(@types/node@25.9.5)(typescript@6.0.3))(vite@7.3.6(@types/node@25.9.5)(jiti@2.7.0)(lightningcss@1.33.0)(terser@5.49.2)(tsx@4.21.0)(yaml@2.8.4))':
+  '@vitest/mocker@3.2.7(msw@2.14.5(@types/node@25.9.5)(typescript@6.0.3))(vite@7.3.6(@types/node@25.9.5)(jiti@2.7.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.21.0)(yaml@2.8.4))':
     dependencies:
       '@vitest/spy': 3.2.7
       estree-walker: 3.0.3
       magic-string: 0.30.21
     optionalDependencies:
       msw: 2.14.5(@types/node@25.9.5)(typescript@6.0.3)
-      vite: 7.3.6(@types/node@25.9.5)(jiti@2.7.0)(lightningcss@1.33.0)(terser@5.49.2)(tsx@4.21.0)(yaml@2.8.4)
+      vite: 7.3.6(@types/node@25.9.5)(jiti@2.7.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.21.0)(yaml@2.8.4)
 
   '@vitest/pretty-format@3.2.7':
     dependencies:
@@ -10930,6 +10985,8 @@ snapshots:
       acorn: 8.16.0
 
   acorn@8.16.0: {}
+
+  acorn@8.18.0: {}
 
   agent-base@6.0.2:
     dependencies:
@@ -11088,6 +11145,8 @@ snapshots:
 
   baseline-browser-mapping@2.10.27: {}
 
+  baseline-browser-mapping@2.11.21: {}
+
   bcrypt-pbkdf@1.0.2:
     dependencies:
       tweetnacl: 0.14.5
@@ -11137,6 +11196,14 @@ snapshots:
       electron-to-chromium: 1.5.351
       node-releases: 2.0.38
       update-browserslist-db: 1.2.3(browserslist@4.28.2)
+
+  browserslist@4.28.9:
+    dependencies:
+      baseline-browser-mapping: 2.11.21
+      caniuse-lite: 1.0.30001810
+      electron-to-chromium: 1.5.423
+      node-releases: 2.0.54
+      update-browserslist-db: 1.3.2(browserslist@4.28.9)
 
   buffer-crc32@1.0.0: {}
 
@@ -11191,6 +11258,8 @@ snapshots:
   camelcase@5.3.1: {}
 
   caniuse-lite@1.0.30001790: {}
+
+  caniuse-lite@1.0.30001810: {}
 
   ccount@2.0.1: {}
 
@@ -11508,6 +11577,8 @@ snapshots:
 
   electron-to-chromium@1.5.351: {}
 
+  electron-to-chromium@1.5.423: {}
+
   emoji-mart@5.6.0: {}
 
   emoji-regex@10.6.0: {}
@@ -11542,6 +11613,8 @@ snapshots:
   es-module-lexer@1.7.0: {}
 
   es-module-lexer@2.3.1: {}
+
+  es-module-lexer@2.3.2: {}
 
   es-object-atoms@1.1.1:
     dependencies:
@@ -12770,16 +12843,17 @@ snapshots:
 
   minimist@1.2.8: {}
 
-  minimizer-webpack-plugin@5.6.1(lightningcss@1.33.0)(postcss@8.5.18)(webpack@5.109.2(lightningcss@1.33.0)(postcss@8.5.18)):
+  minimizer-webpack-plugin@5.10.0(lightningcss@1.33.0)(postcss@8.5.23)(sharp@0.35.3(@types/node@25.9.5))(webpack@5.109.2(lightningcss@1.33.0)(postcss@8.5.23)(sharp@0.35.3(@types/node@25.9.5))):
     dependencies:
       '@jridgewell/trace-mapping': 0.3.31
       jest-worker: 27.5.1
       schema-utils: 4.3.3
-      terser: 5.49.2
-      webpack: 5.109.2(lightningcss@1.33.0)(postcss@8.5.18)
+      terser: 5.51.2
+      webpack: 5.109.2(lightningcss@1.33.0)(postcss@8.5.23)(sharp@0.35.3(@types/node@25.9.5))
     optionalDependencies:
       lightningcss: 1.33.0
-      postcss: 8.5.18
+      postcss: 8.5.23
+      sharp: 0.35.3(@types/node@25.9.5)
 
   minipass@7.1.3: {}
 
@@ -12852,6 +12926,8 @@ snapshots:
     optional: true
 
   nanoid@3.3.16: {}
+
+  nanoid@3.3.18: {}
 
   natural-compare@1.4.0: {}
 
@@ -12931,6 +13007,8 @@ snapshots:
       temporal-polyfill: 1.0.3
 
   node-releases@2.0.38: {}
+
+  node-releases@2.0.54: {}
 
   nodemailer@9.0.3: {}
 
@@ -13123,7 +13201,13 @@ snapshots:
 
   postcss@8.5.18:
     dependencies:
-      nanoid: 3.3.16
+      nanoid: 3.3.18
+      picocolors: 1.1.1
+      source-map-js: 1.2.1
+
+  postcss@8.5.23:
+    dependencies:
+      nanoid: 3.3.18
       picocolors: 1.1.1
       source-map-js: 1.2.1
 
@@ -13936,10 +14020,10 @@ snapshots:
 
   temporal-utils@1.0.1: {}
 
-  terser@5.49.2:
+  terser@5.51.2:
     dependencies:
       '@jridgewell/source-map': 0.3.11
-      acorn: 8.16.0
+      acorn: 8.18.0
       commander: 2.20.3
       source-map-support: 0.5.21
 
@@ -14165,6 +14249,12 @@ snapshots:
       escalade: 3.2.0
       picocolors: 1.1.1
 
+  update-browserslist-db@1.3.2(browserslist@4.28.9):
+    dependencies:
+      browserslist: 4.28.9
+      escalade: 3.2.0
+      picocolors: 1.1.1
+
   uri-js@4.4.1:
     dependencies:
       punycode: 2.3.1
@@ -14212,13 +14302,13 @@ snapshots:
       '@types/unist': 3.0.3
       vfile-message: 4.0.3
 
-  vite-node@3.2.4(@types/node@25.9.5)(jiti@2.7.0)(lightningcss@1.33.0)(terser@5.49.2)(tsx@4.21.0)(yaml@2.8.4):
+  vite-node@3.2.4(@types/node@25.9.5)(jiti@2.7.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.21.0)(yaml@2.8.4):
     dependencies:
       cac: 6.7.14
       debug: 4.4.3
       es-module-lexer: 1.7.0
       pathe: 2.0.3
-      vite: 7.3.6(@types/node@25.9.5)(jiti@2.7.0)(lightningcss@1.33.0)(terser@5.49.2)(tsx@4.21.0)(yaml@2.8.4)
+      vite: 7.3.6(@types/node@25.9.5)(jiti@2.7.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.21.0)(yaml@2.8.4)
     transitivePeerDependencies:
       - '@types/node'
       - jiti
@@ -14233,7 +14323,7 @@ snapshots:
       - tsx
       - yaml
 
-  vite@7.3.6(@types/node@25.9.5)(jiti@2.7.0)(lightningcss@1.33.0)(terser@5.49.2)(tsx@4.21.0)(yaml@2.8.4):
+  vite@7.3.6(@types/node@25.9.5)(jiti@2.7.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.21.0)(yaml@2.8.4):
     dependencies:
       esbuild: 0.28.1
       fdir: 6.5.0(picomatch@4.0.5)
@@ -14246,15 +14336,15 @@ snapshots:
       fsevents: 2.3.3
       jiti: 2.7.0
       lightningcss: 1.33.0
-      terser: 5.49.2
+      terser: 5.51.2
       tsx: 4.21.0
       yaml: 2.8.4
 
-  vitest@3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.49.2)(tsx@4.21.0)(yaml@2.8.4):
+  vitest@3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(terser@5.51.2)(tsx@4.21.0)(yaml@2.8.4):
     dependencies:
       '@types/chai': 5.2.3
       '@vitest/expect': 3.2.7
-      '@vitest/mocker': 3.2.7(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(vite@7.3.6(@types/node@25.9.5)(jiti@2.7.0)(lightningcss@1.33.0)(terser@5.49.2)(tsx@4.21.0)(yaml@2.8.4))
+      '@vitest/mocker': 3.2.7(msw@2.14.5(@types/node@25.9.5)(typescript@5.9.3))(vite@7.3.6(@types/node@25.9.5)(jiti@2.7.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.21.0)(yaml@2.8.4))
       '@vitest/pretty-format': 3.2.7
       '@vitest/runner': 3.2.7
       '@vitest/snapshot': 3.2.7
@@ -14272,8 +14362,8 @@ snapshots:
       tinyglobby: 0.2.17
       tinypool: 1.1.1
       tinyrainbow: 2.0.0
-      vite: 7.3.6(@types/node@25.9.5)(jiti@2.7.0)(lightningcss@1.33.0)(terser@5.49.2)(tsx@4.21.0)(yaml@2.8.4)
-      vite-node: 3.2.4(@types/node@25.9.5)(jiti@2.7.0)(lightningcss@1.33.0)(terser@5.49.2)(tsx@4.21.0)(yaml@2.8.4)
+      vite: 7.3.6(@types/node@25.9.5)(jiti@2.7.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.21.0)(yaml@2.8.4)
+      vite-node: 3.2.4(@types/node@25.9.5)(jiti@2.7.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.21.0)(yaml@2.8.4)
       why-is-node-running: 2.3.0
     optionalDependencies:
       '@types/debug': 4.1.13
@@ -14293,11 +14383,11 @@ snapshots:
       - tsx
       - yaml
 
-  vitest@3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@6.0.3))(terser@5.49.2)(tsx@4.21.0)(yaml@2.8.4):
+  vitest@3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@25.0.1)(lightningcss@1.33.0)(msw@2.14.5(@types/node@25.9.5)(typescript@6.0.3))(terser@5.51.2)(tsx@4.21.0)(yaml@2.8.4):
     dependencies:
       '@types/chai': 5.2.3
       '@vitest/expect': 3.2.7
-      '@vitest/mocker': 3.2.7(msw@2.14.5(@types/node@25.9.5)(typescript@6.0.3))(vite@7.3.6(@types/node@25.9.5)(jiti@2.7.0)(lightningcss@1.33.0)(terser@5.49.2)(tsx@4.21.0)(yaml@2.8.4))
+      '@vitest/mocker': 3.2.7(msw@2.14.5(@types/node@25.9.5)(typescript@6.0.3))(vite@7.3.6(@types/node@25.9.5)(jiti@2.7.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.21.0)(yaml@2.8.4))
       '@vitest/pretty-format': 3.2.7
       '@vitest/runner': 3.2.7
       '@vitest/snapshot': 3.2.7
@@ -14315,8 +14405,8 @@ snapshots:
       tinyglobby: 0.2.17
       tinypool: 1.1.1
       tinyrainbow: 2.0.0
-      vite: 7.3.6(@types/node@25.9.5)(jiti@2.7.0)(lightningcss@1.33.0)(terser@5.49.2)(tsx@4.21.0)(yaml@2.8.4)
-      vite-node: 3.2.4(@types/node@25.9.5)(jiti@2.7.0)(lightningcss@1.33.0)(terser@5.49.2)(tsx@4.21.0)(yaml@2.8.4)
+      vite: 7.3.6(@types/node@25.9.5)(jiti@2.7.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.21.0)(yaml@2.8.4)
+      vite-node: 3.2.4(@types/node@25.9.5)(jiti@2.7.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.21.0)(yaml@2.8.4)
       why-is-node-running: 2.3.0
     optionalDependencies:
       '@types/debug': 4.1.13
@@ -14354,23 +14444,23 @@ snapshots:
 
   webpack-sources@3.5.1: {}
 
-  webpack@5.109.2(lightningcss@1.33.0)(postcss@8.5.18):
+  webpack@5.109.2(lightningcss@1.33.0)(postcss@8.5.23)(sharp@0.35.3(@types/node@25.9.5)):
     dependencies:
       '@types/estree': 1.0.9
       '@types/json-schema': 7.0.15
       '@webassemblyjs/ast': 1.14.1
       '@webassemblyjs/wasm-edit': 1.14.1
       '@webassemblyjs/wasm-parser': 1.14.1
-      acorn: 8.16.0
-      browserslist: 4.28.2
+      acorn: 8.18.0
+      browserslist: 4.28.9
       chrome-trace-event: 1.0.4
       enhanced-resolve: 5.24.5
-      es-module-lexer: 2.3.1
+      es-module-lexer: 2.3.2
       eslint-scope: 5.1.1
       events: 3.3.0
       graceful-fs: 4.2.11
       mime-db: 1.54.0
-      minimizer-webpack-plugin: 5.6.1(lightningcss@1.33.0)(postcss@8.5.18)(webpack@5.109.2(lightningcss@1.33.0)(postcss@8.5.18))
+      minimizer-webpack-plugin: 5.10.0(lightningcss@1.33.0)(postcss@8.5.23)(sharp@0.35.3(@types/node@25.9.5))(webpack@5.109.2(lightningcss@1.33.0)(postcss@8.5.23)(sharp@0.35.3(@types/node@25.9.5)))
       neo-async: 2.6.2
       schema-utils: 4.3.3
       tapable: 2.3.3
@@ -14378,6 +14468,7 @@ snapshots:
       webpack-sources: 3.5.1
     transitivePeerDependencies:
       - '@minify-html/node'
+      - '@napi-rs/image'
       - '@swc/core'
       - '@swc/css'
       - '@swc/html'
@@ -14386,8 +14477,11 @@ snapshots:
       - csso
       - esbuild
       - html-minifier-terser
+      - imagemin
       - lightningcss
       - postcss
+      - sharp
+      - svgo
       - uglify-js
 
   whatwg-encoding@3.1.1:
