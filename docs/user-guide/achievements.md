@@ -30,4 +30,4 @@ A few consequences worth knowing :
 - **It's not retroactive.** Counting starts when the condition is created. Work you did before an admin added the achievement generally won't count toward it.
 - **A badge with no conditions can't be earned.** If a badge has sat locked with no progress for a long time, that's the likely reason ; ask an admin to check its conditions.
 
-Admins define all of this from `/admin/achievements` (see the [admin guide](admin.md#achievements)).
+Admins define all of this from `/admin/achievements` (see the [admin guide](admin/achievements.md)).

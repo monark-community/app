@@ -1,0 +1,3 @@
+# 2.3 Extension points (how a feature ships without touching core)
+
+Five runtime `register*` APIs, all wired at api boot: **feature flags** (`registerFlags`), **permissions** (`registerPermissions`), **notification kinds + templates** (`registerNotificationKind`), **domain events + the operator-facing event-type registry** (`registerEventTypes`), and the generic **metadata sidecar** (`setUserMetadataValue` / `setOrganizationMetadataValue`, identity `(parent_id, module, key)`, JSON value) for per-user/per-org data that needs no indexing. Data that needs indexed columns / FKs lives in the module's own Prisma fragment (extended modules own `packages/<module>/prisma/<module>.prisma`).

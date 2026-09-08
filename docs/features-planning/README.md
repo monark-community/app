@@ -7,14 +7,14 @@ Two kinds of doc live here:
 - **Shipped specs** — kept in the `phase-0/` … `phase-3/` folders as the **immutable historical record** of what a feature was designed to be. Per [CONTRIBUTING.md](../../CONTRIBUTING.md), these are **not** edited after a feature lands ; the as-built truth lives in the module's `README.md`, and divergence is recorded there, not retroactively here. Each shipped spec below links to its live module README.
 - **Proposed specs** — in [`proposed/`](proposed/). Features that are designed but **not built**. These stay editable and are the live backlog of plans.
 
-> Reality check: this folder was originally organized by phase 0–3 as a sequential roadmap. The platform since grew beyond that plan — the shipped set is now **14 core + 2 extended** modules (see [platform-overview.md](../technical-documentation/platform-overview.md) for the authoritative as-is picture), and several shipped modules never had a phase spec (they were built directly and documented in their READMEs + `technical-documentation/`). The phase folders are retained as history, not as a current roadmap.
+> Reality check: this folder was originally organized by phase 0–3 as a sequential roadmap. The platform since grew beyond that plan — the shipped set is now **14 core + 2 extended** modules (see [platform-overview.md](../technical-documentation/platform-overview/_index.md) for the authoritative as-is picture), and several shipped modules never had a phase spec (they were built directly and documented in their READMEs + `technical-documentation/`). The phase folders are retained as history, not as a current roadmap.
 
 ## Shipped
 
 Foundational (`phase-0/`) — architecture + scaffolding, still accurate as history:
 
-- [`phase-0/modular-architecture.md`](phase-0/modular-architecture.md) — the core/extended two-tier module model (live copy: [architecture.md](../technical-documentation/architecture.md) + [extensibility-contract.md](../technical-documentation/extensibility-contract.md)).
-- [`phase-0/project-scaffolding.md`](phase-0/project-scaffolding.md) — stack + workspace layout (live copy: [architecture.md](../technical-documentation/architecture.md)).
+- [`phase-0/modular-architecture.md`](phase-0/modular-architecture.md) — the core/extended two-tier module model (live copy: [architecture.md](../technical-documentation/architecture/_index.md) + [extensibility-contract.md](../technical-documentation/extensibility-contract/_index.md)).
+- [`phase-0/project-scaffolding.md`](phase-0/project-scaffolding.md) — stack + workspace layout (live copy: [architecture.md](../technical-documentation/architecture/_index.md)).
 - [`phase-0/scaffolding-status.md`](phase-0/scaffolding-status.md) — the Phase-0 landing record.
 
 Core modules (`phase-1/`) — all shipped:
@@ -67,6 +67,6 @@ Every spec follows the same shape so reviewers can scan across them: **Context �
 
 ## Conventions
 
-- **Tech stack**: pnpm workspace rooted at `app/`. Next.js 15 App Router in `services/web`, Express 5 + tRPC v11 in `services/api`, Prisma against Supabase Postgres in `packages/db`, shadcn components via the `@monark` registry into `packages/components`. Full details in [architecture.md](../technical-documentation/architecture.md).
-- **Module layout**: one package per module (`@monark/auth`, `@monark/rbac`, …) with `/server`, `/client`, `/contracts` exports ; the boundary is enforced by `package.json#exports`. See [architecture.md](../technical-documentation/architecture.md) and [extensibility-contract.md](../technical-documentation/extensibility-contract.md).
-- **Authoritative as-is reference**: [platform-overview.md](../technical-documentation/platform-overview.md) supersedes any stale detail in the shipped specs here.
+- **Tech stack**: pnpm workspace rooted at `app/`. Next.js 15 App Router in `services/web`, Express 5 + tRPC v11 in `services/api`, Prisma against Supabase Postgres in `packages/db`, shadcn components via the `@monark` registry into `packages/components`. Full details in [architecture.md](../technical-documentation/architecture/_index.md).
+- **Module layout**: one package per module (`@monark/auth`, `@monark/rbac`, …) with `/server`, `/client`, `/contracts` exports ; the boundary is enforced by `package.json#exports`. See [architecture.md](../technical-documentation/architecture/_index.md) and [extensibility-contract.md](../technical-documentation/extensibility-contract/_index.md).
+- **Authoritative as-is reference**: [platform-overview.md](../technical-documentation/platform-overview/_index.md) supersedes any stale detail in the shipped specs here.
