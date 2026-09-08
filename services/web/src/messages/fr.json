@@ -241,6 +241,8 @@
       },
       "submit": "Se connecter",
       "submitting": "Connexion…",
+      "continue": "Continuer",
+      "changeEmail": "Modifier",
       "noAccount": "Pas encore de compte ?",
       "signUpLink": "Créez-en un",
       "forgotPasswordLink": "Mot de passe oublié ?",

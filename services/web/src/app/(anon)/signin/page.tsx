@@ -2,7 +2,6 @@ import { getTranslations } from "next-intl/server";
 import { AuthScreen } from "@/components/auth-screen";
 import { BrandedAppLogo } from "@/components/branded-app-logo";
 import { createServerTrpcClient } from "@/lib/trpc-server";
-import { OAuthButtons } from "../oauth-buttons";
 import { SignInForm } from "./signin-form";
 import { SignInStatusBanner } from "./signin-status-banner";
 
@@ -29,8 +28,9 @@ export default async function SignInPage() {
         </p>
       }
     >
-      <OAuthButtons providers={providers} />
-      <SignInForm />
+      {/* The form owns the buttons : it hides them once an address is
+          entered, which it can only do if it renders them. */}
+      <SignInForm providers={providers} />
     </AuthScreen>
   );
 }
