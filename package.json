@@ -111,7 +111,7 @@
   },
   "simple-git-hooks": {
     "pre-commit": "pnpm exec lint-staged",
-    "pre-push": "pnpm lint"
+    "pre-push": "env -u GIT_DIR -u GIT_WORK_TREE -u GIT_INDEX_FILE -u GIT_PREFIX pnpm lint"
   },
   "lint-staged": {
     "*.{ts,tsx}": [
