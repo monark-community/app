@@ -1969,9 +1969,8 @@
     },
     "connectedAccounts": {
       "title": "Comptes liés",
-      "subtitle": "Les façons de vous connecter à ce compte.",
+      "subtitle": "Vos façons de vous connecter. En ajouter une deuxième est optionnel ; c'est un accès de secours si vous perdez la première.",
       "connected": "Lié",
-      "notSet": "Non défini",
       "password": "Courriel et mot de passe",
       "connect": "Connecter",
       "connecting": "Redirection…",
@@ -1979,17 +1978,19 @@
       "notConnected": "Non connecté",
       "cancel": "Annuler",
       "confirmTitle": "Déconnecter ce compte ?",
-      "confirmBody": "Vous ne pourrez plus vous connecter avec {provider}. Vos autres méthodes de connexion continuent de fonctionner et vous pouvez le reconnecter à tout moment.",
-      "lastMethodHint": "Définissez d'abord un mot de passe ; c'est votre seule façon de vous connecter.",
+      "confirmBody": "Vous ne pourrez plus vous connecter avec {provider}. Vos autres méthodes continuent de fonctionner et vous pouvez le reconnecter à tout moment.",
       "linkedToast": "{provider} connecté.",
       "unlinkedToast": "{provider} déconnecté.",
       "errors": {
         "notLinked": "Ce compte n'est pas connecté.",
-        "lastMethod": "C'est votre seule façon de vous connecter. Définissez d'abord un mot de passe, puis déconnectez-le.",
+        "lastMethod": "C'est votre seule façon de vous connecter. Ajoutez-en une autre d'abord.",
         "linkFailed": "Impossible de connecter {provider}. Il est peut-être déjà lié à un autre compte.",
         "totpPending": "Terminez d'abord la vérification à deux facteurs.",
         "upstream": "Un problème est survenu. Réessayez."
-      }
+      },
+      "onlyWayIn": "Votre seul accès",
+      "passwordWhy": "Se connecter sans fournisseur",
+      "setPassword": "Définir un mot de passe"
     },
     "emailChange": {
       "change": "Modifier le courriel",

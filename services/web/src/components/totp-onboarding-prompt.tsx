@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -45,26 +45,41 @@ export function TotpOnboardingPrompt() {
   });
   const dismiss = trpc.auth.totp.dismissOnboarding.useMutation();
   const [isNavigating, startNavigation] = useTransition();
-  // Local suppression so the modal closes instantly on click rather than
-  // waiting for the mutation + refetch round trip.
-  const [closed, setClosed] = useState(false);
 
-  const open = Boolean(status.data?.shouldPrompt) && !closed;
+  // The cached query answer is the *only* thing that decides visibility.
+  //
+  // It used to be `query && !localState`, which reopened the modal after
+  // a dismissal: this component is mounted in the (authed) layout, so a
+  // client-side navigation remounts it with the local flag back at its
+  // initial value while the query cache still held `shouldPrompt: true`
+  // — the invalidated refetch hadn't landed yet. Writing the answer into
+  // the cache instead survives remounts, because the cache doesn't.
+  const open = status.data?.shouldPrompt === true;
+
+  function suppress() {
+    utils.auth.totp.onboardingStatus.setData(undefined, { shouldPrompt: false });
+  }
 
   function onDismiss() {
-    setClosed(true);
+    if (dismiss.isPending) return;
+    // Cache first so the close is instant and remount-proof, then
+    // persist. On failure we put the question back rather than silently
+    // swallowing a decision that never reached the database.
+    suppress();
     dismiss.mutate(undefined, {
-      onSettled: () => {
+      onError: () => {
         void utils.auth.totp.onboardingStatus.invalidate();
       },
     });
   }
 
   function onEnable() {
-    // Not dismissed : if the user backs out of enrollment the prompt is
-    // gone for this page load but returns on the next one, which is the
-    // behaviour we want for an unfinished intent.
-    setClosed(true);
+    // Cache-only, deliberately not persisted : if the user abandons
+    // enrollment the prompt is gone for this session but returns on a
+    // later load, which is the right behaviour for an unfinished intent.
+    // Completing enrollment makes `shouldPrompt` false server-side
+    // anyway, via `isTotpActive`.
+    suppress();
     startNavigation(() => {
       router.push("/account/security");
     });

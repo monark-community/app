@@ -171,9 +171,10 @@ export function ConnectedAccountsSection() {
                     {t("disconnect")}
                   </Button>
                 ) : (
-                  <p className="max-w-[16rem] text-right text-xs text-muted-foreground">
-                    {t("lastMethodHint")}
-                  </p>
+                  // Deliberately not "set a password first" : the user is
+                  // trying to disconnect, not to add a credential. The
+                  // useful answer is why the button isn't there.
+                  <p className="text-xs text-muted-foreground">{t("onlyWayIn")}</p>
                 )}
               </div>
             </li>
@@ -207,9 +208,17 @@ export function ConnectedAccountsSection() {
             <div className="min-w-0">
               <p className="text-sm font-medium">{t("password")}</p>
               <p className="text-xs text-muted-foreground">
-                {hasPassword ? t("connected") : t("notSet")}
+                {hasPassword ? t("connected") : t("passwordWhy")}
               </p>
             </div>
+            {!hasPassword && (
+              // Anchor to the password card further up this same page. A
+              // bare "Not set" row left the user with a fact and nothing
+              // to do about it.
+              <Button asChild variant="outline" size="sm" className="ml-auto">
+                <a href="#password">{t("setPassword")}</a>
+              </Button>
+            )}
           </li>
         </ul>
       )}
