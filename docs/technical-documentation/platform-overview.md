@@ -167,6 +167,8 @@ Two channels: **`IN_APP`** and **`EMAIL`**. Categories: `SECURITY`, `ACCOUNT`, `
 
 ### 3.9 External integrations
 
+> How the four integration/identity primitives (webhooks, secrets, API keys, service accounts) relate to each other, which direction each one points, and the known gaps between them : [identity-and-integration.md](identity-and-integration.md).
+
 #### Webhooks (`@monark/webhooks`)
 
 Outbound HTTP delivery of domain events with an at-least-once outbox.
@@ -262,4 +264,4 @@ Webhook delivery (5s + `/cron/sweep-webhook-deliveries`), automation (5s, incl. 
 
 ### 5.4 Where to read more
 
-Per-module `README.md` files ; and under this directory: `architecture.md` (architecture + project structure), `data-model-queries.md` (MQL), `automation.md` + `automation-data-flow.md`, `kanban.md`, `secrets.md`, `files.md`, `webhook-secret-resolver.md`.
+Per-module `README.md` files ; and under this directory: `architecture.md` (architecture + project structure), `data-model-queries.md` (MQL), `automation.md` + `automation-data-flow.md`, `kanban.md`, `secrets.md`, `files.md`, `webhook-secret-resolver.md`, `identity-and-integration.md`.
