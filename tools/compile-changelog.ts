@@ -30,6 +30,11 @@ const HEADER_FILE = "_header.md";
 const ENTRY_DATE_RE = /^-\s*(\d{4}-\d{2}-\d{2}):/;
 
 const checkOnly = process.argv.includes("--check");
+// --validate runs the per-fragment rules and nothing else. It is what CI can
+// run on a PR : `--check` compares against CHANGELOG.md, which a PR branch
+// deliberately leaves stale (the compiled file is regenerated once, on
+// develop, after merge), so it would fail every PR that adds an entry.
+const validateOnly = process.argv.includes("--validate");
 
 // Files starting with "_" are structure (the header), not entries ; README.md
 // documents the convention for humans.
@@ -73,6 +78,11 @@ const fragments = fragmentNames.map((file) => {
   }
   return { file, date: m[1], text };
 });
+
+if (validateOnly) {
+  console.log(`changelog:check — ${fragments.length} fragment(s) look well-formed.`);
+  process.exit(0);
+}
 
 // Newest first ; filename breaks ties so the output is deterministic and the
 // historical within-day ordering (encoded in the NN prefix) is preserved.
