@@ -241,7 +241,7 @@ async function requireModelAccess(
 }
 
 // Row-level access context for record reads : the caller's role ids, plus a
-// bypass for data admins (`data-models.manage-schema`, which ADMIN/SYSADMIN
+// bypass for holders of `data-models.view-all-records` (which ADMIN/SYSADMIN
 // short-circuit). Layered on top of the model-level `requireModelAccess`.
 async function recordAccessContext(
   userId: string,
@@ -249,7 +249,7 @@ async function recordAccessContext(
 ): Promise<{ roleIds: string[]; bypass: boolean }> {
   const [roles, bypass] = await Promise.all([
     getUserRoles(userId, orgId),
-    hasPermission(userId, "data-models.manage-schema", orgId),
+    hasPermission(userId, "data-models.view-all-records", orgId),
   ]);
   return { roleIds: roles.map((r) => r.id), bypass };
 }

@@ -12,7 +12,7 @@ const MODELS_SCAN_CAP = 200;
  * Contribute Data Model records to the global command palette — the cross-model
  * record search that didn't exist before. Access is enforced in two layers,
  * mirroring the records list : model-level `record-read` (blanket OR per-model,
- * with `manage-schema` bypass) narrows which models are searched, then row-level
+ * with `view-all-records` bypass) narrows which models are searched, then row-level
  * role access (`searchRecordsAcrossModels`) filters the matched records.
  */
 export function registerDataModelsSearchSource(): void {
@@ -28,7 +28,7 @@ export function registerDataModelsSearchSource(): void {
       const [modelsPage, roles, bypass, blanketRead] = await Promise.all([
         listDataModels({ organizationId: org.id, limit: MODELS_SCAN_CAP }),
         getUserRoles(userId, org.id),
-        hasPermission(userId, "data-models.manage-schema", org.id),
+        hasPermission(userId, "data-models.view-all-records", org.id),
         hasPermission(userId, "data-models.record-read", org.id),
       ]);
       const models = modelsPage.items;
