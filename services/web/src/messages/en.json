@@ -216,7 +216,7 @@
     },
     "signUp": {
       "title": "Create your account",
-      "subtitle": "Join the {appName} community in under a minute.",
+      "subtitle": "Join the {orgName} community in under a minute.",
       "labels": {
         "email": "Email",
         "password": "Password",
@@ -234,7 +234,7 @@
     },
     "signIn": {
       "title": "Welcome back",
-      "subtitle": "Sign in to continue to {appName}.",
+      "subtitle": "Sign in to continue to {orgName}.",
       "labels": {
         "email": "Email",
         "password": "Password"
@@ -309,6 +309,8 @@
       "submitting": "Updating…",
       "expiredTitle": "Link expired",
       "expiredSubtitle": "This reset link is no longer valid. Request a new one to continue.",
+      "backToSignIn": "Remembered it?",
+      "signInLink": "Back to sign in",
       "requestAgain": "Request a new link",
       "errors": {
         "noSession": "Your reset link expired. Request a new one.",
