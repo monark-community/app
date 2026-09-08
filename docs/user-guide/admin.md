@@ -308,6 +308,22 @@ Two layers. **Model-level** : each model auto-registers per-model record permiss
 
 `/admin/service-accounts`. Machine principals for the public API ; an org-owned "user" (of kind `SERVICE`) that a script, agent, or integration authenticates as, with its own admin-assigned roles. From here you **create** a service account, **assign / change its roles** (which is its least-privilege knob), **disable** it (instantly kills its keys), and manage its **API keys** (minted once, shown once). Gated by the `public-api.service-accounts` feature flag and the `api-keys.manage-service-accounts` permission. Personal (human) API keys live separately under [your account](account.md), not here. See the [public API guide](public-api.md) for how keys authenticate.
 
+## Automation integrations
+
+`/admin/automation`. The per-organization connection config for every service your automations trigger on or act through : **GitHub**, **Telegram**, **X (Twitter)**, and **Discord**, one tab each. They live here rather than as top-level destinations because connecting an account is an org-wide, admin-caliber setting, not a place you work day to day.
+
+Each tab is independently gated. A service whose feature flag is off shows a short "this integration is disabled" note naming the flag instead of its form, and a service you lack the `<service>.manage` permission for is read-only. The section as a whole is hidden (and the page 404s) when `automation.enabled` is off.
+
+What you connect here is what an automation's trigger and action nodes can then reach ; the flows themselves are built in [Automations](automations.md), not here.
+
+## Achievements
+
+`/admin/achievements`. Define the achievements users can earn and the conditions that award them. An achievement carries a name, description, icon, and point value, and can be enabled or disabled without deleting it.
+
+Each achievement holds a list of **conditions**. A condition names a domain event to watch (`kanban.card-created`, `wiki.page-created`, and so on), how many matching events are needed, and which field of the event payload names the user to credit ; it can also carry equality matchers on the payload, so "moved a card into Done" is a different condition from "moved a card". An achievement with no conditions can never be earned, and the editor says so. Awarding is automatic from there : the module counts progress per user on the event bus, so nothing is granted by hand.
+
+Gated by the `achievements.enabled` feature flag. The user-facing gallery is reached from the account menu, not from a nav entry.
+
 ## Audit + observability
 
 Every admin write : role assigned, role revoked, user deletion requested, organization renamed, invite sent / revoked ; emits a domain event. Today the event hits the notifications subscriber + the application logs. Phase-2 wires an admin-side audit log surface ; until then, the operator's logging stack (ELK, Sentry, etc.) is the system of record.

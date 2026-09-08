@@ -7,7 +7,7 @@ The chrome that wraps every authenticated page : the navigation rail, the app ba
 On a desktop-width screen a slim vertical **navigation rail** is pinned to the left edge of every authenticated page. Top to bottom :
 
 1. **Brand mark** at the top : clicking it always goes to `/` (home).
-2. **Destination icons** : one per top-level product surface you have access to (Calendar, Kanban, Automation, Data). Each is icon-only with a tooltip on hover ; the icon for the section you're in is highlighted. A destination only appears when its feature is enabled for you, so the rail shows exactly what you can reach.
+2. **Destination icons** : one per top-level product surface you have access to (Calendar, Kanban, Wiki, Automation, Data). Each is icon-only with a tooltip on hover ; the icon for the section you're in is highlighted. A destination only appears when its feature is enabled for you, so the rail shows exactly what you can reach.
 3. **Admin pin** at the bottom : a shield icon, only visible when you hold an admin or sysadmin role. Clicking it enters the admin section.
 
 On narrow (phone / small tablet) viewports the rail is hidden ; tapping the **brand mark** in the app bar (it carries a small menu badge) opens the same destinations as a slide-in drawer from the left. The drawer lists **Home** first, then the module destinations, with the admin pin as a filled button at the bottom. Close it with the X, the dimmed overlay, or Escape.
@@ -36,7 +36,7 @@ The command palette searches across the app ; jump to a section, find a user or 
 
 ## Secondary navigation
 
-Sections that have sub-pages (your account, the admin area, a data model) show a **secondary navigation** for their own tabs : a rail beside the content on wide screens, collapsing to a horizontal tab strip on narrower ones. For example `/account` shows Profile / Account & Security / Notifications / Danger zone ; the admin area shows its tabs the same way.
+Sections that have sub-pages (your account, the admin area, a data model) show a **secondary navigation** for their own tabs : a rail beside the content on wide screens, collapsing to a horizontal tab strip on narrower ones. For example `/account` shows Profile / Account & Security / Notifications / API keys / Danger zone ; the admin area shows its tabs the same way.
 
 ## User menu drawer (avatar)
 
@@ -79,7 +79,3 @@ Destinations behind a feature flag (Kanban, Automation, and the per-model Data s
 - **⌘K / Ctrl-K** opens global search ; **Escape** closes any open drawer, dialog, or the palette.
 - **Tab** moves through controls (the focus ring is brand-orange) ; **Enter** activates the focused button or link.
 - Buttons and links are 36 px or larger so they hit cleanly on touch ; the notifications filter tabs follow tablist semantics (arrow keys move between Unread / All).
-
-## Setup gate
-
-A new install that hasn't bootstrapped its first organization yet routes every URL (including sign-in and sign-up) to a `/setup` checklist page. It polls every five seconds and auto-redirects home once the deploy lands. Once you're past it the first time, you should never see it again.

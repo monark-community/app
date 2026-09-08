@@ -28,7 +28,6 @@ Optional modules : each keeps its user guide **with the module** (so removing th
 
 ## What's _not_ documented here
 
-- Anything you'd reach through the URL `/setup` ; that page is a one-time wizard the operator sees before the first organization is created. After bootstrap it disappears.
 - Internal tools (the developer's console, the dev overlay) ; those are dev-only surfaces and live in [technical-documentation](../technical-documentation/).
 - Future modules listed in [features-planning/](../features-planning/) ; those are roadmaps, not shipped behaviour.
 

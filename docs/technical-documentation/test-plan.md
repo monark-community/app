@@ -207,20 +207,23 @@ The CI job spins up :
 #### Already shipped
 
 - `auth-routing.spec.ts` ; smoke checks that the public auth pages render and the gated routes redirect.
-- `signup-happy-path.spec.ts` ; the existing happy-path signup smoke.
-
-#### Add (Phase-1 closure)
-
+- `signup-happy-path.spec.ts` ; the happy-path signup smoke.
+- `signin-happy-path.spec.ts` ; the happy-path sign-in smoke.
 - `signup-confirm.spec.ts` ; signup → poll Inbucket → click the confirmation link → land on `/`.
-- `signin-totp.spec.ts` ; user with TOTP enrolled goes through the two-step sign-in.
 - `forgot-password.spec.ts` ; request reset → poll Inbucket → click link → set new password → sign in with it.
-- `email-change.spec.ts` ; change email → both inboxes receive the OTP → confirm with one side → second side prompt → confirm second side → sign-out + redirect.
 - `password-change.spec.ts` ; change password from `/account/security` ; without TOTP, with TOTP.
-- `totp-lifecycle.spec.ts` ; configure (2-step wizard) → confirm code → save recovery codes → disable → reconfigure → regenerate codes.
 - `account-deletion.spec.ts` ; request deletion → see grace-period lockdown → cancel → unlocked.
-- `admin-bootstrap.spec.ts` ; first-boot single-tenant : `/setup` redirects → operator hits `/admin/organizations/<singleton>` → fills form.
 - `admin-users-invite.spec.ts` ; admin invites a user → recipient signs up via the link → joins with the right role.
 - `admin-rbac-create-role.spec.ts` ; admin creates a custom role → assigns it to a user → user shows the role chip in their detail page.
+- `admin-webhooks.spec.ts` ; create an endpoint → trigger a subscribed event → the delivery lands with a signature.
+- `a11y.spec.ts` ; axe sweep over the main surfaces (see [Accessibility](#accessibility) below).
+
+#### Still to add (Phase-1 closure)
+
+- `signin-totp.spec.ts` ; user with TOTP enrolled goes through the two-step sign-in.
+- `email-change.spec.ts` ; change email → both inboxes receive the OTP → confirm with one side → second side prompt → confirm second side → sign-out + redirect.
+- `totp-lifecycle.spec.ts` ; configure (2-step wizard) → confirm code → save recovery codes → disable → reconfigure → regenerate codes.
+- `admin-bootstrap.spec.ts` ; first-boot single-tenant : the api provisions the singleton from `INITIAL_ORG_*` → operator hits `/admin/organizations/<singleton>` → fills in the rest of the profile.
 
 #### Add (Phase-2 ; per module as it ships)
 

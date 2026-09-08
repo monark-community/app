@@ -110,7 +110,7 @@ That sets global overrides for the flags a developer normally wants on
 (`wiki.enabled`, `chat.*`, `public-api.*`, `data-models.query-language`,
 `data-models.public-forms`) without touching the registered defaults ; see
 [tools/enable-dev-flags.ts](../../tools/enable-dev-flags.ts). In a real deploy,
-flip them per-org from `/admin/feature-flags` instead.
+overrides are DB rows against the `FeatureFlag` table ; there is no admin UI for them yet.
 
 ## Pre-PR gate
 

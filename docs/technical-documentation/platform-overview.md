@@ -107,7 +107,7 @@ Owns `Organization` (`slug` unique, `displayName`, `logoUrl`, `primaryColor`, so
 
 **Tenancy** is governed by the flag `tenancy.multi-tenant` (default **off**):
 
-- **Single-tenant (default)**: exactly one org is expected ; boot provisions it from `INITIAL_ORG_*` env, routes gate to `/setup` until it exists, and users are auto-granted membership on sign-up/sign-in (`ensureSingletonMembership`).
+- **Single-tenant (default)**: exactly one org is expected ; the api provisions it at boot from `INITIAL_ORG_*` env (or on demand via `pnpm provision:org`), and users are auto-granted membership on sign-up/sign-in (`ensureSingletonMembership`). There is no in-app setup wizard : provisioning is operator-driven, see [white-label.md](white-label.md#provisioning-the-organization).
 - **Multi-tenant**: multiple orgs ; active org comes from the JWT claim.
 
 tRPC (`organizations.*`): `current`, `mine`, `bootstrapStatus`, `ensureBootstrap`, admin org CRUD-ish (`adminList`/`adminGet`/`adminUpdate`), and an `invites.*` sub-router. Events: `organization.created`/`updated`/`member-joined`/`invite-sent`/`invite-accepted`. Consumes `user.signed-up` / `user.signed-in`.
@@ -207,7 +207,7 @@ A visual, event-driven flow engine. An admin builds a flow on a React Flow (`@xy
 
 ### 3.11 Supporting core services
 
-- **Feature flags (`@monark/feature-flags`)** : `registerFlags(module, { key: { description, defaultOn } })` ; `isEnabled("<module>.<key>", { userId, organizationId, roleId })`. Resolution, most-specific first: user → role → org → global override → registered `defaultOn` ; an unregistered key resolves to `false`. Overrides surface in `/admin/feature-flags` ; a `FeatureFlag` DB row is synced per registration at boot.
+- **Feature flags (`@monark/feature-flags`)** : `registerFlags(module, { key: { description, defaultOn } })` ; `isEnabled("<module>.<key>", { userId, organizationId, roleId })`. Resolution, most-specific first: user → role → org → global override → registered `defaultOn` ; an unregistered key resolves to `false`. A `FeatureFlag` DB row is synced per registration at boot ; overrides are rows against that table, set out-of-band (there is no admin UI yet). The resolved value for the current session is visible in the dev overlay's Feature flags panel (Alt+D), and `pnpm enable:dev-flags` flips the local-development set.
 - **Files (`@monark/files`)** : signed-upload service over Supabase Storage (the API never sees the bytes): `createUpload` (records a `PENDING` `StoredFile`, mints a one-shot signed URL) → browser uploads → `finalize` (flips to `READY`). Private buckets ; org-scoped `StoredFile` keyed `{organizationId}/{fileId}-{name}`. Consumed by Data Model `FILE`/`ATTACHMENTS` fields. Flag `files.enabled` (default on) ; **UI** `/admin/files`.
 - **Secrets (`@monark/secrets`)** : per-org encrypted `key → value` store (AES-256-GCM, key separate from TOTP's). **Write-only over the wire**: plaintext never crosses tRPC and there is no read-value procedure ; plaintext is read server-side only via `getSecretValue(orgId, key)` on the trusted automation-node path (`ctx.getSecret`). **UI** `/admin/secrets` (names + metadata only).
 - **Branding (`@monark/branding`)** : a typed brand-identity object (`appName`, `tagline`, `supportEmail`, `totpIssuer`, `fromEmail`, `appUrl`, `brandPrimary`, `brandAccent`, `logoSrc`), each overridable by env (`BRANDING_*` server + `NEXT_PUBLIC_BRANDING_*` client) ; the safe subset merges into every notification template.

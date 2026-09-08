@@ -232,7 +232,7 @@ Hit the deployed app from a browser :
 4. Click the verification link. Lands on `/account` with a confirmed account.
 5. The first user to sign up + confirm gets `bootstrap` admin (per the api's `maybeBootstrapSingletonOrg` hook). Visit `/admin` to confirm.
 6. Open `https://monark-api.onrender.com/health` directly : should return `{ "ok": true, "service": "api" }`.
-7. (Optional) Test a webhook : `/admin/webhooks` → New endpoint pointing at `https://webhook.site/<your-uuid>` → trigger an event (toggle a feature flag in `/admin/feature-flags`) → check webhook.site for the delivery + the `Webhook-Signature` header.
+7. (Optional) Test a webhook : `/admin/webhooks` → New endpoint pointing at `https://webhook.site/<your-uuid>` subscribed to `rbac.role-created` → create a role in `/admin/rbac` → check webhook.site for the delivery + the `Webhook-Signature` header.
 
 If any step fails :
 
