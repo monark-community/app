@@ -3,7 +3,6 @@
 import { useState, useTransition, type FormEvent } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
   InputOTP,
@@ -61,85 +60,77 @@ export function ForgotPasswordForm() {
 
   if (submitted) {
     return (
-      <Card className="shadow-none border-border">
-        <CardContent className="flex flex-col gap-5 pt-6">
-          <p className="text-sm text-muted-foreground">{t("sentBody", { email })}</p>
+      <>
+        <p className="text-sm text-muted-foreground">{t("sentBody", { email })}</p>
 
-          <form onSubmit={onVerifyOtp} className="flex flex-col items-center gap-3">
-            <p className="text-center text-xs uppercase tracking-wider text-muted-foreground">
-              {t("otpPrompt")}
-            </p>
-            <InputOTP
-              maxLength={6}
-              value={otp}
-              onChange={(value) => setOtp(value)}
-              autoComplete="one-time-code"
-              inputMode="numeric"
-            >
-              <InputOTPGroup>
-                <InputOTPSlot index={0} />
-                <InputOTPSlot index={1} />
-                <InputOTPSlot index={2} />
-              </InputOTPGroup>
-              <InputOTPSeparator />
-              <InputOTPGroup>
-                <InputOTPSlot index={3} />
-                <InputOTPSlot index={4} />
-                <InputOTPSlot index={5} />
-              </InputOTPGroup>
-            </InputOTP>
-            <Button type="submit" disabled={isVerifying || otp.length !== 6} className="w-full">
-              {isVerifying ? t("verifying") : t("verify")}
-            </Button>
-            {otpErrorCode && (
-              <p className="text-sm text-destructive">{t(`errors.${otpErrorCode}`)}</p>
-            )}
-          </form>
-
-          <div className="flex items-center gap-3">
-            <Separator className="flex-1" />
-            <span className="text-xs uppercase tracking-wider text-muted-foreground">
-              {t("or")}
-            </span>
-            <Separator className="flex-1" />
-          </div>
-
-          <Button
-            type="button"
-            variant="outline"
-            onClick={onResend}
-            disabled={isResending}
-            className="w-full"
+        <form onSubmit={onVerifyOtp} className="flex flex-col items-center gap-3">
+          <p className="text-center text-xs uppercase tracking-wider text-muted-foreground">
+            {t("otpPrompt")}
+          </p>
+          <InputOTP
+            maxLength={6}
+            value={otp}
+            onChange={(value) => setOtp(value)}
+            autoComplete="one-time-code"
+            inputMode="numeric"
           >
-            {isResending ? t("submitting") : t("resend")}
+            <InputOTPGroup>
+              <InputOTPSlot index={0} />
+              <InputOTPSlot index={1} />
+              <InputOTPSlot index={2} />
+            </InputOTPGroup>
+            <InputOTPSeparator />
+            <InputOTPGroup>
+              <InputOTPSlot index={3} />
+              <InputOTPSlot index={4} />
+              <InputOTPSlot index={5} />
+            </InputOTPGroup>
+          </InputOTP>
+          <Button type="submit" disabled={isVerifying || otp.length !== 6} className="w-full">
+            {isVerifying ? t("verifying") : t("verify")}
           </Button>
-        </CardContent>
-      </Card>
+          {otpErrorCode && (
+            <p className="text-sm text-destructive">{t(`errors.${otpErrorCode}`)}</p>
+          )}
+        </form>
+
+        <div className="flex items-center gap-3">
+          <Separator className="flex-1" />
+          <span className="text-xs uppercase tracking-wider text-muted-foreground">{t("or")}</span>
+          <Separator className="flex-1" />
+        </div>
+
+        <Button
+          type="button"
+          variant="outline"
+          onClick={onResend}
+          disabled={isResending}
+          className="w-full"
+        >
+          {isResending ? t("submitting") : t("resend")}
+        </Button>
+      </>
     );
   }
 
   return (
-    <Card className="shadow-none border-border">
-      <CardContent className="pt-6">
-        <form action={onSubmitEmail} className="flex flex-col gap-4">
-          <div className="grid gap-2">
-            <Label htmlFor="email">{t("labels.email")}</Label>
-            <Input
-              id="email"
-              name="email"
-              type="email"
-              required
-              autoComplete="email"
-              autoFocus
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-            />
-          </div>
-          <Button type="submit" disabled={isPending} className="w-full">
-            {isPending ? t("submitting") : t("submit")}
-          </Button>
-        </form>
-      </CardContent>
-    </Card>
+    <form action={onSubmitEmail} className="flex flex-col gap-4">
+      <div className="grid gap-2">
+        <Label htmlFor="email">{t("labels.email")}</Label>
+        <Input
+          id="email"
+          name="email"
+          type="email"
+          required
+          autoComplete="email"
+          autoFocus
+          value={email}
+          onChange={(event) => setEmail(event.target.value)}
+        />
+      </div>
+      <Button type="submit" disabled={isPending} className="w-full">
+        {isPending ? t("submitting") : t("submit")}
+      </Button>
+    </form>
   );
 }

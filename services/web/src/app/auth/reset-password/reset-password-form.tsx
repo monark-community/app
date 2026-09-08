@@ -5,7 +5,6 @@ import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { checkPasswordOffline } from "@monark/auth/contracts";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PasswordStrengthMeter } from "@/components/password-strength-meter";
@@ -81,53 +80,44 @@ export function ResetPasswordForm({ email }: { email: string }) {
   }
 
   return (
-    <Card className="shadow-none border-border">
-      <CardContent className="pt-6">
-        <form onSubmit={onSubmit} className="flex flex-col gap-4">
-          {/* Hidden `username` field so password managers update the
-              correct entry instead of creating a brand-new one with
-              no email. The recovery flow knows the user's email
-              (from the verified recovery session) so we surface it
-              for the manager to match against. Not displayed, not
-              submitted. */}
-          <input
-            type="text"
-            name="username"
-            value={email}
-            autoComplete="username"
-            readOnly
-            hidden
+    <>
+      <form onSubmit={onSubmit} className="flex flex-col gap-4">
+        {/* Hidden `username` field so password managers update the
+            correct entry instead of creating a brand-new one with
+            no email. The recovery flow knows the user's email
+            (from the verified recovery session) so we surface it
+            for the manager to match against. Not displayed, not
+            submitted. */}
+        <input type="text" name="username" value={email} autoComplete="username" readOnly hidden />
+        <div className="grid gap-2">
+          <Label htmlFor="newPassword">{t("labels.new")}</Label>
+          <Input
+            id="newPassword"
+            type="password"
+            value={newPassword}
+            onChange={(event) => setNewPassword(event.target.value)}
+            required
+            autoComplete="new-password"
+            autoFocus
           />
-          <div className="grid gap-2">
-            <Label htmlFor="newPassword">{t("labels.new")}</Label>
-            <Input
-              id="newPassword"
-              type="password"
-              value={newPassword}
-              onChange={(event) => setNewPassword(event.target.value)}
-              required
-              autoComplete="new-password"
-              autoFocus
-            />
-            <PasswordStrengthMeter score={strength.score} visible={newPassword.length > 0} />
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="confirmPassword">{t("labels.confirm")}</Label>
-            <Input
-              id="confirmPassword"
-              type="password"
-              value={confirmPassword}
-              onChange={(event) => setConfirmPassword(event.target.value)}
-              required
-              autoComplete="new-password"
-            />
-            {mismatch && <p className="text-xs text-destructive">{t("errors.mismatch")}</p>}
-          </div>
-          <Button type="submit" disabled={isPending || !strength.ok} className="w-full">
-            {isPending ? t("submitting") : t("submit")}
-          </Button>
-        </form>
-      </CardContent>
+          <PasswordStrengthMeter score={strength.score} visible={newPassword.length > 0} />
+        </div>
+        <div className="grid gap-2">
+          <Label htmlFor="confirmPassword">{t("labels.confirm")}</Label>
+          <Input
+            id="confirmPassword"
+            type="password"
+            value={confirmPassword}
+            onChange={(event) => setConfirmPassword(event.target.value)}
+            required
+            autoComplete="new-password"
+          />
+          {mismatch && <p className="text-xs text-destructive">{t("errors.mismatch")}</p>}
+        </div>
+        <Button type="submit" disabled={isPending || !strength.ok} className="w-full">
+          {isPending ? t("submitting") : t("submit")}
+        </Button>
+      </form>
 
       <TotpConfirmDialog
         open={dialogOpen}
@@ -143,6 +133,6 @@ export function ResetPasswordForm({ email }: { email: string }) {
         errorKey={dialogError}
         pending={isPending}
       />
-    </Card>
+    </>
   );
 }

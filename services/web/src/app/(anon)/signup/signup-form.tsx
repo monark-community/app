@@ -6,7 +6,6 @@ import { checkPasswordOffline } from "@monark/auth/contracts";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent } from "@/components/ui/card";
 import { PasswordStrengthMeter } from "@/components/password-strength-meter";
 import { signUpAction, type SignUpErrorCode } from "./actions";
 
@@ -40,59 +39,55 @@ export function SignUpForm() {
   }
 
   return (
-    <Card className="shadow-none border-border">
-      <CardContent className="pt-6">
-        <form action={onSubmit} className="flex flex-col gap-4">
-          <div className="grid gap-2">
-            <Label htmlFor="email">{t("labels.email")}</Label>
-            {/* "username" not "email" : the spec reserves "username"
-                for the identity field of a sign-in / sign-up form so
-                password managers can save the right credential pair.
-                Pairs with `new-password` on the password input below. */}
-            <Input
-              id="email"
-              name="email"
-              type="email"
-              required
-              autoComplete="username"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-          </div>
+    <form action={onSubmit} className="flex flex-col gap-4">
+      <div className="grid gap-2">
+        <Label htmlFor="email">{t("labels.email")}</Label>
+        {/* "username" not "email" : the spec reserves "username"
+            for the identity field of a sign-in / sign-up form so
+            password managers can save the right credential pair.
+            Pairs with `new-password` on the password input below. */}
+        <Input
+          id="email"
+          name="email"
+          type="email"
+          required
+          autoComplete="username"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
+      </div>
 
-          <div className="grid gap-2">
-            <Label htmlFor="password">{t("labels.password")}</Label>
-            <Input
-              id="password"
-              name="password"
-              type="password"
-              required
-              autoComplete="new-password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-            <PasswordStrengthMeter score={strength.score} visible={password.length > 0} />
-          </div>
+      <div className="grid gap-2">
+        <Label htmlFor="password">{t("labels.password")}</Label>
+        <Input
+          id="password"
+          name="password"
+          type="password"
+          required
+          autoComplete="new-password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+        />
+        <PasswordStrengthMeter score={strength.score} visible={password.length > 0} />
+      </div>
 
-          <div className="grid gap-2">
-            <Label htmlFor="displayName">{t("labels.displayName")}</Label>
-            <Input
-              id="displayName"
-              name="displayName"
-              type="text"
-              maxLength={80}
-              value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
-            />
-          </div>
+      <div className="grid gap-2">
+        <Label htmlFor="displayName">{t("labels.displayName")}</Label>
+        <Input
+          id="displayName"
+          name="displayName"
+          type="text"
+          maxLength={80}
+          value={displayName}
+          onChange={(e) => setDisplayName(e.target.value)}
+        />
+      </div>
 
-          {errorCode && <p className="text-sm text-destructive">{t(`errors.${errorCode}`)}</p>}
+      {errorCode && <p className="text-sm text-destructive">{t(`errors.${errorCode}`)}</p>}
 
-          <Button type="submit" disabled={isPending || !strength.ok} className="w-full">
-            {isPending ? t("submitting") : t("submit")}
-          </Button>
-        </form>
-      </CardContent>
-    </Card>
+      <Button type="submit" disabled={isPending || !strength.ok} className="w-full">
+        {isPending ? t("submitting") : t("submit")}
+      </Button>
+    </form>
   );
 }

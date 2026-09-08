@@ -364,3 +364,164 @@ h6 {
   pointer-events: none;
   color: var(--muted-foreground);
 }
+
+/*
+ * Animated brand aurora — the backdrop behind every pre-auth screen
+ * (signin, signup, TOTP challenge, forgot / reset password, the email
+ * confirm + revoke-device landings). See `AuthScreen`, which is the only
+ * thing that mounts these classes.
+ *
+ * Three oversized radial washes drift slowly across one another ; where
+ * two overlap the brand colour deepens, and that shifting overlap is
+ * what keeps a flat sign-in page from reading as a blank sheet.
+ *
+ * Everything is painted from `--primary`, so the backdrop follows the
+ * operator's org colour (the root layout overrides `--primary` when the
+ * singleton org sets one) rather than hardcoding the starter orange.
+ * `color-mix` supplies the alpha so branding can hand us an opaque hex
+ * and still get a soft wash — and the mix percentages differ per theme
+ * because the same tint reads far heavier on a near-black ground.
+ *
+ * Softness comes from each gradient's own falloff, not `filter: blur()`
+ * — a blurred layer this size re-rasterizes every frame on low-end
+ * hardware, whereas these composite on the GPU. For the same reason the
+ * keyframes only touch `transform`.
+ */
+.auth-aurora {
+  /* Faint full-bleed wash so the corners the blobs never reach still
+     carry a hint of brand rather than snapping back to flat white. */
+  background:
+    radial-gradient(
+      120% 80% at 50% 0%,
+      color-mix(in oklab, var(--primary) 7%, transparent) 0%,
+      transparent 60%
+    ),
+    radial-gradient(
+      100% 70% at 50% 100%,
+      color-mix(in oklab, var(--primary) 9%, transparent) 0%,
+      transparent 65%
+    );
+}
+
+/*
+ * Clears the middle back toward the page background so the card and its
+ * text sit on a near-neutral ground while the colour frames them from
+ * the edges. Without it the washes cross behind the form and the whole
+ * screen reads as one flat tinted sheet.
+ *
+ * It has to sit above the blobs but below the content, which is what
+ * the pseudo-element buys us : `.auth-aurora` is a positioned ancestor
+ * of the blobs, so its own `::after` paints last among them.
+ */
+.auth-aurora::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    60% 55% at 50% 45%,
+    color-mix(in oklab, var(--background) 72%, transparent) 0%,
+    color-mix(in oklab, var(--background) 35%, transparent) 55%,
+    transparent 100%
+  );
+}
+
+.auth-aurora-blob {
+  position: absolute;
+  display: block;
+  border-radius: 50%;
+  /* Hoisted so each blob only overrides the mix percentage below. */
+  background: radial-gradient(
+    circle at center,
+    color-mix(in oklab, var(--primary) var(--aurora-strength, 30%), transparent) 0%,
+    color-mix(in oklab, var(--primary) calc(var(--aurora-strength, 30%) / 3), transparent) 45%,
+    transparent 72%
+  );
+  will-change: transform;
+}
+
+/* Dark mode: the same tints over a near-black ground read much hotter,
+   so the washes are pulled back rather than re-authored. */
+.dark .auth-aurora-blob {
+  --aurora-strength: 22%;
+}
+
+.auth-aurora-blob-1 {
+  --aurora-strength: 42%;
+  top: -25vmax;
+  left: -20vmax;
+  width: 75vmax;
+  height: 75vmax;
+  animation: auth-aurora-drift-1 30s ease-in-out infinite alternate;
+}
+
+.auth-aurora-blob-2 {
+  --aurora-strength: 36%;
+  right: -30vmax;
+  bottom: -25vmax;
+  width: 80vmax;
+  height: 80vmax;
+  animation: auth-aurora-drift-2 38s ease-in-out infinite alternate;
+}
+
+/* Warmer highlight (brand mixed toward white) sitting on top of the two
+   brand washes — it's what gives the overlap a sunrise falloff instead
+   of a single flat hue. */
+.auth-aurora-blob-3 {
+  --aurora-strength: 32%;
+  top: 20%;
+  right: -15vmax;
+  width: 55vmax;
+  height: 55vmax;
+  background: radial-gradient(
+    circle at center,
+    color-mix(
+        in oklab,
+        color-mix(in oklab, var(--primary) 65%, white) var(--aurora-strength),
+        transparent
+      )
+      0%,
+    transparent 70%
+  );
+  animation: auth-aurora-drift-3 26s ease-in-out infinite alternate;
+}
+
+.dark .auth-aurora-blob-3 {
+  --aurora-strength: 16%;
+}
+
+@keyframes auth-aurora-drift-1 {
+  from {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  to {
+    transform: translate3d(12vmax, 8vmax, 0) scale(1.15);
+  }
+}
+
+@keyframes auth-aurora-drift-2 {
+  from {
+    transform: translate3d(0, 0, 0) scale(1.1);
+  }
+  to {
+    transform: translate3d(-14vmax, -6vmax, 0) scale(0.95);
+  }
+}
+
+@keyframes auth-aurora-drift-3 {
+  from {
+    transform: translate3d(0, 0, 0) scale(0.9);
+  }
+  to {
+    transform: translate3d(-10vmax, 14vmax, 0) scale(1.2);
+  }
+}
+
+/*
+ * Motion is decoration here : freezing the blobs mid-composition keeps
+ * the whole look (overlapping brand washes) and drops only the drift.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .auth-aurora-blob {
+    animation: none;
+  }
+}

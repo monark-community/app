@@ -89,6 +89,8 @@ import { UserBanner, type UserBannerEditConfig } from "@/components/user-banner"
 import { DragHandle } from "@monark/components/ui/drag-handle";
 import { BoardArea, BoardColumn, COLUMN_WIDTH_PX, KanbanCard } from "@monark/kanban/client";
 import { Skeleton } from "@/components/ui/skeleton";
+import { AuthScreen } from "@/components/auth-screen";
+import { BrandedAppLogoView } from "@/components/branded-app-logo-view";
 
 /**
  * Stories for the screenshot harness. Each is a plain React component
@@ -2246,7 +2248,53 @@ function ControlHeightsStory() {
   );
 }
 
+/**
+ * The pre-auth screen shell — a stand-in for the real signin page (whose
+ * form is a server component). What this validates is the animated brand
+ * aurora behind the card, the corner-parked brand mark, and the contrast
+ * of the card over the washes in light and dark. The drift is frozen
+ * wherever the capture lands, so treat the framing as one sample of the
+ * animation, not the whole of it.
+ */
+const AuthScreenStory: FC = () => (
+  <AuthScreen
+    brand={
+      <BrandedAppLogoView
+        data={{
+          singletonLogoUrl: null,
+          singletonDisplayName: null,
+          isSingleTenantBootstrapped: false,
+        }}
+        size={36}
+      />
+    }
+    title="Sign in"
+    subtitle="Welcome back."
+    footer={
+      <p className="mt-6 text-center text-sm text-muted-foreground">
+        No account? <span className="font-medium text-primary">Sign up</span>
+      </p>
+    }
+  >
+    <div className="flex flex-col gap-4">
+      <div className="grid gap-2">
+        <Label htmlFor="story-email">Email</Label>
+        <Input id="story-email" defaultValue="ada@example.com" />
+      </div>
+      <div className="grid gap-2">
+        <div className="flex items-baseline justify-between">
+          <Label htmlFor="story-password">Password</Label>
+          <span className="text-xs font-medium text-primary">Forgot password?</span>
+        </div>
+        <Input id="story-password" type="password" defaultValue="password" />
+      </div>
+      <Button className="w-full">Sign in</Button>
+    </div>
+  </AuthScreen>
+);
+
 export const STORIES: Record<string, FC> = {
+  "auth-screen": AuthScreenStory,
   "control-heights": ControlHeightsStory,
   "filter-date": FilterDateStory,
   "mobile-ux": MobileUxStory,
