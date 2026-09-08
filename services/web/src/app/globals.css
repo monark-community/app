@@ -455,7 +455,7 @@ h6 {
   left: -20vmax;
   width: 75vmax;
   height: 75vmax;
-  animation: auth-aurora-drift-1 30s ease-in-out infinite alternate;
+  animation: auth-aurora-drift-1 17s ease-in-out infinite alternate;
 }
 
 .auth-aurora-blob-2 {
@@ -464,7 +464,7 @@ h6 {
   bottom: -25vmax;
   width: 80vmax;
   height: 80vmax;
-  animation: auth-aurora-drift-2 38s ease-in-out infinite alternate;
+  animation: auth-aurora-drift-2 23s ease-in-out infinite alternate;
 }
 
 /* Warmer highlight (brand mixed toward white) sitting on top of the two
@@ -486,7 +486,7 @@ h6 {
       0%,
     transparent 70%
   );
-  animation: auth-aurora-drift-3 26s ease-in-out infinite alternate;
+  animation: auth-aurora-drift-3 14s ease-in-out infinite alternate;
 }
 
 .dark .auth-aurora-blob-3 {
@@ -497,26 +497,35 @@ h6 {
   from {
     transform: translate3d(0, 0, 0) scale(1);
   }
+  50% {
+    transform: translate3d(18vmax, -4vmax, 0) scale(1.22);
+  }
   to {
-    transform: translate3d(12vmax, 8vmax, 0) scale(1.15);
+    transform: translate3d(24vmax, 16vmax, 0) scale(1.32);
   }
 }
 
 @keyframes auth-aurora-drift-2 {
   from {
-    transform: translate3d(0, 0, 0) scale(1.1);
+    transform: translate3d(0, 0, 0) scale(1.15);
+  }
+  50% {
+    transform: translate3d(-16vmax, 8vmax, 0) scale(0.98);
   }
   to {
-    transform: translate3d(-14vmax, -6vmax, 0) scale(0.95);
+    transform: translate3d(-28vmax, -12vmax, 0) scale(0.86);
   }
 }
 
 @keyframes auth-aurora-drift-3 {
   from {
-    transform: translate3d(0, 0, 0) scale(0.9);
+    transform: translate3d(0, 0, 0) scale(0.85);
+  }
+  50% {
+    transform: translate3d(-14vmax, 4vmax, 0) scale(1.15);
   }
   to {
-    transform: translate3d(-10vmax, 14vmax, 0) scale(1.2);
+    transform: translate3d(-22vmax, 26vmax, 0) scale(1.35);
   }
 }
 
