@@ -195,6 +195,23 @@ function main() {
     )
   }
 
+  // `gh` picks its credential from an OS keyring that may already hold a human
+  // login. Installing gh does not create one, but GitHub Desktop and any
+  // earlier `gh auth login` do, and it survives reinstalls; on this machine a
+  // freshly installed gh already resolved to the operator's account. GH_TOKEN
+  // in the environment beats the keyring, so gh is safe exactly when it is
+  // set to the machine token, and not otherwise.
+  if (tokenEnv && /(^|[\s;&|(])gh(\.exe)?\s/i.test(command)) {
+    const machine = process.env[tokenEnv]
+    const ghToken = process.env.GH_TOKEN || process.env.GITHUB_TOKEN
+    if (!machine || !ghToken || ghToken !== machine) {
+      decide(
+        'deny',
+        `agentkit: gh would fall back to whatever login is in the OS keyring, which may be the operator's. Export GH_TOKEN=$${tokenEnv} in the shell that launches the session, or ship with \`agentkit pr\` instead.`,
+      )
+    }
+  }
+
   // Outbound writes to hosts nobody vouched for.
   if (WRITE_VERB.test(command)) {
     const strangers = foreignHosts(command, allowHosts)
