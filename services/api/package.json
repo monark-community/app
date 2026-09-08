@@ -18,6 +18,7 @@
     "@monark/achievements": "workspace:*",
     "@monark/api-keys": "workspace:*",
     "@monark/auth": "workspace:*",
+    "@monark/branding": "workspace:*",
     "@monark/automation": "workspace:*",
     "@monark/calendar": "workspace:*",
     "@monark/chat": "workspace:*",

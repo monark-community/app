@@ -9,6 +9,7 @@ export {
 } from "./prefs";
 export { registerNotificationSubscribers, _resetSubscribersForTesting } from "./subscribers";
 export { sendMail, type MailMessage, type MailDeliveryResult } from "./transport/email";
+export { renderBrandedEmail } from "./standalone";
 export { notificationsRouter } from "./router";
 export { registerCoreNotificationKinds } from "./register-core-kinds";
 export { registerNotificationsEventTypes } from "./event-types";

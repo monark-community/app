@@ -3,7 +3,7 @@ import { Boxes, type LucideIcon } from "lucide-react";
 /**
  * Single entry in the application's *app launcher* (the 3x3 grid icon
  * to the left of the notification bell). Each entry represents a
- * Monark product surface ; most entries are external apps hosted on
+ * product surface ; most entries are external apps hosted on
  * different subdomains, with one entry marked as the *current* app.
  *
  * The launcher is a discoverability surface only ; it doesn't carry
@@ -45,8 +45,10 @@ export type AppEntry = {
  * launcher's contents ; the order in the array IS the order in the
  * popover.
  *
- * The starter ships with just *Monark Core* (the surface this
- * codebase renders). White-label deployments add their own apps as
+ * The starter ships with a single entry for the surface this
+ * codebase renders ; its label comes from i18n as `{appName} Core`,
+ * so it follows the deployment's branding. White-label deployments
+ * add their own apps as
  * they come online ; entries are otherwise plain config so this is
  * the only file that needs editing.
  *

@@ -1,5 +1,6 @@
 import { BrandedAppLogoView, type BrandedAppLogoData } from "@/components/branded-app-logo-view";
 import { createServerTrpcClient } from "@/lib/trpc-server";
+import { rewriteForRequestHost } from "@/lib/request-host-rewrite";
 
 /**
  * Server fetch + render wrapper around `BrandedAppLogoView`. Calls
@@ -29,7 +30,12 @@ export async function BrandedAppLogo({
     .catch(() => null);
 
   const data: BrandedAppLogoData = {
-    singletonLogoUrl: status?.singletonLogoUrl ?? null,
+    // The stored logoUrl is absolute against the Supabase origin, which
+    // in local dev is loopback. This surface is server-rendered with no
+    // client pass to correct it, so point it at the host the request
+    // actually came in on — otherwise the brand mark is the one broken
+    // element when the app is opened from a phone on the LAN.
+    singletonLogoUrl: await rewriteForRequestHost(status?.singletonLogoUrl ?? null),
     singletonDisplayName: status?.singletonDisplayName ?? null,
     isSingleTenantBootstrapped: status?.mode === "single" && Boolean(status?.bootstrapped),
   };

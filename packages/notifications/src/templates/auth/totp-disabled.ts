@@ -9,7 +9,7 @@ const messages: KindMessages = {
       <p style="margin:0 0 24px 0;color:#3f3f46;">If you made this change, no further action is needed. Sign-ins will no longer require a 6-digit code.</p>
       <table role="presentation" cellpadding="0" cellspacing="0" border="0">
         <tr><td align="center" bgcolor="{{ brandPrimary }}" style="border-radius:8px;">
-          <a href="{{ securityLink }}" target="_blank" style="display:inline-block;padding:12px 22px;font-family:'Nunito Sans','Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;font-weight:700;color:#18181b;text-decoration:none;border-radius:8px;">Open security settings</a>
+          <a href="{{ securityLink }}" target="_blank" style="display:inline-block;padding:12px 22px;font-family:'Nunito Sans','Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;font-weight:700;color:{{ onBrandPrimary }};text-decoration:none;border-radius:8px;">Open security settings</a>
         </td></tr>
       </table>
       <p style="margin:24px 0 0 0;color:#a1a1aa;font-size:13px;">If you didn't request this, your account may be compromised. Re-enable TOTP and rotate your password from the security settings above.</p>`,
@@ -34,7 +34,7 @@ If you didn't request this, your account may be compromised. Re-enable TOTP and 
       <p style="margin:0 0 24px 0;color:#3f3f46;">Si vous êtes à l'origine de ce changement, aucune action n'est requise. Les connexions n'exigeront plus de code à 6 chiffres.</p>
       <table role="presentation" cellpadding="0" cellspacing="0" border="0">
         <tr><td align="center" bgcolor="{{ brandPrimary }}" style="border-radius:8px;">
-          <a href="{{ securityLink }}" target="_blank" style="display:inline-block;padding:12px 22px;font-family:'Nunito Sans','Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;font-weight:700;color:#18181b;text-decoration:none;border-radius:8px;">Ouvrir les paramètres de sécurité</a>
+          <a href="{{ securityLink }}" target="_blank" style="display:inline-block;padding:12px 22px;font-family:'Nunito Sans','Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;font-weight:700;color:{{ onBrandPrimary }};text-decoration:none;border-radius:8px;">Ouvrir les paramètres de sécurité</a>
         </td></tr>
       </table>
       <p style="margin:24px 0 0 0;color:#a1a1aa;font-size:13px;">Si ce n'était pas vous, votre compte est peut-être compromis. Réactivez TOTP et changez votre mot de passe depuis les paramètres de sécurité ci-dessus.</p>`,

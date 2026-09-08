@@ -12,7 +12,7 @@ const messages: KindMessages = {
       </table>
       <table role="presentation" cellpadding="0" cellspacing="0" border="0">
         <tr><td align="center" bgcolor="{{ brandPrimary }}" style="border-radius:8px;">
-          <a href="{{ securityLink }}" target="_blank" style="display:inline-block;padding:12px 22px;font-family:'Nunito Sans','Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;font-weight:700;color:#18181b;text-decoration:none;border-radius:8px;">Review your active sessions</a>
+          <a href="{{ securityLink }}" target="_blank" style="display:inline-block;padding:12px 22px;font-family:'Nunito Sans','Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;font-weight:700;color:{{ onBrandPrimary }};text-decoration:none;border-radius:8px;">Review your active sessions</a>
         </td></tr>
       </table>
       <p style="margin:24px 0 0 0;color:#a1a1aa;font-size:13px;">If this was you, no action is needed. You're receiving this because you turned on sign-in alerts.</p>`,
@@ -41,7 +41,7 @@ If this was you, no action is needed. You're receiving this because you turned o
       </table>
       <table role="presentation" cellpadding="0" cellspacing="0" border="0">
         <tr><td align="center" bgcolor="{{ brandPrimary }}" style="border-radius:8px;">
-          <a href="{{ securityLink }}" target="_blank" style="display:inline-block;padding:12px 22px;font-family:'Nunito Sans','Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;font-weight:700;color:#18181b;text-decoration:none;border-radius:8px;">Vérifier vos sessions actives</a>
+          <a href="{{ securityLink }}" target="_blank" style="display:inline-block;padding:12px 22px;font-family:'Nunito Sans','Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;font-weight:700;color:{{ onBrandPrimary }};text-decoration:none;border-radius:8px;">Vérifier vos sessions actives</a>
         </td></tr>
       </table>
       <p style="margin:24px 0 0 0;color:#a1a1aa;font-size:13px;">Si c'était vous, aucune action n'est requise. Vous recevez ce message car vous avez activé les alertes de connexion.</p>`,

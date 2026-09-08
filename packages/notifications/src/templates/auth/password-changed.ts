@@ -16,7 +16,7 @@ const messages: KindMessages = {
       </ol>
       <table role="presentation" cellpadding="0" cellspacing="0" border="0">
         <tr><td align="center" bgcolor="{{ brandPrimary }}" style="border-radius:8px;">
-          <a href="{{ securityLink }}" target="_blank" style="display:inline-block;padding:12px 22px;font-family:'Nunito Sans','Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;font-weight:700;color:#18181b;text-decoration:none;border-radius:8px;">Lock down my account</a>
+          <a href="{{ securityLink }}" target="_blank" style="display:inline-block;padding:12px 22px;font-family:'Nunito Sans','Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;font-weight:700;color:{{ onBrandPrimary }};text-decoration:none;border-radius:8px;">Lock down my account</a>
         </td></tr>
       </table>`,
     text: `The password on your {{ appName }} account was changed at {{ occurredAtFormatted }}.
@@ -51,7 +51,7 @@ Lock down your account : {{ securityLink }}`,
       </ol>
       <table role="presentation" cellpadding="0" cellspacing="0" border="0">
         <tr><td align="center" bgcolor="{{ brandPrimary }}" style="border-radius:8px;">
-          <a href="{{ securityLink }}" target="_blank" style="display:inline-block;padding:12px 22px;font-family:'Nunito Sans','Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;font-weight:700;color:#18181b;text-decoration:none;border-radius:8px;">Sécuriser mon compte</a>
+          <a href="{{ securityLink }}" target="_blank" style="display:inline-block;padding:12px 22px;font-family:'Nunito Sans','Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;font-weight:700;color:{{ onBrandPrimary }};text-decoration:none;border-radius:8px;">Sécuriser mon compte</a>
         </td></tr>
       </table>`,
     text: `Le mot de passe de votre compte {{ appName }} a été modifié le {{ occurredAtFormatted }}.

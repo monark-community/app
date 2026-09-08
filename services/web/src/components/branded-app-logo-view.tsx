@@ -1,4 +1,4 @@
-import { BRANDING } from "@monark/branding";
+import { BRANDING, isBrandingConfigured } from "@monark/branding";
 import { Building2 } from "lucide-react";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
@@ -24,12 +24,23 @@ import { cn } from "@/lib/utils";
  *      one org). Public via the `bootstrapStatus` tRPC procedure, so
  *      this works on pre-auth surfaces (signin / signup / TOTP gate /
  *      reset-password / not-found / etc.) too.
- *   2. An empty-square placeholder when single-tenant is bootstrapped
- *      but no logo has been uploaded yet — admins fix this from
+ *   2. The deployment's `BRANDING.logoSrc`, when it was actually
+ *      configured via `BRANDING_LOGO_SRC` / the `NEXT_PUBLIC_`
+ *      duplicate.
+ *   3. An empty-square placeholder when single-tenant is bootstrapped
+ *      but neither of the above is set — admins fix this from
  *      `/admin/organizations/<id>`.
- *   3. The starter-template's `BRANDING.logoSrc` if no singleton org
- *      is configured (multi-tenant, a fresh deploy before the singleton
- *      org is provisioned, transient api hiccup).
+ *   4. The starter-template's neutral placeholder logo (multi-tenant,
+ *      a fresh deploy before the singleton org is provisioned,
+ *      transient api hiccup).
+ *
+ * Step 2 is why the order isn't simply "org, else placeholder": the api
+ * provisions the singleton org at first boot, so a bootstrapped
+ * single-tenant deploy hit the placeholder before `BRANDING.logoSrc`
+ * was ever consulted — which made `BRANDING_LOGO_SRC` dead config in
+ * the exact deployment shape white-label.md is written for. Gating on
+ * "did the operator configure one" keeps the nudge-the-admin
+ * placeholder for deploys that set nothing.
  */
 
 export type BrandedAppLogoData = {
@@ -63,7 +74,7 @@ export function BrandedAppLogoView({
     );
   }
 
-  if (isSingleTenantBootstrapped) {
+  if (isSingleTenantBootstrapped && !isBrandingConfigured("logoSrc")) {
     return (
       <span
         className={cn(

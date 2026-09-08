@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { renderWithIntl, screen } from "../test-utils";
 import { BrandedAppLogoView, type BrandedAppLogoData } from "@/components/branded-app-logo-view";
 
@@ -35,11 +35,18 @@ vi.mock("next/image", () => ({
 // `@monark/branding` resolves through tsconfig paths in the workspace,
 // but bringing the real module into the unit suite drags in image
 // asset imports. Stub it with the shape the view reads.
+// `logoSrc` unconfigured by default : this mirrors a deploy that set no
+// BRANDING_LOGO_SRC, which is the branch the placeholder tests below
+// exercise. Individual tests flip `brandingConfigured` to cover the
+// configured-logo branch.
+const brandingConfigured = { logoSrc: false };
+
 vi.mock("@monark/branding", () => ({
   BRANDING: {
     appName: "Monark",
     logoSrc: "/logo.svg",
   },
+  isBrandingConfigured: (key: string) => (key === "logoSrc" ? brandingConfigured.logoSrc : false),
 }));
 
 const SINGLETON_LOGO: BrandedAppLogoData = {
@@ -120,6 +127,36 @@ describe("<BrandedAppLogoView>", () => {
     it("does NOT render the starter-template <img> fallback in this branch", () => {
       renderWithIntl(<BrandedAppLogoView data={SINGLETON_NO_LOGO} size={28} />);
       expect(screen.queryByTestId("next-image")).toBeNull();
+    });
+  });
+
+  describe("singleton without logo, but BRANDING_LOGO_SRC configured", () => {
+    // The api provisions the singleton org at first boot, so this branch
+    // is what a single-tenant deploy actually hits until an admin uploads
+    // a logo. The placeholder used to win here unconditionally, which
+    // made BRANDING_LOGO_SRC dead config for that entire deployment shape.
+    beforeEach(() => {
+      brandingConfigured.logoSrc = true;
+    });
+    afterEach(() => {
+      brandingConfigured.logoSrc = false;
+    });
+
+    it("renders the configured logo instead of the placeholder", () => {
+      const { container } = renderWithIntl(
+        <BrandedAppLogoView data={SINGLETON_NO_LOGO} size={28} />,
+      );
+      expect(screen.getByTestId("next-image")).toHaveAttribute("src", "/logo.svg");
+      expect(container.querySelector("span[aria-label='Acme Inc.']")).toBeNull();
+    });
+
+    it("still prefers the org's own uploaded logo over it", () => {
+      renderWithIntl(<BrandedAppLogoView data={SINGLETON_LOGO} size={28} />);
+      expect(screen.queryByTestId("next-image")).toBeNull();
+      expect(screen.getByAltText("Acme Inc.")).toHaveAttribute(
+        "src",
+        SINGLETON_LOGO.singletonLogoUrl!,
+      );
     });
   });
 

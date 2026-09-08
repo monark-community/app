@@ -1,4 +1,5 @@
 import type { Express, Request, Response, RequestHandler } from "express";
+import { BRANDING } from "@monark/branding";
 import { logger } from "@monark/common";
 import { isEnabled } from "@monark/feature-flags/server";
 import { buildOpenApiSpec, PUBLIC_API_ENABLED_FLAG } from "@monark/public-api/server";
@@ -113,10 +114,13 @@ export function mountPublicApi(app: Express): void {
     }
     res.json(
       buildOpenApiSpec(V1_ROUTES, {
-        title: "Monark Public API",
+        // The OpenAPI document is the front door of this API for every
+        // integrator, so it carries the DEPLOYMENT's name rather than a
+        // hardcoded one. The `mrk_` key prefix and the `monark_*` MCP
+        // tool names stay put — those are stable identifiers, not brand.
+        title: `${BRANDING.appName} Public API`,
         version: "1.0.0",
-        description:
-          "Curated REST access to a Monark organization's Data Models and records, authenticated with an `mrk_` API key.",
+        description: `Curated REST access to a ${BRANDING.appName} organization's Data Models and records, authenticated with an \`mrk_\` API key.`,
         serverUrl: BASE,
       }),
     );

@@ -12,11 +12,23 @@ In the Vercel dashboard :
    - api on Render `oregon` → Vercel `sfo1` or `pdx1`
    - api on Render `ohio` → Vercel `iad1` or `cle1`
    - api on Render `frankfurt` → Vercel `cdg1` or `fra1`
-4. **Environment variables :** copy from `services/api/.env.example` the ones that start with `NEXT_PUBLIC_*` (everything else stays server-only on Render). At minimum :
+4. **Environment variables :** the browser-visible ones live in
+   [`services/web/.env.example`](./.env.example) — that file, not the api's, is
+   the list to work from (the api's `.env.example` carries the server-side
+   twins). Everything without a `NEXT_PUBLIC_` prefix stays server-only on
+   Render, except the two Supabase server values this service needs for its
+   own server actions. At minimum :
    - `NEXT_PUBLIC_SUPABASE_URL`
    - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
    - `NEXT_PUBLIC_API_URL` (the Render web service URL, e.g. `https://api.monark.io`)
    - `NEXT_PUBLIC_APP_URL` (the Vercel URL, e.g. `https://app.monark.io`)
+   - `SUPABASE_URL` + `SUPABASE_SECRET_KEY` — **server-only**, never
+     `NEXT_PUBLIC_*` ; the browser must not see the secret key.
+   - The `NEXT_PUBLIC_BRANDING_*` set, mirroring the `BRANDING_*` values on
+     Render, so page titles, the wordmark and the brand colour match on the
+     browser side. **Quote any hex value** (`NEXT_PUBLIC_BRANDING_PRIMARY="#2563EB"`) —
+     an unquoted leading `#` is read as a comment and resolves to an empty
+     string. See [white-label.md](../../docs/technical-documentation/white-label.md).
 
 ## What's encoded in vercel.json
 

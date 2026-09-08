@@ -281,7 +281,7 @@ otp_expiry = 3600
 # app's /auth/confirm route (token_hash-based), avoiding the double-hop through
 # Supabase's /auth/v1/verify endpoint.
 [auth.email.template.confirmation]
-subject = "Confirm your Monark account"
+subject = "Confirm your account"
 content_path = "./supabase/templates/confirmation.html"
 
 # Email change confirmation. With `double_confirm_changes = true` (above),
@@ -289,7 +289,7 @@ content_path = "./supabase/templates/confirmation.html"
 # confirm before Supabase rotates the email. Locale + display name come
 # from user_metadata (kept current by signUp + updateLocaleAction).
 [auth.email.template.email_change]
-subject = "Confirm your Monark email change"
+subject = "Confirm your email change"
 content_path = "./supabase/templates/email-change.html"
 
 # Password reset. Sent when the /forgot-password form calls
@@ -298,7 +298,7 @@ content_path = "./supabase/templates/email-change.html"
 # (which forwards to /auth/reset-password) instead of double-hopping
 # through Supabase's /auth/v1/verify endpoint.
 [auth.email.template.recovery]
-subject = "Reset your Monark password"
+subject = "Reset your password"
 content_path = "./supabase/templates/recovery.html"
 
 # Uncomment to customize notification email template

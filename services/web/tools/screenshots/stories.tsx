@@ -1014,7 +1014,7 @@ const ColorInputStory: FC = () => {
       </div>
       <div className="space-y-1.5">
         <p className="text-sm font-medium">Empty / unset (dashed swatch)</p>
-        <ColorInput value={empty} onChange={setEmpty} placeholder="#F0870C" aria-label="Color" />
+        <ColorInput value={empty} onChange={setEmpty} placeholder="#2563EB" aria-label="Color" />
       </div>
       <div className="space-y-1.5">
         <p className="text-sm font-medium">Swatch only</p>

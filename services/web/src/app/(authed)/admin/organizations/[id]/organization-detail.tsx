@@ -198,7 +198,7 @@ export function OrganizationDetail({
               id="org-primary-color"
               value={primaryColor}
               onChange={setPrimaryColor}
-              placeholder="#F0870C"
+              placeholder="#2563EB"
               defaultColor="#ffffff"
               aria-label={t("labels.primaryColor")}
             />

@@ -149,15 +149,15 @@ body {
 }
 
 :root {
-  /* Base: zinc / Theme: orange — LIGHT */
+  /* Base: zinc / Theme: neutral brand default — LIGHT */
   --background: oklch(1 0 0);
   --foreground: oklch(0.141 0.005 285.823);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.141 0.005 285.823);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.141 0.005 285.823);
-  --primary: oklch(0.723 0.168 59.48); /* #F0870C brand orange */
-  --primary-foreground: oklch(0.141 0.005 285.823);
+  --primary: oklch(0.546 0.215 262.88); /* #2563EB — see DEFAULT_BRANDING in @monark/branding */
+  --primary-foreground: oklch(0.985 0 0);
   --secondary: oklch(0.967 0.001 286.375);
   --secondary-foreground: oklch(0.21 0.006 285.885);
   --muted: oklch(0.967 0.001 286.375);
@@ -167,36 +167,40 @@ body {
   --destructive: oklch(0.577 0.245 27.325);
   --border: oklch(0.92 0.004 286.32);
   --input: oklch(0.92 0.004 286.32);
-  --ring: oklch(0.723 0.168 59.48);
+  --ring: oklch(0.546 0.215 262.88);
 
-  /* Chart palette: brand orange + coral + gold + teal + indigo */
-  --chart-1: oklch(0.723 0.168 59.48);
-  --chart-2: oklch(0.66 0.18 30);
-  --chart-3: oklch(0.78 0.15 95);
-  --chart-4: oklch(0.63 0.12 200);
-  --chart-5: oklch(0.55 0.14 275);
+  /* Categorical chart ramp. Deliberately NOT derived from the brand
+     color : `--chart-1` is overridden per-deployment by the root
+     layout, and the remaining series have to stay legible next to
+     whatever hue that turns out to be. Evenly spaced hues at a
+     consistent lightness so no series reads as more important. */
+  --chart-1: oklch(0.546 0.215 262.88);
+  --chart-2: oklch(0.64 0.13 195);
+  --chart-3: oklch(0.68 0.15 145);
+  --chart-4: oklch(0.72 0.16 75);
+  --chart-5: oklch(0.58 0.19 330);
 
   /* Sidebar — translucent, subtle accent */
   --sidebar: oklch(0.985 0 0 / 0.85);
   --sidebar-foreground: oklch(0.141 0.005 285.823);
-  --sidebar-primary: oklch(0.723 0.168 59.48);
-  --sidebar-primary-foreground: oklch(0.141 0.005 285.823);
+  --sidebar-primary: oklch(0.546 0.215 262.88);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
   --sidebar-accent: oklch(0.967 0.001 286.375);
   --sidebar-accent-foreground: oklch(0.21 0.006 285.885);
   --sidebar-border: oklch(0.92 0.004 286.32);
-  --sidebar-ring: oklch(0.723 0.168 59.48);
+  --sidebar-ring: oklch(0.546 0.215 262.88);
 }
 
 .dark {
-  /* Base: zinc / Theme: orange — DARK */
+  /* Base: zinc / Theme: neutral brand default — DARK */
   --background: oklch(0.141 0.005 285.823);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.21 0.006 285.885);
   --card-foreground: oklch(0.985 0 0);
   --popover: oklch(0.21 0.006 285.885);
   --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.723 0.168 59.48);
-  --primary-foreground: oklch(0.141 0.005 285.823);
+  --primary: oklch(0.546 0.215 262.88);
+  --primary-foreground: oklch(0.985 0 0);
   --secondary: oklch(0.274 0.006 286.033);
   --secondary-foreground: oklch(0.985 0 0);
   --muted: oklch(0.274 0.006 286.033);
@@ -206,22 +210,22 @@ body {
   --destructive: oklch(0.704 0.191 22.216);
   --border: oklch(1 0 0 / 0.1);
   --input: oklch(1 0 0 / 0.15);
-  --ring: oklch(0.723 0.168 59.48);
+  --ring: oklch(0.546 0.215 262.88);
 
-  --chart-1: oklch(0.723 0.168 59.48);
-  --chart-2: oklch(0.66 0.18 30);
-  --chart-3: oklch(0.78 0.15 95);
-  --chart-4: oklch(0.63 0.12 200);
-  --chart-5: oklch(0.55 0.14 275);
+  --chart-1: oklch(0.546 0.215 262.88);
+  --chart-2: oklch(0.64 0.13 195);
+  --chart-3: oklch(0.68 0.15 145);
+  --chart-4: oklch(0.72 0.16 75);
+  --chart-5: oklch(0.58 0.19 330);
 
   --sidebar: oklch(0.21 0.006 285.885 / 0.85);
   --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.723 0.168 59.48);
-  --sidebar-primary-foreground: oklch(0.141 0.005 285.823);
+  --sidebar-primary: oklch(0.546 0.215 262.88);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
   --sidebar-accent: oklch(0.274 0.006 286.033);
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 0.1);
-  --sidebar-ring: oklch(0.723 0.168 59.48);
+  --sidebar-ring: oklch(0.546 0.215 262.88);
 }
 
 h1,

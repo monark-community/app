@@ -1089,7 +1089,7 @@
         "cancel": "Cancel",
         "saved": "Saved.",
         "saveError": "Could not save changes.",
-        "invalidColor": "Color must be a hex code like #F0870C.",
+        "invalidColor": "Color must be a hex code like #2563EB.",
         "labels": {
           "displayName": "Display name",
           "primaryColor": "Primary brand color"
@@ -1097,7 +1097,7 @@
         "placeholders": {
           "displayName": "How the organization is shown across the app"
         },
-        "primaryColorHint": "Hex code like #F0870C. Leave blank to fall back to the platform default.",
+        "primaryColorHint": "Hex code like #2563EB. Leave blank to use the deployment's brand color.",
         "logoHint": "Square crop, max 2 MB. JPEG, PNG, or WebP.",
         "logoUploadAria": "Upload an organization logo",
         "logoEditAria": "Change organization logo",
@@ -1161,7 +1161,7 @@
         "descriptionLabel": "Description",
         "descriptionPlaceholder": "Surfaces on the role list.",
         "colorLabel": "Color",
-        "colorHint": "Optional hex (e.g. #F0870C) used for the role chip.",
+        "colorHint": "Optional hex (e.g. #2563EB) used for the role chip.",
         "identitySectionTitle": "Identity",
         "permissionsSectionSubtitle": "Tick a category header to grant every permission in it.",
         "permissionsLabel": "Permissions",

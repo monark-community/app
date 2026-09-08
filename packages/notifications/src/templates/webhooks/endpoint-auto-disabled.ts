@@ -19,7 +19,7 @@ const messages: KindMessages = {
       </ol>
       <table role="presentation" cellpadding="0" cellspacing="0" border="0">
         <tr><td align="center" bgcolor="{{ brandPrimary }}" style="border-radius:8px;">
-          <a href="{{ webhookEndpointLink }}" target="_blank" style="display:inline-block;padding:12px 22px;font-family:'Nunito Sans','Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;font-weight:700;color:#18181b;text-decoration:none;border-radius:8px;">Open endpoint</a>
+          <a href="{{ webhookEndpointLink }}" target="_blank" style="display:inline-block;padding:12px 22px;font-family:'Nunito Sans','Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;font-weight:700;color:{{ onBrandPrimary }};text-decoration:none;border-radius:8px;">Open endpoint</a>
         </td></tr>
       </table>`,
     text: `A webhook endpoint hit {{ consecutiveFailures }} consecutive delivery failures and was automatically disabled.
@@ -60,7 +60,7 @@ Open endpoint: {{ webhookEndpointLink }}`,
       </ol>
       <table role="presentation" cellpadding="0" cellspacing="0" border="0">
         <tr><td align="center" bgcolor="{{ brandPrimary }}" style="border-radius:8px;">
-          <a href="{{ webhookEndpointLink }}" target="_blank" style="display:inline-block;padding:12px 22px;font-family:'Nunito Sans','Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;font-weight:700;color:#18181b;text-decoration:none;border-radius:8px;">Ouvrir le point de terminaison</a>
+          <a href="{{ webhookEndpointLink }}" target="_blank" style="display:inline-block;padding:12px 22px;font-family:'Nunito Sans','Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;font-weight:700;color:{{ onBrandPrimary }};text-decoration:none;border-radius:8px;">Ouvrir le point de terminaison</a>
         </td></tr>
       </table>`,
     text: `Un point de terminaison de webhook a atteint {{ consecutiveFailures }} échecs consécutifs et a été automatiquement désactivé.

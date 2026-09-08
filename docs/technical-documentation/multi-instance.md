@@ -15,14 +15,14 @@ Cloudflare (DNS + proxy/TLS/WAF per domain)
 ```
 
 Each instance is a normal production deploy (the [deploy-checklist.md](deploy-checklist.md)
-walkthrough); this doc is what's *different* when you run several. The api ships
+walkthrough); this doc is what's _different_ when you run several. The api ships
 as a container so instance N is "same image, different env file."
 
 ## The API image
 
 [`services/api/Dockerfile`](../../services/api/Dockerfile) builds one
 **env-agnostic** image — it bakes in no secrets and runs no migrations on boot,
-so the *same* image runs staging, production, and every client. Build it once
+so the _same_ image runs staging, production, and every client. Build it once
 (context = repo root):
 
 ```sh
@@ -50,15 +50,15 @@ or a plain VPS.
 Everything an instance needs comes from **runtime env** — one env file per
 client. The keys that MUST differ:
 
-| Group | Keys | Per-client value |
-| --- | --- | --- |
-| **Identity** | `BRANDING_APP_NAME`, `BRANDING_TAGLINE`, `BRANDING_SUPPORT_EMAIL`, `BRANDING_PRIMARY`, `BRANDING_TOTP_ISSUER`, `BRANDING_LOGO_SRC`, … | the client's brand ([white-label.md](white-label.md)) |
-| **Database** | `DATABASE_URL`, `DIRECT_URL`, `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY` | the client's own Supabase project |
-| **URLs** | `WEB_ORIGIN`, `APP_URL` | the client's domain (`https://app.acme.com`) |
-| **Org** | `INITIAL_ORG_SLUG`, `INITIAL_ORG_NAME` | the client's org |
-| **Mail** | `SMTP_URL`, `SMTP_FROM` | the client's sending domain |
-| **Crypto** | `TOTP_ENCRYPTION_KEY`, `SECRETS_ENCRYPTION_KEY`, `CRON_SECRET` | **fresh per instance** — never reuse across clients |
-| **Observability** | `SENTRY_DSN`, `SENTRY_ENVIRONMENT` | e.g. `production` tagged with the client, or a per-client project |
+| Group             | Keys                                                                                                                                  | Per-client value                                                  |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| **Identity**      | `BRANDING_APP_NAME`, `BRANDING_TAGLINE`, `BRANDING_SUPPORT_EMAIL`, `BRANDING_PRIMARY`, `BRANDING_TOTP_ISSUER`, `BRANDING_LOGO_SRC`, … | the client's brand ([white-label.md](white-label.md))             |
+| **Database**      | `DATABASE_URL`, `DIRECT_URL`, `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY`                                       | the client's own Supabase project                                 |
+| **URLs**          | `WEB_ORIGIN`, `APP_URL`                                                                                                               | the client's domain (`https://app.acme.com`)                      |
+| **Org**           | `INITIAL_ORG_SLUG`, `INITIAL_ORG_NAME`                                                                                                | the client's org                                                  |
+| **Mail**          | `SMTP_URL`, `SMTP_FROM`                                                                                                               | the client's sending domain                                       |
+| **Crypto**        | `TOTP_ENCRYPTION_KEY`, `SECRETS_ENCRYPTION_KEY`, `CRON_SECRET`                                                                        | **fresh per instance** — never reuse across clients               |
+| **Observability** | `SENTRY_DSN`, `SENTRY_ENVIRONMENT`                                                                                                    | e.g. `production` tagged with the client, or a per-client project |
 
 Keep each client's env file in a secret store (not the repo). The web app needs
 the `NEXT_PUBLIC_*` mirror of the identity + Supabase + api URL vars per its own
@@ -114,6 +114,34 @@ Two options per instance:
 - **Self-hosted web container** — a Next.js `output: "standalone"` image so web +
   api both run as containers on your infra (fuller self-host, one platform). Not
   built yet; it's the natural next step if you move web off Vercel.
+
+## Two instances on one dev machine
+
+Everything above is about production. Locally, the constraint is different :
+every instance wants the _same_ fixed ports, and `CLAUDE.md` asks each agent to
+work in its own worktree — so running two checkouts side by side is the normal
+case, not an exotic one.
+
+A second local instance needs three edits in the second worktree :
+
+1. **`supabase/config.toml`** — a distinct `project_id` (this is what names the
+   Docker containers, so it's what actually keeps the two stacks apart) and a
+   shifted port block. Shift them all together, e.g. `54321`→`55321` :
+   `[api] port`, `[db] port` + `shadow_port`, `[db.pooler] port`,
+   `[studio] port`, `[inbucket] port` + `smtp_port`, `[analytics] port`.
+2. **`services/web/package.json`** — the `dev` script pins `--port 3000`. Change
+   it to the second instance's port. It is a literal flag on purpose : Next
+   resolves its port _before_ loading `.env`, so a `PORT=` line there is ignored,
+   and passing `PORT` through the environment instead leaks into the api's
+   process too (Node's `--env-file` does not override an already-set variable),
+   which lands both services on the same port.
+3. **The `.env` files** — `PORT` for the api, and `WEB_ORIGIN` / `APP_URL` /
+   `NEXT_PUBLIC_API_URL` / `NEXT_PUBLIC_APP_URL` / the `SUPABASE_URL` pair /
+   `SMTP_URL` to match the shifted ports. `pnpm bootstrap` fills the DB URL and
+   Supabase keys from whatever `supabase status` reports, so it picks up the
+   shift on its own ; the origin URLs are yours to set.
+
+The first two are local-only edits — don't commit them.
 
 ## Provisioning a new instance — checklist
 

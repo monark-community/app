@@ -17,9 +17,11 @@ nvm use                 # Node 22
 pnpm bootstrap
 ```
 
-`pnpm bootstrap` does the whole first-run in order : a preflight (Node / pnpm / Docker reachable), copies each `.env.example` → `.env` (root, `packages/db`, `services/api`, `services/web` ; never overwriting an existing `.env`), `pnpm install`, `pnpm exec supabase start`, and `pnpm db:migrate`. Add `--no-supabase` to skip Docker/Supabase and bring your own Postgres (set `DATABASE_URL` / `DIRECT_URL` yourself).
+`pnpm bootstrap` does the whole first-run in order : a preflight (Node / pnpm / Docker reachable), copies each `.env.example` → `.env` (root, `packages/db`, `services/api`, `services/web` ; never overwriting an existing `.env`), `pnpm install`, `pnpm exec supabase start`, wires the copied `.env` files to that stack, and `pnpm db:migrate`. Add `--no-supabase` to skip Docker/Supabase and bring your own Postgres (set `DATABASE_URL` / `DIRECT_URL` yourself).
 
-Then fill in the secrets (below) and run :
+The wiring step fills **blank values only** — `DATABASE_URL` / `DIRECT_URL` and the Supabase URL + keys read back from `supabase status -o env`, plus locally generated `TOTP_ENCRYPTION_KEY` / `SECRETS_ENCRYPTION_KEY` / `CRON_SECRET`. A value you have already set is never touched, so re-running bootstrap on a configured install is a no-op. What it deliberately leaves blank is everything non-local : SMTP credentials, a Sentry DSN, and your `BRANDING_*` identity.
+
+Then run :
 
 ```sh
 pnpm exec supabase start   # if it isn't already up
@@ -30,17 +32,19 @@ Web → <http://localhost:3000>, api → <http://localhost:4000>.
 
 ## Environment
 
-`bootstrap` copies the templates ; you fill in the blanks. Get the local Supabase values with `pnpm exec supabase status` and paste them in. Each `.env.example` documents every variable inline — the load-bearing ones :
+`bootstrap` copies the templates and fills the local ones ; you fill in the rest. Each `.env.example` documents every variable inline — the load-bearing ones :
 
 - **`services/api/.env`** — `SUPABASE_URL` / `SUPABASE_PUBLISHABLE_KEY` / `SUPABASE_SECRET_KEY`, `TOTP_ENCRYPTION_KEY`, `SECRETS_ENCRYPTION_KEY`, `CRON_SECRET`, `SMTP_URL` (defaults to the local Inbucket at `smtp://localhost:54325`), `INITIAL_ORG_SLUG` / `INITIAL_ORG_NAME` (the single-tenant bootstrap org), `WEB_ORIGIN` / `APP_URL`, `PORT` (4000).
 - **`services/web/.env`** — `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `NEXT_PUBLIC_API_URL` (`http://localhost:4000`), and the **server-only** `SUPABASE_URL` / `SUPABASE_SECRET_KEY` (never `NEXT_PUBLIC_*` — the browser must never see the secret key).
 - **`packages/db/.env`** — `DATABASE_URL` + `DIRECT_URL` must be **duplicated here** : the Prisma CLI reads env from the schema's own package, not from `services/api`.
 
-Generate the three at-rest secrets (`TOTP_ENCRYPTION_KEY`, `SECRETS_ENCRYPTION_KEY`, `CRON_SECRET`) with :
+`bootstrap` generates the three at-rest secrets (`TOTP_ENCRYPTION_KEY`, `SECRETS_ENCRYPTION_KEY`, `CRON_SECRET`) for you locally. To mint one yourself — rotating a key, or filling a production env — use :
 
 ```sh
 node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"
 ```
+
+**Quote any value starting with `#`.** Node's `--env-file` parser reads an unquoted leading `#` as a comment, so `INITIAL_ORG_PRIMARY_COLOR=#2563EB` silently resolves to an empty string ; write `INITIAL_ORG_PRIMARY_COLOR="#2563EB"`. The same applies to `BRANDING_PRIMARY` / `BRANDING_ACCENT`.
 
 Never commit a real value. With `SMTP_URL` unset, outbound mail is **logged, not sent**.
 
@@ -92,6 +96,21 @@ Typical change flow : edit `base.prisma` (core) or a module's `prisma/<module>.p
 | `pnpm test:coverage` / `pnpm test:integration:coverage` → `pnpm coverage:merge` | Coverage, fused and checked against the per-package floors.                                                  |
 
 Run a single package's integration suite with `pnpm --filter <pkg> test:integration` (e.g. `pnpm --filter @monark/calendar test:integration`). Integration and e2e suites only run when Docker (and, for e2e, the full stack) is available. See [testing](../agents/testing.md) for how the harness works and how to add a test.
+
+## Feature flags on a fresh install
+
+Extended modules ship behind flags that default **off**, so a freshly bootstrapped
+install 404s on `/wiki` and friends until they're turned on. For local dev :
+
+```sh
+pnpm enable:dev-flags
+```
+
+That sets global overrides for the flags a developer normally wants on
+(`wiki.enabled`, `chat.*`, `public-api.*`, `data-models.query-language`,
+`data-models.public-forms`) without touching the registered defaults — see
+[tools/enable-dev-flags.ts](../../tools/enable-dev-flags.ts). In a real deploy,
+flip them per-org from `/admin/feature-flags` instead.
 
 ## Pre-PR gate
 

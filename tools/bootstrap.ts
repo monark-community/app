@@ -1,5 +1,6 @@
 import { execSync } from "node:child_process";
-import { copyFileSync, existsSync, readdirSync } from "node:fs";
+import { randomBytes } from "node:crypto";
+import { copyFileSync, existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -14,17 +15,27 @@ import { fileURLToPath } from "node:url";
  *      (NEVER overwrites — operator-set values stay put)
  *   3. pnpm install (skipped when node_modules looks healthy)
  *   4. supabase start (Postgres + Auth + Inbucket on :54321/22/24)
- *   5. pnpm db:migrate (Prisma migrate deploy against the local stack)
+ *   5. Wire the copied .env files to the stack that just started
+ *      (DB URLs + Supabase keys read back from `supabase status`,
+ *      at-rest secrets generated locally) — blanks only, never
+ *      overwriting a value the operator already set
+ *   6. pnpm db:migrate (Prisma migrate deploy against the local stack)
  *
  * Out of scope (manual steps a contributor still does themselves) :
- *   - Filling in real values in the copied .env files (Supabase keys,
- *     SMTP creds, etc.) ; the .env.example surfaces them with TODO
- *     comments.
+ *   - Anything that isn't local : real SMTP credentials, a Sentry DSN,
+ *     production Supabase keys. The `.env.example` files surface those
+ *     with inline notes.
  *   - Seeding e2e test users (run `pnpm tsx tools/seed-e2e-users.ts`
  *     when you specifically want to drive the gated e2e specs).
  *
  * Usage : `pnpm bootstrap`. Add `--no-supabase` to skip the docker /
  * supabase steps when you only want the install + env-copy phase.
+ *
+ * Runs under `node --experimental-strip-types`, NOT `tsx` : this is the
+ * first command a fresh checkout runs, and `tsx` is a workspace
+ * devDependency that doesn't exist until step 3 has finished. Keep this
+ * file to plain type annotations (no enums, no namespaces, no path
+ * aliases, no workspace imports) so type-stripping stays sufficient.
  */
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -128,6 +139,119 @@ function copyMissingEnvFiles(): void {
   }
 }
 
+/**
+ * Read the values `supabase start` just published. `status -o env`
+ * prints `KEY="value"` lines for the whole local stack (DB_URL,
+ * API_URL, PUBLISHABLE_KEY, SECRET_KEY, …), which is where the
+ * connection details a fresh checkout needs actually live — they
+ * depend on `supabase/config.toml`, so hardcoding them here would
+ * quietly break any deploy that shifted a port.
+ */
+function readSupabaseStatus(): Record<string, string> {
+  const result = tryRun("pnpm exec supabase status -o env");
+  if (!result.ok) return {};
+  const out: Record<string, string> = {};
+  for (const line of result.output.split(/\r?\n/)) {
+    const match = /^([A-Z0-9_]+)="?(.*?)"?$/.exec(line.trim());
+    if (match?.[1] && match[2]) out[match[1]] = match[2];
+  }
+  return out;
+}
+
+/**
+ * Set `key=value` in a `.env`, but ONLY when the key is present and
+ * blank. Same contract as the env *copy* step : a value the operator
+ * has already set is never touched, so re-running bootstrap on a
+ * configured install is a no-op. A key the file doesn't declare is
+ * skipped rather than appended — the `.env.example` is the schema.
+ *
+ * Returns the keys it actually wrote, for the log line.
+ */
+function fillBlankEnvValues(relPath: string, values: Record<string, string>): string[] {
+  const target = resolve(APP_ROOT, relPath);
+  if (!existsSync(target)) return [];
+  const original = readFileSync(target, "utf8");
+  const written: string[] = [];
+  const updated = original
+    .split(/\r?\n/)
+    .map((line) => {
+      const match = /^([A-Z0-9_]+)=\s*$/.exec(line);
+      const key = match?.[1];
+      if (!key) return line;
+      const value = values[key];
+      if (!value) return line;
+      written.push(key);
+      // Quote unconditionally : a hex colour (or any value with a `#`)
+      // is otherwise truncated to "" by Node's --env-file parser.
+      return `${key}="${value}"`;
+    })
+    .join("\n");
+  if (written.length > 0) writeFileSync(target, updated, "utf8");
+  return written;
+}
+
+/** 32 bytes, hex-encoded — the shape every at-rest key in this repo takes. */
+function generateSecret(): string {
+  return randomBytes(32).toString("hex");
+}
+
+/**
+ * Point the copied `.env` files at the stack that just started.
+ *
+ * Without this the copied files carry the `.env.example` blanks, and
+ * the very next step (`db:migrate`) fails on an empty `DATABASE_URL`
+ * — the stack is up, but nothing knows how to reach it. The three
+ * at-rest secrets are generated rather than read : they're local-only
+ * dev keys, and `development.md` otherwise asks the reader to run the
+ * same `randomBytes(32)` command three times by hand.
+ */
+function wireEnvToLocalStack(skipSupabase: boolean): void {
+  if (skipSupabase) {
+    warn(
+      "wire-env",
+      "skipped (--no-supabase) ; set DATABASE_URL / DIRECT_URL yourself before `pnpm db:migrate`.",
+    );
+    return;
+  }
+
+  const status = readSupabaseStatus();
+  const dbUrl = status.DB_URL;
+  if (!dbUrl) {
+    warn("wire-env", "couldn't read `supabase status` ; leaving the .env files as copied.");
+    return;
+  }
+
+  const apiUrl = status.API_URL ?? "";
+  const publishable = status.PUBLISHABLE_KEY ?? status.ANON_KEY ?? "";
+  const secret = status.SECRET_KEY ?? status.SERVICE_ROLE_KEY ?? "";
+
+  const filled = [
+    ...fillBlankEnvValues("packages/db/.env", { DATABASE_URL: dbUrl, DIRECT_URL: dbUrl }),
+    ...fillBlankEnvValues("services/api/.env", {
+      DATABASE_URL: dbUrl,
+      DIRECT_URL: dbUrl,
+      SUPABASE_URL: apiUrl,
+      SUPABASE_PUBLISHABLE_KEY: publishable,
+      SUPABASE_SECRET_KEY: secret,
+      TOTP_ENCRYPTION_KEY: generateSecret(),
+      SECRETS_ENCRYPTION_KEY: generateSecret(),
+      CRON_SECRET: generateSecret(),
+    }),
+    ...fillBlankEnvValues("services/web/.env", {
+      NEXT_PUBLIC_SUPABASE_URL: apiUrl,
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: publishable,
+      SUPABASE_URL: apiUrl,
+      SUPABASE_SECRET_KEY: secret,
+    }),
+  ];
+
+  if (filled.length === 0) {
+    log("wire-env", "every value already set, nothing to fill ✓");
+    return;
+  }
+  log("wire-env", `filled ${filled.length} blank values from the local stack ✓`);
+}
+
 function installDependencies(): void {
   // Cheap heuristic for "node_modules looks healthy" : the root has a
   // pnpm-managed node_modules and the lockfile hasn't changed since
@@ -158,7 +282,22 @@ function migrateDatabase(skipSupabase: boolean): void {
     return;
   }
   log("migrate", "applying Prisma migrations against the local DB");
-  run("pnpm db:migrate");
+  try {
+    run("pnpm db:migrate");
+  } catch {
+    // `run` uses stdio: "inherit", so Prisma has already printed the real
+    // error above. Swallow the execSync stack trace — it points at this
+    // file rather than at anything the reader can act on — and land on a
+    // diagnosis instead. The overwhelmingly common cause on a fresh
+    // checkout is a `packages/db/.env` that never got a DATABASE_URL.
+    fail(
+      "migrate",
+      "prisma migrate deploy failed (see the Prisma output above).\n" +
+        "  Most often : packages/db/.env has an empty DATABASE_URL / DIRECT_URL.\n" +
+        "  Check it against `pnpm exec supabase status -o env` (the DB_URL line),\n" +
+        "  then re-run `pnpm db:migrate`.",
+    );
+  }
 }
 
 function printNextSteps(): void {
@@ -174,11 +313,15 @@ function printNextSteps(): void {
   console.log(`  pnpm tsx tools/seed-e2e-users.ts`);
   console.log("");
   console.log(
-    `${ESC_DIM}Note : the copied .env files contain default test values for the${ESC_RESET}`,
+    `${ESC_DIM}Note : the .env files are wired to the LOCAL Supabase stack, with${ESC_RESET}`,
   );
   console.log(
-    `${ESC_DIM}local Supabase stack. Real production values stay out of the repo.${ESC_RESET}`,
+    `${ESC_DIM}freshly generated dev-only at-rest keys. Anything non-local (SMTP,${ESC_RESET}`,
   );
+  console.log(
+    `${ESC_DIM}Sentry, branding) is still blank — see each .env.example. Real${ESC_RESET}`,
+  );
+  console.log(`${ESC_DIM}production values stay out of the repo.${ESC_RESET}`);
 }
 
 function main(): void {
@@ -196,6 +339,7 @@ function main(): void {
   copyMissingEnvFiles();
   installDependencies();
   startSupabase(skipSupabase);
+  wireEnvToLocalStack(skipSupabase);
   migrateDatabase(skipSupabase);
 
   printNextSteps();

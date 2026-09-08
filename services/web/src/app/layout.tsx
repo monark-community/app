@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { Nunito_Sans } from "next/font/google";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages, getTranslations } from "next-intl/server";
-import { BRANDING } from "@monark/branding";
+import { BRANDING, isBrandingConfigured } from "@monark/branding";
 import { ThemeProvider } from "@/lib/theme-provider";
 import { TrpcProvider } from "@/lib/trpc-provider";
 import { DevOverlay } from "@/components/dev-overlay/dev-overlay";
@@ -24,40 +24,54 @@ import "./globals.css";
 //     notifications-bell count pill, etc.)
 //   - `--brand-foreground` : text + icons painted on top of
 //     `--brand-primary` / `--brand-accent` (avatar initials, count
-//     badge digits, etc.). Set unconditionally so the className stays
-//     simple ; defaults to white to preserve the existing visual on
-//     the starter orange / coral gradient, flips to a contrast-correct
-//     value when the operator picks a light brand.
+//     badge digits, etc.). Always contrast-correct for the active
+//     brand color.
 // Overriding all of them at the root `<html>` makes the whole app
-// follow the operator's configured org color without each component
-// having to know about org branding.
+// follow the deployment's brand color without each component having to
+// know about branding. The values in globals.css are the neutral
+// fallback for surfaces rendered outside this layout (the component
+// screenshot harness, for instance) ; the app itself always gets the
+// tokens below.
 function brandStyle(orgPrimaryColor: string | null): React.CSSProperties {
+  // Two sources, one token set. The singleton org's `primaryColor` wins
+  // when it's set ; otherwise the deployment's `BRANDING_PRIMARY`. Both
+  // drive EVERY token below — previously the `--primary` family sat
+  // behind an `if (orgPrimaryColor)`, so a deploy that set only
+  // `BRANDING_PRIMARY` still rendered every button, focus ring, sidebar
+  // accent and first chart series in the starter's own CSS color.
   const primary = orgPrimaryColor ?? BRANDING.brandPrimary;
-  const accent = orgPrimaryColor ?? BRANDING.brandAccent;
-  // When an org primaryColor IS set we compute the contrast-correct
-  // foreground (black or white) via WCAG relative luminance so primary
-  // buttons + brand-painted chrome (avatar initials, badge digits) stay
-  // legible regardless of the operator's color choice — a yellow /
-  // pastel brand would render white-on-light otherwise. When the org
-  // hasn't set a color we leave `--primary-foreground` to globals.css
-  // (tuned for the starter orange) and pin `--brand-foreground` to
-  // white so the starter avatar gradient keeps its existing look.
+
+  // The accent is the second stop of the gradient surfaces (NProgress,
+  // the avatar fallback). The org record carries a primary only, so when
+  // the deployment hasn't configured its own accent we let the org color
+  // stand in for both stops rather than pairing the brand with the
+  // starter's unrelated placeholder. A deployment that DID set
+  // `BRANDING_ACCENT` gets it honoured — that used to be discarded the
+  // moment an org existed, flattening every gradient to one flat color.
+  const accent =
+    orgPrimaryColor && !isBrandingConfigured("brandAccent")
+      ? orgPrimaryColor
+      : BRANDING.brandAccent;
+
+  // Contrast-correct foreground (black or white) via WCAG relative
+  // luminance, so primary buttons + brand-painted chrome (avatar
+  // initials, badge digits) stay legible whatever color the operator
+  // picked — a yellow or pastel brand would render white-on-light
+  // otherwise.
+  const onPrimary = pickContrastForeground(primary);
+
   const style: Record<string, string> = {
     "--brand-primary": primary,
     "--brand-accent": accent,
-    "--brand-foreground": "#FFFFFF",
+    "--brand-foreground": onPrimary,
+    "--primary": primary,
+    "--primary-foreground": onPrimary,
+    "--ring": primary,
+    "--sidebar-primary": primary,
+    "--sidebar-primary-foreground": onPrimary,
+    "--sidebar-ring": primary,
+    "--chart-1": primary,
   };
-  if (orgPrimaryColor) {
-    const onPrimary = pickContrastForeground(orgPrimaryColor);
-    style["--primary"] = orgPrimaryColor;
-    style["--primary-foreground"] = onPrimary;
-    style["--ring"] = orgPrimaryColor;
-    style["--sidebar-primary"] = orgPrimaryColor;
-    style["--sidebar-primary-foreground"] = onPrimary;
-    style["--sidebar-ring"] = orgPrimaryColor;
-    style["--chart-1"] = orgPrimaryColor;
-    style["--brand-foreground"] = onPrimary;
-  }
   return style as React.CSSProperties;
 }
 
