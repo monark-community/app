@@ -46,7 +46,8 @@
     "sysadmin": "tsx --env-file=services/api/.env tools/sysadmin.ts",
     "provision:org": "tsx tools/provision-org.ts",
     "enable:dev-flags": "tsx --env-file=services/api/.env tools/enable-dev-flags.ts",
-    "webhook-receiver": "tsx tools/webhook-receiver.ts"
+    "webhook-receiver": "tsx tools/webhook-receiver.ts",
+    "agent": "node .claude/agentkit/cli.mjs"
   },
   "dependencies": {
     "@monark/auth": "workspace:*",

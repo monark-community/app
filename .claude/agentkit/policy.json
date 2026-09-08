@@ -1,0 +1,110 @@
+{
+  "$comment": "Guard policy. Project-specific additions belong in .claude/policy.local.json, which is merged on top of this file (lists concatenate, scalars override). Patterns are JavaScript regexes, matched case-insensitively against the whole command and against each subcommand.",
+  "autoApprove": "always",
+  "networkWriteAllowHosts": [
+    "localhost",
+    "127.0.0.1",
+    "0.0.0.0",
+    "api.github.com",
+    "github.com",
+    "registry.npmjs.org"
+  ],
+  "deny": [
+    {
+      "pattern": "\\bgit\\s+(-c\\s+\\S+\\s+)*push\\b",
+      "reason": "direct `git push` is blocked so a push can never go out under your personal credential. Use `node .claude/agentkit/cli.mjs push` (or `pnpm agent push`), which pushes over HTTPS with the machine-account token and no credential helper."
+    },
+    {
+      "pattern": "\\bgh\\s+auth\\b",
+      "reason": "`gh auth` would store or switch a login. gh must run on the machine-account token from the environment only; never authenticate it interactively."
+    },
+    {
+      "pattern": "\\bgit\\s+config\\s+(--global|--system)\\b",
+      "reason": "global git config is the operator's, not the agent's. Scope identity changes to the repo with `agentkit identity fix`."
+    },
+    {
+      "pattern": "\\bgit\\s+remote\\s+(set-url|add)\\b",
+      "reason": "rewriting a remote can bake a credential into .git/config or redirect a push. Not agent-editable."
+    },
+    {
+      "pattern": "\\bgit\\s+(checkout|switch)\\s+(-\\S+\\s+)*(main|master)\\b",
+      "reason": "the release branch is off limits; work on a topic branch off the integration branch."
+    },
+    {
+      "pattern": "\\bgit\\s+branch\\s+-[dD]\\s+(main|master|develop)\\b",
+      "reason": "deleting a long-lived branch is not recoverable from here."
+    },
+    {
+      "pattern": "\\bgit\\s+reset\\s+--hard\\b",
+      "reason": "`git reset --hard` throws away uncommitted work with no undo. Commit or stash, then reset."
+    },
+    {
+      "pattern": "\\bgit\\s+clean\\s+-[a-z]*f",
+      "reason": "`git clean -f` deletes untracked files, including the .env files that carry this worktree's port assignment."
+    },
+    {
+      "pattern": "\\bgit\\s+(filter-branch|filter-repo)\\b",
+      "reason": "history rewriting needs a human."
+    },
+    {
+      "pattern": "\\brm\\s+(-[a-zA-Z]+\\s+)*-?[a-zA-Z]*[rR][a-zA-Z]*[fF][a-zA-Z]*\\s+(/|~|\\$HOME|[A-Za-z]:[\\\\/]|\\.\\.)",
+      "reason": "recursive force-delete outside the working tree."
+    },
+    {
+      "pattern": "Remove-Item\\b[^\\n]*-Recurse[^\\n]*-Force[^\\n]*\\s(/|~|\\$HOME|[A-Za-z]:\\\\|\\.\\.)",
+      "reason": "recursive force-delete outside the working tree."
+    },
+    {
+      "pattern": "\\b(supabase\\s+db\\s+reset|prisma\\s+migrate\\s+reset|\\bdb:reset\\b|drop\\s+database\\b)",
+      "reason": "resetting the database destroys local state other worktrees are sharing."
+    },
+    {
+      "pattern": "\\b(npm|pnpm|yarn)\\s+publish\\b",
+      "reason": "publishing a package is public and irreversible."
+    },
+    {
+      "pattern": "\\bdocker\\s+(system\\s+prune|volume\\s+rm)\\b",
+      "reason": "this wipes container state shared with your local database."
+    },
+    {
+      "pattern": "\\b(shutdown|Restart-Computer|Stop-Computer|diskpart|mkfs|format\\s+[a-z]:)\\b",
+      "reason": "machine-level operation."
+    },
+    {
+      "pattern": "\\bcurl\\b[^\\n]*\\|\\s*(ba)?sh\\b",
+      "reason": "piping a downloaded script straight into a shell."
+    },
+    {
+      "pattern": "\\b(nc|ncat|netcat|telnet)\\s+\\S",
+      "reason": "raw socket tools are an exfiltration path with no destination allowlist to check them against."
+    }
+  ],
+  "ask": [
+    {
+      "pattern": "\\bgit\\s+(rebase|merge)\\b",
+      "reason": "history surgery is easier to review with you watching."
+    },
+    {
+      "pattern": "\\b(npm|pnpm|yarn)\\s+(install|add)\\s+(-g|--global)\\b",
+      "reason": "a global install changes the machine, not the project."
+    },
+    {
+      "pattern": "\\bgit\\s+worktree\\s+remove\\b",
+      "reason": "use `agentkit wt rm` so the port slot is handed back too."
+    }
+  ],
+  "denyPaths": [
+    {
+      "pattern": "/\\.git/(config|hooks/)",
+      "reason": "git plumbing is not agent-editable"
+    },
+    {
+      "pattern": "/\\.ssh/",
+      "reason": "SSH keys are not agent-readable or writable"
+    },
+    {
+      "pattern": "/\\.claude/\\.credentials\\.json$",
+      "reason": "credential store"
+    }
+  ]
+}
