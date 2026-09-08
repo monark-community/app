@@ -216,7 +216,7 @@
     },
     "signUp": {
       "title": "Créez votre compte",
-      "subtitle": "Rejoignez la communauté {appName} en moins d'une minute.",
+      "subtitle": "Rejoignez la communauté {orgName} en moins d'une minute.",
       "labels": {
         "email": "Courriel",
         "password": "Mot de passe",
@@ -234,7 +234,7 @@
     },
     "signIn": {
       "title": "Bon retour",
-      "subtitle": "Connectez-vous pour accéder à {appName}.",
+      "subtitle": "Connectez-vous pour accéder à {orgName}.",
       "labels": {
         "email": "Courriel",
         "password": "Mot de passe"
@@ -309,6 +309,8 @@
       "submitting": "Mise à jour…",
       "expiredTitle": "Lien expiré",
       "expiredSubtitle": "Ce lien de réinitialisation n'est plus valide. Demandez-en un nouveau pour continuer.",
+      "backToSignIn": "Vous vous en souvenez ?",
+      "signInLink": "Retour à la connexion",
       "requestAgain": "Demander un nouveau lien",
       "errors": {
         "noSession": "Votre lien de réinitialisation a expiré. Demandez-en un nouveau.",
