@@ -2,16 +2,20 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { getDb } from "@monark/db";
 import { truncate } from "@monark/test-utils/db";
 import {
+  buildCompileFields,
   createDataField,
   createDataModel,
   createDataRecord,
   findFreeDataRecordSlug,
   hardDeleteDataRecord,
+  listDataFields,
   listDataRecords,
+  listDataRecordsWithQuery,
   restoreDataRecord,
   softDeleteDataRecord,
   updateDataRecord,
 } from "../../src/server/data";
+import { fieldFiltersToFilterNode, type RecordFieldFilter } from "../../src/contracts/query";
 
 // Integration tests for DataRecord CRUD — dynamic value validation (shared
 // with the client via `valueSchemaForField`), title derivation from the
@@ -185,7 +189,22 @@ describe("listDataRecords — search + soft delete", () => {
   });
 });
 
-describe("listDataRecords — per-field filters", () => {
+describe("per-field filters — the legacy menu shape, compiled through MonarkQL", () => {
+  // The filter menu no longer has its own execution path : `fieldFilters` are
+  // translated to a query tree and run by the one compiler. This helper mirrors
+  // exactly what `records.list` does, so these tests assert the legacy menu
+  // semantics survive the convergence, executed by the new path.
+  async function listByFieldFilters(modelId: string, fieldFilters: RecordFieldFilter[]) {
+    const filter = fieldFiltersToFilterNode(fieldFilters);
+    if (!filter) return listDataRecords({ dataModelId: modelId });
+    return listDataRecordsWithQuery({
+      dataModelId: modelId,
+      filter,
+      fields: buildCompileFields(await listDataFields(modelId)),
+      queryContext: { userId: ACTOR, now: new Date() },
+    });
+  }
+
   // A model exercising every filterable value encoding : text, number,
   // boolean, single-select, multi-select (stored as string[]).
   async function seedIssueModel() {
@@ -251,22 +270,19 @@ describe("listDataRecords — per-field filters", () => {
     const model = await seedIssueModel();
     await seedIssues(model.id);
 
-    const byText = await listDataRecords({
-      dataModelId: model.id,
-      fieldFilters: [{ key: "title", type: "text", value: "bug" }],
-    });
+    const byText = await listByFieldFilters(model.id, [
+      { key: "title", type: "text", value: "bug" },
+    ]);
     expect(titlesOf(byText)).toEqual(["Login bug"]);
 
-    const byNumber = await listDataRecords({
-      dataModelId: model.id,
-      fieldFilters: [{ key: "priority", type: "number", value: "1" }],
-    });
+    const byNumber = await listByFieldFilters(model.id, [
+      { key: "priority", type: "number", value: "1" },
+    ]);
     expect(titlesOf(byNumber)).toEqual(["Crash on save", "Login bug"]);
 
-    const byBool = await listDataRecords({
-      dataModelId: model.id,
-      fieldFilters: [{ key: "done", type: "boolean", value: "true" }],
-    });
+    const byBool = await listByFieldFilters(model.id, [
+      { key: "done", type: "boolean", value: "true" },
+    ]);
     expect(titlesOf(byBool)).toEqual(["Slow page"]);
   });
 
@@ -274,36 +290,31 @@ describe("listDataRecords — per-field filters", () => {
     const model = await seedIssueModel();
     await seedIssues(model.id);
 
-    const byStatus = await listDataRecords({
-      dataModelId: model.id,
-      fieldFilters: [{ key: "status", type: "select", value: "closed" }],
-    });
+    const byStatus = await listByFieldFilters(model.id, [
+      { key: "status", type: "select", value: "closed" },
+    ]);
     expect(titlesOf(byStatus)).toEqual(["Slow page"]);
 
     // `selectAny` — a scalar single-select matched against one OR more values.
-    const oneStatus = await listDataRecords({
-      dataModelId: model.id,
-      fieldFilters: [{ key: "status", type: "selectAny", value: ["open"] }],
-    });
+    const oneStatus = await listByFieldFilters(model.id, [
+      { key: "status", type: "selectAny", value: ["open"] },
+    ]);
     expect(titlesOf(oneStatus)).toEqual(["Crash on save", "Login bug"]);
 
-    const eitherStatus = await listDataRecords({
-      dataModelId: model.id,
-      fieldFilters: [{ key: "status", type: "selectAny", value: ["open", "closed"] }],
-    });
+    const eitherStatus = await listByFieldFilters(model.id, [
+      { key: "status", type: "selectAny", value: ["open", "closed"] },
+    ]);
     expect(titlesOf(eitherStatus)).toEqual(["Crash on save", "Login bug", "Slow page"]);
 
-    const byTag = await listDataRecords({
-      dataModelId: model.id,
-      fieldFilters: [{ key: "tags", type: "multiSelect", value: ["bug"] }],
-    });
+    const byTag = await listByFieldFilters(model.id, [
+      { key: "tags", type: "multiSelect", value: ["bug"] },
+    ]);
     expect(titlesOf(byTag)).toEqual(["Crash on save", "Login bug"]);
 
     // "any of" — perf (Slow page) OR ux (Login bug)
-    const byTagsAny = await listDataRecords({
-      dataModelId: model.id,
-      fieldFilters: [{ key: "tags", type: "multiSelect", value: ["perf", "ux"] }],
-    });
+    const byTagsAny = await listByFieldFilters(model.id, [
+      { key: "tags", type: "multiSelect", value: ["perf", "ux"] },
+    ]);
     expect(titlesOf(byTagsAny)).toEqual(["Login bug", "Slow page"]);
   });
 
@@ -311,34 +322,25 @@ describe("listDataRecords — per-field filters", () => {
     const model = await seedIssueModel();
     await seedIssues(model.id);
 
-    const both = await listDataRecords({
-      dataModelId: model.id,
-      fieldFilters: [
-        { key: "status", type: "select", value: "open" },
-        { key: "priority", type: "number", value: "1" },
-      ],
-    });
+    const both = await listByFieldFilters(model.id, [
+      { key: "status", type: "select", value: "open" },
+      { key: "priority", type: "number", value: "1" },
+    ]);
     expect(titlesOf(both)).toEqual(["Crash on save", "Login bug"]);
 
     // No open record is tagged perf → empty.
-    const contradiction = await listDataRecords({
-      dataModelId: model.id,
-      fieldFilters: [
-        { key: "status", type: "select", value: "open" },
-        { key: "tags", type: "multiSelect", value: ["perf"] },
-      ],
-    });
+    const contradiction = await listByFieldFilters(model.id, [
+      { key: "status", type: "select", value: "open" },
+      { key: "tags", type: "multiSelect", value: ["perf"] },
+    ]);
     expect(contradiction.items).toEqual([]);
 
     // Empty / non-numeric values compose out, so the list is unfiltered.
-    const neutral = await listDataRecords({
-      dataModelId: model.id,
-      fieldFilters: [
-        { key: "title", type: "text", value: "   " },
-        { key: "priority", type: "number", value: "" },
-        { key: "tags", type: "multiSelect", value: [] },
-      ],
-    });
+    const neutral = await listByFieldFilters(model.id, [
+      { key: "title", type: "text", value: "   " },
+      { key: "priority", type: "number", value: "" },
+      { key: "tags", type: "multiSelect", value: [] },
+    ]);
     expect(neutral.items.length).toBe(3);
   });
 });

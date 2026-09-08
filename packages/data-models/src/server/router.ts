@@ -66,6 +66,7 @@ import { listModelIntegrations } from "../contracts/integrations";
 import { getFieldIndexStatus, requestFieldIndex } from "./indexing";
 import {
   collectTraversalRelationKeys,
+  fieldFiltersToFilterNode,
   filterableKindOf,
   filterQuerySchema,
   type FilterableKind,
@@ -980,7 +981,7 @@ export const dataModelsRouter = router({
             .optional(),
           // Structured query language (MonarkQL) tree — advanced operators +
           // boolean groups. When present it takes precedence over the legacy
-          // `fieldFilters` and runs the raw-SQL compiled path.
+          // `fieldFilters`. Both compile to the same tree and run the same path.
           filter: filterQuerySchema.optional(),
           ...paginationInput,
         }),
@@ -990,20 +991,18 @@ export const dataModelsRouter = router({
         const model = await requireModelById(input.dataModelId);
         const orgId = await requireModelAccess(ctx, model, "data-models.record-read");
         const access = await recordAccessContext(ctx.userId, orgId);
-        if (input.filter) {
+        // One filter implementation. An explicit `filter` tree wins ; otherwise
+        // the legacy filter-menu `fieldFilters` are translated into the same
+        // tree, so both front-ends run through the one compiler.
+        const filter = input.filter ?? fieldFiltersToFilterNode(input.fieldFilters);
+        if (filter) {
           const fields = await listDataFields(input.dataModelId);
-          const relationTargets = await buildRelationTargets(
-            ctx,
-            model,
-            fields,
-            input.filter,
-            access,
-          );
+          const relationTargets = await buildRelationTargets(ctx, model, fields, filter, access);
           const page = await listDataRecordsWithQuery({
             dataModelId: input.dataModelId,
             includeDeleted: input.includeDeleted ?? false,
             search: input.search,
-            filter: input.filter,
+            filter,
             fields: buildCompileFields(fields),
             queryContext: { userId: ctx.userId, now: new Date() },
             relationTargets,
@@ -1014,11 +1013,11 @@ export const dataModelsRouter = router({
           });
           return { ...page, items: page.items.map(serializeRecord) };
         }
+        // No predicate at all : the plain keyset list.
         const page = await listDataRecords({
           dataModelId: input.dataModelId,
           includeDeleted: input.includeDeleted ?? false,
           search: input.search,
-          fieldFilters: input.fieldFilters,
           limit: input.limit,
           cursor: input.cursor,
           roleIds: access.roleIds,
