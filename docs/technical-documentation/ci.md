@@ -97,7 +97,7 @@ still land, just later. The workflow skips itself (with a notice, not a failure)
 the secrets aren't set.
 
 The dispatch needs a GitHub App token scoped to `app-docs` with **Contents: read &
-write** there: `DOCS_SYNC_APP_ID` + `DOCS_SYNC_APP_PRIVATE_KEY`. The App has to be
+write** there: `DOCS_SYNC_APP_CLIENT_ID` + `DOCS_SYNC_APP_PRIVATE_KEY`. The App has to be
 installed on `monark-community/app-docs` as well as here. This mirrors the
 [changelog workflow](../../.github/workflows/changelog-compile.yml)'s reasoning: an
 App token can be scoped to exactly one repository, which the built-in `GITHUB_TOKEN`
