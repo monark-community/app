@@ -14,6 +14,7 @@ import {
 } from "@/components/fields";
 import {
   Bell,
+  BookText,
   CalendarDays,
   Check,
   ChevronDown,
@@ -81,7 +82,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { usePanelIsMobile, useScreenWidth } from "@/hooks/use-panel-is-mobile";
-import { Plus, X } from "lucide-react";
+import { Plus, Search, Sparkles, X } from "lucide-react";
 import type { CalendarDef } from "@monark/calendar/contracts";
 import { CalendarManageDialog } from "@/app/(authed)/calendar/calendar-manage-dialog";
 import { CalendarSidebar, CalendarChip } from "@/app/(authed)/calendar/calendar-sidebar";
@@ -2293,6 +2294,53 @@ const AuthScreenStory: FC = () => (
   </AuthScreen>
 );
 
+/**
+ * Documentation figure for the navigation rail (see tools/screenshots/figures.mjs).
+ * Deliberately separate from `nav-rail`: that story labels its content area to
+ * explain the layout rule it exists to check, which is right for review and
+ * wrong in a user guide, where the explanation is the surrounding prose.
+ */
+const NavRailFigureStory: FC = () => (
+  <div>
+    <NavRailView
+      // Bootstrapped-with-no-logo renders the neutral brand square. The
+      // harness doesn't serve `public/`, so the default branding logo would
+      // come out as a broken image in the figure.
+      brandedLogoData={{
+        singletonLogoUrl: null,
+        singletonDisplayName: "Monark",
+        isSingleTenantBootstrapped: true,
+      }}
+      ariaLabel="Primary navigation"
+      brandHomeAria="Home"
+      items={[
+        { id: "calendar", href: "/calendar", label: "Calendar", icon: CalendarDays, active: false },
+        { id: "kanban", href: "/kanban", label: "Kanban", icon: SquareKanban, active: false },
+        { id: "wiki", href: "/wiki", label: "Wiki", icon: BookText, active: false },
+        { id: "data", href: "/data", label: "Data", icon: Database, active: true },
+      ]}
+      admin={{ href: "/admin", label: "Admin", active: false }}
+    />
+    <div className="md:pl-14">
+      <header className="sticky top-0 border-b border-border bg-background">
+        <div className="flex h-14 items-center gap-4 px-4">
+          <span className="text-sm text-muted-foreground">Data / Projects</span>
+          <div className="ml-auto flex items-center gap-2">
+            <Sparkles className="size-4 text-muted-foreground" />
+            <Search className="size-4 text-muted-foreground" />
+            <div className="size-8 rounded-full bg-muted" />
+          </div>
+        </div>
+      </header>
+      <div className="space-y-3 p-6">
+        <div className="h-6 w-48 rounded bg-muted" />
+        <div className="h-3 w-full max-w-md rounded bg-muted/60" />
+        <div className="h-3 w-full max-w-sm rounded bg-muted/60" />
+      </div>
+    </div>
+  </div>
+);
+
 export const STORIES: Record<string, FC> = {
   "auth-screen": AuthScreenStory,
   "control-heights": ControlHeightsStory,
@@ -2302,6 +2350,7 @@ export const STORIES: Record<string, FC> = {
   "mobile-list-toolbar": MobileListToolbarStory,
   "list-options-sheet": MobileListOptionsSheetStory,
   "nav-rail": NavRailShellStory,
+  "figure-nav-rail": NavRailFigureStory,
   "admin-secret-panel": SecretPanelStory,
   "date-picker": DatePickerStory,
   "table-empty-state": TableEmptyStateStory,
