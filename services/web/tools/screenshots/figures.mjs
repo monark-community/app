@@ -58,6 +58,12 @@ const FIGURES = [
     doc: "packages/kanban/docs/user-guide.md",
   },
   {
+    name: "signin-step-one",
+    story: "signin-step-one",
+    viewport: { width: 900, height: 780 },
+    doc: "docs/user-guide/account.md",
+  },
+  {
     name: "connected-accounts",
     story: "connected-accounts-figure",
     viewport: { width: 760, height: 360 },

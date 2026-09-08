@@ -29,6 +29,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { DataTable } from "@/components/patterns/data-table/data-table";
+import { SignInFormView } from "@/app/(anon)/signin/signin-form-view";
 import { ConnectedAccountsView } from "@/app/(authed)/account/connected-accounts-view";
 import { NavRailView } from "@/components/nav-rail";
 import { QueryBar, type QueryFieldMeta } from "@/components/query/query-bar";
@@ -2434,8 +2435,88 @@ const ConnectedAccountsOnlyMethodFigureStory: FC = () => (
   </div>
 );
 
+/**
+ * The two sign-in steps, inside the real `AuthScreen` shell so the
+ * change this makes to the first screen is visible : the social buttons
+ * are the dominant choice rather than one option among four fields.
+ */
+const SignInStepsStory: FC = () => {
+  const brand = (
+    <BrandedAppLogoView
+      data={{
+        singletonLogoUrl: null,
+        singletonDisplayName: null,
+        isSingleTenantBootstrapped: false,
+      }}
+      size={36}
+    />
+  );
+  const footer = (
+    <p className="mt-6 text-center text-sm text-muted-foreground">
+      Don&apos;t have an account? <span className="font-medium text-primary">Create one</span>
+    </p>
+  );
+  return (
+    <div className="grid gap-8 lg:grid-cols-2">
+      <AccountCase label="Step 1 : identify">
+        <AuthScreen
+          brand={brand}
+          title="Welcome back"
+          subtitle="Sign in to continue."
+          footer={footer}
+        >
+          <SignInFormView providers={["github", "google"]} onSignIn={() => {}} />
+        </AuthScreen>
+      </AccountCase>
+      <AccountCase label="Step 2 : authenticate">
+        <AuthScreen
+          brand={brand}
+          title="Welcome back"
+          subtitle="Sign in to continue."
+          footer={footer}
+        >
+          <SignInFormView
+            providers={["github", "google"]}
+            onSignIn={() => {}}
+            initialStep="password"
+            initialEmail="ada@example.com"
+          />
+        </AuthScreen>
+      </AccountCase>
+    </div>
+  );
+};
+
+/** Step one on its own, for the committed user-guide figure. The
+ *  side-by-side story above is for review ; a guide wants one screen. */
+const SignInStepOneFigureStory: FC = () => (
+  <AuthScreen
+    brand={
+      <BrandedAppLogoView
+        data={{
+          singletonLogoUrl: null,
+          singletonDisplayName: null,
+          isSingleTenantBootstrapped: false,
+        }}
+        size={36}
+      />
+    }
+    title="Welcome back"
+    subtitle="Sign in to continue."
+    footer={
+      <p className="mt-6 text-center text-sm text-muted-foreground">
+        Don&apos;t have an account? <span className="font-medium text-primary">Create one</span>
+      </p>
+    }
+  >
+    <SignInFormView providers={["github", "google"]} onSignIn={() => {}} />
+  </AuthScreen>
+);
+
 export const STORIES: Record<string, FC> = {
   "auth-screen": AuthScreenStory,
+  "signin-steps": SignInStepsStory,
+  "signin-step-one": SignInStepOneFigureStory,
   "connected-accounts": ConnectedAccountsStory,
   "connected-accounts-figure": ConnectedAccountsFigureStory,
   "connected-accounts-only-method": ConnectedAccountsOnlyMethodFigureStory,
