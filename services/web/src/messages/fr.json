@@ -1727,7 +1727,8 @@
       "hardTitle": "Inscription TOTP en retard",
       "hardSubtitle": "Votre compte admin est en retard depuis {days, plural, =0 {moins d'un jour} one {# jour} other {# jours}}. L'accès est limité à /account jusqu'à l'activation de TOTP.",
       "redirectToastTitle": "Accès admin restreint",
-      "redirectToastSubtitle": "Réactivez l'authentification à deux facteurs pour retrouver l'accès aux surfaces admin."
+      "redirectToastSubtitle": "Réactivez l'authentification à deux facteurs pour retrouver l'accès aux surfaces admin.",
+      "cta": "Configurer la double authentification"
     },
     "tabs": {
       "nav": "Section du compte",
