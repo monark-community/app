@@ -3,13 +3,9 @@
 import { useEffect, useState, useTransition } from "react";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { KeyRound, Link2, Unlink } from "lucide-react";
 import { toast } from "sonner";
 import { OAUTH_PROVIDER_LABELS, type OAuthProvider } from "@monark/auth/contracts";
-import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
 import { ConfirmDialog } from "@/components/patterns";
-import { PageSection } from "@/components/page-section";
 import { TotpConfirmDialog } from "@/components/totp-confirm-dialog";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { trpc } from "@/lib/trpc";
@@ -18,6 +14,7 @@ import {
   unlinkProviderAction,
   type UnlinkProviderResult,
 } from "./actions";
+import { ConnectedAccountsView } from "./connected-accounts-view";
 
 /**
  * How this account can be signed into, and the controls to change it.
@@ -131,97 +128,18 @@ export function ConnectedAccountsSection() {
     commitUnlink(provider);
   }
 
-  // Removing the only remaining method would lock the account ; the
-  // server refuses it too, but disabling the button explains it better.
-  function canUnlink(provider: OAuthProvider): boolean {
-    if (hasPassword) return true;
-    return connected.filter((p) => p !== provider).length > 0;
-  }
-
   return (
-    <PageSection title={t("title")} subtitle={t("subtitle")}>
-      {identities.isLoading ? (
-        <div className="space-y-2">
-          <Skeleton className="h-14 w-full" />
-          <Skeleton className="h-14 w-full" />
-        </div>
-      ) : (
-        <ul className="space-y-2">
-          {connected.map((provider) => (
-            <li
-              key={provider}
-              className="flex items-center gap-3 rounded-lg border border-border p-3"
-            >
-              <Link2 className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
-              <div className="min-w-0">
-                <p className="text-sm font-medium">{OAUTH_PROVIDER_LABELS[provider]}</p>
-                <p className="text-xs text-muted-foreground">{t("connected")}</p>
-              </div>
-              <div className="ml-auto">
-                {canUnlink(provider) ? (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="gap-2"
-                    disabled={isUnlinking}
-                    onClick={() => setConfirmUnlink(provider)}
-                  >
-                    <Unlink className="h-4 w-4" aria-hidden />
-                    {t("disconnect")}
-                  </Button>
-                ) : (
-                  // Deliberately not "set a password first" : the user is
-                  // trying to disconnect, not to add a credential. The
-                  // useful answer is why the button isn't there.
-                  <p className="text-xs text-muted-foreground">{t("onlyWayIn")}</p>
-                )}
-              </div>
-            </li>
-          ))}
-
-          {connectable.map((provider) => (
-            <li
-              key={provider}
-              className="flex items-center gap-3 rounded-lg border border-dashed border-border p-3"
-            >
-              <Link2 className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
-              <div className="min-w-0">
-                <p className="text-sm font-medium">{OAUTH_PROVIDER_LABELS[provider]}</p>
-                <p className="text-xs text-muted-foreground">{t("notConnected")}</p>
-              </div>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="ml-auto"
-                disabled={pendingLink !== null}
-                onClick={() => void startLink(provider)}
-              >
-                {pendingLink === provider ? t("connecting") : t("connect")}
-              </Button>
-            </li>
-          ))}
-
-          <li className="flex items-center gap-3 rounded-lg border border-border p-3">
-            <KeyRound className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
-            <div className="min-w-0">
-              <p className="text-sm font-medium">{t("password")}</p>
-              <p className="text-xs text-muted-foreground">
-                {hasPassword ? t("connected") : t("passwordWhy")}
-              </p>
-            </div>
-            {!hasPassword && (
-              // Anchor to the password card further up this same page. A
-              // bare "Not set" row left the user with a fact and nothing
-              // to do about it.
-              <Button asChild variant="outline" size="sm" className="ml-auto">
-                <a href="#password">{t("setPassword")}</a>
-              </Button>
-            )}
-          </li>
-        </ul>
-      )}
+    <>
+      <ConnectedAccountsView
+        loading={identities.isLoading}
+        connected={connected}
+        connectable={connectable}
+        hasPassword={hasPassword}
+        pendingProvider={pendingLink}
+        disconnecting={isUnlinking}
+        onConnect={(provider) => void startLink(provider)}
+        onDisconnect={(provider) => setConfirmUnlink(provider)}
+      />
 
       <ConfirmDialog
         open={confirmUnlink !== null}
@@ -256,6 +174,6 @@ export function ConnectedAccountsSection() {
         errorKey={totpError}
         pending={isUnlinking}
       />
-    </PageSection>
+    </>
   );
 }

@@ -1969,7 +1969,7 @@
     },
     "connectedAccounts": {
       "title": "Connected accounts",
-      "subtitle": "The ways you can sign in. Adding a second one is optional — it's a spare way in if you lose access to the first.",
+      "subtitle": "How you sign in. A second method is an optional backup.",
       "connected": "Connected",
       "password": "Email and password",
       "connect": "Connect",

@@ -1969,7 +1969,7 @@
     },
     "connectedAccounts": {
       "title": "Comptes liés",
-      "subtitle": "Vos façons de vous connecter. En ajouter une deuxième est optionnel ; c'est un accès de secours si vous perdez la première.",
+      "subtitle": "Vos façons de vous connecter. Une deuxième méthode est un accès de secours optionnel.",
       "connected": "Lié",
       "password": "Courriel et mot de passe",
       "connect": "Connecter",
