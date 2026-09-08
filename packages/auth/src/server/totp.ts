@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
 import bcrypt from "bcryptjs";
-import { authenticator } from "otplib";
+import { generateSecret, generateURI, verifySync } from "otplib";
 import qrcode from "qrcode";
 import { BRANDING } from "@monark/branding";
 import { emit, ConflictError, ValidationError } from "@monark/common";
@@ -15,9 +15,23 @@ import type {
 } from "../contracts/events";
 import { decryptSecret, encryptSecret } from "./crypto";
 const RECOVERY_CODE_COUNT = 10;
-// A ±1 window (30 sec either side) catches mild client clock skew without
+// A ±1 step (30 sec either side) catches mild client clock skew without
 // opening the door to brute force beyond what the 6-digit code already allows.
-authenticator.options = { window: 1 };
+// otplib v13 states this as seconds of epoch tolerance rather than v12's
+// `window` step count ; at the default 30 sec period the two are the same
+// tolerance, and a code two steps out is still rejected.
+const TOTP_EPOCH_TOLERANCE_SECONDS = 30;
+
+// v13 replaced the stateful `authenticator` singleton with per-call options,
+// so the tolerance travels with each verification instead of being set once
+// as global module state.
+function checkTotpCode(token: string, secret: string): boolean {
+  return verifySync({
+    secret,
+    token,
+    epochTolerance: TOTP_EPOCH_TOLERANCE_SECONDS,
+  }).valid;
+}
 
 export type TotpStatus =
   | { enrolled: false }
@@ -68,8 +82,12 @@ export async function beginTotpEnrollment(input: {
     throw new ConflictError("TOTP is already active; disable it before re-enrolling.");
   }
 
-  const secret = authenticator.generateSecret();
-  const otpauth = authenticator.keyuri(input.accountLabel, BRANDING.totpIssuer, secret);
+  const secret = generateSecret();
+  const otpauth = generateURI({
+    issuer: BRANDING.totpIssuer,
+    label: input.accountLabel,
+    secret,
+  });
   const rawSvg = await qrcode.toString(otpauth, {
     type: "svg",
     margin: 1,
@@ -127,7 +145,7 @@ export async function confirmTotpEnrollment(input: {
     iv: Buffer.from(secret.secretIv),
     tag: Buffer.from(secret.secretTag),
   });
-  const ok = authenticator.check(input.code.trim(), plaintext);
+  const ok = checkTotpCode(input.code.trim(), plaintext);
   if (!ok) {
     throw new ValidationError("That code is invalid. Check the time on your device.");
   }
@@ -173,7 +191,7 @@ export async function verifyTotpCode(input: { userId: string; code: string }): P
     iv: Buffer.from(secret.secretIv),
     tag: Buffer.from(secret.secretTag),
   });
-  return authenticator.check(input.code.trim(), plaintext);
+  return checkTotpCode(input.code.trim(), plaintext);
 }
 
 // Consumes one unused recovery code (bcrypt-compared). Returns true if the
