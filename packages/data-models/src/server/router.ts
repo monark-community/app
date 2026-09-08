@@ -67,8 +67,11 @@ import { getFieldIndexStatus, requestFieldIndex } from "./indexing";
 import {
   collectTraversalRelationKeys,
   fieldFiltersToFilterNode,
+  fieldKindsFromDataFields,
   filterableKindOf,
   filterQuerySchema,
+  parseQuery,
+  printQuery,
   type FilterableKind,
   type FilterNode,
 } from "../contracts/query";
@@ -78,6 +81,7 @@ import {
   ENFORCED_SCOPE_VERBS,
   isScopableRole,
   listScopesForModel,
+  listScopesForRole,
   resolveRecordScope,
   upsertScope,
 } from "./scopes";
@@ -286,6 +290,21 @@ async function recordAccessContext(
     verb: "READ",
   });
   return { userId, roleIds, bypass, readScope };
+}
+
+/** Render a stored scope tree as canonical MonarkQL text. A tree that no longer
+ *  parses (a field was archived or retyped under it) renders as a marker rather
+ *  than throwing, so one broken scope cannot break the whole list screen ; the
+ *  ENFORCEMENT path still fails closed on it, which is where it matters. */
+async function printScopeQuery(dataModelId: string, raw: unknown): Promise<string> {
+  const parsed = filterQuerySchema.safeParse(raw);
+  if (!parsed.success) return "(unreadable scope)";
+  try {
+    const fields = await listDataFields(dataModelId);
+    return printQuery(parsed.data, fieldKindsFromDataFields(fields));
+  } catch {
+    return "(unreadable scope)";
+  }
 }
 
 // A record is visible when the row-level ACL allows it AND it satisfies the
@@ -1506,12 +1525,40 @@ export const dataModelsRouter = router({
         if (model.organizationId !== org.id) throw new NotFoundError("DataModel", model.id);
         await requirePermission(ctx, "data-models.manage-record-scopes", org.id);
         const rows = await listScopesForModel(model.id);
-        return rows.map((r) => ({
-          roleId: r.roleId,
-          verb: r.verb,
-          query: r.query,
-          updatedAt: r.updatedAt,
-        }));
+        return Promise.all(
+          rows.map(async (r) => ({
+            roleId: r.roleId,
+            verb: r.verb,
+            query: await printScopeQuery(model.id, r.query),
+            updatedAt: r.updatedAt,
+          })),
+        );
+      }),
+
+    // Every scope on one role, across models : what the role editor needs to
+    // render its "record scopes" section in a single request.
+    listForRole: publicProcedure
+      .input(z.object({ roleId: z.string().min(1) }))
+      .query(async ({ ctx, input }) => {
+        if (!ctx.userId) throw new UnauthorizedError();
+        const org = await requireOrg({
+          userId: ctx.userId,
+          activeOrganizationId: ctx.activeOrganizationId,
+        });
+        await requirePermission(ctx, "data-models.manage-record-scopes", org.id);
+        const rows = await listScopesForRole(input.roleId);
+        // Return the canonical MonarkQL TEXT, never the raw JSON tree.
+        // `Prisma.JsonValue` is recursive, and threading it through tRPC's
+        // client inference is expensive enough to trip TS2589 in the web app ;
+        // text is also simply what a caller wants to render or re-edit.
+        return Promise.all(
+          rows.map(async (r) => ({
+            dataModelId: r.dataModelId,
+            verb: r.verb,
+            query: await printScopeQuery(r.dataModelId, r.query),
+            updatedAt: r.updatedAt,
+          })),
+        );
       }),
 
     set: publicProcedure
@@ -1520,7 +1567,10 @@ export const dataModelsRouter = router({
           dataModelId: z.string().min(1),
           roleId: z.string().min(1),
           verb: z.enum(ENFORCED_SCOPE_VERBS),
-          query: filterQuerySchema,
+          // The canonical MonarkQL text, not a tree. Parsed here against the
+          // model's real fields, so an unknown or wrongly-typed field is a
+          // clear error at save time rather than a broken query later.
+          query: z.string().trim().min(1).max(4000),
         }),
       )
       .mutation(async ({ ctx, input }) => {
@@ -1537,11 +1587,24 @@ export const dataModelsRouter = router({
         if (!(await isScopableRole(input.roleId, org.id))) {
           throw new NotFoundError("Role", input.roleId);
         }
+        const fields = await listDataFields(model.id);
+        const kinds = fieldKindsFromDataFields(fields);
+        let tree: FilterNode | null;
+        try {
+          tree = parseQuery(input.query, kinds);
+        } catch (err) {
+          throw new ValidationError(
+            err instanceof Error ? err.message : "Could not parse the scope query.",
+          );
+        }
+        // An empty query parses to null. A scope that matches everything is
+        // not a scope ; clearing it is `scopes.clear`, which says so.
+        if (!tree) throw new ValidationError("A scope query cannot be empty.");
         const row = await upsertScope({
           roleId: input.roleId,
           dataModelId: model.id,
           verb: input.verb,
-          query: input.query,
+          query: tree,
           createdBy: ctx.userId,
         });
         await emit({
@@ -1554,7 +1617,7 @@ export const dataModelsRouter = router({
           verb: input.verb,
           actorId: ctx.userId,
         });
-        return { roleId: row.roleId, verb: row.verb, query: row.query };
+        return { roleId: row.roleId, verb: row.verb, query: printQuery(tree, kinds) };
       }),
 
     clear: publicProcedure

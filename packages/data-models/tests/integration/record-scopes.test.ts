@@ -6,7 +6,6 @@ import { createDataField, createDataModel, createDataRecord } from "../../src/se
 import { registerDataModelsPermissions } from "../../src/server/permissions";
 import { registerDataModelRegistrations } from "../../src/server/registrations";
 import { dataModelsRouter } from "../../src/server/router";
-import { leaf } from "../../src/contracts/query";
 
 // MQL-scoped record permissions: "this role may read the records matching this
 // query". The rules that matter, and that a regression here would break:
@@ -113,13 +112,13 @@ beforeAll(async () => {
     dataModelId: modelId,
     roleId: euRole.id,
     verb: "READ",
-    query: leaf("region", "is", "eu"),
+    query: "region:eu",
   });
   await admin.scopes.set({
     dataModelId: modelId,
     roleId: mineRole.id,
     verb: "READ",
-    query: leaf("owner", "is", "@me"),
+    query: "owner:@me",
   });
 });
 
@@ -228,15 +227,41 @@ describe("failure modes", () => {
     expect(await titles(U_EU)).toEqual(["EU deal"]);
   });
 
-  it("rejects a scope that traverses a relation", async () => {
+  it("rejects a dotted, relation-traversing field in a scope", async () => {
     // A traversal reads the TARGET model, so its evaluation could depend on
-    // rows the scoped role cannot see. Refused up front rather than half-solved.
+    // rows the scoped role cannot see. Refused up front rather than
+    // half-solved. Two guards catch it: the parser (this model has no relation
+    // called `owner`) and `upsertScope`'s explicit traversal check.
     await expect(
       callerFor(U_ADMIN).scopes.set({
         dataModelId: modelId,
         roleId: euRoleId,
         verb: "READ",
-        query: leaf("owner.title", "is", "x"),
+        query: "owner.title:x",
+      }),
+    ).rejects.toThrow();
+  });
+
+  it("rejects a scope naming a field the model does not have", async () => {
+    // Parsed server-side against the model's REAL fields, so a typo is an
+    // error now rather than a query that breaks later.
+    await expect(
+      callerFor(U_ADMIN).scopes.set({
+        dataModelId: modelId,
+        roleId: euRoleId,
+        verb: "READ",
+        query: "regionn:eu",
+      }),
+    ).rejects.toThrow();
+  });
+
+  it("rejects an empty scope, which would be a rule that narrows nothing", async () => {
+    await expect(
+      callerFor(U_ADMIN).scopes.set({
+        dataModelId: modelId,
+        roleId: euRoleId,
+        verb: "READ",
+        query: "   ",
       }),
     ).rejects.toThrow();
   });

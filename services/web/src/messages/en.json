@@ -1235,6 +1235,25 @@
         "createError": "Could not create that role.",
         "updateSuccess": "Role updated.",
         "updateError": "Could not update that role."
+      },
+      "scopes": {
+        "title": "Record scopes",
+        "description": "Limit what this role can read in each database. Roles add up, so someone who also holds an unrestricted role still sees everything.",
+        "unrestricted": "All records",
+        "noDatabases": "This role cannot read any database yet. Grant it record access above first.",
+        "limit": "Limit…",
+        "edit": "Edit",
+        "remove": "Remove limit",
+        "save": "Save scope",
+        "cancel": "Cancel",
+        "saved": "Scope saved.",
+        "cleared": "Scope removed.",
+        "saveFailed": "Could not save the scope.",
+        "invalidQuery": "Write a valid query before saving.",
+        "queryPlaceholder": "e.g. region:eu or owner:@me",
+        "fieldsHeading": "Fields",
+        "valuesHeading": "Values",
+        "hint": "Only this database's own fields ; a scope cannot follow a relation."
       }
     },
     "webhooks": {

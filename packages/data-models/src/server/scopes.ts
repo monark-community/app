@@ -187,6 +187,15 @@ export async function listScopesForModel(dataModelId: string): Promise<DataModel
   });
 }
 
+/** Every scope attached to one role, across models. Bounded by (models x
+ *  verbs) for a single role, so an unbounded read is right here. */
+export async function listScopesForRole(roleId: string): Promise<DataModelRoleScopeRow[]> {
+  return getDb().dataModelRoleScope.findMany({
+    where: { roleId },
+    orderBy: [{ dataModelId: "asc" }, { verb: "asc" }],
+  });
+}
+
 export async function upsertScope(input: {
   roleId: string;
   dataModelId: string;

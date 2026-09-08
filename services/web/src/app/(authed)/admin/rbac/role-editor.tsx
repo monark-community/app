@@ -13,6 +13,7 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { DangerCard, DangerRow } from "@/components/danger-card";
+import { RoleScopesSection } from "./role-scopes-section";
 import {
   ConfirmDialog,
   FieldRow,
@@ -380,6 +381,13 @@ export function RoleEditor(
             }}
           />
         )}
+
+        {/* Record scopes hang off a role id, so there is nothing to attach them
+            to until the role exists ; and a built-in ADMIN bypasses every scope,
+            which would make the section a control that does nothing. */}
+        {isEdit && role && !role.builtIn ? (
+          <RoleScopesSection roleId={role.id} permissions={permissions} />
+        ) : null}
       </PageSection>
 
       {isEdit && role && !role.builtIn && (
