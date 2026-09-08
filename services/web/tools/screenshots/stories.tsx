@@ -2311,15 +2311,14 @@ function AccountCase({ label, children }: { label: string; children: ReactNode }
  * with a provider and no password to see the "only way in" row at all —
  * which is exactly why it's worth a story.
  *
- * No "connect another provider" case: this branch ships one provider, so
- * `connectable` is always empty. Adding one here meant passing a slug
- * outside the `OAuthProvider` union, which renders a nameless row —
- * caught only by looking at the output, because this file sits outside
- * the web tsconfig's `include` and isn't typechecked.
+ * Note that this file sits outside the web tsconfig's `include`, so it
+ * is not typechecked: a provider slug outside the `OAuthProvider` union
+ * compiles fine here and renders a nameless row, which only shows up by
+ * looking at the captured image.
  */
 const ConnectedAccountsStory: FC = () => (
   <div className="mx-auto flex max-w-2xl flex-col gap-8 p-6">
-    <AccountCase label="Provider + password — either can be removed">
+    <AccountCase label="Provider + password : either can be removed">
       <ConnectedAccountsView
         connected={["github"]}
         connectable={[]}
@@ -2328,11 +2327,20 @@ const ConnectedAccountsStory: FC = () => (
         onDisconnect={() => {}}
       />
     </AccountCase>
-    <AccountCase label="Provider only — nothing to remove, and a way to add a second method">
+    <AccountCase label="Provider only : nothing to remove, and a way to add a second method">
       <ConnectedAccountsView
         connected={["github"]}
         connectable={[]}
         hasPassword={false}
+        onConnect={() => {}}
+        onDisconnect={() => {}}
+      />
+    </AccountCase>
+    <AccountCase label="Another provider this deployment offers">
+      <ConnectedAccountsView
+        connected={["github"]}
+        connectable={["google"]}
+        hasPassword
         onConnect={() => {}}
         onDisconnect={() => {}}
       />
