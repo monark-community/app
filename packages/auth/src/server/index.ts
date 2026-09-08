@@ -11,6 +11,20 @@ import { checkPassword } from "./password";
 import { markEmailVerified, recordResendAttempt, type ResendResult } from "./email-verification";
 import { emitPasswordChanged, emitSignedIn, emitSignedOut } from "./events";
 import { signUpUser, signUpInputSchema } from "./signup";
+import {
+  assertCanUnlinkProvider,
+  configuredOAuthProviders,
+  emitProviderLinked,
+  emitProviderUnlinked,
+  provisionOAuthUser,
+  readIdentityStatus,
+} from "./oauth";
+import {
+  OAUTH_PROVIDERS,
+  type IdentityStatus,
+  type OAuthProvider,
+  type OAuthProvisionResult,
+} from "../contracts/oauth";
 import { verifyEmailActionToken } from "./email-action-token";
 import {
   findCurrentDeviceId,
@@ -20,6 +34,11 @@ import {
   revokeTrustedDevice,
   type TrustedDeviceRow,
 } from "./trusted-devices";
+import {
+  dismissTotpOnboarding,
+  getTotpOnboardingStatus,
+  type TotpOnboardingStatus,
+} from "./totp-onboarding";
 import {
   acknowledgeRecoveryCodeUse,
   beginTotpEnrollment,
@@ -210,6 +229,20 @@ const totpRouter = router({
       });
     }),
 
+  // Drives the post-verification enrollment nudge. Anon-safe (returns
+  // "don't prompt") so the layout can mount the modal unconditionally.
+  onboardingStatus: publicProcedure.query(async ({ ctx }): Promise<TotpOnboardingStatus> => {
+    if (!ctx.userId) return { shouldPrompt: false };
+    return getTotpOnboardingStatus(ctx.userId);
+  }),
+
+  // "Not now". Permanent : /account/security keeps the enrollment path
+  // open, and a nudge that reappears is a nag.
+  dismissOnboarding: publicProcedure.mutation(async ({ ctx }) => {
+    if (!ctx.userId) throw new UnauthorizedError();
+    await dismissTotpOnboarding(ctx.userId);
+  }),
+
   // Read by /admin route guards + the /account banner. Returns enforcement
   // mode (soft/hard) when the signed-in admin must enroll TOTP.
   adminEnforcement: publicProcedure.query(async ({ ctx }) => {
@@ -346,9 +379,82 @@ const trustedDevicesRouter = router({
     }),
 });
 
+const oauthRouter = router({
+  // Anon-safe on purpose : /signin and /signup are rendered for signed-
+  // out visitors and need to know which buttons to draw. Returns only
+  // operator configuration (which providers this deployment offers),
+  // never anything user-specific.
+  providers: publicProcedure.query(async (): Promise<OAuthProvider[]> => {
+    const flagOn = await isEnabled("auth.oauth");
+    if (!flagOn) return [];
+    return configuredOAuthProviders();
+  }),
+
+  // Called by /auth/callback the moment the OAuth session cookie is
+  // live, before the user is allowed anywhere else. Creates the shadow
+  // `User` row on a first social sign-in and backfills it afterwards.
+  // The caller forwards the freshly-issued access token, so `ctx.userId`
+  // is the only identity input ; everything else is re-read from the
+  // Supabase admin API inside `provisionOAuthUser`.
+  provision: publicProcedure
+    .input(
+      z
+        .object({
+          localePreference: z.enum(["en", "fr"]).optional(),
+        })
+        .optional(),
+    )
+    .mutation(async ({ ctx, input }): Promise<OAuthProvisionResult> => {
+      if (!ctx.userId) throw new UnauthorizedError();
+      const flagOn = await isEnabled("auth.oauth", { userId: ctx.userId });
+      if (!flagOn) return { ok: false, reason: "disabled" };
+      return provisionOAuthUser({
+        userId: ctx.userId,
+        localePreference: input?.localePreference,
+      });
+    }),
+
+  // Which credentials the signed-in account actually holds. The account
+  // pages branch on `hasPassword` : an OAuth-only user can't be asked
+  // for a current password they never set.
+  identities: publicProcedure.query(async ({ ctx }): Promise<IdentityStatus> => {
+    if (!ctx.userId) return { hasPassword: false, providers: [] };
+    return readIdentityStatus(ctx.userId);
+  }),
+
+  // Preflight for the unlink button : lets the UI disable it and say
+  // why, instead of firing a request that Supabase rejects opaquely.
+  // The web action re-checks this before unlinking — see
+  // `assertCanUnlinkProvider` on why neither is a security boundary.
+  canUnlink: publicProcedure
+    .input(z.object({ provider: z.enum(OAUTH_PROVIDERS) }))
+    .query(async ({ ctx, input }) => {
+      if (!ctx.userId) throw new UnauthorizedError();
+      return assertCanUnlinkProvider({ userId: ctx.userId, provider: input.provider });
+    }),
+
+  // Emitted after the web layer performed the change through the user's
+  // own Supabase session. Same split as `notifySignedIn` : Supabase owns
+  // the state, we own the domain event.
+  notifyUnlinked: publicProcedure
+    .input(z.object({ provider: z.enum(OAUTH_PROVIDERS) }))
+    .mutation(async ({ ctx, input }) => {
+      if (!ctx.userId) throw new UnauthorizedError();
+      await emitProviderUnlinked({ userId: ctx.userId, provider: input.provider });
+    }),
+
+  notifyLinked: publicProcedure
+    .input(z.object({ provider: z.enum(OAUTH_PROVIDERS) }))
+    .mutation(async ({ ctx, input }) => {
+      if (!ctx.userId) throw new UnauthorizedError();
+      await emitProviderLinked({ userId: ctx.userId, provider: input.provider });
+    }),
+});
+
 export const authRouter = router({
   trustedDevices: trustedDevicesRouter,
   totp: totpRouter,
+  oauth: oauthRouter,
 
   ping: publicProcedure.query(() => ({
     pong: true,
@@ -564,6 +670,22 @@ export {
   type TotpStatus,
   type AdminTotpEnforcement,
 } from "./totp";
+export {
+  provisionOAuthUser,
+  readIdentityStatus,
+  configuredOAuthProviders,
+  assertCanUnlinkProvider,
+  emitProviderLinked,
+  emitProviderUnlinked,
+  extractOAuthProfile,
+  type OAuthAuthUserLike,
+  type OAuthProfile,
+} from "./oauth";
+export {
+  getTotpOnboardingStatus,
+  dismissTotpOnboarding,
+  type TotpOnboardingStatus,
+} from "./totp-onboarding";
 export { hardDeleteUser, processExpiredDeletions } from "./account-lifecycle";
 export { getSupabaseAdmin } from "./supabase-admin";
 export { registerAuthFeatureFlags } from "./flags";

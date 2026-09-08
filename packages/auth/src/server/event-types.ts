@@ -16,6 +16,12 @@ const AUTH_EVENT_TYPES = {
         type: "string",
         description: "Optional referral code used at signup.",
       },
+      {
+        key: "provider",
+        type: "string",
+        description:
+          "Social provider the account registered through (google, azure, github). Absent for email + password signups.",
+      },
     ],
   },
   "user.signed-in": {
@@ -119,6 +125,36 @@ const AUTH_EVENT_TYPES = {
         key: "remainingCodes",
         type: "number",
         description: "How many recovery codes remain unused.",
+      },
+    ],
+  },
+  "oauth.provider-linked": {
+    description:
+      "A social provider was connected to an existing account (from account settings, or by Supabase's own verified-email identity matching at sign-in).",
+    fields: [
+      { key: "userId", type: "string", description: "The user the provider was linked to." },
+      {
+        key: "provider",
+        type: "string",
+        description: "Supabase provider slug (github, google, azure).",
+      },
+    ],
+  },
+  "oauth.provider-unlinked": {
+    description:
+      "A social provider was disconnected from an account. Security-relevant: it changes which credentials can reach the account.",
+    fields: [
+      { key: "userId", type: "string", description: "The user the provider was unlinked from." },
+      { key: "provider", type: "string", description: "Supabase provider slug that was removed." },
+      {
+        key: "remainingProviders",
+        type: "number",
+        description: "How many social providers are still linked afterwards.",
+      },
+      {
+        key: "hasPassword",
+        type: "boolean",
+        description: "Whether an email + password credential still exists on the account.",
       },
     ],
   },

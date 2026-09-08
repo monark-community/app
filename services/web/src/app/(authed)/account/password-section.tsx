@@ -15,11 +15,17 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
 import { PasswordStrengthMeter } from "@/components/password-strength-meter";
 import { PageSection } from "@/components/page-section";
 import { TotpConfirmDialog } from "@/components/totp-confirm-dialog";
 import { trpc } from "@/lib/trpc";
-import { changePasswordAction, type ChangePasswordResult } from "./actions";
+import {
+  changePasswordAction,
+  setPasswordAction,
+  type ChangePasswordResult,
+  type SetPasswordResult,
+} from "./actions";
 
 /**
  * Password-change card. The form was inline before ; now it's hosted
@@ -32,10 +38,21 @@ import { changePasswordAction, type ChangePasswordResult } from "./actions";
  * TOTP-enrolled users hit the sequential `<TotpConfirmDialog>` after
  * submit ; non-enrolled users skip straight to the action call. The
  * server-side gate is the actual security boundary, the dialog is UX.
+ *
+ * Two modes. An account that registered through a social provider has
+ * no password at all, so there's no current password to ask for ; that
+ * variant drops the first field and calls `setPasswordAction` instead.
+ * `auth.oauth.identities` decides which one renders, and the same
+ * distinction is enforced server-side — the set path refuses outright
+ * once a password exists.
  */
 export function PasswordSection() {
   const t = useTranslations("account.password");
   const me = trpc.users.me.useQuery(undefined, { refetchOnWindowFocus: false });
+  const identities = trpc.auth.oauth.identities.useQuery(undefined, {
+    refetchOnWindowFocus: false,
+  });
+  const hasPassword = identities.data?.hasPassword ?? false;
   const totpStatus = trpc.auth.totp.status.useQuery(undefined, {
     refetchOnWindowFocus: false,
   });
@@ -74,13 +91,11 @@ export function PasswordSection() {
 
   function commitChange(totpCode?: string) {
     startTransition(async () => {
-      const result: ChangePasswordResult = await changePasswordAction({
-        currentPassword,
-        newPassword,
-        totpCode,
-      });
+      const result: ChangePasswordResult | SetPasswordResult = hasPassword
+        ? await changePasswordAction({ currentPassword, newPassword, totpCode })
+        : await setPasswordAction({ newPassword, totpCode });
       if (result.ok) {
-        toast.success(t("success"));
+        toast.success(hasPassword ? t("success") : t("set.success"));
         setOpen(false);
         setDialogOpen(false);
         setDialogError(null);
@@ -112,16 +127,22 @@ export function PasswordSection() {
   }
 
   return (
-    <PageSection title={t("title")} subtitle={t("subtitle")}>
-      <Button type="button" variant="outline" onClick={() => setOpen(true)}>
-        {t("change")}
-      </Button>
+    <PageSection title={t("title")} subtitle={hasPassword ? t("subtitle") : t("set.subtitle")}>
+      {identities.isLoading ? (
+        <Skeleton className="h-9 w-40" />
+      ) : (
+        <Button type="button" variant="outline" onClick={() => setOpen(true)}>
+          {hasPassword ? t("change") : t("set.cta")}
+        </Button>
+      )}
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>{t("dialogTitle")}</DialogTitle>
-            <DialogDescription>{t("dialogSubtitle")}</DialogDescription>
+            <DialogTitle>{hasPassword ? t("dialogTitle") : t("set.dialogTitle")}</DialogTitle>
+            <DialogDescription>
+              {hasPassword ? t("dialogSubtitle") : t("set.dialogSubtitle")}
+            </DialogDescription>
           </DialogHeader>
           <form id="password-change-form" onSubmit={onSubmit} className="grid gap-3 py-2">
             {/* Hidden `username` field so password managers update the
@@ -138,17 +159,22 @@ export function PasswordSection() {
                 hidden
               />
             )}
-            <div className="grid gap-2">
-              <Label htmlFor="currentPassword">{t("labels.current")}</Label>
-              <Input
-                id="currentPassword"
-                type="password"
-                value={currentPassword}
-                onChange={(event) => setCurrentPassword(event.target.value)}
-                required
-                autoComplete="current-password"
-              />
-            </div>
+            {/* Absent in "set" mode : a social-only account has no
+                current password, and rendering a required field it
+                could never satisfy would dead-end the form. */}
+            {hasPassword && (
+              <div className="grid gap-2">
+                <Label htmlFor="currentPassword">{t("labels.current")}</Label>
+                <Input
+                  id="currentPassword"
+                  type="password"
+                  value={currentPassword}
+                  onChange={(event) => setCurrentPassword(event.target.value)}
+                  required
+                  autoComplete="current-password"
+                />
+              </div>
+            )}
             <div className="grid gap-2">
               <Label htmlFor="newPassword">{t("labels.new")}</Label>
               <Input
@@ -184,7 +210,7 @@ export function PasswordSection() {
               {t("cancel")}
             </Button>
             <Button type="submit" form="password-change-form" disabled={isPending || !strength.ok}>
-              {isPending ? t("submitting") : t("submit")}
+              {isPending ? t("submitting") : hasPassword ? t("submit") : t("set.submit")}
             </Button>
           </DialogFooter>
         </DialogContent>

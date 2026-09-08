@@ -53,7 +53,7 @@ export type TotpConfirmDialogProps = {
    * description copy, scoped per consumer. Falls back to a generic
    * "confirm with two-factor" prompt.
    */
-  scope?: "passwordChange" | "emailChange" | "default";
+  scope?: "passwordChange" | "emailChange" | "providerUnlink" | "default";
   /** When set, surfaces a localised error message under the OTP field. */
   errorKey?: "invalidTotpCode" | "totpRequired" | null;
   pending?: boolean;
