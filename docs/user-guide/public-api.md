@@ -4,7 +4,7 @@ Monark exposes a small, curated **REST API** at `/api/v1` so scripts, integratio
 and AI agents can read and write your organization's data without a browser
 session. This page is for the person wiring that up.
 
-Everything the API can do, it does **as you** (or as a service account) — it can
+Everything the API can do, it does **as you** (or as a service account) ; it can
 never do more than the account behind the key. If you can't do something in the
 app, a key you create can't either.
 
@@ -12,7 +12,7 @@ app, a key you create can't either.
 
 The public API ships **off by default**. An organization admin turns it on in
 **Admin → Feature flags** by enabling `public-api.enabled`. Until then, any key
-you create is inert — the account API-keys page shows a notice when that's the
+you create is inert ; the account API-keys page shows a notice when that's the
 case. (There's a separate `public-api.service-accounts` flag for the
 service-account admin surface, covered below.)
 
@@ -20,15 +20,15 @@ service-account admin surface, covered below.)
 
 Go to **Account → API keys** and choose **New API key**. You'll set:
 
-- **Name** — a label so you can tell keys apart later ("Zapier", "nightly sync").
-- **Access** —
+- **Name** : a label so you can tell keys apart later ("Zapier", "nightly sync").
+- **Access** :
   - **Full access** : the key acts with everything _you_ can do.
-  - **Limited** : pick a subset of your own permissions — an ad-hoc role that
+  - **Limited** : pick a subset of your own permissions ; an ad-hoc role that
     exists only for this key. You can only pick permissions you actually hold.
-- **Expiration** — optional; the key stops working after it.
+- **Expiration** : optional; the key stops working after it.
 
 When you create it, the key is shown **once** (it starts with `mrk_`). Copy it
-immediately — it's stored only as a hash and can never be shown again. Lost it?
+immediately : it's stored only as a hash and can never be shown again. Lost it?
 Revoke it and make a new one.
 
 A key is always tied to **one organization** (the one you're in when you create
@@ -43,7 +43,7 @@ curl -H "Authorization: Bearer mrk_your_key_here" \
   https://<your-monark-host>/api/v1/me
 ```
 
-`GET /api/v1/me` returns the identity + organization the key acts as — a good
+`GET /api/v1/me` returns the identity + organization the key acts as ; a good
 first call to confirm your key works. The exact base URL for your deployment is
 shown on the Account → API keys page.
 
@@ -75,7 +75,7 @@ curl -X POST -H "Authorization: Bearer mrk_…" -H "Content-Type: application/js
   https://<host>/api/v1/models/projects/records
 ```
 
-> **Projects, tasks, and everything else** live as **Data Model records** — there
+> **Projects, tasks, and everything else** live as **Data Model records** ; there
 > is no separate endpoint per feature. Whatever Data Models your org has defined,
 > you reach them all through `/models/{key}/records`.
 
@@ -97,7 +97,7 @@ Setup is in [services/mcp/README.md](../../services/mcp/README.md).
 
 ## Rate limits
 
-Each key gets a token bucket — by default a sustained **5 requests/second** with
+Each key gets a token bucket ; by default a sustained **5 requests/second** with
 a **burst of 20** (an operator can change this via the `PUBLIC_API_RATE_PER_SECOND`
 and `PUBLIC_API_BURST` environment variables). Every response carries
 `X-RateLimit-Limit` and `X-RateLimit-Remaining`; when you're over, you get
@@ -106,7 +106,7 @@ and `PUBLIC_API_BURST` environment variables). Every response carries
 ## Errors
 
 Errors are JSON: `{ "error": { "code": "…", "message": "…" } }` with a matching
-HTTP status — `401` (missing/invalid/revoked/expired key), `403` (the key's
+HTTP status : `401` (missing/invalid/revoked/expired key), `403` (the key's
 account lacks the permission, or a limited key wasn't granted it), `404`,
 `400` (bad request body), `429` (rate limited).
 
@@ -114,9 +114,9 @@ account lacks the permission, or a limited key wasn't granted it), `404`,
 
 Two ways to hand out _less_ than full access:
 
-1. **A limited personal key** — pick a subset of your own permissions when you
+1. **A limited personal key** : pick a subset of your own permissions when you
    create it (above). Good for your own scripts.
-2. **A service account** — an org-owned "machine" identity with its own roles,
+2. **A service account** : an org-owned "machine" identity with its own roles,
    created by an admin under **Admin → Service accounts** (behind the
    `public-api.service-accounts` flag). Its keys act as the account, not a
    person, so they survive staff changes and attribute cleanly. Give the account
@@ -126,4 +126,4 @@ Two ways to hand out _less_ than full access:
 Either way, the ceiling is only ever _narrower_ than the owning account: a key's
 effective rights are its allowlist **intersected with the account's current
 permissions**. If the account loses a permission, the key loses it too, the same
-moment — nothing to re-issue.
+moment : nothing to re-issue.

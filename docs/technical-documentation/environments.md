@@ -1,27 +1,27 @@
-# Environments — staging + production
+# Environments : staging + production
 
 Three environments, mapped to branches:
 
-| Environment | Branch | Web (Vercel) | API + crons (Render) | Database (Supabase) |
-| --- | --- | --- | --- | --- |
-| **Local dev** | any | `pnpm dev` | `pnpm dev` | local `supabase start` |
-| **Staging** | `develop` | Preview deploy (stable branch domain) | `monark-api-staging` + `monark-cron-*-staging` | **separate** staging project |
-| **Production** | `main` | Production deploy | `monark-api` + `monark-cron-*` | production project |
+| Environment    | Branch    | Web (Vercel)                          | API + crons (Render)                           | Database (Supabase)          |
+| -------------- | --------- | ------------------------------------- | ---------------------------------------------- | ---------------------------- |
+| **Local dev**  | any       | `pnpm dev`                            | `pnpm dev`                                     | local `supabase start`       |
+| **Staging**    | `develop` | Preview deploy (stable branch domain) | `monark-api-staging` + `monark-cron-*-staging` | **separate** staging project |
+| **Production** | `main`    | Production deploy                     | `monark-api` + `monark-cron-*`                 | production project           |
 
 **A push to `develop` redeploys staging ; a push to `main` redeploys
-production.** Both are native git deploys — Render `autoDeploy` and Vercel's git
-integration each watch their branch — so there is no separate deploy workflow to
+production.** Both are native git deploys ; Render `autoDeploy` and Vercel's git
+integration each watch their branch ; so there is no separate deploy workflow to
 run. Deploys fire on push **in parallel with** CI (see [ci.md](ci.md)); staging
 is where you catch what the gate can't.
 
 The golden rule: **staging and production never share a database.** Staging
 points at its own Supabase project so you can seed, migrate, and break it without
 touching production data. Every `sync: false` env var in
-[`render.yaml`](../../render.yaml) holds a *separate* value per environment.
+[`render.yaml`](../../render.yaml) holds a _separate_ value per environment.
 
 > This guide covers the two environments of **one** instance. To run **many**
-> isolated single-tenant instances — one per business, each with its own
-> database + domain via containers + Cloudflare — see
+> isolated single-tenant instances ; one per business, each with its own
+> database + domain via containers + Cloudflare ; see
 > [multi-instance.md](multi-instance.md).
 
 ## Promotion flow
@@ -53,7 +53,7 @@ Setup:
    (as in the deploy checklist), and `monark-cron-shared` with the production
    `CRON_SECRET` + `API_URL`.
 3. Fill the **`monark-api-staging`** env from the **staging** Supabase project,
-   and `monark-cron-shared-staging` with a *distinct* staging `CRON_SECRET` +
+   and `monark-cron-shared-staging` with a _distinct_ staging `CRON_SECRET` +
    the staging api URL.
 4. `SENTRY_ENVIRONMENT` is pre-set (`production` / `staging`) so Sentry separates
    the two automatically; set `SENTRY_DSN` on both (same or separate Sentry
@@ -61,10 +61,10 @@ Setup:
 
 Each api service runs its own `prisma migrate deploy` in `preDeployCommand`, so a
 push to `develop` migrates the staging DB and a push to `main` migrates
-production — independently. A migration that fails on staging aborts the staging
+production : independently. A migration that fails on staging aborts the staging
 deploy and never reaches production.
 
-Staging can run on a smaller Render plan than production — drop `plan:` on the
+Staging can run on a smaller Render plan than production ; drop `plan:` on the
 `*-staging` services if you want to save cost (a free plan spins down when idle,
 which is usually fine for staging).
 
@@ -88,12 +88,12 @@ Vercel maps branches to environments through the dashboard, not `vercel.json`:
    staging web at the staging api + staging Supabase.
 
 The [`vercel.json`](../../services/web/vercel.json) `ignoreCommand` skips a build
-when a push touched nothing under `services/web` or the shared packages — that
+when a push touched nothing under `services/web` or the shared packages ; that
 applies to both environments.
 
 > **Note on PR previews.** Because every non-production branch is a Vercel
-> Preview, each **PR also gets its own ephemeral preview URL** — but those share
-> the *Preview* env vars, so they talk to the **staging** api + Supabase. Treat
+> Preview, each **PR also gets its own ephemeral preview URL** ; but those share
+> the _Preview_ env vars, so they talk to the **staging** api + Supabase. Treat
 > PR previews as staging-data clients, not isolated sandboxes.
 
 ## Supabase (database + auth)
@@ -104,10 +104,10 @@ production ([deploy-checklist.md](deploy-checklist.md) Phase 0.2):
 - Copy its `URL` / publishable / secret keys into the staging Render api env and
   the Vercel **Preview** env vars.
 - **Authentication → URL Configuration** → set the **Site URL** + redirect URLs
-  to the *staging* web URL (the `develop` Vercel domain), independently of
+  to the _staging_ web URL (the `develop` Vercel domain), independently of
   production.
 - Migrations reach it through the staging api's `preDeployCommand` on each
-  `develop` deploy — you don't run them by hand.
+  `develop` deploy : you don't run them by hand.
 
 (Supabase's own preview **branching** is an alternative for ephemeral per-PR
 databases; a dedicated staging project is simpler for a single always-on staging
@@ -118,7 +118,7 @@ environment and is what `render.yaml` assumes.)
 `SENTRY_ENVIRONMENT` is `production` on the prod services and `staging` on the
 staging ones (set in `render.yaml`), and the web reads
 `NEXT_PUBLIC_SENTRY_ENVIRONMENT` per Vercel environment. Point both at the same
-Sentry project and use the environment filter, or use separate projects — either
+Sentry project and use the environment filter, or use separate projects ; either
 way errors are attributed to the right environment. See
 [observability.md](observability.md).
 
@@ -141,5 +141,5 @@ Native deploys fire on push regardless of CI. If you'd rather deploy **only afte
 the verify gate is green**, disable `autoDeploy` on the Render services + turn off
 Vercel's automatic git deploys, and trigger each platform's deploy hook from a
 GitHub Actions job keyed on `workflow_run` (the CI workflow) `conclusion == success`.
-Not wired today — staging deploying on every push is the intended behaviour, so a
+Not wired today : staging deploying on every push is the intended behaviour, so a
 red build is visible on staging quickly.

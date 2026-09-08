@@ -64,5 +64,5 @@ jobs:
       - name: Note when the token isn't configured
         if: steps.app-token.outputs.token == ''
         run: |
-          echo "::notice::DOCS_SYNC_APP_ID / DOCS_SYNC_APP_PRIVATE_KEY not set — skipping."
+          echo "::notice::DOCS_SYNC_APP_CLIENT_ID / DOCS_SYNC_APP_PRIVATE_KEY not set ; skipping."
           echo "The docs site will still pick these changes up on its daily schedule."

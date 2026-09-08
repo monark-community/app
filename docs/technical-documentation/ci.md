@@ -48,7 +48,7 @@ Two rules the gate enforces:
 
 - **Every package that emits coverage MUST have an entry.** A package that
   produces a coverage report but has no floor fails the gate ("produced coverage
-  but has no THRESHOLDS entry") — this is how a newly-added module can't ship
+  but has no THRESHOLDS entry") ; this is how a newly-added module can't ship
   un-gated. A package with **no** `test:coverage` script produces no report and
   is listed as "skipped" (e.g. pure libraries covered only via their consumers).
 - **Floors are a regression guard, not a brag.** Set each metric a few points
@@ -64,7 +64,7 @@ unit); ratchet it up once a merged CI run publishes the real number.
 ## End-to-end tests are manual
 
 The Playwright e2e suite ([`.github/workflows/e2e.yml`](../../.github/workflows/e2e.yml))
-is **`workflow_dispatch` only** — it boots a full Supabase + api + web stack and
+is **`workflow_dispatch` only** : it boots a full Supabase + api + web stack and
 costs ~20 min, too much to pay on every push for what is primarily an
 auth/admin regression net. Run it from the Actions tab (**Actions → E2E → Run
 workflow → pick a branch**) when touching those surfaces; developers run
@@ -74,10 +74,10 @@ workflow → pick a branch**) when touching those surfaces; developers run
 
 Alongside the verify pipeline, security + quality workflows run on push/PR:
 
-- **gitleaks** — secret scanning (allowlist in `.gitleaks.toml`).
-- **codeql** — static analysis.
-- **dependency-review** — flags risky dependency changes on PRs.
-- **lighthouse** — web performance/accessibility budget.
+- **gitleaks** : secret scanning (allowlist in `.gitleaks.toml`).
+- **codeql** : static analysis.
+- **dependency-review** : flags risky dependency changes on PRs.
+- **lighthouse** : web performance/accessibility budget.
 
 ## Publishing the docs
 
@@ -97,13 +97,13 @@ still land, just later. The workflow skips itself (with a notice, not a failure)
 the secrets aren't set.
 
 The dispatch needs a GitHub App token scoped to `app-docs` with **Contents: read &
-write** there: `DOCS_SYNC_APP_ID` + `DOCS_SYNC_APP_PRIVATE_KEY`. The App has to be
+write** there: `DOCS_SYNC_APP_CLIENT_ID` + `DOCS_SYNC_APP_PRIVATE_KEY`. The App has to be
 installed on `monark-community/app-docs` as well as here. This mirrors the
 [changelog workflow](../../.github/workflows/changelog-compile.yml)'s reasoning: an
 App token can be scoped to exactly one repository, which the built-in `GITHUB_TOKEN`
 (scoped to this repo) can't cross to at all.
 
-Prose that isn't published — planning specs, the archive, `docs/agents` — doesn't
+Prose that isn't published (planning specs, the archive, `docs/agents`) doesn't
 trigger anything. A link from a published page into that material is rewritten to an
 absolute GitHub URL by the sync, so it stays reachable without being republished.
 

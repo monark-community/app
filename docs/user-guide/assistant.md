@@ -1,7 +1,7 @@
 # The assistant
 
 Monark has a built-in AI assistant that lives one tap away and can both answer
-questions about your data and make changes for you — always with your say-so.
+questions about your data and make changes for you ; always with your say-so.
 
 > The assistant only appears when your organization has turned it on. If you
 > don't see the ✨ icon, it isn't enabled for you yet.
@@ -11,7 +11,7 @@ questions about your data and make changes for you — always with your say-so.
 - Click the **✨ icon** in the top bar (it's there on every page), or
 - Press **Ctrl / ⌘ + J**.
 
-A panel slides in from the right. It stays out of the way — you can keep clicking
+A panel slides in from the right. It stays out of the way ; you can keep clicking
 around the app while it's open. On a phone it opens full-screen; close it with the
 X or the back arrow.
 
@@ -29,8 +29,8 @@ here" or "what's in this list?" and it understands the context.
 
 It can:
 
-- **Answer questions** about your data — "how many open records are in Projects?"
-- **Take actions** — "create a task called Follow up", "update this record's
+- **Answer questions** about your data : "how many open records are in Projects?"
+- **Take actions** : "create a task called Follow up", "update this record's
   status to Done".
 
 ## Confirming changes
@@ -41,7 +41,7 @@ with **Confirm** and **Reject** buttons. Nothing happens until you press Confirm
 Read-only lookups (just reading your data) run on their own.
 
 You're always in control, and the assistant can only ever see or change what
-**you** are allowed to — it acts with your own permissions, nothing more.
+**you** are allowed to : it acts with your own permissions, nothing more.
 
 ## Good to know
 

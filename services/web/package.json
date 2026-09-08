@@ -12,7 +12,8 @@
     "test": "vitest run --passWithNoTests",
     "test:coverage": "vitest run --coverage --passWithNoTests",
     "test:e2e": "playwright test",
-    "screenshots": "node tools/screenshots/capture.mjs"
+    "screenshots": "node tools/screenshots/capture.mjs",
+    "figures": "node tools/screenshots/figures.mjs"
   },
   "dependencies": {
     "@blocknote/ariakit": "^0.53.0",
