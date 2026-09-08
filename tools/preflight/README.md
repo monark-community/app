@@ -67,10 +67,11 @@ Node builtins only — no dependencies. It runs in front of the app, including i
 ## Tests
 
 ```sh
-pnpm test:preflight
+pnpm test            # the whole workspace, tools included
+pnpm --filter @monark/tools test
 ```
 
-Uses Node's built-in test runner rather than vitest: `tools/` is not a workspace package, so it has no vitest config to inherit, and none of the other tools carry tests. This keeps real coverage on the parsing logic without adding a dependency or restructuring the workspace. **It is not currently part of `pnpm test` or the CI gate** — wiring it in means making `tools/` a workspace package, which is a deliberate decision rather than a side effect of adding this tool.
+`tools/` is a workspace package (`@monark/tools`), so its tests run under vitest in the same `pnpm test` and the same CI gate as everything else. The `.env` parser is where the subtle logic lives, so that is where the tests are.
 
 ## Adding a check
 

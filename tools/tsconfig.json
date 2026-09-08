@@ -11,5 +11,10 @@
       "@monark/*/contracts/events": ["./packages/*/src/contracts/events.ts"]
     }
   },
-  "include": ["**/*.ts"]
+  "include": ["**/*.ts"],
+  // vitest.config.ts imports ../vitest.shared, which lives outside this
+  // package and resolves `vitest/config` against the root. Every other
+  // package keeps its vitest config out of typecheck the same way (they
+  // scope `include` to src/) ; vitest type-checks it at runtime anyway.
+  "exclude": ["vitest.config.ts"]
 }
