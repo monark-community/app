@@ -91,6 +91,17 @@ jobs:
       - name: Check public-API MCP visibility
         run: pnpm check:mcp
 
+      - name: Check changelog fragment naming
+        run: pnpm check:changelog
+
+      # Suites for the repo-level scripts in tools/. `pnpm test` is
+      # `turbo run test`, which only reaches workspace packages ; tools/ is
+      # not one, so its tests need their own invocation. They belong here
+      # rather than in the unit-tests job because what they cover is the
+      # check:* guards this job runs.
+      - name: Test repo tooling
+        run: pnpm test:tools
+
   # Migration ↔ schema drift. Replays every committed migration into a throwaway
   # Postgres and diffs the result against schema.prisma (modulo an allowlist of
   # raw-SQL divergences the Prisma datamodel can't express). Catches a modeled
