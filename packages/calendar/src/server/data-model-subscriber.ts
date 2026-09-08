@@ -64,15 +64,16 @@ async function resolveMaterialization(
   return { title: record.title, at, calendarId };
 }
 
-// Calendar itself is org-scoped ; a platform-wide Data Model (organizationId
-// null) has no single org's calendar to materialize into, so it's skipped
-// rather than guessed at.
+// Calendar is org-scoped, and so is every Data Model : `DataModel.
+// organizationId` is a required column and platform-wide models are
+// disallowed, so the record always names the org whose calendar it
+// materializes into. (This used to skip on a null org — a branch guarding a
+// state the schema forbids.)
 async function syncRecord(
   dataModelId: string,
   recordId: string,
-  organizationId: string | null,
+  organizationId: string,
 ): Promise<void> {
-  if (!organizationId) return;
   const resolved = await resolveMaterialization(dataModelId, recordId);
   if (!resolved) {
     await softDeleteCalendarEventBySource(SOURCE_MODULE, recordId);

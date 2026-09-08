@@ -1,4 +1,4 @@
-import { afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { getDb } from "@monark/db";
 import { truncate } from "@monark/test-utils/db";
 import { emit } from "@monark/common";
@@ -12,7 +12,8 @@ import {
 // Integration tests for the webhook subscribers — the layer between
 // the in-memory event bus and the `WebhookDelivery` outbox table.
 // The three routing rules (platform-tier firehose, direct-org match,
-// user-tied membership match + singleton fallback) live here ; a
+// resolved-org match — membership when the event names a user, the
+// singleton org otherwise) live here ; a
 // regression either over-fans-out (privacy leak — endpoints in org A
 // receive org B's events) or under-fans-out (operators stop getting
 // alerts they explicitly subscribed to). Both are silent failures.
@@ -260,6 +261,90 @@ describe("webhooks/subscribers — Rule 3 (user-tied membership match)", () => {
       // @ts-expect-error synthetic shape
     });
     expect(await deliveriesForEndpoint(epAId)).toBe(0);
+  });
+});
+
+// The gap this closes : an event carrying neither an org id nor a user id
+// used to satisfy Rule 1 only, so it reached platform-tier endpoints and
+// nothing else. An operator could scope an endpoint to their org, subscribe
+// it to `feature-flag.flipped`, and silently receive nothing — no error, no
+// delivery row, nothing to explain it. Real events with that shape are
+// `feature-flag.flipped`, `files.bucket-created`, and a platform-tier
+// `rbac.role-*`: all instance-level facts, which in a one-org deployment
+// belong to the org that exists.
+describe("webhooks/subscribers — Rule 3 (instance-level event, single org)", () => {
+  // `findOnlySingletonOrgId` resolves only while exactly one org is live.
+  // Soft-delete the others for this block rather than deleting them : the
+  // query filters on `deletedAt`, and a real delete would cascade away
+  // fixtures other spec files own (file parallelism is off, but their rows
+  // outlive them).
+  let hiddenOrgIds: string[] = [];
+
+  beforeAll(async () => {
+    const db = getDb();
+    const others = await db.organization.findMany({
+      where: { deletedAt: null, id: { not: ORG_A } },
+      select: { id: true },
+    });
+    hiddenOrgIds = others.map((o) => o.id);
+    await db.organization.updateMany({
+      where: { id: { in: hiddenOrgIds } },
+      data: { deletedAt: new Date() },
+    });
+  });
+
+  afterAll(async () => {
+    await getDb().organization.updateMany({
+      where: { id: { in: hiddenOrgIds } },
+      data: { deletedAt: null },
+    });
+  });
+
+  it("delivers an event with neither org id nor user id to the only org's endpoint", async () => {
+    const epId = await seedEndpoint({
+      organizationId: ORG_A,
+      eventType: "feature-flag.flipped",
+    });
+    await emit({
+      type: "feature-flag.flipped",
+      occurredAt: new Date(),
+      // @ts-expect-error synthetic shape
+    });
+    expect(await deliveriesForEndpoint(epId)).toBe(1);
+  });
+
+  it("still delivers a user-tied event when the user has no membership row yet", async () => {
+    // Direct sign-ups predating the auto-membership subscriber, and every
+    // sign-in before that upsert lands, hit this path.
+    const epId = await seedEndpoint({
+      organizationId: ORG_A,
+      eventType: "auth.signed-in",
+    });
+    await emit({
+      type: "auth.signed-in",
+      userId: USER_A,
+      occurredAt: new Date(),
+      // @ts-expect-error synthetic shape
+    });
+    expect(await deliveriesForEndpoint(epId)).toBe(1);
+  });
+});
+
+describe("webhooks/subscribers — Rule 3 (instance-level event, several orgs)", () => {
+  it("does NOT guess an org for an org-less event when more than one org is live", async () => {
+    // With no singleton to resolve to, the event is genuinely ambiguous.
+    // Skipping is the safe answer : a platform-tier endpoint still gets it
+    // via Rule 1, and no org receives another org's traffic by accident.
+    const epId = await seedEndpoint({
+      organizationId: ORG_A,
+      eventType: "feature-flag.flipped",
+    });
+    await emit({
+      type: "feature-flag.flipped",
+      occurredAt: new Date(),
+      // @ts-expect-error synthetic shape
+    });
+    expect(await deliveriesForEndpoint(epId)).toBe(0);
   });
 });
 

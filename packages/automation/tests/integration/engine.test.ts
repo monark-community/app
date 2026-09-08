@@ -63,6 +63,17 @@ const GRAPH: AutomationGraph = {
   edges: [{ id: "e1", source: "n1", target: "n2" }],
 };
 
+// Same shape, triggered by an event that carries neither an org id nor a user
+// id. `resolveTriggerEventType` reads the trigger node, so the event type has
+// to live in the graph — passing it as the `triggerEventType` input alone is
+// overridden.
+const BUCKET_GRAPH: AutomationGraph = {
+  ...GRAPH,
+  nodes: GRAPH.nodes.map((n) =>
+    n.id === "n1" ? { ...n, config: { eventType: "files.bucket-created" } } : n,
+  ),
+};
+
 beforeAll(async () => {
   const db = getDb();
   await db.organization.deleteMany({ where: { id: ORG } });
@@ -406,6 +417,25 @@ describe("automation — manual run", () => {
   });
 });
 
+// Runs `fn` in a world where ORG is the only live organization. The singleton
+// lookup filters on `deletedAt`, so other orgs are soft-deleted for the
+// duration and restored after — a real delete would cascade away fixtures
+// other specs own.
+async function withSingleOrg(fn: () => Promise<void>): Promise<void> {
+  const db = getDb();
+  const others = await db.organization.findMany({
+    where: { deletedAt: null, id: { not: ORG } },
+    select: { id: true },
+  });
+  const ids = others.map((o) => o.id);
+  await db.organization.updateMany({ where: { id: { in: ids } }, data: { deletedAt: new Date() } });
+  try {
+    await fn();
+  } finally {
+    await db.organization.updateMany({ where: { id: { in: ids } }, data: { deletedAt: null } });
+  }
+}
+
 describe("automation — event trigger", () => {
   it("enqueues and runs when a matching event fires", async () => {
     const admin = callerFor(U_ADMIN, ORG);
@@ -449,6 +479,65 @@ describe("automation — event trigger", () => {
       occurredAt: new Date(),
     } as unknown as DomainEvent);
     await drain();
+
+    const runs = await admin.runs.list({ automationId: created.id });
+    expect(runs.items.length).toBe(0);
+  });
+
+  // `files.bucket-created` carries neither an `organizationId` nor a `userId`
+  // (a bucket is project-level infra). Org resolution used to give up on that
+  // shape and return no orgs, so the trigger was offered in the editor's
+  // picker and could never fire — an operator wired a flow to it and simply
+  // got nothing.
+  it("enqueues a run for an event carrying neither an org id nor a user id", async () => {
+    const admin = callerFor(U_ADMIN, ORG);
+    const created = await admin.automations.create({
+      name: "Bucket flow",
+      graph: BUCKET_GRAPH,
+    });
+    await admin.automations.setEnabled({ id: created.id, enabled: true });
+
+    await withSingleOrg(async () => {
+      await emit({
+        type: "files.bucket-created",
+        bucket: "assets",
+        isPublic: false,
+        actorId: U_ADMIN,
+        occurredAt: new Date(),
+      } as unknown as DomainEvent);
+      await drain();
+    });
+
+    const runs = await admin.runs.list({ automationId: created.id });
+    expect(runs.items.length).toBeGreaterThanOrEqual(1);
+    expect(runs.items[0]?.status).toBe("SUCCEEDED");
+  });
+
+  it("does NOT guess an org for such an event when more than one org is live", async () => {
+    const admin = callerFor(U_ADMIN, ORG);
+    const created = await admin.automations.create({
+      name: "Bucket flow ambiguous",
+      graph: BUCKET_GRAPH,
+    });
+    await admin.automations.setEnabled({ id: created.id, enabled: true });
+
+    const db = getDb();
+    const otherId = "auto-it-org-ambiguous";
+    await db.organization.create({
+      data: { id: otherId, slug: otherId, displayName: otherId },
+    });
+    try {
+      await emit({
+        type: "files.bucket-created",
+        bucket: "assets",
+        isPublic: false,
+        actorId: U_ADMIN,
+        occurredAt: new Date(),
+      } as unknown as DomainEvent);
+      await drain();
+    } finally {
+      await db.organization.deleteMany({ where: { id: otherId } });
+    }
 
     const runs = await admin.runs.list({ automationId: created.id });
     expect(runs.items.length).toBe(0);
