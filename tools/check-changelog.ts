@@ -126,11 +126,13 @@ for (const path of targets) {
 
 if (problems.length > 0) {
   console.error(
-    `check:changelog: FAIL — ${problems.length} fragment(s) break the naming convention.\n\n` +
+    `check:changelog: FAIL — ${problems.length} problem(s) in changelog.d/.\n\n` +
       problems.join("\n") +
-      `\n\nConvention: changelog.d/YYYY-MM-DD-NN-<slug>.md, where the date matches the\n` +
+      `\n\nNaming: changelog.d/YYYY-MM-DD-NN-<slug>.md, where the date matches the\n` +
       `entry's own "- YYYY-MM-DD:" line, NN is a two-digit within-day sequence, and\n` +
       `<slug> is lowercase kebab-case (conventionally the branch name with "/" as "-").\n` +
+      `Links: written from the repo root, since the entry compiles into CHANGELOG.md\n` +
+      `there — "tools/foo.ts", not "../tools/foo.ts".\n` +
       `Full guidance: changelog.d/README.md.`,
   );
   process.exit(1);
