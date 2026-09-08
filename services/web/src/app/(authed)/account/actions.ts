@@ -3,8 +3,11 @@
 import sharp from "sharp";
 import { cookies } from "next/headers";
 import { createClient } from "@supabase/supabase-js";
+import type { OAuthProvider } from "@monark/auth/contracts";
 import { setLocaleAction } from "@/i18n/set-locale-action";
+import { setOAuthLinkIntent } from "@/lib/oauth-link-cookie";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { readTotpPending } from "@/lib/totp-pending-cookie";
 import { createServerTrpcClient } from "@/lib/trpc-server";
 import { DEVICE_COOKIE_NAME } from "@/lib/trusted-device-cookie";
 
@@ -101,6 +104,177 @@ export async function changePasswordAction(input: {
   }
 
   await api.auth.notifyPasswordChanged.mutate({ triggeredBy: "user" }).catch(() => {});
+  return { ok: true };
+}
+
+export type SetPasswordErrorCode =
+  | "alreadySet"
+  | "weakPassword"
+  | "totpRequired"
+  | "invalidTotpCode"
+  | "upstream";
+
+export type SetPasswordResult = { ok: true } | { ok: false; errorCode: SetPasswordErrorCode };
+
+// First password for an account that has never had one : the user
+// registered through a social provider, so there is no
+// current password to re-enter and `changePasswordAction`'s gate can't
+// be satisfied. The live session is the proof of identity here, which
+// is the same standard the provider round trip just met.
+//
+// The `alreadySet` refusal is what keeps this from being a way around
+// that gate. Identity state is read from the Supabase admin API
+// server-side (never from the client), so a caller who already has a
+// password lands back on `changePasswordAction` with its
+// current-password requirement intact.
+//
+// The TOTP second factor still applies when enrolled : an attacker
+// holding a stolen OAuth session shouldn't be able to mint a password
+// and convert it into durable, provider-independent access.
+export async function setPasswordAction(input: {
+  newPassword: string;
+  totpCode?: string;
+}): Promise<SetPasswordResult> {
+  const supabase = await createSupabaseServerClient();
+  const [{ data: userData }, { data: sessionData }] = await Promise.all([
+    supabase.auth.getUser(),
+    supabase.auth.getSession(),
+  ]);
+  const email = userData.user?.email;
+  const accessToken = sessionData.session?.access_token;
+  if (!email || !accessToken) return { ok: false, errorCode: "upstream" };
+
+  const api = createServerTrpcClient(accessToken);
+  const identities = await api.auth.oauth.identities.query().catch(() => null);
+  if (!identities) return { ok: false, errorCode: "upstream" };
+  if (identities.hasPassword) return { ok: false, errorCode: "alreadySet" };
+
+  const totpStatus = await api.auth.totp.status.query().catch(() => null);
+  if (totpStatus && "enrolled" in totpStatus && totpStatus.enrolled) {
+    if (!input.totpCode || input.totpCode.length < 6) {
+      return { ok: false, errorCode: "totpRequired" };
+    }
+    const verified = await api.auth.totp.verifyCode
+      .mutate({ code: input.totpCode })
+      .catch(() => ({ ok: false }));
+    if (!verified.ok) return { ok: false, errorCode: "invalidTotpCode" };
+  }
+
+  const me = await api.users.me.query().catch(() => null);
+  const strength = await api.auth.checkPassword
+    .mutate({
+      password: input.newPassword,
+      email,
+      displayName: me?.displayName ?? undefined,
+    })
+    .catch(() => null);
+  if (!strength || !strength.ok) return { ok: false, errorCode: "weakPassword" };
+
+  const { data: updated, error: updateError } = await supabase.auth.updateUser({
+    password: input.newPassword,
+  });
+  if (updateError || !updated.user) return { ok: false, errorCode: "upstream" };
+
+  await api.auth.notifyPasswordChanged.mutate({ triggeredBy: "user" }).catch(() => {});
+  return { ok: true };
+}
+
+export type BeginProviderLinkErrorCode = "totpPending" | "upstream";
+
+export type BeginProviderLinkResult =
+  | { ok: true }
+  | { ok: false; errorCode: BeginProviderLinkErrorCode };
+
+// Arms the single-use link-intent cookie, then the client calls
+// `supabase.auth.linkIdentity` to do the actual redirect (it has to run
+// in the browser so the PKCE verifier lands where /auth/callback can
+// read it back).
+//
+// Refuses while a TOTP challenge is pending. The middleware already
+// keeps such a session away from /account, so this is belt-and-braces —
+// but the cookie is what tells the callback to skip the TOTP gate, so
+// the one place that sets it should be the strictest about when.
+export async function beginProviderLinkAction(input: {
+  provider: OAuthProvider;
+}): Promise<BeginProviderLinkResult> {
+  const pending = await readTotpPending();
+  if (pending.pending) return { ok: false, errorCode: "totpPending" };
+
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase.auth.getUser();
+  if (error || !data.user) return { ok: false, errorCode: "upstream" };
+
+  await setOAuthLinkIntent(input.provider);
+  return { ok: true };
+}
+
+export type UnlinkProviderErrorCode =
+  | "notLinked"
+  | "lastMethod"
+  | "totpRequired"
+  | "invalidTotpCode"
+  | "upstream";
+
+export type UnlinkProviderResult = { ok: true } | { ok: false; errorCode: UnlinkProviderErrorCode };
+
+// Disconnects a social provider from the account.
+//
+// The unlink itself runs through the user's own Supabase session
+// (`unlinkIdentity` needs the identity object from `getUserIdentities`,
+// and there is no admin-side equivalent in supabase-js). That also means
+// the guard below is a footgun guard rather than a security boundary: a
+// user holding a session can call `unlinkIdentity` from the console
+// whatever we decide here, and Supabase's refusal to remove the last
+// identity is the only hard floor. What we add is a floor that matches
+// *our* notion of a usable sign-in method, plus an explanation instead
+// of an opaque upstream error.
+//
+// TOTP still gates it when enrolled, for the same reason password and
+// email changes do: removing a way into the account is at least as
+// sensitive as changing one.
+export async function unlinkProviderAction(input: {
+  provider: OAuthProvider;
+  totpCode?: string;
+}): Promise<UnlinkProviderResult> {
+  const supabase = await createSupabaseServerClient();
+  const { data: sessionData } = await supabase.auth.getSession();
+  const accessToken = sessionData.session?.access_token;
+  if (!accessToken) return { ok: false, errorCode: "upstream" };
+  const api = createServerTrpcClient(accessToken);
+
+  const allowed = await api.auth.oauth.canUnlink
+    .query({ provider: input.provider })
+    .catch(() => null);
+  if (!allowed) return { ok: false, errorCode: "upstream" };
+  if (!allowed.ok) {
+    return {
+      ok: false,
+      errorCode: allowed.reason === "not-linked" ? "notLinked" : "lastMethod",
+    };
+  }
+
+  const totpStatus = await api.auth.totp.status.query().catch(() => null);
+  if (totpStatus && "enrolled" in totpStatus && totpStatus.enrolled) {
+    if (!input.totpCode || input.totpCode.length < 6) {
+      return { ok: false, errorCode: "totpRequired" };
+    }
+    const verified = await api.auth.totp.verifyCode
+      .mutate({ code: input.totpCode })
+      .catch(() => ({ ok: false }));
+    if (!verified.ok) return { ok: false, errorCode: "invalidTotpCode" };
+  }
+
+  const { data: identityData, error: identityError } = await supabase.auth.getUserIdentities();
+  if (identityError || !identityData) return { ok: false, errorCode: "upstream" };
+  const identity = identityData.identities.find((i) => i.provider === input.provider);
+  if (!identity) return { ok: false, errorCode: "notLinked" };
+
+  const { error: unlinkError } = await supabase.auth.unlinkIdentity(identity);
+  if (unlinkError) return { ok: false, errorCode: "upstream" };
+
+  // Event only after Supabase confirmed the removal ; the api re-reads
+  // the post-change identity state rather than trusting us to describe it.
+  await api.auth.oauth.notifyUnlinked.mutate({ provider: input.provider }).catch(() => {});
   return { ok: true };
 }
 

@@ -604,7 +604,7 @@ export async function findFreeDataRecordSlug(
 // ── Per-record role access (row-level authorization) ──────
 // Mirrors CalendarRoleAccess : a record with NO access rows is visible to
 // everyone who can access its model ; with rows, only those roles. Data
-// admins (`bypass`, resolved from `data-models.manage-schema` in the router)
+// callers holding `data-models.view-all-records` (`bypass`, resolved in the router)
 // skip the filter entirely. See the DataRecordRoleAccess model comment.
 
 /** Prisma `where` fragment restricting to records the caller's roles may see.

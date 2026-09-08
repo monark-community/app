@@ -206,6 +206,14 @@
     }
   },
   "auth": {
+    "oauth": {
+      "continueWith": "Continue with {provider}",
+      "starting": "Redirecting…",
+      "divider": "or",
+      "errors": {
+        "start": "Couldn't reach {provider}. Try again."
+      }
+    },
     "signUp": {
       "title": "Create your account",
       "subtitle": "Join the {appName} community in under a minute.",
@@ -251,6 +259,18 @@
         "deletionScheduled": {
           "title": "Deletion scheduled",
           "subtitle": "Your account is set to be removed on {date}. Sign back in any time before then to cancel."
+        },
+        "oauthError": {
+          "title": "Couldn't finish signing in",
+          "reasons": {
+            "cancelled": "You cancelled the request at the provider. Nothing was changed.",
+            "no-email": "That provider account has no email address, so we can't create an account from it. Sign up with an email address instead.",
+            "email-unverified": "Your provider hasn't verified that email address yet. Verify it with them, then try again.",
+            "email-collision": "An account already exists for that email address. Sign in with your password, then link the provider from your account settings.",
+            "disabled": "Social sign-in is currently turned off. Sign in with your email and password instead.",
+            "exchange-failed": "The sign-in link expired before we could use it. Try again.",
+            "fallback": "Something went wrong on the way back from the provider. Try again."
+          }
         }
       }
     },
@@ -776,7 +796,11 @@
         "createCta": "New secret",
         "searchPlaceholder": "Search by name or description…",
         "searchAria": "Search secrets",
-        "columns": { "key": "Name", "lastUsed": "Last used", "updated": "Updated" },
+        "columns": {
+          "key": "Name",
+          "lastUsed": "Last used",
+          "updated": "Updated"
+        },
         "never": "Never",
         "empty": "No secrets yet.",
         "panelCreateTitle": "New secret",
@@ -1940,7 +1964,32 @@
     "email": {
       "title": "Email",
       "subtitle": "The address you sign in with and where we send notifications.",
-      "currentLabel": "Current email"
+      "currentLabel": "Current email",
+      "needsPassword": "Set a password below before changing your email address; the change is confirmed with your current password."
+    },
+    "connectedAccounts": {
+      "title": "Connected accounts",
+      "subtitle": "The ways you can sign in to this account.",
+      "connected": "Connected",
+      "notSet": "Not set",
+      "password": "Email and password",
+      "connect": "Connect",
+      "connecting": "Redirecting…",
+      "disconnect": "Disconnect",
+      "notConnected": "Not connected",
+      "cancel": "Cancel",
+      "confirmTitle": "Disconnect this account?",
+      "confirmBody": "You'll no longer be able to sign in with {provider}. Your other sign-in methods keep working, and you can reconnect it any time.",
+      "lastMethodHint": "Set a password first — this is your only way to sign in.",
+      "linkedToast": "{provider} connected.",
+      "unlinkedToast": "{provider} disconnected.",
+      "errors": {
+        "notLinked": "That account isn't connected.",
+        "lastMethod": "That's your only way to sign in. Set a password first, then disconnect it.",
+        "linkFailed": "Couldn't connect {provider}. It may already be linked to another account.",
+        "totpPending": "Finish the two-factor challenge first.",
+        "upstream": "Something went wrong. Try again."
+      }
     },
     "emailChange": {
       "change": "Change email",
@@ -1980,6 +2029,14 @@
       "title": "Password",
       "subtitle": "Change the password used to sign in.",
       "change": "Change password",
+      "set": {
+        "subtitle": "You sign in with a connected account. Add a password to sign in with your email address too.",
+        "cta": "Set a password",
+        "dialogTitle": "Set a password",
+        "dialogSubtitle": "Choose a password for your email address. Your connected accounts keep working either way.",
+        "submit": "Set password",
+        "success": "Password set."
+      },
       "dialogTitle": "Change your password",
       "dialogSubtitle": "Enter your current password, then a new one. We'll email you a confirmation once the change lands.",
       "labels": {
@@ -1995,6 +2052,7 @@
       "success": "Password updated.",
       "errors": {
         "invalidCurrentPassword": "Current password is incorrect.",
+        "alreadySet": "This account already has a password. Use Change password instead.",
         "weakPassword": "New password is too short.",
         "totpRequired": "Two-factor code is required to change your password.",
         "invalidTotpCode": "That two-factor code is invalid or expired.",
@@ -2069,6 +2127,10 @@
         "emailChange": {
           "title": "Confirm email change",
           "description": "Enter the 6-digit code from your authenticator app to send the confirmation emails."
+        },
+        "providerUnlink": {
+          "title": "Confirm disconnect",
+          "description": "Enter the 6-digit code from your authenticator app to disconnect this account."
         }
       },
       "reminder": {
@@ -2164,6 +2226,12 @@
         "notAuthenticated": "Sign in again and retry.",
         "upstream": "Could not schedule deletion. Try again."
       }
+    },
+    "totpOnboarding": {
+      "title": "Protect your account",
+      "body": "Two-factor authentication means a stolen password isn't enough to sign in.",
+      "enable": "Set up two-factor",
+      "notNow": "Not now"
     }
   },
   "devOverlay": {
@@ -2865,7 +2933,13 @@
         "onDay": "On day",
         "lastDay": "Last day",
         "onThe": "On the",
-        "nth": { "1": "first", "2": "second", "3": "third", "4": "fourth", "last": "last" },
+        "nth": {
+          "1": "first",
+          "2": "second",
+          "3": "third",
+          "4": "fourth",
+          "last": "last"
+        },
         "nextRun": "Next run: {time}",
         "nextRunNone": "No upcoming run"
       },

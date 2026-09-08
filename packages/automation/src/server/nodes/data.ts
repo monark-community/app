@@ -20,7 +20,7 @@ import { parseJsonObject, requireOwnerPermission } from "./shared";
 /**
  * Resolve a record by id and assert the automation's OWNER may act on it: it
  * must belong to the run's org AND be visible to the owner's roles (a data admin
- * with `manage-schema` bypasses row-level access). Mirrors the tRPC records
+ * with `view-all-records` bypasses row-level access). Mirrors the tRPC records
  * router's `requireModelAccess` + `isDataRecordRoleAccessible` so a node can't
  * reach a record the owner couldn't through the UI (cross-org or row-restricted).
  * Throws a not-found-style error (no existence leak) when the check fails.
@@ -36,7 +36,7 @@ async function requireOwnerAccessibleRecord(
   }
   const [roles, bypass] = await Promise.all([
     getUserRoles(ownerId, ctx.organizationId),
-    hasPermission(ownerId, "data-models.manage-schema", ctx.organizationId),
+    hasPermission(ownerId, "data-models.view-all-records", ctx.organizationId),
   ]);
   const accessible = await isDataRecordRoleAccessible(recordId, {
     roleIds: roles.map((r) => r.id),
@@ -206,11 +206,11 @@ export const dataFindRecordsNode = defineNode({
     const ownerId = await requireOwnerPermission(ctx, "data-models.record-read");
     const model = await findDataModelByKey(ctx.organizationId, config.modelKey);
     if (!model) throw new Error(`No Data Model with key "${config.modelKey}" in this org.`);
-    // Row-level access: a data admin (manage-schema) bypasses ; otherwise the
+    // Row-level access: a `view-all-records` holder bypasses ; otherwise the
     // owner's roles gate which records are visible.
     const [roles, isAdmin] = await Promise.all([
       getUserRoles(ownerId, ctx.organizationId),
-      hasPermission(ownerId, "data-models.manage-schema", ctx.organizationId),
+      hasPermission(ownerId, "data-models.view-all-records", ctx.organizationId),
     ]);
     ctx.log(`Querying "${model.name}" where ${config.field} ${config.match} "${config.value}".`);
     // The node's simple match vocabulary maps onto the same legacy filter shape

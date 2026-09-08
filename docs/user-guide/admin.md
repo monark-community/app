@@ -294,7 +294,7 @@ The list page shows every Data Model in the org ; **New model** creates one (nam
 
 ### Access
 
-Two layers. **Model-level** : each model auto-registers per-model record permissions (read / write / delete) that surface in the role editor, so a role can be granted just one model's records. **Record-level** : an individual record can be restricted to specific roles (a record with no restriction is visible to everyone who can access the model ; a restricted record is invisible (a 404) to others). Data admins (`data-models.manage-schema`, which built-in admins hold) bypass the record layer.
+Two layers. **Model-level** : each model auto-registers per-model record permissions (read / write / delete) that surface in the role editor, so a role can be granted just one model's records. **Record-level** : an individual record can be restricted to specific roles (a record with no restriction is visible to everyone who can access the model ; a restricted record is invisible (a 404) to others). Seeing past the record layer is its own permission, **View all records** (`data-models.view-all-records`), which built-in admins hold. Being able to _edit a model's schema_ no longer implies being able to _read every record in it_ ; revoke View all records from a role to get someone who can shape a database but not read the rows other people restricted.
 
 ### Public forms
 

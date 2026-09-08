@@ -110,7 +110,7 @@ async function accessibleWatchers(
   for (const uid of candidates) {
     const [roles, bypass] = await Promise.all([
       getUserRoles(uid, orgId),
-      hasPermission(uid, "data-models.manage-schema", orgId),
+      hasPermission(uid, "data-models.view-all-records", orgId),
     ]);
     const ok = await isDataRecordRoleAccessible(recordId, {
       roleIds: roles.map((r) => r.id),

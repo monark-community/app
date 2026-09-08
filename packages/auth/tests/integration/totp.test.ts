@@ -1,5 +1,5 @@
 import { randomBytes } from "node:crypto";
-import { authenticator } from "otplib";
+import { generateSync } from "otplib";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { getDb } from "@monark/db";
 import { truncate } from "@monark/test-utils/db";
@@ -10,10 +10,11 @@ import { _resetTotpRateLimitForTesting } from "../../src/server/totp-rate-limit"
 // module so the lazy `loadKey()` finds it.
 process.env.TOTP_ENCRYPTION_KEY = randomBytes(32).toString("hex");
 
-// Same window value the production code uses ; tests mint codes with
-// `authenticator.generate(secret)` so this only matters when the
-// `authenticator.check` clock-skew window is hit.
-authenticator.options = { window: 1 };
+// Tests always mint a code for the current time step, so the production
+// ±30 sec epoch tolerance only comes into play if a step boundary happens
+// to fall mid-test. No global options to set : otplib v13 takes its
+// tolerance per call rather than on a shared `authenticator` singleton.
+const totpCode = (secret: string): string => generateSync({ secret });
 
 // The `auth.totp-trust-devices` flag gates `requiresTotpChallenge` ;
 // stub the feature-flags module so the integration test isn't
@@ -75,7 +76,7 @@ async function fullyEnroll(): Promise<{ secret: string; recoveryCodes: string[] 
     userId: USER_ID,
     accountLabel: "totp@x.test",
   });
-  const code = authenticator.generate(secret);
+  const code = totpCode(secret);
   const { recoveryCodes } = await confirmTotpEnrollment({
     userId: USER_ID,
     code,
@@ -168,7 +169,7 @@ describe("confirmTotpEnrollment", () => {
       userId: USER_ID,
       accountLabel: "totp@x.test",
     });
-    const code = authenticator.generate(secret);
+    const code = totpCode(secret);
     const { recoveryCodes } = await confirmTotpEnrollment({
       userId: USER_ID,
       code,
@@ -211,7 +212,7 @@ describe("confirmTotpEnrollment", () => {
 
   it("rejects when TOTP is already active", async () => {
     const { secret } = await fullyEnroll();
-    const code = authenticator.generate(secret);
+    const code = totpCode(secret);
     await expect(confirmTotpEnrollment({ userId: USER_ID, code })).rejects.toThrow(
       /already active/i,
     );
@@ -223,7 +224,7 @@ describe("verifyTotpCode", () => {
     const { secret } = await fullyEnroll();
     const ok = await verifyTotpCode({
       userId: USER_ID,
-      code: authenticator.generate(secret),
+      code: totpCode(secret),
     });
     expect(ok).toBe(true);
     const bad = await verifyTotpCode({ userId: USER_ID, code: "000000" });
@@ -289,7 +290,7 @@ describe("regenerateRecoveryCodes", () => {
     const { secret, recoveryCodes: original } = await fullyEnroll();
     const fresh = await regenerateRecoveryCodes({
       userId: USER_ID,
-      code: authenticator.generate(secret),
+      code: totpCode(secret),
     });
     expect(fresh).toHaveLength(10);
     // Any old code should be gone after regen.
@@ -336,7 +337,7 @@ describe("getRecoveryCodeStatus + acknowledgeRecoveryCodeUse", () => {
 describe("disableTotp", () => {
   it("removes the secret + cascades the recovery codes", async () => {
     const { secret } = await fullyEnroll();
-    await disableTotp({ userId: USER_ID, code: authenticator.generate(secret) });
+    await disableTotp({ userId: USER_ID, code: totpCode(secret) });
     const db = getDb();
     const row = await db.totpSecret.findUnique({ where: { userId: USER_ID } });
     expect(row).toBeNull();

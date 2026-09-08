@@ -387,6 +387,47 @@ skip_nonce_check = false
 # If enabled, it will allow the user to successfully authenticate when the provider does not return an email address.
 email_optional = false
 
+# ── Social sign-in ────────────────────────────────────────────
+# GitHub backs the "Continue with …" button on /signin and /signup. It
+# ships disabled : a developer without an OAuth app registered at the
+# vendor runs the stack exactly as before, and `AUTH_OAUTH_PROVIDERS` on
+# the api (unset by default) keeps the button off the page to match.
+#
+# To turn it on locally : register the OAuth app with GitHub, set its
+# callback URL to
+#   http://127.0.0.1:54321/auth/v1/callback
+# put the client id + secret in a **root `.env`** (the `env()` refs below
+# are resolved by the Supabase CLI from the directory you run
+# `supabase start` in, NOT from `services/api/.env` — see
+# packages/auth/README.md § Social sign-in setup), flip `enabled` to true
+# here, and add `github` to `AUTH_OAUTH_PROVIDERS` in
+# `services/api/.env`. Secrets are read through `env()` so nothing
+# credential-shaped is ever committed.
+#
+# `redirect_uri` is set explicitly rather than left as the upstream
+# template's `""`. CLI 2.98.2 never substitutes a default for it: empty
+# string and absent key both leave
+# GOTRUE_EXTERNAL_<PROVIDER>_REDIRECT_URI empty in the auth container,
+# and GoTrue then rejects every authorize call with
+# `validation_failed: Unsupported provider: missing redirect URI`. The
+# value is this stack's own callback ; hosted projects derive it.
+#
+# Hosted projects configure providers under Authentication → Providers
+# in the dashboard rather than through this file.
+
+# GitHub accounts can have an unverified or private primary address ;
+# our callback refuses those rather than trusting the provider's word,
+# so a user in that state has to verify with GitHub first. That's also
+# why `email_optional` stays false : an identity with no verified email
+# can't be provisioned, so accepting one would only produce a dead end.
+[auth.external.github]
+enabled = false
+client_id = "env(SUPABASE_AUTH_EXTERNAL_GITHUB_CLIENT_ID)"
+secret = "env(SUPABASE_AUTH_EXTERNAL_GITHUB_SECRET)"
+redirect_uri = "http://127.0.0.1:54321/auth/v1/callback"
+skip_nonce_check = false
+email_optional = false
+
 # Allow Solana wallet holders to sign in to your project via the Sign in with Solana (SIWS, EIP-4361) standard.
 # You can configure "web3" rate limit in the [auth.rate_limit] section and set up [auth.captcha] if self-hosting.
 [auth.web3.solana]

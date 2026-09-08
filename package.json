@@ -46,7 +46,8 @@
     "sysadmin": "tsx --env-file=services/api/.env tools/sysadmin.ts",
     "provision:org": "tsx tools/provision-org.ts",
     "enable:dev-flags": "tsx --env-file=services/api/.env tools/enable-dev-flags.ts",
-    "webhook-receiver": "tsx tools/webhook-receiver.ts"
+    "webhook-receiver": "tsx tools/webhook-receiver.ts",
+    "agent": "node .claude/agentkit/cli.mjs"
   },
   "dependencies": {
     "@monark/auth": "workspace:*",
@@ -64,7 +65,7 @@
     "@types/istanbul-lib-report": "^3.0.3",
     "@types/istanbul-reports": "^3.0.4",
     "@types/node": "^22.10.0",
-    "eslint": "^10.8.0",
+    "eslint": "^10.10.0",
     "istanbul-lib-coverage": "^3.2.2",
     "istanbul-lib-report": "^3.0.1",
     "istanbul-reports": "^3.2.0",

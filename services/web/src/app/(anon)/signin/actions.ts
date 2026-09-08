@@ -1,10 +1,10 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { completeSignIn } from "@/lib/complete-sign-in";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createServerTrpcClient } from "@/lib/trpc-server";
-import { recognizeDeviceAfterAuth } from "@/lib/trusted-device-cookie";
-import { clearTotpPending, setTotpPending } from "@/lib/totp-pending-cookie";
+import { clearTotpPending } from "@/lib/totp-pending-cookie";
 
 export type SignInErrorCode = "invalidCredentials";
 
@@ -35,47 +35,10 @@ export async function signInAction(input: {
     redirect(`/signup/check-email?email=${encoded}`);
   }
 
-  const accessToken = data.session.access_token;
-  const trustedDeviceId = await recognizeDeviceAfterAuth(accessToken);
-  const api = createServerTrpcClient(accessToken);
-
-  // TOTP-gated sign-ins land at /signin/totp; the session cookie is live but
-  // the middleware pending-gate keeps the user from reaching protected
-  // routes until a code is verified. notifySignedIn waits until then so the
-  // event fires once the sign-in is fully complete.
-  const challengeRequired = await api.auth.totp.isChallengeRequired
-    .query({ trustedDeviceId })
-    .catch(() => false);
-
-  if (challengeRequired) {
-    await setTotpPending(trustedDeviceId);
-    redirect("/signin/totp");
-  }
-
-  await clearTotpPending();
-  await api.auth.notifySignedIn
-    .mutate(trustedDeviceId ? { trustedDeviceId } : undefined)
-    .catch(() => {
-      // Event emission is best-effort; the session cookie is already set.
-    });
-  // Auto-accept any pending invites for this user's email — covers the
-  // "admin invited me, then I signed in" path. Idempotent so the call
-  // is safe on every sign-in. Best-effort : a failure here doesn't
-  // block the sign-in itself.
-  await api.organizations.invites.consumePending.mutate().catch(() => {});
-
-  // Land deletion-pending users straight on the danger tab so the
-  // grace-period banner + Cancel button are the first thing they see.
-  // `users.me` returns the shadow row with `deletedAt` set when the
-  // account is in the 14-day grace window. The (authed) layout's
-  // own redirect logic also forwards them there for any subsequent
-  // navigation, but bouncing here saves an extra round-trip on the
-  // first request right after sign-in.
-  const me = await api.users.me.query().catch(() => null);
-  if (me?.deletedAt) {
-    redirect("/account/danger");
-  }
-  redirect("/account");
+  // Device recognition, the TOTP gate, the signed-in event, pending
+  // invites and the deletion-grace bounce are shared with the social
+  // sign-in callback ; see `completeSignIn`.
+  redirect(await completeSignIn(data.session.access_token));
 }
 
 export async function signOutAction(scope: "local" | "global" = "local"): Promise<void> {

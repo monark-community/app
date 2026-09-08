@@ -74,13 +74,13 @@ jobs:
       E2E_ADMIN_PASSWORD: "Tg7!hP9q*xLb-admin"
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v6
 
       - name: Setup Node
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
           cache: pnpm

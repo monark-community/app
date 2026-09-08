@@ -1,8 +1,11 @@
 import { registerPermissions } from "@monark/rbac/server";
 
 // Schema-editing permissions govern *shape* (Data Models + their fields) ;
-// record permissions govern the *data* inside them, model-wide (not per-row
-// — see the spec's "Deferred" section for the per-row follow-up). Keys use
+// record permissions govern the *data* inside them. Row-level visibility is a
+// separate axis: `DataRecordRoleAccess` restricts individual records, and
+// `view-all-records` is the capability that ignores those restrictions. It is
+// deliberately NOT implied by `manage-schema` — designing a schema and reading
+// every row in it are different powers (see identity-and-integration.md). Keys use
 // hyphens, not dots — the rbac registry's KEY_RE forbids "." inside a key,
 // so "record.read" isn't representable ; "record-read" is.
 const DATA_MODELS_PERMISSIONS = {
@@ -30,6 +33,11 @@ const DATA_MODELS_PERMISSIONS = {
   },
   "record-delete": {
     description: "Soft-delete or hard-delete Data Records.",
+    category: "data-models",
+  },
+  "view-all-records": {
+    description:
+      "See every Data Record, ignoring per-record role restrictions. Held by admins by default. Revoke it from a role that should design schemas but not read restricted rows (HR, payroll, legal).",
     category: "data-models",
   },
   "manage-forms": {
