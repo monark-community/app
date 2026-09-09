@@ -5,6 +5,11 @@ const DATA_MODELS_EVENT_TYPES = {
     description: "A Data Model or one of its fields was created, edited, reordered, or archived.",
     fields: [
       { key: "dataModelId", type: "string", description: "The data model whose schema changed." },
+      {
+        key: "organizationId",
+        type: "string",
+        description: "The org the data model belongs to.",
+      },
       { key: "kind", type: "string", description: "What changed: model, field, or integration." },
       { key: "actorId", type: "string", description: "The user who changed the schema." },
     ],
@@ -22,7 +27,7 @@ const DATA_MODELS_EVENT_TYPES = {
       {
         key: "organizationId",
         type: "string",
-        description: "The record's org scope, or null for platform-tier.",
+        description: "The org the record belongs to.",
       },
       { key: "actorId", type: "string", description: "The user who created the record." },
     ],
@@ -40,7 +45,7 @@ const DATA_MODELS_EVENT_TYPES = {
       {
         key: "organizationId",
         type: "string",
-        description: "The record's org scope, or null for platform-tier.",
+        description: "The org the record belongs to.",
       },
       { key: "actorId", type: "string", description: "The user who updated the record." },
       {
@@ -68,7 +73,7 @@ const DATA_MODELS_EVENT_TYPES = {
       {
         key: "organizationId",
         type: "string",
-        description: "The record's org scope, or null for platform-tier.",
+        description: "The org the record belongs to.",
       },
       { key: "actorId", type: "string", description: "The user who deleted the record." },
       { key: "hard", type: "boolean", description: "True for hard-delete, false for soft-delete." },
@@ -94,7 +99,7 @@ const DATA_MODELS_EVENT_TYPES = {
       {
         key: "organizationId",
         type: "string",
-        description: "The record's org scope, or null for platform-tier.",
+        description: "The org the record belongs to.",
       },
     ],
   },
@@ -108,7 +113,7 @@ const DATA_MODELS_EVENT_TYPES = {
       {
         key: "organizationId",
         type: "string",
-        description: "The record's org scope, or null for platform-tier.",
+        description: "The org the record belongs to.",
       },
     ],
   },
@@ -123,7 +128,7 @@ const DATA_MODELS_EVENT_TYPES = {
       {
         key: "organizationId",
         type: "string",
-        description: "The record's org scope, or null for platform-tier.",
+        description: "The org the record belongs to.",
       },
     ],
   },

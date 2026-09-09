@@ -1,5 +1,5 @@
 import { WILDCARD_EVENT_TYPE, logger, on, type DomainEvent } from "@monark/common";
-import { getUserOrgs } from "@monark/organizations/server";
+import { getSingletonOrganization, getUserOrgs } from "@monark/organizations/server";
 import { parseGraph } from "../contracts/graph";
 import { DATA_RECORD_TRIGGER_TYPE } from "../contracts/triggers";
 import { createPendingRun, findEnabledAutomationsForEvent, type AutomationRow } from "./data";
@@ -9,8 +9,17 @@ let registered = false;
 /**
  * Resolve which org(s) an event belongs to, mirroring the webhooks subscriber's
  * routing: an event carrying `organizationId` is that org's ; a user-tied event
- * (only `userId`) fans out to the user's member orgs. Events with neither are
- * unroutable to an org and match nothing.
+ * (only `userId`) fans out to the user's member orgs ; and an event with
+ * neither is an instance-level fact (a storage bucket was created, a
+ * platform-tier role was defined), which in a single-org deployment belongs to
+ * the one org that exists.
+ *
+ * That last case used to return `[]`, which made a handful of trigger types
+ * dead on arrival : the picker offered them, an operator wired a flow to one,
+ * and it simply never fired — no error, no run row, nothing to explain it.
+ * With more than one org live there is still no singleton to resolve to, the
+ * event stays genuinely ambiguous, and `[]` remains the safe answer rather than
+ * firing every org's flows on one org's event.
  */
 async function resolveEventOrgIds(event: DomainEvent): Promise<string[]> {
   const orgId =
@@ -25,9 +34,14 @@ async function resolveEventOrgIds(event: DomainEvent): Promise<string[]> {
       : null;
   if (userId) {
     const orgs = await getUserOrgs(userId);
-    return orgs.map((o) => o.id);
+    if (orgs.length > 0) return orgs.map((o) => o.id);
+    // Fall through : a user with no membership row yet (direct sign-ups
+    // predating the auto-membership subscriber) still belongs to the
+    // singleton org.
   }
-  return [];
+
+  const singleton = await getSingletonOrganization();
+  return singleton ? [singleton.id] : [];
 }
 
 /**
@@ -38,8 +52,11 @@ async function resolveEventOrgIds(event: DomainEvent): Promise<string[]> {
  *   - `automation.*` : ignored to avoid feedback loops — an automation triggered
  *     by its own run events (`automation.run-succeeded`, …) would re-fire forever.
  *   - `feature-flag.flipped` : its org / user lives nested under `scope`, not the
- *     top-level `resolveEventOrgIds` routes on, and a *global* flip has no org at
- *     all — so it can never reliably enqueue an org-scoped run. A dead option.
+ *     top-level `resolveEventOrgIds` routes on. A flip aimed at one org would
+ *     resolve to the singleton like any other org-less event rather than to the
+ *     org it names, so with more than one org it would fire the wrong flows.
+ *     Re-offering it means routing on the nested scope first ; until then it
+ *     stays out of the picker.
  */
 export function isTriggerableEventType(type: string): boolean {
   return !type.startsWith("automation.") && type !== "feature-flag.flipped";
