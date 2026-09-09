@@ -45,7 +45,18 @@ export async function getTotpStatus(userId: string): Promise<TotpStatus> {
       recoveryCodes: { where: { usedAt: null } },
     },
   });
-  if (!secret) return { enrolled: false };
+  // `activatedAt`, not mere row existence. `beginTotpEnrollment` writes a
+  // secret the moment a QR is generated, so a user who opened the
+  // enrollment card and walked away leaves a row behind with
+  // `activatedAt` null. Treating that as enrolled is a lockout: every
+  // security gate (change password, set password, change email, unlink a
+  // provider) would then demand a code from an authenticator the user
+  // never finished adding, and `verifyTotpCode` can't accept one because
+  // the secret was never activated.
+  //
+  // `isTotpActive` below has always keyed off the same field ; this makes
+  // the two agree.
+  if (!secret?.activatedAt) return { enrolled: false };
   return {
     enrolled: true,
     activatedAt: secret.activatedAt,
