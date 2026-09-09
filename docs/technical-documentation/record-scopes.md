@@ -1,11 +1,12 @@
 # Record scopes ; MonarkQL-scoped record permissions
 
 A role can be granted access to **the records matching a condition**, written in
-[MonarkQL](data-model-queries.md), per data model. "Support sees only tickets in their region",
+[MonarkQL](data-model-queries/_index.md), per data model. "Support sees only tickets in their region",
 "a rep sees only their own deals", without a per-record ACL on every row.
 
 This is the third and narrowest layer of record authorization. Read
-[platform-overview.md](platform-overview.md) § 3.5 for the first two.
+[the Data Models capability page](platform-overview/3-core-capabilities/35-polymorphic-data-models-monarkdata-models.md)
+for the first two.
 
 ## The three layers
 
@@ -16,7 +17,7 @@ This is the third and narrowest layer of record authorization. Read
 | **Scope (by rule)** | **Do you match the condition for this model ?** | **`DataModelRoleScope` ; no rows = unrestricted**                            |
 
 All three are AND-ed. All three are bypassed by `data-models.view-all-records`
-(see [the identity model](identity-and-integration.md) and the changelog for `2026-09-08`).
+(see [the identity model](identity-and-integration/_index.md) and the changelog for `2026-09-08`).
 
 ## The data model
 

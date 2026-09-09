@@ -2,7 +2,7 @@
 
 An **automation** is a small flow you build on a canvas : a **trigger** ("when this happens") wired to one or more **actions** ("do these things"). When the trigger fires, the flow runs on the server, on its own ; you don't have to be watching.
 
-Reach it from the **Automation** entry in the navigation rail (visible where the feature is enabled). This page covers building and running a flow ; for the details of passing values between steps, see [Using values in an automation](automation-variables.md).
+Reach it from the **Automation** entry in the navigation rail (visible where the feature is enabled). This page covers building and running a flow ; for the details of passing values between steps, see [Using values in an automation](automation-variables/_index.md).
 
 ## Your automations
 
@@ -26,7 +26,7 @@ Wired after the trigger, **action nodes** do the work. What's available includes
 - **People** : **assign or remove a role**, **get** a user, update a user's profile or metadata, activate / deactivate a user.
 - **Control flow** : a **condition** that branches (true / false), a **delay** that pauses the flow (even for hours or days), **set variable** / **constant** / **transform** for shaping values.
 
-Nodes pass values down the flow : a later node can reference the trigger's data or an earlier step's output with `{{ … }}` references, inserted by the variable picker. That's the subject of [Using values in an automation](automation-variables.md).
+Nodes pass values down the flow : a later node can reference the trigger's data or an earlier step's output with `{{ … }}` references, inserted by the variable picker. That's the subject of [Using values in an automation](automation-variables/_index.md).
 
 ## Running a flow
 
@@ -44,4 +44,4 @@ A flow runs **as the person who created it**, and it can never do more than that
 
 ## Reaching external systems safely
 
-Action nodes that call out (webhook, email, or anything needing a token) read credentials from your organization's [Secrets](admin.md#secrets) by name ; you reference a secret in the node's config, and the value is fetched at run time without ever being shown in the editor or the logs.
+Action nodes that call out (webhook, email, or anything needing a token) read credentials from your organization's [Secrets](admin/secrets.md) by name ; you reference a secret in the node's config, and the value is fetched at run time without ever being shown in the editor or the logs.

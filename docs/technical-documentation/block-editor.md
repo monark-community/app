@@ -71,7 +71,7 @@ usable click target. See [globals.css](../../services/web/src/app/globals.css).
 ## Consumers
 
 - **Data Models `DOCUMENT`** field type : [data-models README](../../packages/data-models/README.md).
-- **Wiki** page body : [wiki.md](wiki.md).
-- **Kanban** card description (+ its checklist) : [kanban.md](kanban.md).
+- **Wiki** page body : [wiki.md](wiki/_index.md).
+- **Kanban** card description (+ its checklist) : [kanban.md](kanban/_index.md).
 - **Rich text stays** for compact/inline surfaces (the calendar event description, and
   the `richText` Data Models field type).

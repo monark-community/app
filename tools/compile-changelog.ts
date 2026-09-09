@@ -9,10 +9,11 @@
 // so no branch has to touch the compiled file and there is nothing to
 // conflict over.
 //
-// Ordering is (date DESC, filename ASC). The historical fragments carry a
-// `YYYY-MM-DD-NN-` prefix so their original within-day order is preserved
-// exactly ; new fragments can be named freely, since a new entry's date
-// almost always places it on its own.
+// Ordering is (date DESC, filename ASC), which is why every fragment carries a
+// `YYYY-MM-DD-NN-` prefix : the filename is the tiebreak, so an undated name
+// sorts by whatever its slug happens to start with and lands arbitrarily among
+// that day's entries. tools/check-changelog.ts enforces the prefix, and that
+// its date matches the entry's own, at commit time and in CI.
 //
 // Usage:
 //   pnpm changelog:compile           rewrite CHANGELOG.md
@@ -22,6 +23,7 @@
 import { readFileSync, writeFileSync, readdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { escapingLinksOf } from "./lib/changelog-fragments";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const FRAGMENTS_DIR = join(ROOT, "changelog.d");
@@ -61,8 +63,10 @@ const fragments = fragmentNames.map((file) => {
   // Fragments live in changelog.d/ but compile into CHANGELOG.md at the repo
   // root, so a link written relative to the fragment ("../tools/foo.ts") ends
   // up pointing one level above the repo. Easy to write, invisible once
-  // compiled ; reject it here instead of shipping a dead link.
-  const escaping = [...text.matchAll(/\]\((\.\.\/[^)]*)\)/g)].flatMap((x) => x[1] ?? []);
+  // compiled ; reject it here instead of shipping a dead link. `pnpm
+  // check:changelog` applies the same rule at commit time and on PRs, so this
+  // is the last line rather than the only one.
+  const escaping = escapingLinksOf(text);
   if (escaping.length > 0) {
     console.error(
       `changelog:compile — ${file} has link(s) relative to changelog.d/ instead of the repo root:\n` +

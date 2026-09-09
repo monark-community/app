@@ -2,7 +2,7 @@
 
 > **Update (2026-07-28):** the encrypted-token storage this spec assumed is now
 > a shipped core primitive. Build the OAuth **refresh-token / access-token
-> storage on the [`@monark/secrets`](../../technical-documentation/secrets.md)
+> storage on the [`@monark/secrets`](../../technical-documentation/secrets/_index.md)
 > store** (per-org encrypted `key → value`, `SECRETS_ENCRYPTION_KEY`) rather than
 > a bespoke `SocialAccount` token-cipher column reusing the TOTP key. A node
 > reads a stored token with `ctx.getSecret(...)`; outbound calls go through
