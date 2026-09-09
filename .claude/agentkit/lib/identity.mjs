@@ -64,8 +64,8 @@ export function branchAuthors(cfg, cwd, base = cfg.worktrees.baseBranch) {
   // local base branch can be stale, or carry commits that never reached the
   // remote. Either way `local..HEAD` includes commits that are not this
   // branch's work, and they get reported as "not authored by the machine
-  // account" — which reads as a demand to rewrite somebody else's history,
-  // on a branch that is in fact perfectly clean.
+  // account", which reads as a demand to rewrite somebody else's history on a
+  // branch that is in fact perfectly clean.
   const remote = gitOut(['rev-parse', '--verify', '--quiet', `origin/${base}`], cwd)
   const range = `${remote ? `origin/${base}` : base}..HEAD`
   const out = gitOut(['log', '--format=%ae', range], cwd)
@@ -77,6 +77,39 @@ export function pushUrl(cfg, tok) {
   const repo = cfg.identity?.repo
   if (!repo) throw new Error('identity.repo is not set in agentkit.config.json')
   return `https://x-access-token:${tok}@${host}/${repo}.git`
+}
+
+/**
+ * What this worktree last saw the remote holding for `head`, or '' if it has
+ * never fetched it. This is the lease value for a forced push.
+ *
+ * Deliberately NOT refreshed here. Fetching immediately before computing the
+ * expectation is the classic way to defeat a lease: it folds whatever somebody
+ * else just pushed into the value we then authorise overwriting. A stale
+ * tracking ref failing the push is the correct outcome; the agent refetches,
+ * looks at what arrived, and decides again.
+ */
+export function leaseExpectation(cwd, head) {
+  return gitOut(['rev-parse', '--verify', '--quiet', `refs/remotes/origin/${head}`], cwd)
+}
+
+/**
+ * Build the push argv. Pure, so the part that has been wrong twice is testable
+ * without a network or a remote.
+ *
+ * A bare `--force-with-lease` cannot work here. It derives its expectation from
+ * the remote-tracking ref of a NAMED remote, and we push to an anonymous
+ * `https://x-access-token:...@host/repo.git` precisely so no configured remote
+ * (and no credential helper) is involved. With no remote to derive from, git
+ * records no expectation and rejects every forced push with `(stale info)`,
+ * even one that is a plain fast-forward. So the expectation is passed
+ * explicitly.
+ */
+export function buildPushArgs({ url, head, force = false, expect = '' }) {
+  const args = ['-c', 'credential.helper=', 'push']
+  if (force && expect) args.push(`--force-with-lease=refs/heads/${head}:${expect}`)
+  args.push(url, `HEAD:refs/heads/${head}`)
+  return args
 }
 
 /**
@@ -114,11 +147,46 @@ export function pushAsAgent(cfg, cwd, { branch, force = false } = {}) {
     }
   }
 
-  const args = ['-c', 'credential.helper=', 'push']
-  if (force) args.push('--force-with-lease')
-  args.push(pushUrl(cfg, tok.value), `HEAD:refs/heads/${head}`)
+  const url = pushUrl(cfg, tok.value)
 
-  const res = run('git', args, { cwd, env: cleanGitEnv() })
+  let expect = ''
+  if (force) {
+    expect = leaseExpectation(cwd, head)
+    if (!expect) {
+      // No tracking ref. Either the branch is not on the remote at all (a first
+      // push creates it and needs no force), or this worktree has simply never
+      // fetched it. Those need opposite handling, and only the remote can say
+      // which it is.
+      const onRemote = run('git', ['ls-remote', '--exit-code', '--heads', url, head], { cwd })
+      if (onRemote.ok) {
+        return {
+          ok: false,
+          branch: head,
+          reason:
+            `cannot force-push ${head}: this worktree has no refs/remotes/origin/${head}, so there is nothing to ` +
+            `lease against, and forcing without one could discard commits you have never seen. Run ` +
+            `\`git fetch origin ${head}\`, look at what it brought back, then re-run.`,
+        }
+      }
+    }
+  }
+
+  const res = run('git', buildPushArgs({ url, head, force, expect }), { cwd, env: cleanGitEnv() })
+
+  if (res.ok) {
+    // Pushing to an ad-hoc URL does not move refs/remotes/origin/*; git only
+    // maintains those for a configured remote. Left alone, our own successful
+    // push makes the tracking ref stale, so the NEXT forced push leases against
+    // a value the remote has already moved past and fails with the same
+    // `(stale info)` this exists to prevent - the fix would work exactly once.
+    //
+    // Record the commit we just pushed, never whatever the remote holds now:
+    // the former is knowledge we earned (the lease proved nobody else had moved
+    // the branch), the latter would be a silent fetch of someone else's work.
+    const pushed = gitOut(['rev-parse', 'HEAD'], cwd)
+    if (pushed) run('git', ['update-ref', `refs/remotes/origin/${head}`, pushed], { cwd })
+  }
+
   return {
     ok: res.ok,
     branch: head,
