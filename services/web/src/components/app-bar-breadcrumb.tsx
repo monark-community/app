@@ -24,10 +24,9 @@ import { cn } from "@/lib/utils";
 const ALWAYS_NON_NAVIGABLE_HREFS: ReadonlySet<string> = new Set(["/admin"]);
 
 /**
- * Paths that are *only* non-navigable in single-tenant deploys.
- * `/admin/organizations` lands on a list view in multi-tenant (real
- * page) but server-redirects to the singleton's edit page in
- * single-tenant — same shape as `/admin` but tenancy-conditional. We
+ * Paths that are non-navigable because they only ever redirect.
+ * `/admin/organizations` server-redirects to the singleton's edit
+ * page — same shape as `/admin`. We
  * keep this list separate so the runtime check only adds these when
  * `bootstrapStatus.mode !== "multi"`.
  */

@@ -8,11 +8,8 @@ let registered = false;
 
 /**
  * Idempotently grants the user a membership in the singleton org
- * when the deploy runs in single-tenant mode AND exactly one org
- * exists. Three short-circuit cases :
+ * when exactly one org exists. Two short-circuit cases :
  *
- *   - Multi-tenant flag ON ⇒ no implicit membership ; users must
- *     accept an invite or be granted a role to belong to an org.
  *   - Org count != 1 ⇒ ambiguous singleton ; skip rather than guess.
  *   - User already has an active membership in the singleton ⇒ no-op
  *     (idempotent on every sign-in).

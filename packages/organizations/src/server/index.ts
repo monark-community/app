@@ -77,7 +77,7 @@ export const organizationsRouter = router({
   // gates. Public on purpose : the gate has to read this before it
   // knows whether the request can proceed, and the response carries no
   // sensitive info (the count of active orgs is at most ambient
-  // metadata). Multi-tenant mode always reports `bootstrapped: true`.
+  // metadata).
   bootstrapStatus: publicProcedure.query(() => getBootstrapStatus()),
 
   // Self-healing bootstrap. Public on purpose : the gate inside

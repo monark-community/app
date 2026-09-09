@@ -29,8 +29,8 @@ const activeOrgs = await db.organization.findMany({
 if (activeOrgs.length !== 1) {
   console.error(
     `backfill: expected exactly 1 active organization, found ${activeOrgs.length}. ` +
-      `This script is single-tenant-only ; a multi-tenant deploy needs an ` +
-      `explicit per-user → org mapping.`,
+      `The app serves exactly one organization ; more than one means an ` +
+      `explicit per-user → org mapping is needed first.`,
   );
   process.exit(1);
 }

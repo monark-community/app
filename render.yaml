@@ -135,7 +135,7 @@ services:
       - key: SECRETS_ENCRYPTION_KEY
         sync: false
       # Single-tenant bootstrap : the api auto-creates one org with this
-      # slug + name at boot if none exists. Blank in multi-tenant mode.
+      # slug + name at boot if none exists.
       - key: INITIAL_ORG_SLUG
         sync: false
       - key: INITIAL_ORG_NAME

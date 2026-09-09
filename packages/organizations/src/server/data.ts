@@ -28,7 +28,7 @@ export async function countActiveOrganizations(): Promise<number> {
 // tenant code paths that want to skip the picker and route directly
 // to "the org" — invite-flow auto-select, admin/organizations
 // fast-redirect, etc. Returns null when there are zero or more than
-// one orgs (the latter would mean we're in multi-tenant territory).
+// one orgs.
 export async function findOnlyActiveOrganization(): Promise<OrganizationRow | null> {
   const db = getDb();
   const rows = await db.organization.findMany({

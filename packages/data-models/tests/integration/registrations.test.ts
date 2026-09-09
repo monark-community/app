@@ -9,7 +9,7 @@ import { registerDataModelVisibilityResolvers } from "../../src/server/registrat
 // Integration coverage for the org-scoped visibility resolvers — the layer
 // that keeps one org's per-model permissions + event types out of another
 // org's RBAC catalog / webhook picker, even though the entries themselves are
-// globally registered. This is the multi-tenant isolation guarantee.
+// globally registered. This is the org-isolation guarantee.
 //
 // Vitest isolates modules per test file, so the resolver arrays start empty
 // here ; we register once in beforeAll. The resolvers query the DB per call,

@@ -30,7 +30,7 @@ import { listAllDataModelsForRegistration, listLiveDataModelsForOrg } from "./da
  * keys are stable for a model's lifetime ; only the human labels move on
  * rename.
  *
- * Multi-tenant safety: the entries are marked `orgScoped` and the display
+ * Org isolation: the entries are marked `orgScoped` and the display
  * readers (`/admin/rbac`'s catalog, the webhook picker) only SHOW an org the
  * entries a registered visibility resolver reports for it — see
  * `registerDataModelVisibilityResolvers` below. The registered KEYS are still

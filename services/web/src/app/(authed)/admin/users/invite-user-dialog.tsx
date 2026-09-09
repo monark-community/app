@@ -26,9 +26,8 @@ import { trpc } from "@/lib/trpc";
 /**
  * Dialog launched from the admin users list to send a new invite. The
  * underlying tRPC mutation requires an `organizationId` ; in
- * single-tenant deploys we resolve that from `bootstrapStatus`
- * (singleton id is exposed there) so the operator never sees a
- * picker. Multi-tenant deploys still see the picker.
+ * resolve that from `bootstrapStatus` (the singleton id is exposed
+ * there) so the operator never sees a picker.
  *
  * Role options come from `rbac.adminListRoles` against the chosen org
  * — built-in `ADMIN` plus every custom role the org has defined via
@@ -106,8 +105,7 @@ export function InviteUserDialog({
       onOpenChange={(next) => {
         onOpenChange(next);
         // Soft reset on close so a re-open starts clean. We don't
-        // touch `orgId` since the single-tenant pin auto-resolves
-        // and the multi-tenant picker carries its own state.
+        // touch `orgId` since it auto-resolves to the singleton.
         if (!next) {
           setEmail("");
           setDisplayName("");
