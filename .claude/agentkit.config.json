@@ -53,7 +53,9 @@
     "pnpm check:tiers",
     "pnpm check:modules",
     "pnpm check:i18n",
-    "pnpm check:mcp"
+    "pnpm check:mcp",
+    "pnpm check:changelog",
+    "pnpm test:tools"
   ],
   "night": {
     "queue": "AGENT-QUEUE.md",

@@ -90,17 +90,38 @@ describe("getTotpStatus", () => {
     expect(status).toEqual({ enrolled: false });
   });
 
-  it("reports enrolled but not activated mid-enrollment", async () => {
+  it("still reports not enrolled mid-enrollment", async () => {
+    // Was the opposite until an abandoned enrollment locked an account
+    // out of its own settings. `beginTotpEnrollment` writes the secret
+    // the moment a QR is generated, so opening the card and walking away
+    // leaves a row with `activatedAt` null. Reporting that as enrolled
+    // made every security gate — change password, set password, change
+    // email, unlink a provider — demand a code from an authenticator the
+    // user never finished adding, and `verifyTotpCode` cannot accept one
+    // because the secret was never activated.
+    //
+    // Nothing consumed the old shape: the account UI derives
+    // `active = enrolled && activatedAt`, so it reads the same either
+    // way, and a pending row is disposable — the next
+    // `beginTotpEnrollment` replaces it.
     await beginTotpEnrollment({
       userId: USER_ID,
       accountLabel: "totp@x.test",
     });
     const status = await getTotpStatus(USER_ID);
-    expect(status.enrolled).toBe(true);
-    if (status.enrolled) {
-      expect(status.activatedAt).toBeNull();
-      expect(status.remainingRecoveryCodes).toBe(0);
-    }
+    expect(status).toEqual({ enrolled: false });
+  });
+
+  it("agrees with isTotpActive at every stage", async () => {
+    // The two disagreeing is what produced the lockout, so pin them
+    // together rather than trusting they stay in step.
+    expect((await getTotpStatus(USER_ID)).enrolled).toBe(await isTotpActive(USER_ID));
+
+    await beginTotpEnrollment({ userId: USER_ID, accountLabel: "totp@x.test" });
+    expect((await getTotpStatus(USER_ID)).enrolled).toBe(await isTotpActive(USER_ID));
+
+    await fullyEnroll();
+    expect((await getTotpStatus(USER_ID)).enrolled).toBe(await isTotpActive(USER_ID));
   });
 
   it("reports remainingRecoveryCodes after enrollment confirmation", async () => {
