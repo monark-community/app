@@ -1,9 +1,9 @@
 import { randomBytes } from "node:crypto";
 import bcrypt from "bcryptjs";
-import { generateSecret, generateURI, verifySync } from "otplib";
+import { createGuardrails, generateSecret, generateURI, verifySync } from "otplib";
 import qrcode from "qrcode";
 import { BRANDING } from "@monark/branding";
-import { emit, ConflictError, ValidationError } from "@monark/common";
+import { emit, logger, ConflictError, ValidationError } from "@monark/common";
 import { getDb } from "@monark/db";
 import { isEnabled } from "@monark/feature-flags/server";
 import { adminAssignmentSummary } from "@monark/rbac/server";
@@ -22,15 +22,56 @@ const RECOVERY_CODE_COUNT = 10;
 // tolerance, and a code two steps out is still rejected.
 const TOTP_EPOCH_TOLERANCE_SECONDS = 30;
 
+// otplib v12's `authenticator.generateSecret()` defaulted to **10** bytes, so
+// every enrollment made before the v13 upgrade holds an 80-bit secret. v13
+// added a `MIN_SECRET_BYTES = 16` guardrail that *throws* `SecretTooShortError`
+// rather than returning `{ valid: false }`, which took every pre-upgrade
+// authenticator offline the moment the upgrade shipped : the throw travelled up
+// through `verifyTotpCode` and the tRPC boundary into the sign-in action's
+// catch-all, where it read to the user as "that code is invalid". A correct
+// code from a correctly-synced app could never be accepted again.
+//
+// The v13 changelog entry claimed enrolled users were unaffected because both
+// versions mint "the same 32-character Base32 secret" ; that is true of v13's
+// `generateSecret()` (20 bytes) but not of the v12 default this codebase
+// actually ran, which produced 16 characters. Nothing caught it because the
+// integration suite enrolls fresh inside each test, so it only ever exercises
+// a v13-length secret.
+//
+// Lowering the verification floor to the v12 default keeps those enrollments
+// working. It only relaxes what we accept from secrets already in the database ;
+// `beginTotpEnrollment` still calls v13's `generateSecret()`, so every new
+// enrollment gets the RFC 4226-recommended 20 bytes.
+const LEGACY_MIN_SECRET_BYTES = 10;
+const TOTP_GUARDRAILS = createGuardrails({ MIN_SECRET_BYTES: LEGACY_MIN_SECRET_BYTES });
+
 // v13 replaced the stateful `authenticator` singleton with per-call options,
 // so the tolerance travels with each verification instead of being set once
 // as global module state.
+//
+// `verifySync` distinguishes "this code doesn't match" (a `valid: false`
+// result) from "this input can't be verified at all" (a throw). Only the first
+// is a user error, but every caller above us funnels both into the same
+// "invalid code" copy, which is how the guardrail regression above stayed
+// invisible : a hard failure wearing a typo's clothes. Log the throw before it
+// travels, so the next one shows up in the api logs instead of only in a
+// support ticket. Rethrow rather than returning false ; a verification we
+// couldn't perform is not a verification that failed.
 function checkTotpCode(token: string, secret: string): boolean {
-  return verifySync({
-    secret,
-    token,
-    epochTolerance: TOTP_EPOCH_TOLERANCE_SECONDS,
-  }).valid;
+  try {
+    return verifySync({
+      secret,
+      token,
+      epochTolerance: TOTP_EPOCH_TOLERANCE_SECONDS,
+      guardrails: TOTP_GUARDRAILS,
+    }).valid;
+  } catch (error) {
+    logger.error(
+      { err: error, secretLength: secret.length },
+      "totp verification threw; the code was not checked (this reads as an invalid code to the user)",
+    );
+    throw error;
+  }
 }
 
 export type TotpStatus =
