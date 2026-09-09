@@ -132,8 +132,7 @@ export default async function AuthedLayout({ children }: { children: ReactNode }
     // lib/request-host-rewrite.ts.
     singletonLogoUrl: await rewriteForRequestHost(brandStatus?.singletonLogoUrl ?? null),
     singletonDisplayName: brandStatus?.singletonDisplayName ?? null,
-    isSingleTenantBootstrapped:
-      brandStatus?.mode === "single" && Boolean(brandStatus?.bootstrapped),
+    isBootstrapped: Boolean(brandStatus?.bootstrapped),
   };
 
   return (

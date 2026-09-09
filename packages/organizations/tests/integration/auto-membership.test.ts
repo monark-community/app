@@ -1,15 +1,9 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { emit, on } from "@monark/common";
 import { _resetHandlersForTesting } from "@monark/common/events";
 import type { DomainEvent } from "@monark/common/contracts/events";
 import type { UserSignedInEvent, UserSignedUpEvent } from "@monark/auth/contracts";
 import { getDb } from "@monark/db";
-
-// Auto-membership consults `tenancy.multi-tenant` ; stub the flag module.
-const isEnabledMock = vi.fn(async () => false);
-vi.mock("@monark/feature-flags/server", () => ({
-  isEnabled: (...args: unknown[]) => isEnabledMock(...(args as [])),
-}));
 
 import {
   _resetOrganizationsSubscribersForTesting,
@@ -36,8 +30,6 @@ async function resetAll(): Promise<void> {
 }
 
 beforeEach(async () => {
-  isEnabledMock.mockReset();
-  isEnabledMock.mockResolvedValue(false);
   _resetHandlersForTesting();
   _resetOrganizationsSubscribersForTesting();
   captured.length = 0;
@@ -78,13 +70,6 @@ describe("ensureSingletonMembership", () => {
     });
     expect(await ensureSingletonMembership(USER)).toBe(false);
     expect(captured).toHaveLength(0);
-  });
-
-  it("skips when the multi-tenant flag is on", async () => {
-    isEnabledMock.mockResolvedValue(true);
-    await org(ORG);
-    expect(await ensureSingletonMembership(USER)).toBe(false);
-    expect(await getDb().organizationMembership.count({ where: { userId: USER } })).toBe(0);
   });
 
   it("skips when the org count isn't exactly one", async () => {

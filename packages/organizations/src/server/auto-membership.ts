@@ -1,7 +1,6 @@
 import { emit, logger, on } from "@monark/common";
 import type { UserSignedInEvent, UserSignedUpEvent } from "@monark/auth/contracts";
 import { getDb } from "@monark/db";
-import { isEnabled } from "@monark/feature-flags/server";
 import { countActiveOrganizations, findOnlyActiveOrganization } from "./data";
 import type { MemberJoinedEvent } from "../contracts/events";
 
@@ -9,11 +8,8 @@ let registered = false;
 
 /**
  * Idempotently grants the user a membership in the singleton org
- * when the deploy runs in single-tenant mode AND exactly one org
- * exists. Three short-circuit cases :
+ * when exactly one org exists. Two short-circuit cases :
  *
- *   - Multi-tenant flag ON ⇒ no implicit membership ; users must
- *     accept an invite or be granted a role to belong to an org.
  *   - Org count != 1 ⇒ ambiguous singleton ; skip rather than guess.
  *   - User already has an active membership in the singleton ⇒ no-op
  *     (idempotent on every sign-in).
@@ -28,9 +24,6 @@ let registered = false;
  * `(userId, organizationId)`.
  */
 export async function ensureSingletonMembership(userId: string): Promise<boolean> {
-  const multi = await isEnabled("tenancy.multi-tenant");
-  if (multi) return false;
-
   const orgCount = await countActiveOrganizations();
   if (orgCount !== 1) return false;
 

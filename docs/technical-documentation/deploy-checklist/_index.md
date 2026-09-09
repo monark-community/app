@@ -1,6 +1,6 @@
 # Deploy checklist : Vercel (web) + Render (api)
 
-Step-by-step walkthrough for a fresh production deploy. Assumes a single-tenant launch ; multi-tenant has additional setup not covered here.
+Step-by-step walkthrough for a fresh production deploy. The app is single-tenant : one deployment serves one organization. To serve several businesses, run several instances ; see [multi-instance.md](../multi-instance/_index.md).
 
 > This walkthrough sets up **production** (branch `main`). For the full two-environment model ; a **staging** environment that auto-deploys from `develop` alongside production : see [environments.md](../environments/_index.md) ; it reuses these same steps against a separate Supabase project + the `*-staging` Render services.
 
@@ -60,10 +60,8 @@ Save. The change is live immediately ; no Supabase redeploy needed.
 
 ---
 
-
 ## What's NOT in this checklist
 
-- **Multi-tenant mode.** The `tenancy.multi-tenant` feature flag is OFF by default. Flip it on only after the org-selector UI is wired (currently incomplete ; see backlog).
 - **Backups.** Supabase auto-snapshots production projects daily ; verify the schedule in Supabase → Database → Backups. Render Postgres (if you ever swap off Supabase) needs explicit backup config.
 - **Log retention.** Render's free tier retains ~7 days of logs ; Vercel keeps ~3 days. For longer retention, ship to Logtail / Datadog / etc.
 - **Error tracking IS wired** : Sentry, opt-in per deployment via `SENTRY_DSN` (api) / `NEXT_PUBLIC_SENTRY_DSN` (web) ; see [observability.md](.././observability.md). **Uptime / latency monitoring is NOT** ; add UptimeRobot / Better Uptime / Pingdom against `https://api.yourdomain.com/health` and the web URL.

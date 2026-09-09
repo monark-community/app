@@ -27,12 +27,6 @@ beforeEach(() => {
       defaultOn: true,
     },
   });
-  registerFlags("tenancy", {
-    "multi-tenant": {
-      description: "Self-service org creation.",
-      defaultOn: false,
-    },
-  });
 });
 
 afterEach(() => {
@@ -44,10 +38,6 @@ describe("feature-flags/flags.registerFlags", () => {
     expect(getFlagDef("auth.trusted-devices")?.defaultOn).toBe(true);
     expect(getFlagDef("auth.totp-trust-devices")?.defaultOn).toBe(true);
     expect(getFlagDef("auth.totp-required-admin")?.defaultOn).toBe(true);
-  });
-
-  it("keeps tenancy off by default (single-tenant is the starter mode)", () => {
-    expect(getFlagDef("tenancy.multi-tenant")?.defaultOn).toBe(false);
   });
 
   it("every registered flag has a non-empty description", () => {
@@ -89,7 +79,6 @@ describe("feature-flags/flags.isKnownFlag", () => {
   it("returns true for registered dotted keys", () => {
     expect(isKnownFlag("auth.trusted-devices")).toBe(true);
     expect(isKnownFlag("auth.totp-required-admin")).toBe(true);
-    expect(isKnownFlag("tenancy.multi-tenant")).toBe(true);
   });
 
   it("returns false for unknown keys, malformed input, and prototype hits", () => {
@@ -129,7 +118,6 @@ describe("feature-flags/flags.listFlagKeys", () => {
       "auth.totp-required-admin",
       "auth.totp-trust-devices",
       "auth.trusted-devices",
-      "tenancy.multi-tenant",
     ]);
   });
 });

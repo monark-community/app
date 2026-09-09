@@ -65,9 +65,9 @@ const schema = z.object({
   // suit an interactive integration ; raise for higher-throughput deployments.
   PUBLIC_API_RATE_PER_SECOND: z.coerce.number().positive().default(5),
   PUBLIC_API_BURST: z.coerce.number().int().positive().default(20),
-  // Single-tenant bootstrap : when the `tenancy.multi-tenant` flag is OFF
-  // and zero organizations exist, the API boot hook reads these and
-  // creates the singleton org so the /setup gate can lift. Idempotent ;
+  // Singleton-org bootstrap : when zero organizations exist, the API
+  // boot hook reads these and
+  // creates the singleton org the rest of the app needs. Idempotent ;
   // a second restart on a healthy install is a no-op. The "external
   // tool / system" the user manages writes these into the deployment
   // environment.

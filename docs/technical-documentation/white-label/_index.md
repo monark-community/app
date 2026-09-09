@@ -28,21 +28,17 @@ These never surface to an end user, so they stay stable across deployments.
 
 ## Provisioning the organization
 
-Single-tenant deploys need exactly one organization. There is no in-app setup
+The app needs exactly one organization. There is no in-app setup
 page ; provisioning is operator-driven:
 
-- **At api boot** : when the `tenancy.multi-tenant` flag is OFF (default) and
-  zero organizations exist, the API reads `INITIAL_ORG_SLUG` / `INITIAL_ORG_NAME`
+- **At api boot** : when zero organizations exist, the API reads
+  `INITIAL_ORG_SLUG` / `INITIAL_ORG_NAME`
   / `INITIAL_ORG_PRIMARY_COLOR` and provisions the singleton. Idempotent ; a
   restart on a healthy install is a no-op.
 - **Manually, without a restart** : `pnpm provision:org` (see
   [`tools/provision-org.ts`](../../../tools/provision-org.ts)). It reads the same
   `INITIAL_ORG_*` env vars, or accepts `--slug` / `--name` / `--color` flags, and
   is likewise idempotent. Needs `DATABASE_URL`.
-
-Multi-tenant deploys leave the `INITIAL_ORG_*` vars unset and create
-organizations through the app.
-
 
 ## What stays with the deployment, not the code
 

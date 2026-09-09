@@ -73,11 +73,11 @@ export const organizationsRouter = router({
     return getUserOrgs(ctx.userId);
   }),
 
-  // Bootstrap status for the /setup page + the (anon)/(authed) layout
+  // Bootstrap status for the (anon)/(authed) layout
   // gates. Public on purpose : the gate has to read this before it
   // knows whether the request can proceed, and the response carries no
   // sensitive info (the count of active orgs is at most ambient
-  // metadata). Multi-tenant mode always reports `bootstrapped: true`.
+  // metadata).
   bootstrapStatus: publicProcedure.query(() => getBootstrapStatus()),
 
   // Self-healing bootstrap. Public on purpose : the gate inside
@@ -85,7 +85,7 @@ export const organizationsRouter = router({
   // single AND no org exists yet, so this can't be abused to spawn
   // extra orgs at runtime — the worst a hostile caller can do is
   // re-trigger the same env-driven creation that boot already runs.
-  // The /setup page polls this on every stuck tick so a missed
+  // Callers can retry this after a failed boot hook so a missed
   // boot-time hook (race, transient DB error, env vars set after the
   // server was already up) doesn't require a container restart to
   // recover from. Input is fully optional ; when missing we fall back
@@ -372,7 +372,6 @@ export {
   type InitialOrgInput,
 } from "./bootstrap";
 export { isMember } from "./data";
-export { registerOrganizationsFeatureFlags } from "./flags";
 export { registerOrganizationsPermissions } from "./permissions";
 export { registerOrganizationsEventTypes } from "./event-types";
 export { ensureSingletonMembership, registerOrganizationsSubscribers } from "./auto-membership";

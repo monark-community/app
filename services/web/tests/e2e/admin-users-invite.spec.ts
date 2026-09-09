@@ -12,9 +12,8 @@ import { expect, test } from "@playwright/test";
  *
  * Skipped by default ; opt in with `E2E_FULL_STACK=1`. Requires a
  * pre-seeded admin user (`E2E_ADMIN_EMAIL` + `E2E_ADMIN_PASSWORD`)
- * AND single-tenant mode (the singleton org is auto-pinned in the
- * dialog ; multi-tenant adds the org picker step which is its own
- * spec when needed). The seeded admin must also belong to the org
+ * (the singleton org is auto-pinned in the dialog). The seeded
+ * admin must also belong to the org
  * (or be the singleton's owner) so `adminCreate` doesn't 403.
  *
  * Generates a unique invite email per run so re-runs against a
@@ -55,8 +54,7 @@ test.describe("admin users — invite flow", () => {
     ).toBeVisible();
 
     // 4. Fill the form. Order matters : roles only enable once the
-    // org is resolved (single-tenant : automatic ; multi-tenant
-    // would need an org pick first — out of scope for this spec).
+    // org is resolved, which is automatic.
     await page.getByLabel(/^full name$|^nom complet$/i).fill(INVITE_NAME);
     await page.getByLabel(/^email$/i).fill(INVITE_EMAIL);
 

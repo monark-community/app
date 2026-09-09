@@ -217,7 +217,7 @@
     },
     "signUp": {
       "title": "Créez votre compte",
-      "subtitle": "Rejoignez la communauté {appName} en moins d'une minute.",
+      "subtitle": "Rejoignez la communauté {orgName} en moins d'une minute.",
       "labels": {
         "email": "Courriel",
         "password": "Mot de passe",
@@ -235,7 +235,7 @@
     },
     "signIn": {
       "title": "Bon retour",
-      "subtitle": "Connectez-vous pour accéder à {appName}.",
+      "subtitle": "Connectez-vous pour accéder à {orgName}.",
       "labels": {
         "email": "Courriel",
         "password": "Mot de passe"
@@ -310,6 +310,8 @@
       "submitting": "Mise à jour…",
       "expiredTitle": "Lien expiré",
       "expiredSubtitle": "Ce lien de réinitialisation n'est plus valide. Demandez-en un nouveau pour continuer.",
+      "backToSignIn": "Vous vous en souvenez ?",
+      "signInLink": "Retour à la connexion",
       "requestAgain": "Demander un nouveau lien",
       "errors": {
         "noSession": "Votre lien de réinitialisation a expiré. Demandez-en un nouveau.",
@@ -1023,8 +1025,7 @@
         "revokeAria": "Révoquer {role}",
         "addCta": "Ajouter un rôle",
         "dialogTitle": "Assigner un rôle",
-        "dialogSubtitle": "Choisissez la portée et le rôle à accorder.",
-        "dialogSubtitleSingle": "Choisissez le rôle à accorder.",
+        "dialogSubtitle": "Choisissez le rôle à accorder.",
         "dialogCancel": "Annuler",
         "roleLabel": "Rôle",
         "rolePlaceholder": "Choisissez un rôle",
@@ -1150,8 +1151,7 @@
       "placeholder": "L'assignation des rôles sera ajoutée ici.",
       "sysadmins": {
         "title": "Administrateurs système",
-        "subtitle": "Comptes au niveau plateforme qui détiennent toutes les permissions dans chaque organisation.",
-        "subtitleSingle": "Comptes qui détiennent toutes les permissions.",
+        "subtitle": "Comptes qui détiennent toutes les permissions.",
         "empty": "Aucun administrateur système actif pour le moment.",
         "grantedAt": "Depuis le {date}"
       },
@@ -1730,7 +1730,8 @@
       "hardTitle": "Inscription TOTP en retard",
       "hardSubtitle": "Votre compte admin est en retard depuis {days, plural, =0 {moins d'un jour} one {# jour} other {# jours}}. L'accès est limité à /account jusqu'à l'activation de TOTP.",
       "redirectToastTitle": "Accès admin restreint",
-      "redirectToastSubtitle": "Réactivez l'authentification à deux facteurs pour retrouver l'accès aux surfaces admin."
+      "redirectToastSubtitle": "Réactivez l'authentification à deux facteurs pour retrouver l'accès aux surfaces admin.",
+      "cta": "Configurer la double authentification"
     },
     "tabs": {
       "nav": "Section du compte",

@@ -94,7 +94,7 @@ No seed data ships by default ; in single-tenant mode the first org is created b
 
 ## Events consumed
 
-- `user.signed-up` and `user.signed-in` — `registerOrganizationsSubscribers()` listens on both and runs `ensureSingletonMembership(userId)`. In single-tenant deploys with exactly one org, this idempotently upserts an `OrganizationMembership` row and emits `organization.member-joined` so downstream listeners (notifications, webhooks) see the user join with the same shape as an invite-driven membership. Short-circuits when the multi-tenant flag is ON, when there is zero or more than one org, or when the user already has an active membership in the singleton. Members the operator explicitly removed (rows with `leftAt` set) are NOT auto-rejoined — a sign-in won't silently undo an admin-initiated removal.
+- `user.signed-up` and `user.signed-in` — `registerOrganizationsSubscribers()` listens on both and runs `ensureSingletonMembership(userId)`. In single-tenant deploys with exactly one org, this idempotently upserts an `OrganizationMembership` row and emits `organization.member-joined` so downstream listeners (notifications, webhooks) see the user join with the same shape as an invite-driven membership. Short-circuits when there is zero or more than one org, or when the user already has an active membership in the singleton. Members the operator explicitly removed (rows with `leftAt` set) are NOT auto-rejoined — a sign-in won't silently undo an admin-initiated removal.
 
   Wire the subscriber once at api boot from [services/api/src/server.ts](../../services/api/src/server.ts), before `registerWebhookSubscribers()` so the derived `member-joined` event reaches the webhook outbox in the same emit pass.
 
@@ -102,10 +102,9 @@ No seed data ships by default ; in single-tenant mode the first org is created b
 
 Full scope from the planning doc; every item below ships once the dependent pieces land.
 
-- **`createOrganization` / `deleteOrganization`** (self-service multi-org) — need the multi-tenant creation UI ; `adminUpdate` (org profile / slug / branding edit) already ships.
+- **`createOrganization` / `deleteOrganization`** (self-service multi-org) — intentionally absent ; the app is single-tenant and its one org is provisioned from `INITIAL_ORG_*`. `adminUpdate` (org profile / slug / branding edit) ships.
 - **Member management** (`listMembers`, `removeMember`) — admin-guarded; ships after rbac.
 - **`switchActiveOrg`** — mutates the Supabase session claim; requires the JWT claim plumbing from `@monark/auth`.
 - **Slug-redirect middleware** — the `adminUpdate` rename flow already records `OrgSlugRedirect` rows (90-day TTL) ; only the resolving middleware + cleanup cron are still deferred.
 - **White-label** (primary color, logo upload) — `primaryColor` + `logoUrl` are editable via `adminUpdate` (validated as hex ; note the column, not oklch) ; the Supabase Storage bucket (`org-logos`) for logo upload comes with the Branding tab.
 - **Org switcher UI** + `/onboarding/create-org` + `/invite/<token>` pages — depend on `@monark/components` shadcn form primitives.
-- **Multi-tenant UI** — the `tenancy.multi-tenant` flag is already registered (default OFF) and gates auto-membership + bootstrap ; the self-service multi-org creation UI ships later.

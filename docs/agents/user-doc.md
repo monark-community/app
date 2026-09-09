@@ -51,7 +51,6 @@ Monark surfaces appear conditionally, and the guide must say so or it will descr
 
 - **Feature flags** — "visible where the feature is enabled", "where the query feature is on". Don't name the flag key.
 - **Permissions / roles** — "what you can do depends on your role", "where your role permits", "admins always see every record". Don't name the permission slug.
-- **Tenancy** — call out single- vs multi-tenant differences inline when a flow changes (see `admin.md`'s tenancy note for the pattern).
 
 ## Placement — core vs extended
 
@@ -74,7 +73,7 @@ When you add or move a page, update `_index.md` so the index stays complete.
 
 ## What NOT to document here
 
-- The one-time `/setup` bootstrap wizard, and any dev-only surface (dev overlay, console) — those are internal.
+- Operator-only bootstrap surfaces (`pnpm provision:org`, `pnpm preflight`) and any dev-only surface (dev overlay, console) — those are internal.
 - Anything in `features-planning/` — those are roadmaps, not shipped behaviour.
 - Internal architecture, APIs, or data models — that's `technical-documentation/` and the module READMEs.
 

@@ -81,8 +81,8 @@ export async function notify<K extends NotificationKind>(
   // Pull the singleton org's brand overrides (logo + primary color)
   // so the email shell renders the deployer's actual brand instead of
   // the starter-template `BRANDING.logoSrc` from /public and the
-  // starter-orange accent bar. Returns nulls for multi-tenant or when
-  // the org row has neither field configured ; `enrichVars` falls
+  // starter-orange accent bar. Returns nulls when the org row has
+  // neither field configured ; `enrichVars` falls
   // back to BRANDING for any null.
   const orgBranding = await resolveOrgBranding();
   const vars = enrichVars(kind, data, locale, {

@@ -8,8 +8,7 @@
  * or drive it from a deploy hook / one-off job.
  *
  * Idempotent : a re-run on a healthy install is a no-op (the existing org id is
- * returned). Refuses in multi-tenant mode — there, organizations are created by
- * the user-facing flows, not provisioned.
+ * returned).
  *
  * Usage :
  *   # local, against the `pnpm dev` stack :
@@ -40,8 +39,6 @@ function arg(name: string): string | undefined {
 }
 
 const FAILURE_HELP: Record<string, string> = {
-  "already-multi-tenant":
-    "tenancy.multi-tenant is ON — organizations are created by users, not provisioned.",
   "already-bootstrapped": "the system is already bootstrapped.",
   "env-not-set": "provide --slug and --name (or set INITIAL_ORG_SLUG / INITIAL_ORG_NAME).",
   "invalid-slug": "slug must be lowercase alphanumeric + hyphens, 2–60 chars.",

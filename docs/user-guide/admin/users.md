@@ -20,7 +20,6 @@ The **Invite user** button opens a dialog with :
 
 - **Email** : required.
 - **Role** : pick from the org's available roles (built-in admin + custom roles in the role manager).
-- **Organization** (multi-tenant only) : the org the invite scopes to. Single-tenant pins this automatically.
 - **Full name** (optional) : pre-fills the recipient's display name on signup ; also used to address them in the invite email's greeting.
 
 Submitting sends an invite email with a unique link. The invite expires after 14 days. The email's greeting reads the optional full name when present ; otherwise generic.
@@ -47,7 +46,6 @@ The user's role assignments render as a flex-wrap of removable chips (color-tint
 
 A dashed-border **+ Add new role** chip at the end opens the assign dialog :
 
-- **Organization** (multi-tenant only) : the org to scope the role to. Single-tenant pins the singleton.
 - **Role** : pick from the org's role list. Built-in admin + every custom role created in the role manager.
 
 The dialog wipes its selections each time it opens.

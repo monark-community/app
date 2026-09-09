@@ -217,7 +217,7 @@
     },
     "signUp": {
       "title": "Create your account",
-      "subtitle": "Join the {appName} community in under a minute.",
+      "subtitle": "Join the {orgName} community in under a minute.",
       "labels": {
         "email": "Email",
         "password": "Password",
@@ -235,7 +235,7 @@
     },
     "signIn": {
       "title": "Welcome back",
-      "subtitle": "Sign in to continue to {appName}.",
+      "subtitle": "Sign in to continue to {orgName}.",
       "labels": {
         "email": "Email",
         "password": "Password"
@@ -310,6 +310,8 @@
       "submitting": "Updating…",
       "expiredTitle": "Link expired",
       "expiredSubtitle": "This reset link is no longer valid. Request a new one to continue.",
+      "backToSignIn": "Remembered it?",
+      "signInLink": "Back to sign in",
       "requestAgain": "Request a new link",
       "errors": {
         "noSession": "Your reset link expired. Request a new one.",
@@ -1023,8 +1025,7 @@
         "revokeAria": "Revoke {role}",
         "addCta": "Add new role",
         "dialogTitle": "Assign a role",
-        "dialogSubtitle": "Pick the scope and the role to grant.",
-        "dialogSubtitleSingle": "Pick the role to grant.",
+        "dialogSubtitle": "Pick the role to grant.",
         "dialogCancel": "Cancel",
         "roleLabel": "Role",
         "rolePlaceholder": "Pick a role",
@@ -1150,8 +1151,7 @@
       "placeholder": "Role assignment lands here.",
       "sysadmins": {
         "title": "System administrators",
-        "subtitle": "Platform-tier accounts that hold every permission across every organization.",
-        "subtitleSingle": "Accounts that hold every permission.",
+        "subtitle": "Accounts that hold every permission.",
         "empty": "No system administrators are currently active.",
         "grantedAt": "Since {date}"
       },
@@ -1730,7 +1730,8 @@
       "hardTitle": "Two-factor enrollment overdue",
       "hardSubtitle": "Your admin account has been overdue for {days, plural, =0 {less than a day} one {# day} other {# days}}. Sign-in is restricted to /account until you enroll TOTP.",
       "redirectToastTitle": "Admin access restricted",
-      "redirectToastSubtitle": "Re-enable two-factor authentication to regain access to admin surfaces."
+      "redirectToastSubtitle": "Re-enable two-factor authentication to regain access to admin surfaces.",
+      "cta": "Set up two-factor now"
     },
     "tabs": {
       "nav": "Account section",

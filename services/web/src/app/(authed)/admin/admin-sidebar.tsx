@@ -26,15 +26,12 @@ export function AdminSidebar({
 }) {
   const tNav = useTranslations("admin.tabs");
   const pathname = usePathname();
-  // Tenancy mode is stable across a session ; cache forever so this
-  // doesn't refetch on every nav. The default-on-loading path matches
-  // the new-tenant fresh-deploy case (single-tenant) so a user
-  // refreshing on the admin surface doesn't see the label flicker.
+  // The singleton id is stable across a session ; cache forever so this
+  // doesn't refetch on every nav.
   const status = trpc.organizations.bootstrapStatus.useQuery(undefined, {
     refetchOnWindowFocus: false,
     staleTime: Infinity,
   });
-  const isSingleTenant = status.data?.mode !== "multi";
 
   // Flag-gated tabs (e.g. service accounts) are hidden until their flag
   // resolves on for the viewer. Until flags load, gated tabs stay hidden so
@@ -45,18 +42,17 @@ export function AdminSidebar({
   });
   const visibleTabs = ADMIN_TABS.filter((tab) => !tab.flag || flags.data?.[tab.flag] === true);
 
-  // In single-tenant mode the redirect at `/admin/organizations` lands
-  // on the singleton's edit page, but stopping there briefly is still
-  // a stop. Re-target the tab href directly at the singleton's URL
-  // when we know it ; the active-state regex still catches the prefix
-  // so the highlight works regardless of which form of the href the
-  // operator clicked.
+  // The redirect at `/admin/organizations` lands on the singleton's
+  // edit page, but stopping there briefly is still a stop. Re-target
+  // the tab href directly at the singleton's URL when we know it ; the
+  // active-state regex still catches the prefix so the highlight works
+  // regardless of which form of the href the operator clicked.
   const singletonId = status.data?.singletonOrganizationId ?? null;
   const items: SidebarItem[] = visibleTabs.map((tab) => {
     const isOrgTab = tab.id === "organizations";
     const href: `/admin/${string}` =
-      isOrgTab && isSingleTenant && singletonId ? `/admin/organizations/${singletonId}` : tab.href;
-    const labelKey = isOrgTab && isSingleTenant ? "organization" : tab.id;
+      isOrgTab && singletonId ? `/admin/organizations/${singletonId}` : tab.href;
+    const labelKey = isOrgTab ? "organization" : tab.id;
     return {
       key: tab.id,
       label: tNav(labelKey),

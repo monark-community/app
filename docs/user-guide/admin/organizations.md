@@ -1,15 +1,6 @@
 # Organizations
 
-`/admin/organizations` (multi-tenant) or directly `/admin/organizations/<id>` (single-tenant). Lets you manage the brand + identity of every organization on the deploy.
-
-### List (multi-tenant only)
-
-A paginated card list. Top of the page :
-
-- **Search** : filters by display name or slug as you type (debounced).
-- **Load more** : appears when there are more rows than the current page can show.
-
-Each row is a clickable card with the org's logo, display name, slug, primary-color swatch, and a chevron pointing into the detail page.
+`/admin/organizations` goes straight to `/admin/organizations/<id>` for the one organization on the deploy. Lets you manage its brand + identity.
 
 ### Detail / edit
 

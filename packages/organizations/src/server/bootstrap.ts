@@ -1,5 +1,4 @@
 import { emit, logger } from "@monark/common";
-import { isEnabled } from "@monark/feature-flags/server";
 import type { OrganizationCreatedEvent } from "../contracts/events";
 import {
   countActiveOrganizations,
@@ -12,39 +11,28 @@ const HEX_RE = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
 
 export type BootstrapStatus = {
   /**
-   * `single` when the `tenancy.multi-tenant` flag is OFF (default) ;
-   * `multi` when ON. The mode determines whether the system needs at
-   * least one org before app routes unlock.
-   */
-  mode: "single" | "multi";
-  /**
-   * True iff the system is ready to serve requests. In single-tenant
-   * mode this requires exactly one non-deleted Organization row ; in
-   * multi-tenant the system is always considered bootstrapped (orgs
-   * are created on demand by the user-facing flows).
+   * True iff the system is ready to serve requests : exactly one
+   * non-deleted Organization row exists. Provisioned from `INITIAL_ORG_*`
+   * at api boot, or on demand with `pnpm provision:org`.
    */
   bootstrapped: boolean;
-  /** Count of non-deleted organizations. Surfaces to the /setup page. */
+  /** Count of non-deleted organizations. */
   organizationCount: number;
   /**
-   * Id of the singleton organization in single-tenant mode. Set only
-   * when `mode === "single"` and exactly one non-deleted org exists ;
-   * null otherwise (multi-tenant, pre-bootstrap, or somehow >1 org).
-   * Used by the admin sidebar to link the "Organization" tab straight
-   * at the singleton's edit page so single-tenant operators don't
-   * stop on the redirect-only `/admin/organizations` URL.
+   * Id of the singleton organization. Null before bootstrap, or in the
+   * misconfigured >1-org case. Used by the admin sidebar to link the
+   * "Organization" tab straight at the singleton's edit page so
+   * operators don't stop on the redirect-only `/admin/organizations`
+   * URL.
    */
   singletonOrganizationId: string | null;
   /**
    * Display name + logo URL + primary color of the singleton org.
-   * Same gate as `singletonOrganizationId` (single-tenant + exactly
-   * one org). Used by the public app chrome (AppBar logo + pre-auth
-   * screens) AND by the root layout's CSS-variable injection so the
-   * whole app (primary buttons, focus rings, sidebar accents, charts,
-   * gradients) follows the operator's chosen brand color instead of
-   * the starter-template orange. Multi-tenant pre-auth has no org
-   * context — falls back to the starter-template brand. All three
-   * are null when the gate doesn't fire.
+   * Same gate as `singletonOrganizationId`. Used by the public app
+   * chrome (AppBar logo + pre-auth screens) AND by the root layout's
+   * CSS-variable injection so the whole app (primary buttons, focus
+   * rings, sidebar accents, charts, gradients) follows the operator's
+   * chosen brand color. All three are null before bootstrap.
    */
   singletonDisplayName: string | null;
   singletonLogoUrl: string | null;
@@ -52,24 +40,11 @@ export type BootstrapStatus = {
 };
 
 export async function getBootstrapStatus(): Promise<BootstrapStatus> {
-  const multi = await isEnabled("tenancy.multi-tenant");
-  const mode: BootstrapStatus["mode"] = multi ? "multi" : "single";
   const organizationCount = await countActiveOrganizations();
-  if (multi) {
-    return {
-      mode,
-      bootstrapped: true,
-      organizationCount,
-      singletonOrganizationId: null,
-      singletonDisplayName: null,
-      singletonLogoUrl: null,
-      singletonPrimaryColor: null,
-    };
-  }
-  // Single-tenant : look up the row only when count is exactly 1, so
-  // the misconfigured ">1 org under single-tenant" case (operator
-  // flipped to single after running multi) doesn't pin the sidebar to
-  // an arbitrary row.
+  // Look the row up only when the count is exactly 1, so a database
+  // that somehow holds more than one org doesn't pin the chrome to an
+  // arbitrary row ; the operator sees the unbootstrapped state and can
+  // fix the data instead of getting a silently wrong brand.
   let singletonOrganizationId: string | null = null;
   let singletonDisplayName: string | null = null;
   let singletonLogoUrl: string | null = null;
@@ -89,7 +64,6 @@ export async function getBootstrapStatus(): Promise<BootstrapStatus> {
     }
   }
   return {
-    mode,
     bootstrapped: organizationCount >= 1,
     organizationCount,
     singletonOrganizationId,
@@ -99,10 +73,8 @@ export async function getBootstrapStatus(): Promise<BootstrapStatus> {
   };
 }
 
-// Convenience for single-tenant code paths that want "the org" without
-// a picker. Returns null in multi-tenant mode (caller should branch
-// on tenancy.multi-tenant beforehand) or when single-tenant isn't yet
-// bootstrapped.
+// Convenience for code paths that want "the org" without a picker.
+// Null until the deployment is bootstrapped.
 export async function getSingletonOrganization() {
   return findOnlyActiveOrganization();
 }
@@ -121,7 +93,6 @@ export type EnsureBootstrapResult =
   | {
       ok: false;
       reason:
-        | "already-multi-tenant"
         | "already-bootstrapped"
         | "env-not-set"
         | "invalid-slug"
@@ -134,15 +105,14 @@ export type EnsureBootstrapResult =
 // Same semantics as the API server's boot-time hook ; pulled into the
 // organizations package so the same code path is reachable both at
 // module-load (server.ts) and through the tRPC `bootstrapFromEnv`
-// mutation the /setup page calls on each stuck-poll. Self-healing :
-// if the boot-time hook silently failed (timing race, swallowed
-// import error, container restarted before env was set), the /setup
-// page's polling drives recovery without an operator restart.
+// mutation callers use to retry. Self-healing : if the boot-time hook
+// silently failed (timing race, swallowed import error, container
+// restarted before env was set), calling this again drives recovery
+// without an operator restart.
 //
 // Validation runs in this function (slug shape + color shape) so a
-// typo in the env var lands as a structured `reason` the /setup page
-// can surface, instead of throwing a Prisma constraint deep in the
-// stack.
+// typo in the env var lands as a structured `reason` the caller can
+// surface, instead of throwing a Prisma constraint deep in the stack.
 export async function ensureSingletonOrganizationFromInput(input: {
   slug?: string | null;
   displayName?: string | null;
@@ -152,9 +122,6 @@ export async function ensureSingletonOrganizationFromInput(input: {
 }): Promise<EnsureBootstrapResult> {
   try {
     const status = await getBootstrapStatus();
-    if (status.mode !== "single") {
-      return { ok: false, reason: "already-multi-tenant" };
-    }
     if (status.bootstrapped) {
       const existing = await findOnlyActiveOrganization();
       return existing
@@ -195,8 +162,8 @@ export async function ensureSingletonOrganizationFromInput(input: {
   }
 }
 
-// One-shot bootstrap helper. Creates the singleton organization in
-// single-tenant mode if it doesn't exist yet, emits
+// One-shot bootstrap helper. Creates the singleton organization if it
+// doesn't exist yet, emits
 // `organization.created`, and returns the row. Idempotent : a second
 // call after the org lands is a no-op (existing row returned, no
 // event re-emitted).
@@ -209,8 +176,8 @@ export async function bootstrapSingletonOrganization(
     if (existing) {
       return { created: false, organizationId: existing.id };
     }
-    // Multiple orgs already (operator flipped to single-tenant after
-    // running multi-tenant) — bail rather than silently picking one.
+    // Multiple orgs already : the app serves exactly one, so bail
+    // rather than silently picking a row.
     throw new Error("Cannot bootstrap singleton : multiple organizations already exist.");
   }
   const row = await createOrganizationRow({

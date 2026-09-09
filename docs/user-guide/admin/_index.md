@@ -7,7 +7,7 @@ The admin section lives at `/admin/*` and ships eight tabs : **Organizations**, 
 ## In this section
 
 - **[Reaching `/admin`](reaching-admin.md)**
-- **[A note on tenancy](a-note-on-tenancy.md)**
+- **[One organization](one-organization.md)**
 - **[Organizations](organizations.md)**
 - **[Users](users.md)**
 - **[Roles & permissions](roles-permissions.md)**

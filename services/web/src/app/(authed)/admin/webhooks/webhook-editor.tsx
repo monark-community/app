@@ -27,7 +27,6 @@ import { DirtyFormBar } from "@/components/dirty-form-bar";
 import { PageHeader } from "@/components/page-header";
 import { PageSection } from "@/components/page-section";
 import { trpc } from "@/lib/trpc";
-import { useIsSingleTenant } from "@/lib/use-is-single-tenant";
 import { SubscriptionPicker, type SubscriptionDraft } from "./subscription-picker";
 import { WebhookTabsNav } from "./webhook-tabs-nav";
 
@@ -62,7 +61,6 @@ export function WebhookEditor(
     | {
         mode: "create";
         organizationId: string | null;
-        scopeLabel: string;
       }
     | { mode: "edit"; endpointId: string }
   ) & {
@@ -72,7 +70,6 @@ export function WebhookEditor(
   },
 ) {
   const t = useTranslations("admin.webhooks.editor");
-  const tManager = useTranslations("admin.webhooks.manager");
   const tCommon = useTranslations("common");
   const router = useRouter();
   const utils = trpc.useUtils();
@@ -82,19 +79,6 @@ export function WebhookEditor(
   // callbacks instead of a full navigation.
   const containment = props.containment ?? "viewport";
   const inPanel = containment === "container";
-
-  // Scope field is informational-only ; it carries useful context for
-  // sysadmins who can land on either platform-tier or org-scoped
-  // endpoints, but for an org-admin it never holds anything other than
-  // "Organization-scoped" — they can't pick anything else, so hiding
-  // the field removes a useless row. Also hidden on a single-tenant deploy,
-  // where org-vs-platform scope is a distinction the operator never acts on.
-  const isSysadminQuery = trpc.rbac.isSysadmin.useQuery(undefined, {
-    refetchOnWindowFocus: false,
-    staleTime: Infinity,
-  });
-  const isSingleTenant = useIsSingleTenant();
-  const showScope = isSysadminQuery.data === true && !isSingleTenant;
 
   const isEdit = props.mode === "edit";
   const endpointQuery = trpc.webhooks.get.useQuery(
@@ -369,12 +353,6 @@ export function WebhookEditor(
   }
 
   const submitting = createMutation.isPending || updateMutation.isPending;
-  const orgScopeLabel =
-    props.mode === "create"
-      ? props.scopeLabel
-      : (endpointQuery.data?.organizationId ?? null) === null
-        ? tManager("orgPicker.platform")
-        : t("orgScopeOrg");
 
   const headerTitle =
     props.mode === "create"
@@ -428,13 +406,6 @@ export function WebhookEditor(
 
         <PageSection title={t("endpointSectionTitle")}>
           <div className="@container space-y-5">
-            {showScope && (
-              <FieldRow label={t("scopeLabel")} htmlFor="webhook-scope">
-                <Input id="webhook-scope" value={orgScopeLabel} disabled readOnly />
-                <p className="text-xs text-muted-foreground">{t("scopeHint")}</p>
-              </FieldRow>
-            )}
-
             <FieldRow label={t("nameLabel")} htmlFor="webhook-name">
               <Input
                 id="webhook-name"

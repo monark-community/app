@@ -24,10 +24,9 @@ import { cn } from "@/lib/utils";
 const ALWAYS_NON_NAVIGABLE_HREFS: ReadonlySet<string> = new Set(["/admin"]);
 
 /**
- * Paths that are *only* non-navigable in single-tenant deploys.
- * `/admin/organizations` lands on a list view in multi-tenant (real
- * page) but server-redirects to the singleton's edit page in
- * single-tenant — same shape as `/admin` but tenancy-conditional. We
+ * Paths that are non-navigable because they only ever redirect.
+ * `/admin/organizations` server-redirects to the singleton's edit
+ * page — same shape as `/admin`. We
  * keep this list separate so the runtime check only adds these when
  * `bootstrapStatus.mode !== "multi"`.
  */
@@ -58,17 +57,6 @@ const SINGLE_TENANT_NON_NAVIGABLE_HREFS: ReadonlySet<string> = new Set(["/admin/
  */
 export function AppBarBreadcrumb() {
   const pathname = usePathname();
-  // Tenancy mode toggles which routes are pure redirects ; cached
-  // forever since it doesn't flip mid-session. Defaults to single
-  // during the loading window so the breadcrumb doesn't briefly
-  // expose a clickable `/admin/organizations` on a single-tenant
-  // deploy where it would round-trip through a redirect.
-  const status = trpc.organizations.bootstrapStatus.useQuery(undefined, {
-    refetchOnWindowFocus: false,
-    staleTime: Infinity,
-  });
-  const isSingleTenant = status.data?.mode !== "multi";
-
   if (pathname === "/" || pathname === "") return null;
 
   const segments = pathname.split("/").filter(Boolean);
@@ -142,7 +130,6 @@ export function AppBarBreadcrumb() {
                 before={entry.before}
                 href={entry.href}
                 isLast={entry.isLast}
-                isSingleTenant={isSingleTenant}
               />
             )}
           </Fragment>
@@ -157,13 +144,11 @@ function CrumbItem({
   before,
   href,
   isLast,
-  isSingleTenant,
 }: {
   segment: string;
   before: string;
   href: string;
   isLast: boolean;
-  isSingleTenant: boolean;
 }) {
   const content = pickCrumbForSegment({ before, segment });
   // Last crumb is the current page : non-interactive span styled as
@@ -180,8 +165,7 @@ function CrumbItem({
     );
   }
   const nonNavigable =
-    ALWAYS_NON_NAVIGABLE_HREFS.has(href) ||
-    (isSingleTenant && SINGLE_TENANT_NON_NAVIGABLE_HREFS.has(href));
+    ALWAYS_NON_NAVIGABLE_HREFS.has(href) || SINGLE_TENANT_NON_NAVIGABLE_HREFS.has(href);
   if (nonNavigable) {
     return <span className="truncate">{content}</span>;
   }

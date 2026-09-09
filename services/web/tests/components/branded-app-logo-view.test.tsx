@@ -52,19 +52,19 @@ vi.mock("@monark/branding", () => ({
 const SINGLETON_LOGO: BrandedAppLogoData = {
   singletonLogoUrl: "https://supabase.test/storage/v1/object/public/avatars/org-logos/abc/123.webp",
   singletonDisplayName: "Acme Inc.",
-  isSingleTenantBootstrapped: true,
+  isBootstrapped: true,
 };
 
 const SINGLETON_NO_LOGO: BrandedAppLogoData = {
   singletonLogoUrl: null,
   singletonDisplayName: "Acme Inc.",
-  isSingleTenantBootstrapped: true,
+  isBootstrapped: true,
 };
 
 const NO_SINGLETON: BrandedAppLogoData = {
   singletonLogoUrl: null,
   singletonDisplayName: null,
-  isSingleTenantBootstrapped: false,
+  isBootstrapped: false,
 };
 
 describe("<BrandedAppLogoView>", () => {
@@ -160,7 +160,7 @@ describe("<BrandedAppLogoView>", () => {
     });
   });
 
-  describe("no singleton (multi-tenant, /setup pending, api hiccup)", () => {
+  describe("no singleton (not yet provisioned, or an api hiccup)", () => {
     it("falls back to the starter-template logo from BRANDING", () => {
       renderWithIntl(<BrandedAppLogoView data={NO_SINGLETON} size={56} />);
       const fallback = screen.getByTestId("next-image");

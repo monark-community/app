@@ -10,7 +10,7 @@ The subscription edge is modeled generically from day one (`targetType` + `targe
 
 ### Decisions locked
 
-- **Scope : organization-scoped.** You see, subscribe to, and interact with co-members of your active organization only. The deploy defaults to single-tenant (`tenancy.multi-tenant` flag off ⇒ singleton org auto-membership), so in practice this is "everyone on the deploy" today ; the data stays org-scoped so the feature is correct the moment multi-tenant is turned on.
+- **Scope : organization-scoped.** You see, subscribe to, and interact with co-members of your active organization only. The app serves exactly one organization (auto-membership on sign-up/sign-in), so in practice this is "everyone on the deploy" ; keeping the data org-scoped costs nothing and keeps the feed's queries honest about what they select.
 - **Identity : globally-unique `@username` handle** added to `User`. Profiles live at `/u/[username]` ; this sets up `@mentions` later.
 - **Subscription : one-way follow** (no approval). A follow is just a subscription edge, which maps cleanly onto the future data-model subscriptions.
 - **Posts : text-only** (≤ 500 characters) at MVP. Image posts are a deliberate fast-follow ; Supabase Storage is already wired for avatars / banners.

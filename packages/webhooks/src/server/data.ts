@@ -404,11 +404,9 @@ export async function findUserMemberOrgIds(userId: string): Promise<string[]> {
  * implicit org so the operator's org-scoped endpoint still receives
  * the event.
  *
- * Doesn't check the multi-tenant feature flag here ; the subscriber
- * only consults this fallback after the membership lookup returned
- * empty, and a multi-tenant deploy with exactly one org is unusual
- * enough that the fallback's behavior matches what the operator
- * almost certainly wants.
+ * The subscriber only consults this fallback after the membership
+ * lookup returned empty, so with exactly one org the fallback's
+ * behavior matches what the operator almost certainly wants.
  */
 export async function findOnlySingletonOrgId(): Promise<string | null> {
   const db = getDb();

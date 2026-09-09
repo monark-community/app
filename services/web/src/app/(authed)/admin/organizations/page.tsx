@@ -6,13 +6,12 @@ import { OrganizationsList } from "./organizations-list";
 export default async function AdminOrganizationsPage() {
   const t = await getTranslations("admin.organizations");
 
-  // Single-tenant fast path : when the deploy runs in single-tenant
-  // mode and exactly one organization exists, the "list" surface is
+  // The app serves exactly one organization, so this "list" surface is
   // dead weight — there's never going to be a second row. Land the
   // admin straight on the singleton's edit page so the click that's
-  // 99% the right one is the only click. The list view is still
-  // reachable directly via the URL for inspection or in the rare
-  // multi-org-while-single-tenant case (e.g. a flag flip post-launch).
+  // 99% the right one is the only click. The list stays reachable by
+  // URL for inspection, and is what a database holding more than one
+  // org falls back to.
   //
   // We read the singleton id from `bootstrapStatus` rather than
   // `adminList` : the former is a public procedure (the (anon)/(authed)
@@ -22,11 +21,7 @@ export default async function AdminOrganizationsPage() {
   // would swallow the error, and the redirect would silently no-op.
   const api = createServerTrpcClient();
   const status = await api.organizations.bootstrapStatus.query().catch(() => null);
-  if (
-    status?.mode === "single" &&
-    status.singletonOrganizationId !== null &&
-    status.singletonOrganizationId !== undefined
-  ) {
+  if (status?.singletonOrganizationId) {
     redirect(`/admin/organizations/${status.singletonOrganizationId}`);
   }
 

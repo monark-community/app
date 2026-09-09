@@ -1,14 +1,6 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { getDb } from "@monark/db";
 import { NotFoundError } from "@monark/common";
-
-// getCurrentOrg consults `tenancy.multi-tenant` ; stub the flag module so the
-// test doesn't depend on a flag-eval service. Default OFF (single-tenant),
-// matching production ; the multi-tenant case overrides per-test.
-const isEnabledMock = vi.fn(async () => false);
-vi.mock("@monark/feature-flags/server", () => ({
-  isEnabled: (...args: unknown[]) => isEnabledMock(...(args as [])),
-}));
 
 import {
   getById,
@@ -48,8 +40,6 @@ async function makeOrg(
 }
 
 beforeEach(async () => {
-  isEnabledMock.mockReset();
-  isEnabledMock.mockResolvedValue(false);
   await resetAll();
   await seedUsers();
 });
@@ -89,12 +79,6 @@ describe("organizations/read getCurrentOrg", () => {
   it("returns null when the active-org claim is stale (membership gone)", async () => {
     await makeOrg("acme"); // exists, but USER has no membership
     expect(await getCurrentOrg({ userId: USER, activeOrganizationId: "acme" })).toBeNull();
-  });
-
-  it("multi-tenant with no active-org claim returns null (route to switcher)", async () => {
-    isEnabledMock.mockResolvedValue(true);
-    await makeOrg("acme", { member: USER });
-    expect(await getCurrentOrg({ userId: USER, activeOrganizationId: null })).toBeNull();
   });
 
   it("single-tenant with no claim falls back to the sole active org", async () => {

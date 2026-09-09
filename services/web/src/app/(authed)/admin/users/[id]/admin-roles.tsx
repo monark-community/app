@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Plus } from "lucide-react";
 import { toast } from "sonner";
@@ -23,8 +23,6 @@ import {
 } from "@/components/ui/select";
 import { RoleChip } from "@/components/role-chip";
 import { trpc } from "@/lib/trpc";
-
-const ADMIN_ROLE_KEY = "ADMIN";
 
 type Assignment = {
   id: string;
@@ -60,9 +58,8 @@ type Assignment = {
  * The dialog itself filters available roles by selected org and
  * pivots on the role's scope :
  *  - Built-in `ADMIN` (Role.organizationId is null) is assignable at
- *    platform tier (orgId null) or any org. The form lets the operator
- *    pick the scope explicitly in multi-tenant ; in single-tenant the
- *    org auto-resolves to the singleton.
+ *    platform tier (orgId null) or the org. The org auto-resolves to
+ *    the singleton.
  *  - Custom roles (Role.organizationId set) are assignable only within
  *    their owning org ; we hide them when a different org is selected
  *    to prevent invalid combinations.
@@ -154,28 +151,18 @@ function AssignRoleDialog({
     refetchOnWindowFocus: false,
     staleTime: Infinity,
   });
-  const isSingleTenant = status.data?.mode !== "multi";
   const singletonOrgId = status.data?.singletonOrganizationId ?? null;
-
-  const orgsQuery = trpc.organizations.adminList.useQuery(
-    { limit: 100 },
-    {
-      enabled: open && !isSingleTenant,
-      refetchOnWindowFocus: false,
-    },
-  );
 
   const [pendingOrgId, setPendingOrgId] = useState<string>("");
   const [pendingRoleId, setPendingRoleId] = useState<string>("");
 
-  // Wipe selections every time the dialog opens, then auto-pin the
-  // singleton org in single-tenant so the form reduces to just the
-  // role picker.
+  // Wipe selections every time the dialog opens and pin the singleton
+  // org, so the form reduces to just the role picker.
   useEffect(() => {
     if (!open) return;
-    setPendingOrgId(isSingleTenant && singletonOrgId ? singletonOrgId : "");
+    setPendingOrgId(singletonOrgId ?? "");
     setPendingRoleId("");
-  }, [open, isSingleTenant, singletonOrgId]);
+  }, [open, singletonOrgId]);
 
   const rolesQuery = trpc.rbac.adminListRoles.useQuery(
     { organizationId: pendingOrgId },
@@ -193,32 +180,11 @@ function AssignRoleDialog({
     },
   });
 
-  const selectedRole = useMemo(
-    () => rolesQuery.data?.find((r) => r.id === pendingRoleId) ?? null,
-    [rolesQuery.data, pendingRoleId],
-  );
-  // Built-in ADMIN at platform tier still requires the operator to
-  // explicitly opt in via a scope toggle ; in single-tenant the
-  // singleton org is the default and the toggle is hidden. For
-  // multi-tenant we keep the previous behaviour : ADMIN with no org
-  // chosen → platform tier.
-  const willAssignAtPlatform =
-    !isSingleTenant &&
-    selectedRole !== null &&
-    selectedRole.builtIn &&
-    selectedRole.key === ADMIN_ROLE_KEY &&
-    pendingOrgId === "";
-
-  const canSubmit =
-    pendingRoleId !== "" && (willAssignAtPlatform || pendingOrgId !== "") && !assign.isPending;
+  const canSubmit = pendingRoleId !== "" && pendingOrgId !== "" && !assign.isPending;
 
   function onAdd() {
     if (!canSubmit) return;
-    assign.mutate({
-      userId,
-      roleId: pendingRoleId,
-      organizationId: willAssignAtPlatform ? null : pendingOrgId,
-    });
+    assign.mutate({ userId, roleId: pendingRoleId, organizationId: pendingOrgId });
   }
 
   return (
@@ -226,38 +192,10 @@ function AssignRoleDialog({
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>{t("dialogTitle")}</DialogTitle>
-          <DialogDescription>
-            {isSingleTenant ? t("dialogSubtitleSingle") : t("dialogSubtitle")}
-          </DialogDescription>
+          <DialogDescription>{t("dialogSubtitle")}</DialogDescription>
         </DialogHeader>
 
         <div className="grid gap-3 py-2">
-          {!isSingleTenant && (
-            <div className="grid gap-1.5">
-              <label htmlFor="assign-org-select" className="text-sm font-medium">
-                {t("orgLabel")}
-              </label>
-              <Select
-                value={pendingOrgId}
-                onValueChange={(next) => {
-                  setPendingOrgId(next);
-                  setPendingRoleId("");
-                }}
-              >
-                <SelectTrigger id="assign-org-select" className="w-full">
-                  <SelectValue placeholder={t("orgPlaceholder")} />
-                </SelectTrigger>
-                <SelectContent>
-                  {(orgsQuery.data?.items ?? []).map((org) => (
-                    <SelectItem key={org.id} value={org.id}>
-                      {org.displayName}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-
           <div className="grid gap-1.5">
             <label htmlFor="assign-role-select" className="text-sm font-medium">
               {t("roleLabel")}
