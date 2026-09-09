@@ -24,6 +24,8 @@ export function useFieldStrings(): FieldStrings {
         selectPlaceholder: t("selectPlaceholder"),
         add: t("add"),
         loading: t("loading"),
+        restricted: t("restricted"),
+        restrictedHint: t("restrictedHint"),
         remove: (label) => t("remove", { label }),
         yes: t("yes"),
         no: t("no"),

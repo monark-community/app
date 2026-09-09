@@ -94,7 +94,9 @@
       "unlink": "Retirer le lien",
       "linkUrlPlaceholder": "Collez un lien…",
       "linkApply": "Appliquer"
-    }
+    },
+    "restricted": "Restreint",
+    "restrictedHint": "Lié à un enregistrement auquel vous n'avez pas accès."
   },
   "common": {
     "appName": "{appName}",
@@ -1233,6 +1235,25 @@
         "createError": "Impossible de créer ce rôle.",
         "updateSuccess": "Rôle mis à jour.",
         "updateError": "Impossible de mettre à jour ce rôle."
+      },
+      "scopes": {
+        "title": "Portées d'enregistrements",
+        "description": "Limitez ce que ce rôle peut lire dans chaque base. Les rôles s'additionnent : une personne qui détient aussi un rôle sans limite voit toujours tout.",
+        "unrestricted": "Tous les enregistrements",
+        "noDatabases": "Ce rôle ne peut lire aucune base pour l'instant. Accordez-lui d'abord un accès aux enregistrements ci-dessus.",
+        "limit": "Limiter…",
+        "edit": "Modifier",
+        "remove": "Retirer la limite",
+        "save": "Enregistrer la portée",
+        "cancel": "Annuler",
+        "saved": "Portée enregistrée.",
+        "cleared": "Portée retirée.",
+        "saveFailed": "Impossible d'enregistrer la portée.",
+        "invalidQuery": "Écrivez une requête valide avant d'enregistrer.",
+        "queryPlaceholder": "ex. region:eu ou owner:@me",
+        "fieldsHeading": "Champs",
+        "valuesHeading": "Valeurs",
+        "hint": "Uniquement les champs de cette base ; une portée ne peut pas suivre une relation."
       }
     },
     "webhooks": {

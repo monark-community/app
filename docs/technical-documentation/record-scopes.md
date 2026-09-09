@@ -97,8 +97,9 @@ A filter that silently stops filtering is an authorization bug, not a 400. So:
   the _target_ model, so its evaluation could depend on rows the scoped role cannot see, and it would
   need the target's own row-access threaded into a predicate that runs before we know which record we
   are judging. Refusing it up front is a smaller, checkable rule than getting that right.
-- **A scope references an archived or retyped field** and therefore fails to compile: the query errors
-  rather than returning unfiltered rows.
+- **A scope names a field the model does not have**: rejected at save time, because `set` parses the
+  text against the model's live fields. A scope that references a field archived or retyped _later_
+  fails to compile at query time, and errors rather than returning unfiltered rows.
 
 ## Who may configure one
 
@@ -123,9 +124,39 @@ and a model nobody has scoped does no extra per-user work at all.
 
 ## tRPC surface
 
-`dataModels.scopes.{list, set, clear}`, all gated on `data-models.manage-record-scopes`. `set` takes
-`{ dataModelId, roleId, verb, query }` and validates the tree with `filterQuerySchema`, rejects
-traversal, and rejects a role belonging to another organization.
+`dataModels.scopes.{list, listForRole, set, clear}`, all gated on
+`data-models.manage-record-scopes`.
+
+**The wire format is MonarkQL text, not a tree**, in both directions.
+
+- `set` takes `{ dataModelId, roleId, verb, query: string }` and **parses it server-side against the
+  model's real fields**, so an unknown or wrongly-typed field is a clear error at save time rather
+  than a query that breaks later. It also rejects traversal, an empty query (a scope that narrows
+  nothing is not a scope ; clearing one is `clear`, which says so), and a role belonging to another
+  organization.
+- `list` / `listForRole` return the **canonical printed text**. Returning `Prisma.JsonValue` instead
+  would push a recursive type through tRPC's client inference, which is expensive enough to trip
+  `TS2589` in the web app ; text is also simply what a caller wants to render or re-edit. A stored
+  tree that no longer parses renders as `(unreadable scope)` rather than throwing, so one broken row
+  cannot break the whole screen. The **enforcement** path still fails closed on it, which is where it
+  matters.
+- `listForRole` exists so the role editor can render its section in one request instead of one per
+  database.
+
+## Configuring one
+
+`/admin/rbac` → a role → **Record scopes**
+([`role-scopes-section.tsx`](<../../services/web/src/app/(authed)/admin/rbac/role-scopes-section.tsx>)).
+
+Edit-mode only: a scope hangs off a role id, so there is nothing to attach it to until the role
+exists. It saves immediately rather than joining the role form's dirty state, because it is a
+separate resource with its own permission ; this mirrors `RecordAccessSection`, which does the same
+for the per-record ACL. Built-in ADMIN is excluded, since it bypasses every scope and the section
+would be a control that does nothing.
+
+Only databases the role can actually read are listed. Scoping one the role has no `record-read` on
+would be a rule with nothing to narrow. The query is written with the same `QueryChipBar` the record
+list uses, so the language is learned once.
 
 ## Tests
 

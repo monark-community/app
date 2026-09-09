@@ -302,6 +302,10 @@ export interface FieldLabels {
   add: string;
   /** Relation async loading label. */
   loading: string;
+  /** Label for a relation chip whose target the viewer may not read. */
+  restricted: string;
+  /** Tooltip explaining a restricted relation chip. */
+  restrictedHint: string;
   /** Remove-chip aria-label ; receives the chip label. */
   remove: (label: string) => string;
   /** Boolean cell / read view. */

@@ -26,6 +26,7 @@ export function Chip({
   removeLabel,
   disabled,
   tone,
+  title,
   className,
 }: {
   label: ReactNode;
@@ -40,6 +41,8 @@ export function Chip({
   removeLabel?: string;
   disabled?: boolean;
   tone?: ChipTone;
+  /** Native tooltip on the chip, for explaining a non-obvious state. */
+  title?: string;
   className?: string;
 }) {
   const removable = !!onRemove && !disabled;
@@ -59,6 +62,7 @@ export function Chip({
   return (
     <Badge
       variant={tone ?? "secondary"}
+      title={title}
       className={cn("max-w-full gap-1", removable ? "pl-1.5 pr-1" : "px-2", className)}
     >
       {leading}
