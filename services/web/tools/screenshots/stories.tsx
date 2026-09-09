@@ -2374,6 +2374,7 @@ const ConnectedAccountsStory: FC = () => (
         hasPassword
         onConnect={() => {}}
         onDisconnect={() => {}}
+        onSetPassword={() => {}}
       />
     </AccountCase>
     <AccountCase label="Provider only : nothing to remove, and a way to add a second method">
@@ -2383,6 +2384,7 @@ const ConnectedAccountsStory: FC = () => (
         hasPassword={false}
         onConnect={() => {}}
         onDisconnect={() => {}}
+        onSetPassword={() => {}}
       />
     </AccountCase>
     <AccountCase label="Another provider this deployment offers">
@@ -2392,6 +2394,7 @@ const ConnectedAccountsStory: FC = () => (
         hasPassword
         onConnect={() => {}}
         onDisconnect={() => {}}
+        onSetPassword={() => {}}
       />
     </AccountCase>
     <AccountCase label="Loading">
@@ -2402,6 +2405,7 @@ const ConnectedAccountsStory: FC = () => (
         hasPassword={false}
         onConnect={() => {}}
         onDisconnect={() => {}}
+        onSetPassword={() => {}}
       />
     </AccountCase>
   </div>
@@ -2417,6 +2421,7 @@ const ConnectedAccountsFigureStory: FC = () => (
       hasPassword
       onConnect={() => {}}
       onDisconnect={() => {}}
+      onSetPassword={() => {}}
     />
   </div>
 );
@@ -2431,6 +2436,7 @@ const ConnectedAccountsOnlyMethodFigureStory: FC = () => (
       hasPassword={false}
       onConnect={() => {}}
       onDisconnect={() => {}}
+      onSetPassword={() => {}}
     />
   </div>
 );

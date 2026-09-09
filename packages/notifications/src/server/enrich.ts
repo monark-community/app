@@ -38,12 +38,9 @@ function resolveAppUrl(): string {
  * the starter-template `/public/<logo>.svg` for the logo and the
  * starter-orange for the accent bar + wordmark color.
  *
- * Single-tenant only : "singleton" = exactly one non-deleted
- * Organization row. Multi-tenant deploys fall through and the
- * recipient sees the BRANDING-derived fallback ; the right semantics
- * for multi-tenant (recipient's primary org, the org the event came
- * from, …) is a separate design question for when multi-tenant
- * actually ships.
+ * "Singleton" = exactly one non-deleted Organization row. Anything
+ * else falls through and the recipient sees the BRANDING-derived
+ * fallback.
  *
  * Async on its own so `enrichVars` itself can stay synchronous — the
  * dozen unit-test call sites pass `undefined` overrides and get

@@ -31,6 +31,8 @@ http://127.0.0.1:54321/auth/v1/callback          # local
 https://<project-ref>.supabase.co/auth/v1/callback # hosted
 ```
 
+**Microsoft is the exception locally.** Entra validates Web-platform redirect URIs as HTTPS-only, with `http://localhost` the single plaintext exception, and refuses `http://127.0.0.1` outright at registration time. Its stanza therefore registers and sends `http://localhost:54321/auth/v1/callback`. Both resolve to the same Supabase, and hosted projects derive their own HTTPS callback, so the asymmetry never leaves local dev.
+
 Supabase then bounces the browser to `<app-origin>/auth/callback`, which is our route. _That_ URL is the one that has to appear in `additional_redirect_urls` in [supabase/config.toml](../../supabase/config.toml) ; it already lists `localhost:3000` plus RFC 1918 wildcards so a phone on the LAN works.
 
 ## Two traps that cost real time
@@ -100,6 +102,16 @@ Homepage URL can be anything; the Authorization callback URL is Supabase's. Noth
 
 **Watch out for:** a local sign-in that fails on a **nonce mismatch** wants `skip_nonce_check = true` in the local config **only** ; never carry that into a hosted project. Google is also the one provider here that sends the avatar as `picture` rather than `avatar_url`, which is why `extractOAuthProfile` checks both keys; nothing to configure, but it explains the extra branch if you're reading that code.
 
+### Microsoft (Entra ID)
+
+**Where:** Entra ID (Azure portal) → App registrations → New registration, then **Certificates & secrets** for the client secret.
+
+- Supabase's slug is `azure`, and that is the id carried end to end. "Microsoft" is only the display label.
+- **Decide the tenant up front.** The default multi-tenant endpoint accepts work **and** personal accounts. A single-tenant app needs an explicit `url = "https://login.microsoftonline.com/<tenant-id>/v2.0"` in the stanza.
+- Register the redirect URI under **Web**, not SPA ; the flow is server-side.
+
+**Watch out for:** the redirect URI must be `http://localhost:54321/auth/v1/callback`, not the `127.0.0.1` form the other providers use — Entra rejects the latter when you try to save it. And the client secret **expires**, 24 months at most and often shorter by policy. When it lapses every Microsoft sign-in stops dead with no warning, so the renewal belongs on a calendar rather than in someone's memory.
+
 ## Hosted projects
 
 Same three parts, different second one: instead of `config.toml`, configure the provider under **Authentication → Providers** in the Supabase dashboard, and register the vendor redirect URI against `https://<project-ref>.supabase.co/auth/v1/callback`. `AUTH_OAUTH_PROVIDERS` still has to list the slug on the api, and `additional_redirect_urls` still has to allow the app origin. The `redirect_uri` trap doesn't apply ; the platform derives it.
@@ -136,4 +148,4 @@ Figures regenerate with `pnpm --filter web figures connected-accounts connected-
 
 ## Not wired
 
-**Microsoft (`azure`)** is a separate change in flight. **Apple** is further out: it needs a paid developer account, a client secret that is a JWT requiring regeneration every six months, and it only returns the user's name on the _first_ authorization.
+**Apple** is further out: it needs a paid developer account, a client secret that is a JWT requiring regeneration every six months, and it only returns the user's name on the _first_ authorization.

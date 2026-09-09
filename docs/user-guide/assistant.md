@@ -43,6 +43,13 @@ Read-only lookups (just reading your data) run on their own.
 You're always in control, and the assistant can only ever see or change what
 **you** are allowed to : it acts with your own permissions, nothing more.
 
+## Its name
+
+Out of the box the assistant is called **Chrysa**. Your organization can rename
+it : an administrator sets **AI assistant name** on the organization profile
+(`/admin/organizations`), and the new name shows up everywhere at once ; in the
+panel header, on the launcher, and in the way the assistant refers to itself.
+
 ## Good to know
 
 - Replies stream in as they're written (after a brief "Thinking…" moment).

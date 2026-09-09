@@ -82,9 +82,7 @@ export function UsersList() {
   const [limit, setLimit] = useState(25);
   // Filter is keyed on the selected role's `id` (FK into the Role
   // table) ; "all" means no role constraint. The dropdown's options
-  // come from `rbac.adminListRoles` against the singleton org's id —
-  // multi-tenant deploys would need a richer "global role filter"
-  // (deferred to backlog).
+  // come from `rbac.adminListRoles` against the singleton org's id.
   const [roleFilter, setRoleFilter] = useState<string[]>([]);
   const [statusFilter, setStatusFilter] = useState<StatusValue[]>([]);
   const [emailFilter, setEmailFilter] = useState<EmailVerifiedFilter>("all");

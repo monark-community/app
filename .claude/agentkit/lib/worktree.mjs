@@ -2,6 +2,7 @@
 // slot back. One command so a new parallel task can never start on ports
 // another session is already holding.
 import fs from 'node:fs'
+import os from 'node:os'
 import path from 'node:path'
 import { currentCheckout } from './config.mjs'
 import { ensureIdentity } from './identity.mjs'
@@ -51,34 +52,90 @@ export function create(cfg, name, opts = {}) {
   return { dir, branch, base: startPoint, slot: slot.slot, ports: slot.ports, written, postCreate }
 }
 
+/**
+ * Delete a directory tree that git could not.
+ *
+ * On Windows neither `fs.rmSync` nor PowerShell's `Remove-Item` reliably
+ * clears a pnpm `node_modules`: the `.pnpm/<pkg>@<ver>_<hash>/...` paths run
+ * past 290 characters and both give up partway, even through the `\\?\`
+ * device path. `robocopy` mirroring an empty directory onto the target is not
+ * subject to MAX_PATH and does clear it, so it is the fallback of last resort.
+ */
+function forceRemoveTree(dir) {
+  const native = process.platform === 'win32' ? `\\\\?\\${dir}` : dir
+  try {
+    fs.rmSync(native, { recursive: true, force: true, maxRetries: 5 })
+  } catch {
+    /* fall through to robocopy */
+  }
+  if (!fs.existsSync(dir)) return true
+
+  if (process.platform === 'win32') {
+    const empty = fs.mkdtempSync(path.join(os.tmpdir(), 'agentkit-empty-'))
+    // Exit codes 0-7 are all success for robocopy, so the result is judged by
+    // what is left on disk rather than by the status code.
+    run('robocopy', [empty, dir, '/MIR', '/NFL', '/NDL', '/NJH', '/NJS', '/NC', '/NS'])
+    fs.rmSync(empty, { recursive: true, force: true })
+    try {
+      fs.rmdirSync(dir)
+    } catch {
+      /* judged below */
+    }
+  }
+  return !fs.existsSync(dir)
+}
+
 export function remove(cfg, name, { force = false, deleteBranch = false } = {}) {
   const dir = fs.existsSync(name) ? path.resolve(name) : worktreePath(cfg, name)
-  const branch = gitOut(['rev-parse', '--abbrev-ref', 'HEAD'], dir)
+  const registered = list(cfg).some(
+    (e) => path.resolve(e.dir).toLowerCase() === path.resolve(dir).toLowerCase(),
+  )
 
-  // The env files the allocator wrote are untracked by design, so git would
-  // refuse every removal without --force and make --force reflexive, which is
-  // how real work gets deleted. Ignore exactly those files, and keep refusing
-  // when anything else is uncommitted.
-  const generated = new Set((cfg.ports.env ?? []).map((e) => e.file.replace(/\\/g, '/')))
-  const leftovers = gitOut(['status', '--porcelain'], dir)
-    .split('\n')
-    .map((l) => l.slice(3).trim().replace(/\\/g, '/'))
-    .filter((f) => f && !generated.has(f))
+  if (!registered && !fs.existsSync(dir)) {
+    // Nothing on disk and nothing in git: only the port slot can still be held.
+    const freed = release(cfg, dir)
+    return { dir, branch: '', freed, orphan: false }
+  }
 
-  if (leftovers.length && !force) {
+  const branch = registered ? gitOut(['rev-parse', '--abbrev-ref', 'HEAD'], dir) : ''
+
+  if (registered) {
+    // The env files the allocator wrote are untracked by design, so git would
+    // refuse every removal without --force and make --force reflexive, which
+    // is how real work gets deleted. Ignore exactly those, and keep refusing
+    // when anything else is uncommitted.
+    const generated = new Set((cfg.ports.env ?? []).map((e) => e.file.replace(/\\/g, '/')))
+    const leftovers = gitOut(['status', '--porcelain'], dir)
+      .split('\n')
+      .map((l) => l.slice(3).trim().replace(/\\/g, '/'))
+      .filter((f) => f && !generated.has(f))
+
+    if (leftovers.length && !force) {
+      throw new Error(
+        `${path.basename(dir)} still has uncommitted work: ${leftovers.slice(0, 5).join(', ')}${leftovers.length > 5 ? ` (+${leftovers.length - 5} more)` : ''}. Commit it, or pass --force to discard it.`,
+      )
+    }
+
+    git(['worktree', 'remove', '--force', dir], cfg.primaryRoot)
+  }
+
+  // Whatever git managed or refused, the directory has to go. A half-finished
+  // `worktree remove` deregisters the worktree and then dies on a long path,
+  // leaving a tree that `git worktree remove` will no longer touch ("is not a
+  // working tree") and that nothing else cleans up. Own that state here.
+  const orphan = !registered && fs.existsSync(dir)
+  if (fs.existsSync(dir) && !forceRemoveTree(dir)) {
     throw new Error(
-      `${path.basename(dir)} still has uncommitted work: ${leftovers.slice(0, 5).join(', ')}${leftovers.length > 5 ? ` (+${leftovers.length - 5} more)` : ''}. Commit it, or pass --force to discard it.`,
+      `could not delete ${dir}. Something is holding a file open (a dev server, an editor, a shell sitting in it); close it and re-run.`,
     )
   }
 
-  const res = git(['worktree', 'remove', '--force', dir], cfg.primaryRoot)
-  if (!res.ok) throw new Error(`git worktree remove failed: ${res.stderr || res.stdout}`)
-
+  git(['worktree', 'prune'], cfg.primaryRoot)
   const freed = release(cfg, dir)
   if (deleteBranch && branch && branch !== 'HEAD') {
     git(['branch', force ? '-D' : '-d', branch], cfg.primaryRoot)
   }
-  return { dir, branch, freed }
+  return { dir, branch, freed, orphan }
 }
 
 export function list(cfg) {

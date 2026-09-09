@@ -30,8 +30,8 @@ import { cn } from "@/lib/utils";
  *   3. An empty-square placeholder when single-tenant is bootstrapped
  *      but neither of the above is set — admins fix this from
  *      `/admin/organizations/<id>`.
- *   4. The starter-template's neutral placeholder logo (multi-tenant,
- *      a fresh deploy before the singleton org is provisioned,
+ *   4. The starter-template's neutral placeholder logo (a fresh
+ *      deploy before the singleton org is provisioned, or a
  *      transient api hiccup).
  *
  * Step 2 is why the order isn't simply "org, else placeholder": the api

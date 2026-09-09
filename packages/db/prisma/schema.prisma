@@ -280,6 +280,7 @@ model Role {
   flagOverrides     FeatureFlagOverride[]
   calendarAccess    CalendarRoleAccess[]
   dataRecordAccess  DataRecordRoleAccess[]
+  dataModelScopes   DataModelRoleScope[]
   kanbanBoardAccess KanbanBoardRoleAccess[]
 
   // Each org can have its own list of role keys ; the built-in ADMIN
@@ -818,6 +819,7 @@ model DataModel {
   watchers     DataModelWatcher[]
   views        DataRecordView[]
   forms        DataForm[]
+  roleScopes   DataModelRoleScope[]
 
   // Per-org key uniqueness among LIVE models is enforced by the hand-
   // written partial index `DataModel_org_key_active_unique`
@@ -922,6 +924,47 @@ model DataRecordRoleAccess {
   role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
 
   @@id([dataRecordId, roleId])
+  @@index([roleId])
+}
+
+// Which record operation a scope constrains. Kept separate from the permission
+// registry's verbs so a scope can narrow read without touching write.
+enum DataRecordScopeVerb {
+  READ
+  WRITE
+  DELETE
+}
+
+// A MonarkQL-scoped grant : this role may perform this verb on the records of
+// this model that satisfy `query`.
+//
+// Semantics, chosen so roles stay ADDITIVE (they grant, they never subtract) :
+// the effective predicate is the OR over every role the caller holds that
+// GRANTS the verb on this model, of that role's scope (or TRUE when the role
+// has no scope row). So holding one unscoped granting role keeps you
+// unrestricted, and a scope only ever narrows the access its own role confers.
+// No row anywhere = today's behavior, which is what makes this backward
+// compatible.
+//
+// Bypassed by `data-models.view-all-records` (which ADMIN / SYSADMIN
+// short-circuit), the same capability that bypasses DataRecordRoleAccess.
+model DataModelRoleScope {
+  id          String              @id @default(cuid())
+  roleId      String
+  role        Role                @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  dataModelId String
+  dataModel   DataModel           @relation(fields: [dataModelId], references: [id], onDelete: Cascade)
+  verb        DataRecordScopeVerb
+  // A MonarkQL FilterNode tree, validated with `filterQuerySchema` on write.
+  // A tree that fails to compile denies rather than degrading open — a filter
+  // that silently stops filtering is an authorization bug, not a 400.
+  query       Json
+  createdBy   String
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  @@unique([roleId, dataModelId, verb])
+  @@index([dataModelId])
   @@index([roleId])
 }
 

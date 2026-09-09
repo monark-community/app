@@ -15,6 +15,11 @@ describe("chat registrations", () => {
     expect(listFlagDefinitions().find((f) => f.key === "chat.enabled")?.defaultOn).toBe(false);
   });
 
+  it("registers chat.org-branding defaulting off", () => {
+    registerChatFeatureFlags();
+    expect(listFlagDefinitions().find((f) => f.key === "chat.org-branding")?.defaultOn).toBe(false);
+  });
+
   it("registers event types under the chat namespace", () => {
     registerChatEventTypes();
     expect(listEventTypes().some((e) => e.type.startsWith("chat."))).toBe(true);

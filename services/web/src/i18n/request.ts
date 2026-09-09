@@ -20,9 +20,8 @@ import { DEFAULT_LOCALE, isLocale } from "./config";
  * software (the app-bar wordmark, page titles, the apps launcher) stays
  * on `{appName}`.
  *
- * Falls back to `appName` when there is no singleton org: a multi-tenant
- * deploy, a fresh install before provisioning, or a transient api
- * failure. That keeps the copy grammatical in every case instead of
+ * Falls back to `appName` when there is no singleton org: a fresh
+ * install before provisioning, or a transient api failure. That keeps the copy grammatical in every case instead of
  * rendering an empty string.
  */
 function brandPlaceholders(orgName: string | null): Record<string, string> {

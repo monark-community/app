@@ -38,18 +38,46 @@ export function OrganizationDetail({
     },
   });
 
+  // The AI assistant's per-org name. Owned by @monark/chat rather than the org
+  // row (it lives in the metadata sidecar), so it's a separate query + mutation
+  // riding the same form. `enabled: false` on the response means the
+  // `chat.org-branding` flag is off for this org and the field doesn't render at
+  // all — the assistant then answers to the deploy-wide name.
+  const branding = trpc.chat.branding.get.useQuery(
+    { organizationId: orgId },
+    { refetchOnWindowFocus: false },
+  );
+  const brandingEnabled = branding.data?.enabled === true;
+  const saveBranding = trpc.chat.branding.set.useMutation({
+    onSuccess: () => {
+      void utils.chat.branding.get.invalidate({ organizationId: orgId });
+      // The companion resolves its name from `chat.config`; drop it so a rename
+      // shows up in the launcher / panel without a reload.
+      void utils.chat.config.invalidate();
+    },
+    onError: (error) => {
+      toast.error(error.message || t("saveError"));
+    },
+  });
+
   // Tenancy mode drives single-tenant UX adaptations on this page :
   // Controlled inputs ; resync from the row whenever the underlying
   // query result rotates so a save (or another admin's change) doesn't
   // leave the form pointing at stale values.
   const [displayName, setDisplayName] = useState("");
   const [primaryColor, setPrimaryColor] = useState("");
+  const [assistantName, setAssistantName] = useState("");
 
   useEffect(() => {
     if (!query.data) return;
     setDisplayName(query.data.displayName);
     setPrimaryColor(query.data.primaryColor ?? "");
   }, [query.data]);
+
+  useEffect(() => {
+    if (!branding.data) return;
+    setAssistantName(branding.data.assistantName ?? "");
+  }, [branding.data]);
 
   // Dirty-check vs. the source row so the Save button activates only
   // when something actually changed. Cancel reverts to the row values.
@@ -61,12 +89,20 @@ export function OrganizationDetail({
     };
   }, [query.data]);
 
+  // Separate baseline: the assistant name comes from its own query and may not
+  // have landed yet when the org row has. Treated as clean until it does, so a
+  // half-loaded form never shows the save bar.
+  const assistantBaseline = brandingEnabled ? (branding.data?.assistantName ?? "") : null;
+
   const dirty = Boolean(
-    baseline &&
-    (displayName.trim() !== baseline.displayName || primaryColor.trim() !== baseline.primaryColor),
+    (baseline &&
+      (displayName.trim() !== baseline.displayName ||
+        primaryColor.trim() !== baseline.primaryColor)) ||
+    (assistantBaseline !== null && assistantName.trim() !== assistantBaseline),
   );
 
   function onCancel() {
+    if (assistantBaseline !== null) setAssistantName(assistantBaseline);
     if (!baseline) return;
     setDisplayName(baseline.displayName);
     setPrimaryColor(baseline.primaryColor);
@@ -76,6 +112,7 @@ export function OrganizationDetail({
     if (!baseline) return;
     const nextDisplayName = displayName.trim();
     const nextColor = primaryColor.trim();
+    const nextAssistantName = assistantName.trim();
 
     if (nextDisplayName.length < 1 || nextDisplayName.length > 120) {
       toast.error(t("saveError"));
@@ -99,7 +136,19 @@ export function OrganizationDetail({
     if (nextColor !== baseline.primaryColor) {
       payload.primaryColor = nextColor === "" ? null : nextColor;
     }
-    update.mutate(payload);
+    const orgChanged = payload.displayName !== undefined || payload.primaryColor !== undefined;
+    const assistantChanged = assistantBaseline !== null && nextAssistantName !== assistantBaseline;
+
+    // Two backing stores (the org row, and chat's metadata sidecar), one save
+    // button. Each only fires when its own half changed ; the success toast is
+    // owned by whichever ran, so a branding-only save still confirms.
+    if (orgChanged) update.mutate(payload);
+    if (assistantChanged) {
+      saveBranding.mutate(
+        { organizationId: orgId, assistantName: nextAssistantName || null },
+        { onSuccess: orgChanged ? undefined : () => toast.success(t("saved")) },
+      );
+    }
   }
 
   async function onLogoChanged() {
@@ -180,6 +229,25 @@ export function OrganizationDetail({
             />
             <p className="text-xs text-muted-foreground">{t("primaryColorHint")}</p>
           </FieldRow>
+
+          {/* Assistant branding. Rendered only when `chat.org-branding` is on
+              for this org ; while the flag query is in flight nothing shows,
+              which is why there's no skeleton here — a one-line field that
+              may not exist at all would flash worse than it waits. */}
+          {brandingEnabled && (
+            <FieldRow label={t("labels.assistantName")} htmlFor="org-assistant-name">
+              <Input
+                id="org-assistant-name"
+                value={assistantName}
+                onChange={(event) => setAssistantName(event.target.value)}
+                placeholder={branding.data?.defaultName ?? ""}
+                maxLength={40}
+              />
+              <p className="text-xs text-muted-foreground">
+                {t("assistantNameHint", { defaultName: branding.data?.defaultName ?? "" })}
+              </p>
+            </FieldRow>
+          )}
         </div>
       </div>
 
@@ -188,7 +256,7 @@ export function OrganizationDetail({
         open={dirty}
         onSave={onSave}
         onCancel={onCancel}
-        saving={update.isPending}
+        saving={update.isPending || saveBranding.isPending}
         saveLabel={t("save")}
         savingLabel={t("saving")}
         cancelLabel={t("cancel")}

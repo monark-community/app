@@ -15,6 +15,17 @@ const CHAT_FLAGS = {
       "Enable the app-owned AI agent inside chat (LLM-backed replies + tool use). Requires chat.enabled.",
     defaultOn: false,
   },
+  // Branding, not capability: this one gates *who decides* the assistant's
+  // name. Off, the name is a deploy-wide constant (CHAT_ASSISTANT_NAME, else
+  // the shipped default) and the org settings form doesn't offer the field. On,
+  // each org can name its own assistant. Gating resolution as well as the form
+  // means flipping it off reverts every org to the deploy name without anyone
+  // having to clear the stored values.
+  "org-branding": {
+    description:
+      "Let each organization name its own AI assistant from the organization settings form, overriding the deploy-wide CHAT_ASSISTANT_NAME.",
+    defaultOn: false,
+  },
 } as const;
 
 export function registerChatFeatureFlags(): void {

@@ -58,9 +58,8 @@ type Assignment = {
  * The dialog itself filters available roles by selected org and
  * pivots on the role's scope :
  *  - Built-in `ADMIN` (Role.organizationId is null) is assignable at
- *    platform tier (orgId null) or any org. The form lets the operator
- *    pick the scope explicitly in multi-tenant ; in single-tenant the
- *    org auto-resolves to the singleton.
+ *    platform tier (orgId null) or the org. The org auto-resolves to
+ *    the singleton.
  *  - Custom roles (Role.organizationId set) are assignable only within
  *    their owning org ; we hide them when a different org is selected
  *    to prevent invalid combinations.

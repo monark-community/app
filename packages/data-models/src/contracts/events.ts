@@ -4,6 +4,12 @@ import type { DomainEventBase } from "@monark/common/contracts/events";
 export type DataModelSchemaChangedEvent = DomainEventBase & {
   type: "data-models.schema-changed";
   dataModelId: string;
+  // The owning org. Non-null like every other org id in this file :
+  // `DataModel.organizationId` is a required column and platform-wide
+  // models are disallowed, so a schema change always happens inside
+  // exactly one org. Carried so webhook routing can scope the event
+  // without loading the model.
+  organizationId: string;
   kind: "model" | "field" | "integration";
   actorId: string;
 };
@@ -17,7 +23,7 @@ export type DataModelRecordCreatedEvent = DomainEventBase & {
   dataModelId: string;
   dataModelKey: string;
   recordId: string;
-  organizationId: string | null;
+  organizationId: string;
   actorId: string;
 };
 
@@ -26,7 +32,7 @@ export type DataModelRecordUpdatedEvent = DomainEventBase & {
   dataModelId: string;
   dataModelKey: string;
   recordId: string;
-  organizationId: string | null;
+  organizationId: string;
   actorId: string;
   // DataField.key values that changed, plus "title" / "slug" when the
   // denormalized envelope columns moved.
@@ -42,7 +48,7 @@ export type DataModelRecordDeletedEvent = DomainEventBase & {
   // subscribers run, so the title can't be looked up afterward (the watcher
   // notification needs it).
   recordTitle: string;
-  organizationId: string | null;
+  organizationId: string;
   actorId: string;
   hard: boolean;
 };
@@ -60,7 +66,7 @@ export type DataFormSubmittedEvent = DomainEventBase & {
   mode: "anonymous" | "email";
   // The invited recipient's email for EMAIL mode ; null for anonymous.
   submitterEmail: string | null;
-  organizationId: string | null;
+  organizationId: string;
 };
 
 // Emitted when an admin approves a public-form submission onto the public board
@@ -72,7 +78,7 @@ export type DataFormEntryPublishedEvent = DomainEventBase & {
   dataModelKey: string;
   recordId: string;
   formId: string;
-  organizationId: string | null;
+  organizationId: string;
 };
 
 // Emitted when a logged-in user posts a comment on a record (auto-published).
@@ -84,6 +90,29 @@ export type DataRecordCommentedEvent = DomainEventBase & {
   recordId: string;
   commentId: string;
   authorId: string;
+  organizationId: string;
+};
+
+// A role's record scope changed. Authorization-relevant, so it is emitted for
+// audit: an operator subscribing to these sees every widening or narrowing of
+// who can read which records, without polling the table.
+export type DataRecordScopeSetEvent = DomainEventBase & {
+  type: "data-models.record-scope-set";
+  dataModelId: string;
+  dataModelKey: string;
+  roleId: string;
+  verb: string;
+  actorId: string;
+  organizationId: string | null;
+};
+
+export type DataRecordScopeClearedEvent = DomainEventBase & {
+  type: "data-models.record-scope-cleared";
+  dataModelId: string;
+  dataModelKey: string;
+  roleId: string;
+  verb: string;
+  actorId: string;
   organizationId: string | null;
 };
 
@@ -94,4 +123,6 @@ export type DataModelsEvents =
   | DataModelRecordDeletedEvent
   | DataFormSubmittedEvent
   | DataFormEntryPublishedEvent
-  | DataRecordCommentedEvent;
+  | DataRecordCommentedEvent
+  | DataRecordScopeSetEvent
+  | DataRecordScopeClearedEvent;

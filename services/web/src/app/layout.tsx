@@ -96,8 +96,8 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   // Pull the singleton org's brand color (public procedure — safe pre-
   // auth) so anon screens (signin / signup / forgot-password) are
   // already on the deployer's brand color, not the starter orange.
-  // Multi-tenant deploys + first-boot (no org yet) return null and the
-  // starter colors stand in. Best-effort : a transient api failure
+  // First boot (no org yet) returns null and the starter colors
+  // stand in. Best-effort : a transient api failure
   // falls through to the BRANDING defaults rather than crashing the
   // root layout.
   const status = await getBootstrapStatus();

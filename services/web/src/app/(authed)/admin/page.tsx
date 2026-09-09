@@ -9,9 +9,8 @@ import { ADMIN_TABS } from "./admin-tabs";
 // → users → rbac) automatically retargets `/admin` to whatever's
 // pinned at index 0.
 //
-// In single-tenant deploys `/admin/organizations` further redirects
-// to the singleton org's edit page ; in multi-tenant it lands on the
-// list view. Either way the operator hits a real surface in one hop.
+// `/admin/organizations` further redirects to the singleton org's
+// edit page, so the operator hits a real surface in one hop.
 //
 // The redirect happens *after* the layout's rbac gate, so non-admins
 // are bounced to `/` before reaching here.

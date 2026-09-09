@@ -34,10 +34,11 @@
     "check:i18n": "tsx tools/check-i18n.ts",
     "check:migrations": "tsx tools/check-migrations.ts",
     "check:mcp": "tsx tools/check-public-api-mcp.ts",
+    "check:changelog": "tsx tools/check-changelog.ts",
+    "test:tools": "vitest run --config vitest.tools.config.ts",
     "coverage:merge": "tsx tools/merge-coverage.ts",
     "coverage:suggest": "tsx tools/merge-coverage.ts --suggest",
     "changelog:compile": "tsx tools/compile-changelog.ts",
-    "changelog:check": "tsx tools/compile-changelog.ts --validate",
     "gen": "pnpm gen:schema && pnpm gen:events && pnpm gen:routers",
     "gen:module": "tsx tools/gen-module.ts",
     "gen:schema": "tsx tools/gen-schema.ts",
@@ -79,7 +80,8 @@
     "tsx": "^4.21.0",
     "turbo": "^2.9.14",
     "typescript": "^5.7.0",
-    "typescript-eslint": "^8.65.0"
+    "typescript-eslint": "^8.65.0",
+    "vitest": "^3.0.0"
   },
   "pnpm": {
     "overrides": {
@@ -118,6 +120,9 @@
     "pre-push": "env -u GIT_DIR -u GIT_WORK_TREE -u GIT_INDEX_FILE -u GIT_PREFIX pnpm lint"
   },
   "lint-staged": {
+    "changelog.d/*.md": [
+      "tsx tools/check-changelog.ts"
+    ],
     "*.{ts,tsx}": [
       "prettier --write",
       "eslint --fix --max-warnings=0 --no-warn-ignored"

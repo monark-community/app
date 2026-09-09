@@ -1,6 +1,7 @@
 {
   "chat": {
     "launcherAria": "Open {name}",
+    "assistantFallbackName": "Assistant",
     "conversationsTitle": "Conversations",
     "newConversation": "New chat",
     "back": "Back to conversations",
@@ -1119,12 +1120,14 @@
         "invalidColor": "Color must be a hex code like #2563EB.",
         "labels": {
           "displayName": "Display name",
+          "assistantName": "AI assistant name",
           "primaryColor": "Primary brand color"
         },
         "placeholders": {
           "displayName": "How the organization is shown across the app"
         },
         "primaryColorHint": "Hex code like #2563EB. Leave blank to use the deployment's brand color.",
+        "assistantNameHint": "What this organization's AI assistant is called, in chat and in its own replies. Leave blank to use the deployment default ({defaultName}).",
         "logoHint": "Square crop, max 2 MB. JPEG, PNG, or WebP.",
         "logoUploadAria": "Upload an organization logo",
         "logoEditAria": "Change organization logo",

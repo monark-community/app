@@ -8,8 +8,7 @@
  * or drive it from a deploy hook / one-off job.
  *
  * Idempotent : a re-run on a healthy install is a no-op (the existing org id is
- * returned). Refuses in multi-tenant mode — there, organizations are created by
- * the user-facing flows, not provisioned.
+ * returned).
  *
  * Usage :
  *   # local, against the `pnpm dev` stack :

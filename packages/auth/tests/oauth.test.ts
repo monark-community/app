@@ -190,6 +190,32 @@ describe("auth/oauth — google", () => {
   });
 });
 
+// Microsoft/Entra sends a name but no avatar key, and the provider slug
+// is `azure` rather than "microsoft".
+const AZURE: OAuthAuthUserLike = {
+  id: "u-azure",
+  email: "alan@example.com",
+  email_confirmed_at: "2026-01-02T03:04:05Z",
+  user_metadata: { name: "Alan Turing", email_verified: true },
+  app_metadata: { provider: "azure", providers: ["azure"] },
+};
+
+describe("auth/oauth — azure (Microsoft)", () => {
+  it("extracts the profile from Entra's metadata shape", () => {
+    const profile = extractOAuthProfile(AZURE);
+    expect(profile.provider).toBe("azure");
+    expect(profile.displayName).toBe("Alan Turing");
+    expect(profile.email).toBe("alan@example.com");
+    expect(profile.emailVerified).toBe(true);
+  });
+
+  it("is accepted as a provider slug and configurable", () => {
+    expect(isOAuthProvider("azure")).toBe(true);
+    // Guards the slug choice : "microsoft" is the label, never the id.
+    expect(isOAuthProvider("microsoft")).toBe(false);
+  });
+});
+
 describe("auth/oauth.isOAuthProvider", () => {
   it("accepts every slug in the exported list", () => {
     for (const provider of OAUTH_PROVIDERS) {

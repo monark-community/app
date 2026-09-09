@@ -15,7 +15,6 @@ Flags are runtime-registered. The DB stores `(module, key)` and the call-site us
 Core registrations live in each owning module's server package and are wired in [services/api/src/server.ts](../../services/api/src/server.ts) :
 
 - `auth.*` — registered by `registerAuthFeatureFlags()` in [@monark/auth/server](../auth/src/server/flags.ts).
-- `tenancy.*` — registered by `registerOrganizationsFeatureFlags()` in [@monark/organizations/server](../organizations/src/server/flags.ts).
 
 An extended module follows the same shape :
 

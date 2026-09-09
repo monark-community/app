@@ -388,7 +388,7 @@ skip_nonce_check = false
 email_optional = false
 
 # ── Social sign-in ────────────────────────────────────────────
-# GitHub and Google back the "Continue with …" buttons on /signin and
+# GitHub, Google and Microsoft (`azure`) back the "Continue with …" buttons on /signin and
 # /signup. Both ship disabled : a developer without OAuth apps
 # registered at the vendors runs the stack exactly as before, and
 # `AUTH_OAUTH_PROVIDERS` on the api (unset by default) keeps the buttons
@@ -448,6 +448,30 @@ redirect_uri = "http://127.0.0.1:54321/auth/v1/callback"
 # comes back through the CLI's loopback auth server ; flip this to true
 # if a local sign-in fails with a nonce mismatch. Leave it false
 # everywhere else, and never carry it into a hosted project.
+skip_nonce_check = false
+email_optional = false
+
+# Microsoft Entra ID. `azure` is Supabase's slug for it and the id we
+# carry end to end (see packages/auth/src/contracts/oauth.ts) ; users
+# see "Microsoft" via OAUTH_PROVIDER_LABELS.
+#
+# The default multi-tenant endpoint accepts both work and personal
+# accounts. A single-tenant app adds
+#   url = "https://login.microsoftonline.com/<tenant-id>/v2.0"
+# The client secret **expires** (24 months maximum) ; when it lapses
+# every Microsoft sign-in stops dead, so put the renewal on a calendar.
+#
+# Note the callback is `localhost`, not the `127.0.0.1` the other
+# providers use. Entra validates redirect URIs on the Web platform as
+# HTTPS-only, with `http://localhost` the single plaintext exception ;
+# it refuses `http://127.0.0.1` at registration time. The two resolve to
+# the same Supabase either way, and hosted projects derive their own
+# HTTPS callback, so this asymmetry is local-only.
+[auth.external.azure]
+enabled = false
+client_id = "env(SUPABASE_AUTH_EXTERNAL_AZURE_CLIENT_ID)"
+secret = "env(SUPABASE_AUTH_EXTERNAL_AZURE_SECRET)"
+redirect_uri = "http://localhost:54321/auth/v1/callback"
 skip_nonce_check = false
 email_optional = false
 

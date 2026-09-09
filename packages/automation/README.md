@@ -71,7 +71,7 @@ Prisma models live under `// ── MODULE: automation ──` in `packages/db/p
 ## Events emitted / consumed
 
 - **Emits:** `automation.created`, `automation.updated`, `automation.deleted`, `automation.run-started`, `automation.run-succeeded`, `automation.run-failed`.
-- **Consumes:** _every_ registered domain event, via a wildcard subscriber that matches events against enabled automations' `triggerEventType`. Non-triggerable events are skipped (`isTriggerableEventType`) : `automation.*` (feedback-loop avoidance) and `feature-flag.flipped` (unroutable — its org/user is nested under `scope`). On top of the event-type match, `eventScopeMatches` applies the **Data Record trigger**'s model filter : a trigger scoped to a `dataModelKey` only fires for `data-models.record-*` events on that model.
+- **Consumes:** _every_ registered domain event, via a wildcard subscriber that matches events against enabled automations' `triggerEventType`. Non-triggerable events are skipped (`isTriggerableEventType`) : `automation.*` (feedback-loop avoidance) and `feature-flag.flipped` (its org/user is nested under `scope`, so a flip aimed at one org would resolve like any other org-less event rather than to the org it names). An event's org is resolved the way the webhooks subscriber resolves it — the payload's `organizationId`, else the `userId`'s member orgs, else the singleton org when exactly one is live ; an event with none of those in a multi-org deploy is genuinely ambiguous and fires nothing. On top of the event-type match, `eventScopeMatches` applies the **Data Record trigger**'s model filter : a trigger scoped to a `dataModelKey` only fires for `data-models.record-*` events on that model.
 
 ## Notifications
 

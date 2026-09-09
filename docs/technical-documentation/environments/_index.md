@@ -84,11 +84,47 @@ way errors are attributed to the right environment. See
    staging URL (the [deploy-checklist.md](../deploy-checklist/_index.md) Phase 4 steps).
 
 
-## Optional: gate deploys on CI
+## Deploy on green
 
-Native deploys fire on push regardless of CI. If you'd rather deploy **only after
-the verify gate is green**, disable `autoDeploy` on the Render services + turn off
-Vercel's automatic git deploys, and trigger each platform's deploy hook from a
-GitHub Actions job keyed on `workflow_run` (the CI workflow) `conclusion == success`.
-Not wired today : staging deploying on every push is the intended behaviour, so a
-red build is visible on staging quickly.
+Render's own trigger fires on **push**, not on green : a merge that breaks the
+build still deploys, and the failure surfaces from the running service rather
+than from CI. It is also invisible from this repo — when the backend doesn't
+follow a merge there is no run, no log and no failed check here to look at.
+
+[`deploy-api.yml`](../../.github/workflows/deploy-api.yml) closes both gaps. It
+keys on `workflow_run` for the CI workflow, deploys only when
+`conclusion == success`, resolves the Render services **by name** from this
+blueprint's convention (`monark-api` / `monark-api-staging`, plus the two crons
+per environment), and polls each deploy to a terminal state so the check
+reflects the deploy's real outcome rather than "we asked Render to deploy".
+
+Setup is one secret : `RENDER_API_KEY` (Render dashboard → Account Settings →
+API Keys) in **Settings → Secrets → Actions**. Services are looked up by name,
+so adding a service to the blueprint doesn't mean adding another secret.
+Without the secret the workflow no-ops with a notice instead of failing.
+
+Once it is wired up, set `autoDeploy: false` on the services in `render.yaml`
+and re-sync the blueprint — otherwise every push deploys twice, once from
+Render's trigger and once from this workflow.
+
+`workflow_dispatch` gives a manual re-deploy per environment, for when a deploy
+failed for an environment reason rather than a code one.
+
+### When the backend doesn't follow a merge
+
+The web side deploys through Vercel's own git integration, so the two can drift
+apart. In order of likelihood:
+
+1. **The Blueprint isn't synced.** If the Render services were created by hand
+   rather than from `render.yaml`, nothing in this file applies to them —
+   including `autoDeploy`. Render → the service → Settings should show it as
+   blueprint-managed.
+2. **Auto-Deploy is off in the dashboard**, which overrides the blueprint value
+   until the next sync. Render → the service → Settings → Auto-Deploy.
+3. **The GitHub connection lapsed.** Render → Account Settings → GitHub ; a
+   revoked or re-scoped installation stops the push webhook silently.
+4. **The push didn't touch a watched branch.** Only `main` and `develop` have
+   services pointed at them.
+
+Enabling `deploy-api.yml` makes 2–4 moot : the deploy is driven from this repo
+and its outcome is a check on the commit.

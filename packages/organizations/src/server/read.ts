@@ -36,17 +36,16 @@ export async function getUserOrgs(userId: string): Promise<Organization[]> {
 
 // Returns the active org for a session.
 //
-// Multi-tenant : drives off the session's `active_organization_id`
-// claim, validating that the user still has a live membership. A
-// stale claim (user was removed from the org) returns null so the
-// caller can route them to the org switcher.
+// When the session carries an `active_organization_id` claim, that
+// drives it, validating that the user still has a live membership. A
+// stale claim (user was removed from the org) returns null.
 //
-// Single-tenant : there's only ever one org, so the claim is dead
-// weight ; we fall back to the singleton for any signed-in caller
+// There's only ever one org, so the claim is usually dead weight ;
+// we fall back to the singleton for any signed-in caller
 // (sysadmins, dev users without a formal Membership row, anyone the
 // session metadata never got populated for). Without this fallback,
-// `current.useQuery` would forever return null in single-tenant
-// dev — which is what bit the dev overlay panel.
+// `current.useQuery` would forever return null in dev — which is
+// what bit the dev overlay panel.
 export async function getCurrentOrg(ctx: OrgSessionContext): Promise<Organization | null> {
   if (!ctx.userId) return null;
   if (ctx.activeOrganizationId) {

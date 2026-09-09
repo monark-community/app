@@ -9,10 +9,11 @@
 // so no branch has to touch the compiled file and there is nothing to
 // conflict over.
 //
-// Ordering is (date DESC, filename ASC). The historical fragments carry a
-// `YYYY-MM-DD-NN-` prefix so their original within-day order is preserved
-// exactly ; new fragments can be named freely, since a new entry's date
-// almost always places it on its own.
+// Ordering is (date DESC, filename ASC), which is why every fragment carries a
+// `YYYY-MM-DD-NN-` prefix : the filename is the tiebreak, so an undated name
+// sorts by whatever its slug happens to start with and lands arbitrarily among
+// that day's entries. tools/check-changelog.ts enforces the prefix, and that
+// its date matches the entry's own, at commit time and in CI.
 //
 // Usage:
 //   pnpm changelog:compile           rewrite CHANGELOG.md
@@ -22,6 +23,7 @@
 import { readFileSync, writeFileSync, readdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { escapingLinksOf } from "./lib/changelog-fragments";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const FRAGMENTS_DIR = join(ROOT, "changelog.d");
@@ -30,11 +32,6 @@ const HEADER_FILE = "_header.md";
 const ENTRY_DATE_RE = /^-\s*(\d{4}-\d{2}-\d{2}):/;
 
 const checkOnly = process.argv.includes("--check");
-// --validate runs the per-fragment rules and nothing else. It is what CI can
-// run on a PR : `--check` compares against CHANGELOG.md, which a PR branch
-// deliberately leaves stale (the compiled file is regenerated once, on
-// develop, after merge), so it would fail every PR that adds an entry.
-const validateOnly = process.argv.includes("--validate");
 
 // Files starting with "_" are structure (the header), not entries ; README.md
 // documents the convention for humans.
@@ -66,8 +63,10 @@ const fragments = fragmentNames.map((file) => {
   // Fragments live in changelog.d/ but compile into CHANGELOG.md at the repo
   // root, so a link written relative to the fragment ("../tools/foo.ts") ends
   // up pointing one level above the repo. Easy to write, invisible once
-  // compiled ; reject it here instead of shipping a dead link.
-  const escaping = [...text.matchAll(/\]\((\.\.\/[^)]*)\)/g)].flatMap((x) => x[1] ?? []);
+  // compiled ; reject it here instead of shipping a dead link. `pnpm
+  // check:changelog` applies the same rule at commit time and on PRs, so this
+  // is the last line rather than the only one.
+  const escaping = escapingLinksOf(text);
   if (escaping.length > 0) {
     console.error(
       `changelog:compile — ${file} has link(s) relative to changelog.d/ instead of the repo root:\n` +
@@ -78,11 +77,6 @@ const fragments = fragmentNames.map((file) => {
   }
   return { file, date: m[1], text };
 });
-
-if (validateOnly) {
-  console.log(`changelog:check — ${fragments.length} fragment(s) look well-formed.`);
-  process.exit(0);
-}
 
 // Newest first ; filename breaks ties so the output is deterministic and the
 // historical within-day ordering (encoded in the NN prefix) is preserved.

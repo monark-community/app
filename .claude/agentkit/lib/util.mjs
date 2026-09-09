@@ -43,8 +43,18 @@ export function run(cmd, args, opts = {}) {
 }
 
 export function git(args, cwd) {
-  return run('git', args, { cwd })
+  return run('git', [...LONG_PATHS, ...args], { cwd })
 }
+
+/**
+ * Windows caps paths at 260 characters unless something opts out, and pnpm's
+ * nested `node_modules/.pnpm/<pkg>@<version>_<hash>/...` routinely runs past
+ * 290. `git worktree remove` then dies with "Filename too long" partway
+ * through deleting the tree. Scoped to each invocation with `-c` rather than
+ * relying on a global `core.longpaths`, so the kit works on a machine whose
+ * git was never configured for it.
+ */
+const LONG_PATHS = process.platform === 'win32' ? ['-c', 'core.longpaths=true'] : []
 
 export function gitOut(args, cwd) {
   const r = git(args, cwd)

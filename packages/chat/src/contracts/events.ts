@@ -23,4 +23,19 @@ export type ChatMessageCreatedEvent = DomainEventBase & {
   actorId: string | null;
 };
 
-export type ChatEvents = ChatConversationCreatedEvent | ChatMessageCreatedEvent;
+// Emitted when an admin renames (or clears) the org's AI assistant. Carries the
+// new name because it's operator-chosen branding, not user data — the whole
+// point of the event is letting an integration mirror the rename.
+export type ChatAssistantNameChangedEvent = DomainEventBase & {
+  type: "chat.assistant-name-changed";
+  organizationId: string;
+  actorId: string;
+  // The org's new override, or null when it was cleared back to the
+  // deploy-wide default.
+  assistantName: string | null;
+};
+
+export type ChatEvents =
+  | ChatConversationCreatedEvent
+  | ChatMessageCreatedEvent
+  | ChatAssistantNameChangedEvent;

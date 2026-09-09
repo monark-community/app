@@ -7,14 +7,14 @@ import { WebhookEditor } from "../webhook-editor";
 /**
  * Create-endpoint page. Three scopes the operator can land in :
  *
- *   - `?org=<id>` — multi-tenant ; the manager passes the picked org.
+ *   - `?org=<id>` — an explicit org, when a caller passes one.
  *   - `?scope=platform` — sysadmin platform-tier endpoint
  *     (organizationId = null) ; receives every event matching the
  *     subscription regardless of org.
- *   - no params — only valid in single-tenant deploys, where the
- *     bootstrap status carries the singleton id ; we resolve it here.
+ *   - no params — the usual case ; the bootstrap status carries the
+ *     singleton id and we resolve it here.
  *
- * If we can't resolve a scope (multi-tenant with no `?org=` and no
+ * If we can't resolve a scope (no singleton yet, no `?org=` and no
  * platform flag), render an empty state pointing back to the manager
  * rather than booting the operator into a broken form.
  */

@@ -53,18 +53,31 @@ signed-in user**, so every tool inherits that user's RBAC.
 - **Per-org, per-participant scoping.** Every row is `organizationId`-scoped; a
   conversation is only reachable by a participant. Message content + tool
   inputs/outputs are stored verbatim for replay + audit.
+- **Three-level assistant branding.** The assistant's display name resolves
+  per-org override → `CHAT_ASSISTANT_NAME` → the shipped default (`Chrysa`), in
+  `src/server/config.ts`. The override lives in the organization **metadata
+  sidecar** (`module: "chat"`, `key: "assistant-name"`) rather than a column on
+  `Organization`: one unindexed string nobody filters or sorts on, so no
+  migration and no core-schema change. `chat.org-branding` gates both the org
+  settings field and the resolution itself, so turning the flag off reverts
+  every org to the deploy name without clearing a single stored value. One
+  resolved name feeds both the system prompt and the web UI (`chat.config`), so
+  a rename lands everywhere at once.
 
 ## Public API
 
-| Export                                             | From                     | Purpose                                                                             |
-| -------------------------------------------------- | ------------------------ | ---------------------------------------------------------------------------------- |
-| `chatRouter`                                        | `@monark/chat/server`    | tRPC router (see tRPC surface).                                                     |
-| `advanceConversation(ctx, id, opts?)`               | `@monark/chat/server`    | Run the agent turn(s) until done or a mutation needs confirmation.                  |
-| `confirmToolCall` / `rejectToolCall(ctx, id)`       | `@monark/chat/server`    | Resolve a gated tool call, then resume the loop.                                    |
-| `setChatToolExecutor(exec)` / `getChatToolExecutor` | `@monark/chat/server`    | Inject / read the concrete tool executor (wired in `services/api`).                |
-| `setLlmProvider(p)` / `getLlmProvider()`            | `@monark/chat/server`    | Override / resolve the LLM provider.                                                |
-| `register{Permissions,EventTypes,FeatureFlags}()`   | `@monark/chat/server`    | Boot-time registration.                                                             |
-| `ChatEvents`, `MessageView`, `ChatMessageContext`   | `@monark/chat/contracts` | Domain events + shared types.                                                       |
+| Export                                              | From                     | Purpose                                                                 |
+| --------------------------------------------------- | ------------------------ | ----------------------------------------------------------------------- |
+| `chatRouter`                                        | `@monark/chat/server`    | tRPC router (see tRPC surface).                                         |
+| `advanceConversation(ctx, id, opts?)`               | `@monark/chat/server`    | Run the agent turn(s) until done or a mutation needs confirmation.      |
+| `confirmToolCall` / `rejectToolCall(ctx, id)`       | `@monark/chat/server`    | Resolve a gated tool call, then resume the loop.                        |
+| `setChatToolExecutor(exec)` / `getChatToolExecutor` | `@monark/chat/server`    | Inject / read the concrete tool executor (wired in `services/api`).     |
+| `setLlmProvider(p)` / `getLlmProvider()`            | `@monark/chat/server`    | Override / resolve the LLM provider.                                    |
+| `register{Permissions,EventTypes,FeatureFlags}()`   | `@monark/chat/server`    | Boot-time registration.                                                 |
+| `getAssistantName(scope?)`                          | `@monark/chat/server`    | Effective assistant name for an org (override → env → default). Async.  |
+| `getDefaultAssistantName()`                         | `@monark/chat/server`    | The deploy-wide name (`CHAT_ASSISTANT_NAME`, else the shipped default). |
+| `getOrganizationAssistantName(orgId)`               | `@monark/chat/server`    | One org's stored override, ignoring the flag; `null` when it inherits.  |
+| `ChatEvents`, `MessageView`, `ChatMessageContext`   | `@monark/chat/contracts` | Domain events + shared types.                                           |
 
 ## Data model
 
@@ -76,12 +89,16 @@ migration `20260804150000_add_chat`):
   `User`), `lastMessageAt?`, timestamps, `deletedAt?`.
 - **`ConversationParticipant`** — `conversationId`, `participantType`
   (`USER` | `AI_AGENT`), `userId?` (null for the AI). Unique `(conversationId,
-  userId)`.
+userId)`.
 - **`Message`** — `conversationId`, `organizationId` (denormalized), `authorType`
   (`USER` | `AI_AGENT` | `TOOL`), `authorUserId?` (SetNull), `content`, `createdAt`.
 - **`MessageToolCall`** — `messageId`, `organizationId`, `toolCallRef`, `toolName`,
   `input` (JSON), `status` (`PROPOSED`→`EXECUTING`→`SUCCEEDED`/`FAILED`/`REJECTED`),
   `mutates`, `result?`, `errorMessage?`. Persisted for audit + replay.
+
+No table of its own for branding: the per-org assistant name is an
+`OrganizationMetadata` row (`module: "chat"`, `key: "assistant-name"`, value a
+JSON string), written through `@monark/organizations/server`.
 
 ## Events emitted
 
@@ -89,6 +106,9 @@ migration `20260804150000_add_chat`):
   `actorId`.
 - `chat.message-created` — `organizationId`, `conversationId`, `messageId`,
   `authorType`, `actorId` (null for AI/TOOL). **Never carries content.**
+- `chat.assistant-name-changed` — `organizationId`, `assistantName` (null when
+  cleared), `actorId`. Carries the name because it is operator-chosen branding,
+  not user data.
 
 Consumes none.
 
@@ -102,11 +122,23 @@ require `chat.ai-agent`.
   creates a conversation when none is given, runs the agent turn, returns
   `{ conversationId, status }`)
 - `chat.toolCalls.confirm` / `.reject`
+- `chat.config` — the resolved assistant name for the caller's active org.
+  Session-only (not flag-gated) so the shell can label the launcher either way.
+- `chat.branding.get` / `.set` — the org settings form's read/write pair for the
+  per-org assistant name. Gated by `organizations.update-settings` (this _is_
+  org-profile editing, on a field chat happens to own) plus the
+  `chat.org-branding` flag; `set` with a blank / null name clears the override.
 
 ## Feature flags
 
 - `chat.enabled` — the module + web surface. Default **off**.
 - `chat.ai-agent` — the LLM-backed agent (requires `chat.enabled`). Default **off**.
+- `chat.org-branding` — lets each org name its own assistant from the
+  organization settings form, overriding `CHAT_ASSISTANT_NAME`. Default **off**;
+  while off the name is a deploy-wide constant and the form omits the field.
+  The **form** additionally requires `chat.enabled` (no point naming an
+  assistant the org can't see); **resolution** checks `chat.org-branding` alone,
+  so a stored name survives chat being toggled off and returns with it.
 
 ## Environment
 
@@ -114,7 +146,8 @@ require `chat.ai-agent`.
   unset only fails when someone actually opens the AI agent).
 - `CHAT_LLM_PROVIDER` (default `anthropic`), `CHAT_LLM_MODEL`,
   `CHAT_LLM_MAX_TOKENS` — optional overrides.
-- `CHAT_ASSISTANT_NAME` — the assistant's display name (default `Chrysa`). Used in
-  the system prompt and surfaced to the web UI via the `chat.config` query, so
-  one setting brands the assistant everywhere. A per-org override can layer on
-  this later.
+- `CHAT_ASSISTANT_NAME` — the deploy-wide assistant display name (default
+  `Chrysa`, for _chrysalide_). Used in the system prompt and surfaced to the web
+  UI via the `chat.config` query, so one setting brands the assistant
+  everywhere. A per-org override takes precedence over it when
+  `chat.org-branding` is on; see Key concepts.
