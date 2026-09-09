@@ -6,7 +6,21 @@ One file per entry. That inversion exists because several agents and contributor
 
 ## Adding an entry
 
-Create `changelog.d/<slug>.md` (the branch name makes a good slug — `feat/public-api-keys` → `feat-public-api-keys.md`) containing **exactly one entry**:
+Create `changelog.d/YYYY-MM-DD-NN-<slug>.md` containing **exactly one entry**:
+
+- `YYYY-MM-DD` — the entry's own date, the same one that opens the entry body below. The two **must** match ; `pnpm check:changelog` fails when they disagree, because a filename that claims a different day than the entry it holds silently misplaces it in the compiled order.
+- `NN` — a two-digit within-day sequence. Take the next one free for that date: `ls changelog.d | grep ^2026-09-08` and add one. Nothing breaks if two branches land the same `NN` on the same day (the filename still breaks the tie deterministically), so don't rebase over it ; just pick a free one when you can see the others.
+- `<slug>` — lowercase kebab-case, conventionally the branch name with `/` flattened to `-` (`feat/public-api-keys` → `feat-public-api-keys`).
+
+So a fragment on branch `feat/public-api-keys`, first entry of the day:
+
+```
+changelog.d/2026-09-08-01-feat-public-api-keys.md
+```
+
+The prefix is not decoration. `CHANGELOG.md` is compiled in (date DESC, filename ASC) order, so an undated filename sorts by whatever its slug happens to start with and lands arbitrarily among that day's entries ; dating the file makes the compiled order match the order entries were actually written, and makes `ls changelog.d` readable as a timeline.
+
+The file contains exactly one entry:
 
 ```
 - YYYY-MM-DD: <Module / area> — <concise summary>. <one paragraph of what changed and why, linking the key files>.
@@ -20,11 +34,26 @@ You do **not** need to run the compiler or commit `CHANGELOG.md` — CI does tha
 
 ## Files here
 
-| File | Purpose |
-| --- | --- |
-| `<slug>.md` | One changelog entry. Yours goes here. |
-| `YYYY-MM-DD-NN-<slug>.md` | The 411 historical entries, extracted from the old hand-maintained `CHANGELOG.md`. The `NN` preserves their original within-day ordering. |
-| `_header.md` | The static top of `CHANGELOG.md` (title, Keep a Changelog blurb, `## [Unreleased]`). Files starting with `_` are structure, not entries. |
+| File                      | Purpose                                                                                                                                                        |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `YYYY-MM-DD-NN-<slug>.md` | One changelog entry. Yours goes here, and so do the 411 historical entries extracted from the old hand-maintained `CHANGELOG.md` — same shape, one convention. |
+| `_header.md`              | The static top of `CHANGELOG.md` (title, Keep a Changelog blurb, `## [Unreleased]`). Files starting with `_` are structure, not entries.                       |
+
+## Checking
+
+```bash
+pnpm check:changelog            # every fragment's name
+pnpm check:changelog <paths…>   # just these (what the pre-commit hook runs)
+```
+
+[tools/check-changelog.ts](../tools/check-changelog.ts) enforces the naming rule and that each filename's date matches its entry's date. It runs in two places, so a bad name never gets far:
+
+- **On commit**, through `lint-staged` on any staged `changelog.d/*.md`. The commit is rejected and the error prints the exact `git mv` to fix it, with the next free `NN` already worked out.
+- **In CI**, in the `repo-checks` job, which is the authoritative gate.
+
+It checks two things: the filename (above), and that no link is written relative to `changelog.d/` — see the link rule further up. Link syntax inside backticks or a fenced block is ignored, so an entry may quote the wrong form when explaining it.
+
+The rule itself lives in [tools/lib/changelog-fragments.ts](../tools/lib/changelog-fragments.ts) as pure functions, covered by [tools/tests/changelog-fragments.test.ts](../tools/tests/changelog-fragments.test.ts) (`pnpm test:tools`). That suite also asserts every committed fragment conforms, so the directory can't drift back.
 
 ## Compiling
 

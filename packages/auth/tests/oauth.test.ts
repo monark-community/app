@@ -157,6 +157,39 @@ describe("auth/oauth.extractOAuthProfile", () => {
   });
 });
 
+// Google is the reason `picture` is in AVATAR_KEYS at all : it's the
+// only provider here that doesn't send `avatar_url`.
+const GOOGLE: OAuthAuthUserLike = {
+  id: "u-google",
+  email: "Ada@Example.com",
+  email_confirmed_at: "2026-01-02T03:04:05Z",
+  user_metadata: {
+    full_name: "Ada Lovelace",
+    name: "Ada Lovelace",
+    picture: "https://lh3.googleusercontent.com/a/ada",
+    email_verified: true,
+  },
+  app_metadata: { provider: "google", providers: ["google"] },
+};
+
+describe("auth/oauth — google", () => {
+  it("extracts the profile from Google's metadata shape", () => {
+    const profile = extractOAuthProfile(GOOGLE);
+    expect(profile.provider).toBe("google");
+    expect(profile.displayName).toBe("Ada Lovelace");
+    expect(profile.email).toBe("ada@example.com");
+    expect(profile.emailVerified).toBe(true);
+  });
+
+  it("reads the avatar from `picture`, which Google sends instead of avatar_url", () => {
+    expect(extractOAuthProfile(GOOGLE).avatarUrl).toBe("https://lh3.googleusercontent.com/a/ada");
+  });
+
+  it("is accepted as a provider slug", () => {
+    expect(isOAuthProvider("google")).toBe(true);
+  });
+});
+
 describe("auth/oauth.isOAuthProvider", () => {
   it("accepts every slug in the exported list", () => {
     for (const provider of OAUTH_PROVIDERS) {

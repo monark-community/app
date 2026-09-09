@@ -14,6 +14,7 @@ import {
 } from "@/components/fields";
 import {
   Bell,
+  BookText,
   CalendarDays,
   Check,
   ChevronDown,
@@ -28,6 +29,8 @@ import {
   Trash2,
 } from "lucide-react";
 import { DataTable } from "@/components/patterns/data-table/data-table";
+import { SignInFormView } from "@/app/(anon)/signin/signin-form-view";
+import { ConnectedAccountsView } from "@/app/(authed)/account/connected-accounts-view";
 import { NavRailView } from "@/components/nav-rail";
 import { QueryBar, type QueryFieldMeta } from "@/components/query/query-bar";
 import { QueryChipBar } from "@/components/query/query-chip-bar";
@@ -81,7 +84,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { usePanelIsMobile, useScreenWidth } from "@/hooks/use-panel-is-mobile";
-import { Plus, X } from "lucide-react";
+import { Plus, Search, Sparkles, X } from "lucide-react";
 import type { CalendarDef } from "@monark/calendar/contracts";
 import { CalendarManageDialog } from "@/app/(authed)/calendar/calendar-manage-dialog";
 import { CalendarSidebar, CalendarChip } from "@/app/(authed)/calendar/calendar-sidebar";
@@ -2293,8 +2296,236 @@ const AuthScreenStory: FC = () => (
   </AuthScreen>
 );
 
+/**
+ * Documentation figure for the navigation rail (see tools/screenshots/figures.mjs).
+ * Deliberately separate from `nav-rail`: that story labels its content area to
+ * explain the layout rule it exists to check, which is right for review and
+ * wrong in a user guide, where the explanation is the surrounding prose.
+ */
+const NavRailFigureStory: FC = () => (
+  <div>
+    <NavRailView
+      // Bootstrapped-with-no-logo renders the neutral brand square. The
+      // harness doesn't serve `public/`, so the default branding logo would
+      // come out as a broken image in the figure.
+      brandedLogoData={{
+        singletonLogoUrl: null,
+        singletonDisplayName: "Monark",
+        isSingleTenantBootstrapped: true,
+      }}
+      ariaLabel="Primary navigation"
+      brandHomeAria="Home"
+      items={[
+        { id: "calendar", href: "/calendar", label: "Calendar", icon: CalendarDays, active: false },
+        { id: "kanban", href: "/kanban", label: "Kanban", icon: SquareKanban, active: false },
+        { id: "wiki", href: "/wiki", label: "Wiki", icon: BookText, active: false },
+        { id: "data", href: "/data", label: "Data", icon: Database, active: true },
+      ]}
+      admin={{ href: "/admin", label: "Admin", active: false }}
+    />
+    <div className="md:pl-14">
+      <header className="sticky top-0 border-b border-border bg-background">
+        <div className="flex h-14 items-center gap-4 px-4">
+          <span className="text-sm text-muted-foreground">Data / Projects</span>
+          <div className="ml-auto flex items-center gap-2">
+            <Sparkles className="size-4 text-muted-foreground" />
+            <Search className="size-4 text-muted-foreground" />
+            <div className="size-8 rounded-full bg-muted" />
+          </div>
+        </div>
+      </header>
+      <div className="space-y-3 p-6">
+        <div className="h-6 w-48 rounded bg-muted" />
+        <div className="h-3 w-full max-w-md rounded bg-muted/60" />
+        <div className="h-3 w-full max-w-sm rounded bg-muted/60" />
+      </div>
+    </div>
+  </div>
+);
+
+/** Labelled wrapper ; same visual language as `Panel` above, but
+ *  full-width because this card fills its column. */
+function AccountCase({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="space-y-1">
+      <p className="text-xs text-muted-foreground">{label}</p>
+      {children}
+    </div>
+  );
+}
+
+/**
+ * Connected accounts, in the states that matter. The provider-only case
+ * is awkward to reach in a live app — you'd have to provision an account
+ * with a provider and no password to see the "only way in" row at all —
+ * which is exactly why it's worth a story.
+ *
+ * Note that this file sits outside the web tsconfig's `include`, so it
+ * is not typechecked: a provider slug outside the `OAuthProvider` union
+ * compiles fine here and renders a nameless row, which only shows up by
+ * looking at the captured image.
+ */
+const ConnectedAccountsStory: FC = () => (
+  <div className="mx-auto flex max-w-2xl flex-col gap-8 p-6">
+    <AccountCase label="Provider + password : either can be removed">
+      <ConnectedAccountsView
+        connected={["github"]}
+        connectable={[]}
+        hasPassword
+        onConnect={() => {}}
+        onDisconnect={() => {}}
+        onSetPassword={() => {}}
+      />
+    </AccountCase>
+    <AccountCase label="Provider only : nothing to remove, and a way to add a second method">
+      <ConnectedAccountsView
+        connected={["github"]}
+        connectable={[]}
+        hasPassword={false}
+        onConnect={() => {}}
+        onDisconnect={() => {}}
+        onSetPassword={() => {}}
+      />
+    </AccountCase>
+    <AccountCase label="Another provider this deployment offers">
+      <ConnectedAccountsView
+        connected={["github"]}
+        connectable={["google"]}
+        hasPassword
+        onConnect={() => {}}
+        onDisconnect={() => {}}
+        onSetPassword={() => {}}
+      />
+    </AccountCase>
+    <AccountCase label="Loading">
+      <ConnectedAccountsView
+        loading
+        connected={[]}
+        connectable={[]}
+        hasPassword={false}
+        onConnect={() => {}}
+        onDisconnect={() => {}}
+        onSetPassword={() => {}}
+      />
+    </AccountCase>
+  </div>
+);
+
+/** Single realistic instance for the committed doc figure. The gallery
+ *  above is for visual review ; a guide wants one card, not four. */
+const ConnectedAccountsFigureStory: FC = () => (
+  <div className="max-w-2xl p-4">
+    <ConnectedAccountsView
+      connected={["github"]}
+      connectable={[]}
+      hasPassword
+      onConnect={() => {}}
+      onDisconnect={() => {}}
+      onSetPassword={() => {}}
+    />
+  </div>
+);
+
+/** The state behind "why is there no Disconnect button?" — a support
+ *  question often enough to be worth a figure of its own. */
+const ConnectedAccountsOnlyMethodFigureStory: FC = () => (
+  <div className="max-w-2xl p-4">
+    <ConnectedAccountsView
+      connected={["github"]}
+      connectable={[]}
+      hasPassword={false}
+      onConnect={() => {}}
+      onDisconnect={() => {}}
+      onSetPassword={() => {}}
+    />
+  </div>
+);
+
+/**
+ * The two sign-in steps, inside the real `AuthScreen` shell so the
+ * change this makes to the first screen is visible : the social buttons
+ * are the dominant choice rather than one option among four fields.
+ */
+const SignInStepsStory: FC = () => {
+  const brand = (
+    <BrandedAppLogoView
+      data={{
+        singletonLogoUrl: null,
+        singletonDisplayName: null,
+        isSingleTenantBootstrapped: false,
+      }}
+      size={36}
+    />
+  );
+  const footer = (
+    <p className="mt-6 text-center text-sm text-muted-foreground">
+      Don&apos;t have an account? <span className="font-medium text-primary">Create one</span>
+    </p>
+  );
+  return (
+    <div className="grid gap-8 lg:grid-cols-2">
+      <AccountCase label="Step 1 : identify">
+        <AuthScreen
+          brand={brand}
+          title="Welcome back"
+          subtitle="Sign in to continue."
+          footer={footer}
+        >
+          <SignInFormView providers={["github", "google"]} onSignIn={() => {}} />
+        </AuthScreen>
+      </AccountCase>
+      <AccountCase label="Step 2 : authenticate">
+        <AuthScreen
+          brand={brand}
+          title="Welcome back"
+          subtitle="Sign in to continue."
+          footer={footer}
+        >
+          <SignInFormView
+            providers={["github", "google"]}
+            onSignIn={() => {}}
+            initialStep="password"
+            initialEmail="ada@example.com"
+          />
+        </AuthScreen>
+      </AccountCase>
+    </div>
+  );
+};
+
+/** Step one on its own, for the committed user-guide figure. The
+ *  side-by-side story above is for review ; a guide wants one screen. */
+const SignInStepOneFigureStory: FC = () => (
+  <AuthScreen
+    brand={
+      <BrandedAppLogoView
+        data={{
+          singletonLogoUrl: null,
+          singletonDisplayName: null,
+          isSingleTenantBootstrapped: false,
+        }}
+        size={36}
+      />
+    }
+    title="Welcome back"
+    subtitle="Sign in to continue."
+    footer={
+      <p className="mt-6 text-center text-sm text-muted-foreground">
+        Don&apos;t have an account? <span className="font-medium text-primary">Create one</span>
+      </p>
+    }
+  >
+    <SignInFormView providers={["github", "google"]} onSignIn={() => {}} />
+  </AuthScreen>
+);
+
 export const STORIES: Record<string, FC> = {
   "auth-screen": AuthScreenStory,
+  "signin-steps": SignInStepsStory,
+  "signin-step-one": SignInStepOneFigureStory,
+  "connected-accounts": ConnectedAccountsStory,
+  "connected-accounts-figure": ConnectedAccountsFigureStory,
+  "connected-accounts-only-method": ConnectedAccountsOnlyMethodFigureStory,
   "control-heights": ControlHeightsStory,
   "filter-date": FilterDateStory,
   "mobile-ux": MobileUxStory,
@@ -2302,6 +2533,7 @@ export const STORIES: Record<string, FC> = {
   "mobile-list-toolbar": MobileListToolbarStory,
   "list-options-sheet": MobileListOptionsSheetStory,
   "nav-rail": NavRailShellStory,
+  "figure-nav-rail": NavRailFigureStory,
   "admin-secret-panel": SecretPanelStory,
   "date-picker": DatePickerStory,
   "table-empty-state": TableEmptyStateStory,

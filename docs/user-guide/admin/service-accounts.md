@@ -1,0 +1,3 @@
+# Service accounts
+
+`/admin/service-accounts`. Machine principals for the public API ; an org-owned "user" (of kind `SERVICE`) that a script, agent, or integration authenticates as, with its own admin-assigned roles. From here you **create** a service account, **assign / change its roles** (which is its least-privilege knob), **disable** it (instantly kills its keys), and manage its **API keys** (minted once, shown once). Gated by the `public-api.service-accounts` feature flag and the `api-keys.manage-service-accounts` permission. Personal (human) API keys live separately under [your account](../account/_index.md), not here. See the [public API guide](../public-api/_index.md) for how keys authenticate.

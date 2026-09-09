@@ -585,6 +585,7 @@ export const dataModelsRouter = router({
         const event: DataModelSchemaChangedEvent = {
           type: "data-models.schema-changed",
           dataModelId: model.id,
+          organizationId: model.organizationId,
           kind: "model",
           actorId: ctx.userId,
           occurredAt: new Date(),
@@ -626,6 +627,7 @@ export const dataModelsRouter = router({
         const event: DataModelSchemaChangedEvent = {
           type: "data-models.schema-changed",
           dataModelId: updated.id,
+          organizationId: updated.organizationId,
           kind: "model",
           actorId: ctx.userId,
           occurredAt: new Date(),
@@ -652,6 +654,7 @@ export const dataModelsRouter = router({
         const event: DataModelSchemaChangedEvent = {
           type: "data-models.schema-changed",
           dataModelId: input.id,
+          organizationId: existing.organizationId,
           kind: "model",
           actorId: ctx.userId,
           occurredAt: new Date(),
@@ -737,6 +740,7 @@ export const dataModelsRouter = router({
         const event: DataModelSchemaChangedEvent = {
           type: "data-models.schema-changed",
           dataModelId: input.dataModelId,
+          organizationId: model.organizationId,
           kind: "field",
           actorId: ctx.userId,
           occurredAt: new Date(),
@@ -779,6 +783,7 @@ export const dataModelsRouter = router({
         const event: DataModelSchemaChangedEvent = {
           type: "data-models.schema-changed",
           dataModelId: model.id,
+          organizationId: model.organizationId,
           kind: "field",
           actorId: ctx.userId,
           occurredAt: new Date(),
@@ -811,6 +816,7 @@ export const dataModelsRouter = router({
         const event: DataModelSchemaChangedEvent = {
           type: "data-models.schema-changed",
           dataModelId: model.id,
+          organizationId: model.organizationId,
           kind: "field",
           actorId: ctx.userId,
           occurredAt: new Date(),
@@ -838,6 +844,7 @@ export const dataModelsRouter = router({
         const event: DataModelSchemaChangedEvent = {
           type: "data-models.schema-changed",
           dataModelId: model.id,
+          organizationId: model.organizationId,
           kind: "field",
           actorId: ctx.userId,
           occurredAt: new Date(),
@@ -859,6 +866,7 @@ export const dataModelsRouter = router({
         const event: DataModelSchemaChangedEvent = {
           type: "data-models.schema-changed",
           dataModelId: model.id,
+          organizationId: model.organizationId,
           kind: "field",
           actorId: ctx.userId,
           occurredAt: new Date(),
@@ -941,6 +949,7 @@ export const dataModelsRouter = router({
         const event: DataModelSchemaChangedEvent = {
           type: "data-models.schema-changed",
           dataModelId: model.id,
+          organizationId: model.organizationId,
           kind: "integration",
           actorId: ctx.userId,
           occurredAt: new Date(),

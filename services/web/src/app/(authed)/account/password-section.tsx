@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useState, useTransition, type FormEvent } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { checkPasswordOffline } from "@monark/auth/contracts";
@@ -20,6 +20,7 @@ import { PasswordStrengthMeter } from "@/components/password-strength-meter";
 import { PageSection } from "@/components/page-section";
 import { TotpConfirmDialog } from "@/components/totp-confirm-dialog";
 import { trpc } from "@/lib/trpc";
+import { SET_PASSWORD_EVENT, SET_PASSWORD_PARAM, SET_PASSWORD_VALUE } from "./set-password-request";
 import {
   changePasswordAction,
   setPasswordAction,
@@ -67,6 +68,24 @@ export function PasswordSection() {
   const [isPending, startTransition] = useTransition();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogError, setDialogError] = useState<"invalidTotpCode" | "totpRequired" | null>(null);
+
+  // The Connected accounts card can ask this dialog to open, and
+  // `/account/security?password=set` does the same as a deep link. The
+  // param is cleared once consumed so a refresh doesn't reopen a dialog
+  // the user already dismissed.
+  const consumeRequest = useCallback(() => {
+    const url = new URL(window.location.href);
+    if (url.searchParams.get(SET_PASSWORD_PARAM) !== SET_PASSWORD_VALUE) return;
+    url.searchParams.delete(SET_PASSWORD_PARAM);
+    window.history.replaceState(null, "", url.toString());
+    setOpen(true);
+  }, []);
+
+  useEffect(() => {
+    consumeRequest();
+    window.addEventListener(SET_PASSWORD_EVENT, consumeRequest);
+    return () => window.removeEventListener(SET_PASSWORD_EVENT, consumeRequest);
+  }, [consumeRequest]);
 
   // Reset every time the modal opens so a half-finished attempt
   // doesn't leak across opens.

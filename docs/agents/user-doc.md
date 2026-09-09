@@ -31,7 +31,7 @@ Name things the way the UI names them (records, boards, flows, cards, columns). 
 
 A user doc that describes a button that isn't there is worse than no doc. Before writing a surface:
 
-- **Confirm it exists and how it behaves** — run the app, or read the wired web components (`services/web/src/app/(authed)/<area>/`) and the module's `README.md`. The [platform-overview](../technical-documentation/platform-overview.md) and per-module READMEs are the authoritative behaviour references ; the user page is their user-facing translation.
+- **Confirm it exists and how it behaves** — run the app, or read the wired web components (`services/web/src/app/(authed)/<area>/`) and the module's `README.md`. The [platform-overview](../technical-documentation/platform-overview/_index.md) and per-module READMEs are the authoritative behaviour references ; the user page is their user-facing translation.
 - **Shipped only.** If it's behind an off-by-default flag that never ships, or it's a `features-planning/proposed/` idea, it doesn't go in the guide.
 - When you can't verify an exact label or micro-flow, **raise the altitude** ("open the card to edit it") instead of inventing specifics ("click the pencil icon in the top-right").
 

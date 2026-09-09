@@ -41,7 +41,7 @@ The global command palette (⌘K / Ctrl-K) finds cards by title across every boa
 
 ## Notifications
 
-When someone adds you as an **assignee** on a card, you get an in-app notification (and an email if you've opted that on). You're never notified about assigning a card to yourself. Manage these under [notification preferences](../../../docs/user-guide/account.md#notifications).
+When someone adds you as an **assignee** on a card, you get an in-app notification (and an email if you've opted that on). You're never notified about assigning a card to yourself. Manage these under [notification preferences](../../../docs/user-guide/account/the-account-section-account/notifications.md).
 
 ## Permissions
 
