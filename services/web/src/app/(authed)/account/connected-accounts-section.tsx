@@ -9,6 +9,7 @@ import { ConfirmDialog } from "@/components/patterns";
 import { TotpConfirmDialog } from "@/components/totp-confirm-dialog";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { trpc } from "@/lib/trpc";
+import { SET_PASSWORD_EVENT, SET_PASSWORD_PARAM, SET_PASSWORD_VALUE } from "./set-password-request";
 import {
   beginProviderLinkAction,
   unlinkProviderAction,
@@ -63,6 +64,17 @@ export function ConnectedAccountsSection() {
     // Strip the param so a refresh doesn't re-toast.
     window.history.replaceState(null, "", window.location.pathname);
   }, [linked, t, utils]);
+
+  // Cross-card request routed through the URL rather than lifted state :
+  // the password card is a sibling rendered by a server component, so
+  // there is no client parent to hold the flag. See
+  // [set-password-request.ts](./set-password-request.ts).
+  function openSetPassword() {
+    const url = new URL(window.location.href);
+    url.searchParams.set(SET_PASSWORD_PARAM, SET_PASSWORD_VALUE);
+    window.history.replaceState(null, "", url.toString());
+    window.dispatchEvent(new Event(SET_PASSWORD_EVENT));
+  }
 
   const connected = identities.data?.providers ?? [];
   const hasPassword = identities.data?.hasPassword ?? false;
@@ -139,6 +151,7 @@ export function ConnectedAccountsSection() {
         disconnecting={isUnlinking}
         onConnect={(provider) => void startLink(provider)}
         onDisconnect={(provider) => setConfirmUnlink(provider)}
+        onSetPassword={openSetPassword}
       />
 
       <ConfirmDialog

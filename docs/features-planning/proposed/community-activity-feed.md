@@ -17,7 +17,7 @@ The subscription edge is modeled generically from day one (`targetType` + `targe
 
 ## Architecture fit
 
-Honors the module tier contract ([extensibility-contract.md](../../technical-documentation/extensibility-contract.md), [CLAUDE.md](../../../CLAUDE.md)) in **two parts** :
+Honors the module tier contract ([extensibility-contract.md](../../technical-documentation/extensibility-contract/_index.md), [CLAUDE.md](../../../CLAUDE.md)) in **two parts** :
 
 - **Part A — a core change to the `users` module** (which owns the `User` model) : add the `username` column, generation on signup, edit UI, and a backfill. An extended module cannot touch `User`, so the handle is a core contribution.
 - **Part B — a new extended module `@monark/community`** : owns a `// ── MODULE: community ──` fragment in the core `schema.prisma`, exactly as extended `@monark/projects` already owns its `Project` / `Industry` models. Scaffold with `pnpm gen:module`, register in [modules.manifest.ts](../../../modules.manifest.ts) at tier `extended`, and wire its `register*` helpers into [services/api/src/server.ts](../../../services/api/src/server.ts). It depends only on core modules (`users`, `organizations`, `rbac`, `notifications`, `feature-flags`, `common`, `db`) and never on another extended module.
