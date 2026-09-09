@@ -2,7 +2,7 @@
 
 | Command                                                                         | Runs                                                                                                         |
 | ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| `pnpm test`                                                                     | Unit tests across every package.                                                                             |
+| `pnpm test`                                                                     | Unit tests across every package, `tools/` included.                                                          |
 | `pnpm test:integration`                                                         | Integration tests (serialized ; each boots a throwaway Postgres testcontainer ; **Docker must be running**). |
 | `pnpm test:e2e`                                                                 | Playwright end-to-end (full stack : Supabase + api + web).                                                   |
 | `pnpm test:coverage` / `pnpm test:integration:coverage` → `pnpm coverage:merge` | Coverage, fused and checked against the per-package floors.                                                  |
