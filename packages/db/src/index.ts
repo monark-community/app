@@ -1,4 +1,9 @@
-export { PrismaClient, NotificationCategory, NotificationChannel } from "@prisma/client";
+export {
+  PrismaClient,
+  NotificationCategory,
+  NotificationChannel,
+  DataRecordScopeVerb,
+} from "@prisma/client";
 // `Prisma` is exported as a value (not just a type) so consumers can reach its
 // runtime helpers — `Prisma.sql` / `Prisma.join` / `Prisma.empty` for tagged
 // raw queries — as well as its type namespace (`Prisma.DataRecordWhereInput`).

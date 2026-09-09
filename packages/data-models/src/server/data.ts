@@ -933,6 +933,29 @@ export async function isDataRecordRoleAccessible(
   return hit !== null;
 }
 
+/**
+ * True when one record satisfies a MonarkQL predicate. Used to apply an
+ * access SCOPE to a single record on the by-id paths, where there is no list
+ * query to fold the predicate into.
+ *
+ * It runs the same compiler as the list path, so a scope cannot mean one thing
+ * in a list and another on `getById` ; that divergence is exactly how a record
+ * becomes invisible in the table but reachable by direct link.
+ */
+export async function dataRecordMatchesFilter(input: {
+  recordId: string;
+  filter: FilterNode;
+  fields: CompileFields;
+  queryContext?: QueryContext;
+}): Promise<boolean> {
+  const db = getDb();
+  const predicate = compileFilterToSql(input.filter, input.fields, input.queryContext);
+  const rows = await db.$queryRaw<Array<{ ok: number }>>(
+    Prisma.sql`SELECT 1 AS ok FROM "DataRecord" r WHERE r."id" = ${input.recordId} AND (${predicate}) LIMIT 1`,
+  );
+  return rows.length > 0;
+}
+
 /** The role ids explicitly granted access to a record (empty = open to all). */
 export async function getDataRecordRoleAccess(recordId: string): Promise<string[]> {
   const db = getDb();

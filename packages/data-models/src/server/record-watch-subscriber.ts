@@ -1,6 +1,7 @@
 import { logger, on } from "@monark/common";
 import { getDb } from "@monark/db";
 import { getUserRoles, hasPermission } from "@monark/rbac/server";
+import { isRecordInScope, modelHasAnyScope } from "./scopes";
 import { notify } from "@monark/notifications/server";
 import type {
   DataModelRecordCreatedEvent,
@@ -93,6 +94,7 @@ export function registerDataModelRecordWatchSubscriber(): void {
 async function accessibleWatchers(
   recordId: string,
   dataModelId: string,
+  dataModelKey: string,
   excludeUserId: string,
   orgId?: string,
 ): Promise<string[]> {
@@ -104,19 +106,35 @@ async function accessibleWatchers(
     (uid) => uid !== excludeUserId,
   );
   if (candidates.length === 0) return [];
-  const restricted = (await getDataRecordRoleAccess(recordId)).length > 0;
-  if (!restricted || !orgId) return candidates;
+  // A record may be hidden by an MQL scope even when it carries no row-level
+  // ACL, so both gates matter ; but if neither applies to this model we keep the
+  // original cheap path and skip the per-user loop entirely.
+  const [restricted, scoped] = await Promise.all([
+    getDataRecordRoleAccess(recordId).then((rows) => rows.length > 0),
+    modelHasAnyScope(dataModelId),
+  ]);
+  if ((!restricted && !scoped) || !orgId) return candidates;
   const recipients: string[] = [];
   for (const uid of candidates) {
     const [roles, bypass] = await Promise.all([
       getUserRoles(uid, orgId),
       hasPermission(uid, "data-models.view-all-records", orgId),
     ]);
-    const ok = await isDataRecordRoleAccessible(recordId, {
-      roleIds: roles.map((r) => r.id),
-      bypass,
-    });
-    if (ok) recipients.push(uid);
+    const roleIds = roles.map((r) => r.id);
+    if (restricted && !(await isDataRecordRoleAccessible(recordId, { roleIds, bypass }))) continue;
+    if (
+      scoped &&
+      !(await isRecordInScope({
+        recordId,
+        userId: uid,
+        roleIds,
+        bypass,
+        model: { id: dataModelId, key: dataModelKey },
+      }))
+    ) {
+      continue;
+    }
+    recipients.push(uid);
   }
   return recipients;
 }
@@ -129,6 +147,7 @@ async function handle(event: RecordEvent): Promise<void> {
     const recipients = await accessibleWatchers(
       event.recordId,
       event.dataModelId,
+      event.dataModelKey,
       event.actorId,
       orgId,
     );
@@ -179,6 +198,7 @@ async function handleCommented(event: DataRecordCommentedEvent): Promise<void> {
     const recipients = await accessibleWatchers(
       event.recordId,
       event.dataModelId,
+      event.dataModelKey,
       event.authorId,
       orgId,
     );
