@@ -1,6 +1,6 @@
 # Module-authoring guidelines
 
-How to add a new module, for agents and humans. Read this before scaffolding a package. It's the task-shaped recipe ; the _why_ is in [architecture.md](../technical-documentation/architecture.md) and the full contract is in [extensibility-contract.md](../technical-documentation/extensibility-contract.md). `CLAUDE.md` is the authoritative working agreement — this page condenses it into a checklist.
+How to add a new module, for agents and humans. Read this before scaffolding a package. It's the task-shaped recipe ; the _why_ is in [architecture.md](../technical-documentation/architecture/_index.md) and the full contract is in [extensibility-contract.md](../technical-documentation/extensibility-contract/_index.md). `CLAUDE.md` is the authoritative working agreement — this page condenses it into a checklist.
 
 ## TL;DR
 

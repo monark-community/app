@@ -55,4 +55,4 @@ A view-options control tailors the calendar to you, and your choices are remembe
 
 ## Events that come from your data
 
-Some events may appear that you didn't create by hand : if an admin has connected a [Data Model](../../../docs/user-guide/data.md) to the calendar, records with a date field show up here automatically as events. Change the record and its event follows ; clear the date and the event disappears. You manage those through the record, not the event.
+Some events may appear that you didn't create by hand : if an admin has connected a [Data Model](../../../docs/user-guide/data/_index.md) to the calendar, records with a date field show up here automatically as events. Change the record and its event follows ; clear the date and the event disappears. You manage those through the record, not the event.

@@ -29,6 +29,8 @@ export type ConnectedAccountsViewProps = {
   disconnecting?: boolean;
   onConnect: (provider: OAuthProvider) => void;
   onDisconnect: (provider: OAuthProvider) => void;
+  /** Opens the password card's own set-password dialog. */
+  onSetPassword: () => void;
 };
 
 /**
@@ -57,6 +59,7 @@ export function ConnectedAccountsView({
   disconnecting = false,
   onConnect,
   onDisconnect,
+  onSetPassword,
 }: ConnectedAccountsViewProps) {
   const t = useTranslations("account.connectedAccounts");
 
@@ -142,11 +145,18 @@ export function ConnectedAccountsView({
               </p>
             </div>
             {!hasPassword && (
-              // Anchor to the password card further up this same page. A
-              // bare "Not set" row left the user with a fact and nothing
-              // to do about it.
-              <Button asChild variant="outline" size="sm" className="ml-auto">
-                <a href="#password">{t("setPassword")}</a>
+              // Opens the password card's dialog directly. This used to
+              // be an anchor that scrolled to that card, which left the
+              // user looking at the right place but still a click away
+              // from the thing they had just asked for.
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="ml-auto"
+                onClick={onSetPassword}
+              >
+                {t("setPassword")}
               </Button>
             )}
           </li>

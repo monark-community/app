@@ -22,7 +22,7 @@ Per-package schema fragments landed for the extended modules (calendar + kanban 
 
 ## Webhooks
 
-- [ ] **[2026-05-08] Default env-var secret resolver.** Ship a `WEBHOOK_SECRETS` JSON env-var backed resolver as the default so single-tenant deploys work without integrating an external secret store. See [webhook-secret-resolver.md](../technical-documentation/webhook-secret-resolver.md) for the contract.
+- [ ] **[2026-05-08] Default env-var secret resolver.** Ship a `WEBHOOK_SECRETS` JSON env-var backed resolver as the default so single-tenant deploys work without integrating an external secret store. See [webhook-secret-resolver.md](../technical-documentation/webhook-secret-resolver/_index.md) for the contract.
 - [ ] **[2026-05-08] Per-endpoint rate limiting.** A receiver returning 429 today retries with backoff but doesn't pause sibling deliveries to the same endpoint. A token bucket per endpoint would be kinder.
 - [ ] **[2026-05-08] Delivery log export.** No CSV or JSON download of delivery history from the admin UI. Operators who need bulk audit data rely on the database directly.
 
@@ -95,13 +95,13 @@ Deferred from the 2026-07-29 full-branch security audit (the High/Medium/Low fix
 
 ## Test coverage rollout
 
-Driven by [test-plan.md](../technical-documentation/test-plan.md). Items below are land-time gates for phase-2 work.
+Driven by [test-plan.md](../technical-documentation/test-plan/_index.md). Items below are land-time gates for phase-2 work.
 
 - [x] ~~**[2026-05-05] Wire vitest coverage thresholds in every package + service.**~~ shipped 2026-05-05 ; per-package `vitest.config.ts` files extend the shared root [vitest.shared.ts](../../vitest.shared.ts), `@vitest/coverage-v8` is wired across the workspace, and `pnpm test:coverage` runs end-to-end. Thresholds are commented out for the moment — flip them on per package as gaps below close.
 - [ ] **[2026-05-05] Backfill missing-tests gaps to clear the 75 % bar** : `@monark/users`, `@monark/organizations`, `@monark/rbac` integration suites against a Postgres testcontainer. `@monark/common` (errors / events / logger). `services/api` server + cron + bootstrap.
 - [ ] **[2026-05-05] Server-action test suites** for every `services/web/src/app/.../actions.ts` file (security-sensitive surface, 80 % bar). Covers happy path + every documented error code, with stubbed `@monark/*/server` calls + Supabase admin client.
-- [ ] **[2026-05-05] Component tests for the interactive islands** ; the breadcrumb walker, the notifications drawer, the role editor's tri-state checkboxes, the email-change modal's two-stage dance. List in [test-plan.md § Per-service plan](../technical-documentation/test-plan.md#servicesweb).
-- [ ] **[2026-05-05] e2e spec backfill** ; the existing two specs (`auth-routing`, `signup-happy-path`) cover smoke. Add the eight in [test-plan.md § End-to-end plan](../technical-documentation/test-plan.md#end-to-end-plan) to cover signup-confirm, signin-totp, forgot-password, email-change, password-change, totp-lifecycle, account-deletion, admin-bootstrap + admin-invite + admin-rbac. Cross-browser (Chromium / Firefox / WebKit) at the same pass.
+- [ ] **[2026-05-05] Component tests for the interactive islands** ; the breadcrumb walker, the notifications drawer, the role editor's tri-state checkboxes, the email-change modal's two-stage dance. List in [test-plan.md § Per-service plan](../technical-documentation/test-plan/per-service-plan.md#servicesweb).
+- [ ] **[2026-05-05] e2e spec backfill** ; the existing two specs (`auth-routing`, `signup-happy-path`) cover smoke. Add the eight in [test-plan.md § End-to-end plan](../technical-documentation/test-plan/end-to-end-plan.md) to cover signup-confirm, signin-totp, forgot-password, email-change, password-change, totp-lifecycle, account-deletion, admin-bootstrap + admin-invite + admin-rbac. Cross-browser (Chromium / Firefox / WebKit) at the same pass.
 - [x] ~~**[2026-05-05] CI workflow split into `verify` + `e2e` jobs**~~ shipped 2026-05-05 ; [.github/workflows/ci.yml](../../.github/workflows/ci.yml) now has the two-job split. `verify` runs lint + typecheck + `pnpm test:coverage` ; `e2e` boots the Supabase local stack + Playwright across Chromium / Firefox / WebKit and depends on `verify` passing.
 - [x] ~~**[2026-05-05] Codecov upload step.**~~ shipped 2026-05-05 ; the `verify` job hands every package's `coverage/lcov.info` to `codecov/codecov-action@v4`. Token reads from `secrets.CODECOV_TOKEN` ; `fail_ci_if_error: false` so a missing token (forks) doesn't block the build.
 
