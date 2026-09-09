@@ -177,9 +177,11 @@ All user-facing strings go through i18n in both `en` and `fr` — never hardcode
 
 Every completed feature, foundation shift, or substantive fix gets one dated entry — added as a new file under [changelog.d/](changelog.d/README.md). **[CHANGELOG.md](CHANGELOG.md) is a generated artifact ; never edit it by hand.** The fragments are the source of truth: with several branches in flight, everyone editing the same insertion point in one shared file is a guaranteed merge conflict, while everyone adding their own new file isn't. `pnpm changelog:compile` ([tools/compile-changelog.ts](tools/compile-changelog.ts)) rebuilds `CHANGELOG.md` from every fragment (date descending) ; it runs automatically on every push to `develop` ([.github/workflows/changelog-compile.yml](.github/workflows/changelog-compile.yml)), so a PR only ever adds its fragment — don't run the compiler or commit the regenerated file yourself, that reintroduces the conflicts this removes.
 
-Create `changelog.d/<branch-slug>.md` containing one entry:
+Create `changelog.d/YYYY-MM-DD-NN-<branch-slug>.md` containing one entry. The date is the entry's own date and must match the `- YYYY-MM-DD:` line inside the file ; `NN` is the next free two-digit sequence for that date (`ls changelog.d | grep ^<date>`). `pnpm check:changelog` enforces both — at commit time through `lint-staged`, and again in CI's `repo-checks` job — and prints the exact `git mv` to fix a wrong name:
 
 ```
+changelog.d/2026-09-08-01-feat-public-api-keys.md
+
 - YYYY-MM-DD: <Module / area> — <concise summary>. <one paragraph of what changed and why, linking the key files>.
 ```
 
@@ -200,12 +202,12 @@ pnpm agent gate
 which runs, stopping at the first failure:
 
 ```
-pnpm gen && pnpm typecheck && pnpm lint && pnpm test && pnpm check:tiers && pnpm check:modules && pnpm check:i18n && pnpm check:mcp
+pnpm gen && pnpm typecheck && pnpm lint && pnpm test && pnpm check:tiers && pnpm check:modules && pnpm check:i18n && pnpm check:mcp && pnpm check:changelog && pnpm test:tools
 ```
 
 The list lives in `checks` in [.claude/agentkit.config.json](.claude/agentkit.config.json) ; keep it in step with [.github/workflows/ci.yml](.github/workflows/ci.yml) when either changes. A failing gate is a finding to report, never a check to weaken or skip.
 
-`pnpm gen` first so a stale generated file doesn't fail `typecheck` ; `check:tiers` confirms no boundary was crossed ; `check:modules` confirms every module is complete (registered in the manifest, README + `contracts/events.ts` present, integration suite present ; conscious exceptions live in `ACKNOWLEDGED_GAPS` in [tools/check-modules.ts](tools/check-modules.ts)) ; `check:i18n` confirms every locale catalog has the exact same key set as `en` (no missing or dead keys) ; `check:mcp` confirms every public-API route (`V1_ROUTES`) made an explicit MCP-visibility decision (`mcp: { expose } | { skip }`) and that exposed tool names are unique + well-formed — the MCP server auto-generates its tools from these, so an undecided route can't silently ship.
+`pnpm gen` first so a stale generated file doesn't fail `typecheck` ; `check:tiers` confirms no boundary was crossed ; `check:modules` confirms every module is complete (registered in the manifest, README + `contracts/events.ts` present, integration suite present ; conscious exceptions live in `ACKNOWLEDGED_GAPS` in [tools/check-modules.ts](tools/check-modules.ts)) ; `check:i18n` confirms every locale catalog has the exact same key set as `en` (no missing or dead keys) ; `check:mcp` confirms every public-API route (`V1_ROUTES`) made an explicit MCP-visibility decision (`mcp: { expose } | { skip }`) and that exposed tool names are unique + well-formed — the MCP server auto-generates its tools from these, so an undecided route can't silently ship. `check:changelog` confirms every `changelog.d/` fragment is named `YYYY-MM-DD-NN-<slug>.md` with a filename date matching the entry's own ; `test:tools` runs the suites for the repo scripts in [tools/](tools/), which `pnpm test` does not reach because it fans out to workspace packages and `tools/` is not one.
 
 ## Definition of done
 
@@ -220,7 +222,7 @@ The list lives in `checks` in [.claude/agentkit.config.json](.claude/agentkit.co
 - [ ] A module with a page has a `PRIMARY_NAV` entry (auto-adds it to global-search "Go to") ; a module with searchable entities registers a `registerSearchSource` at boot (self-scoped, server-built hrefs) + a `globalSearch.groups.<id>` heading (or consciously N/A)
 - [ ] Module README updated (API + data model) ; user + dev docs updated where they apply
 - [ ] i18n keys added for en + fr
-- [ ] CHANGELOG fragment added under `changelog.d/` (not a direct `CHANGELOG.md` edit)
+- [ ] CHANGELOG fragment added under `changelog.d/`, named `YYYY-MM-DD-NN-<slug>.md` (not a direct `CHANGELOG.md` edit)
 - [ ] `register*` helpers wired into [services/api/src/server.ts](services/api/src/server.ts)
 - [ ] Work happened in its own worktree/branch (`pnpm agent wt new`), on its own port slot ; landed as a PR into `develop`, not a direct push to a shared checkout
 - [ ] Agent-authored commits/PRs are authored as `monark-agent`, shipped with `pnpm agent pr` — never the operator's personal identity
