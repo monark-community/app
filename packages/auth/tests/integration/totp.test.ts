@@ -1,5 +1,5 @@
 import { randomBytes } from "node:crypto";
-import { generateSync } from "otplib";
+import { createGuardrails, generateSync } from "otplib";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { getDb } from "@monark/db";
 import { truncate } from "@monark/test-utils/db";
@@ -15,6 +15,17 @@ process.env.TOTP_ENCRYPTION_KEY = randomBytes(32).toString("hex");
 // to fall mid-test. No global options to set : otplib v13 takes its
 // tolerance per call rather than on a shared `authenticator` singleton.
 const totpCode = (secret: string): string => generateSync({ secret });
+
+// A v12-era secret. `authenticator.generateSecret()` defaulted to 10 bytes,
+// which is 16 Base32 characters ; every enrollment predating the otplib 13
+// upgrade has this shape, and v13's `MIN_SECRET_BYTES = 16` guardrail rejects
+// it by *throwing*. Fixed rather than generated so the case keeps pinning the
+// historical shape even if otplib's own defaults move again ; minting a code
+// for it needs the same relaxed floor the production path now uses.
+const LEGACY_SECRET = "JBSWY3DPEHPK3PXP";
+const LEGACY_GUARDRAILS = createGuardrails({ MIN_SECRET_BYTES: 10 });
+const legacyTotpCode = (secret: string): string =>
+  generateSync({ secret, guardrails: LEGACY_GUARDRAILS });
 
 // The `auth.totp-trust-devices` flag gates `requiresTotpChallenge` ;
 // stub the feature-flags module so the integration test isn't
@@ -38,7 +49,7 @@ import {
   verifyTotpCode,
   acknowledgeRecoveryCodeUse,
 } from "../../src/server/totp";
-import { decryptSecret } from "../../src/server/crypto";
+import { decryptSecret, encryptSecret } from "../../src/server/crypto";
 
 const USER_ID = "totp-user-1";
 
@@ -259,6 +270,35 @@ describe("verifyTotpCode", () => {
     });
     const ok = await verifyTotpCode({ userId: USER_ID, code: "000000" });
     expect(ok).toBe(false);
+  });
+
+  // Regression : the otplib 13 upgrade silently locked out every account
+  // enrolled before it. v13 rejects the 10-byte secrets v12 minted by throwing
+  // `SecretTooShortError` from inside `verifySync`, and that throw surfaced to
+  // the user as "that code is invalid" — indistinguishable from a mistyped
+  // code, with no way to recover short of a recovery code. The rest of this
+  // suite can't see it because every other case enrolls fresh, so it only ever
+  // exercises a v13-length secret ; this one plants the historical row shape.
+  it("accepts a code from an enrollment predating the otplib 13 upgrade", async () => {
+    const db = getDb();
+    const encrypted = encryptSecret(LEGACY_SECRET);
+    await db.totpSecret.create({
+      data: {
+        userId: USER_ID,
+        secretCipher: Uint8Array.from(encrypted.cipher),
+        secretIv: Uint8Array.from(encrypted.iv),
+        secretTag: Uint8Array.from(encrypted.tag),
+        activatedAt: new Date(),
+      },
+    });
+
+    const ok = await verifyTotpCode({
+      userId: USER_ID,
+      code: legacyTotpCode(LEGACY_SECRET),
+    });
+    expect(ok).toBe(true);
+    // Still a plain false, not a throw, for a wrong code on the same secret.
+    expect(await verifyTotpCode({ userId: USER_ID, code: "000000" })).toBe(false);
   });
 });
 
