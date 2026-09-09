@@ -3,9 +3,15 @@ import { router, publicProcedure } from "@monark/common/trpc";
 import { emit, NotFoundError, UnauthorizedError } from "@monark/common";
 import { MAX_PAGE_SIZE } from "@monark/common/pagination";
 import { isEnabled } from "@monark/feature-flags/server";
-import { requireOrg } from "@monark/organizations/server";
+import {
+  getCurrentOrg,
+  requireOrg,
+  setOrganizationMetadataValue,
+  deleteOrganizationMetadataValue,
+} from "@monark/organizations/server";
 import { requirePermission } from "@monark/rbac/server";
 import type {
+  ChatAssistantNameChangedEvent,
   ChatConversationCreatedEvent,
   ChatMessageCreatedEvent,
 } from "../contracts";
@@ -27,7 +33,15 @@ import {
   type AdvanceResult,
 } from "./agent";
 import type { ChatUserContext } from "./tools";
-import { getAssistantName } from "./config";
+import {
+  ASSISTANT_NAME_KEY,
+  ASSISTANT_NAME_MAX_LENGTH,
+  CHAT_METADATA_MODULE,
+  CHAT_ORG_BRANDING_FLAG,
+  getAssistantName,
+  getDefaultAssistantName,
+  getOrganizationAssistantName,
+} from "./config";
 import type { ChatMessageContext } from "../contracts";
 
 const CHAT_ENABLED = "chat.enabled";
@@ -130,9 +144,117 @@ export const chatRouter = router({
   // Lightweight branding lookup for the web companion (the assistant's display
   // name). Session-only — it isn't gated on the chat flags so the UI can resolve
   // the name regardless; the launcher/panel are hidden by the flag anyway.
-  config: publicProcedure.query(({ ctx }) => {
+  // Resolves the caller's *active* org so a per-org rename shows up in the
+  // header / launcher, not just in the system prompt. `getCurrentOrg` rather
+  // than `requireOrg`: a session with no resolvable org still gets a usable
+  // name (the deploy default) instead of a NOT_FOUND.
+  config: publicProcedure.query(async ({ ctx }) => {
     if (!ctx.userId) throw new UnauthorizedError();
-    return { assistantName: getAssistantName() };
+    const org = await getCurrentOrg({
+      userId: ctx.userId,
+      activeOrganizationId: ctx.activeOrganizationId,
+    }).catch(() => null);
+    return {
+      assistantName: await getAssistantName({
+        organizationId: org?.id ?? null,
+        userId: ctx.userId,
+      }),
+    };
+  }),
+
+  // ── Per-org assistant branding ────────────────────────────────────
+  // The org settings form's read/write pair for the assistant's name. Chat owns
+  // these rather than routing through `organizations.metadata.*` so the module
+  // keeps its own validation (length, trimming) and its own gate, and so the
+  // generic sidecar permissions (`organizations.write-metadata-for-module-chat`)
+  // aren't the thing standing between an admin and a rename. The capability
+  // checked is `organizations.update-settings` — this *is* org profile editing,
+  // just a field the chat module happens to own; built-in ADMIN short-circuits
+  // it, so no backfill is needed.
+  branding: router({
+    get: publicProcedure
+      .input(z.object({ organizationId: z.string().min(1) }))
+      .query(async ({ ctx, input }) => {
+        await requirePermission(ctx, "organizations.update-settings", input.organizationId);
+        const scope = {
+          organizationId: input.organizationId,
+          userId: ctx.userId ?? undefined,
+        };
+        // `chat.org-branding` requires `chat.enabled` the same way `ai-agent`
+        // does: there is no point offering to name an assistant this org can't
+        // see. Only the *form* reads this compound answer — resolution
+        // (`getAssistantName`) checks org-branding alone, so a stored name
+        // survives chat being toggled off and comes back with it.
+        const [brandingOn, chatOn, assistantName] = await Promise.all([
+          isEnabled(CHAT_ORG_BRANDING_FLAG, scope),
+          isEnabled(CHAT_ENABLED, scope),
+          getOrganizationAssistantName(input.organizationId),
+        ]);
+        return {
+          // Whether the org may set its own name at all. The form hides the
+          // field when this is false rather than showing a dead input.
+          enabled: brandingOn && chatOn,
+          // The stored override, or null when the org inherits.
+          assistantName,
+          // What the assistant is called when there is no override — shown as
+          // the field's placeholder so the admin sees what they'd fall back to.
+          defaultName: getDefaultAssistantName(),
+        };
+      }),
+
+    // Set or clear the override. `null` (and a blank string, which is what an
+    // emptied input sends) clears it, so the org falls back to the deploy name.
+    set: publicProcedure
+      .input(
+        z.object({
+          organizationId: z.string().min(1),
+          assistantName: z.string().trim().max(ASSISTANT_NAME_MAX_LENGTH).nullable(),
+        }),
+      )
+      .mutation(async ({ ctx, input }) => {
+        const actorId = await requirePermission(
+          ctx,
+          "organizations.update-settings",
+          input.organizationId,
+        );
+        if (
+          !(await isEnabled(CHAT_ORG_BRANDING_FLAG, {
+            organizationId: input.organizationId,
+            userId: ctx.userId ?? undefined,
+          }))
+        ) {
+          // Same shape as every other flag-off path in this module: reveal
+          // nothing about a surface the caller can't use.
+          throw new NotFoundError("chat org branding");
+        }
+
+        const next = input.assistantName?.trim() ?? "";
+        if (next.length > 0) {
+          await setOrganizationMetadataValue({
+            organizationId: input.organizationId,
+            module: CHAT_METADATA_MODULE,
+            key: ASSISTANT_NAME_KEY,
+            value: next,
+          });
+        } else {
+          await deleteOrganizationMetadataValue(
+            input.organizationId,
+            CHAT_METADATA_MODULE,
+            ASSISTANT_NAME_KEY,
+          );
+        }
+
+        const event: ChatAssistantNameChangedEvent = {
+          type: "chat.assistant-name-changed",
+          organizationId: input.organizationId,
+          actorId,
+          assistantName: next.length > 0 ? next : null,
+          occurredAt: new Date(),
+        };
+        await emit(event).catch(() => {});
+
+        return { assistantName: next.length > 0 ? next : null };
+      }),
   }),
 
   conversations: router({
@@ -141,12 +263,14 @@ export const chatRouter = router({
       return listConversations(organizationId, userId, input);
     }),
 
-    get: publicProcedure.input(z.object({ id: z.string().min(1) })).query(async ({ ctx, input }) => {
-      const { organizationId, userId } = await requireChatAccess(ctx);
-      const conversation = await getConversationForUser(organizationId, input.id, userId);
-      if (!conversation) throw new NotFoundError("conversation", input.id);
-      return conversation;
-    }),
+    get: publicProcedure
+      .input(z.object({ id: z.string().min(1) }))
+      .query(async ({ ctx, input }) => {
+        const { organizationId, userId } = await requireChatAccess(ctx);
+        const conversation = await getConversationForUser(organizationId, input.id, userId);
+        if (!conversation) throw new NotFoundError("conversation", input.id);
+        return conversation;
+      }),
 
     create: publicProcedure
       .input(
@@ -272,3 +396,12 @@ export {
   type ToolExecuteResult,
 } from "./tools";
 export { setLlmProvider, getLlmProvider, type LlmProvider } from "./llm";
+// Assistant branding, for any surface that needs to label the assistant outside
+// the chat router (notification copy, a future settings page, tests).
+export {
+  getAssistantName,
+  getDefaultAssistantName,
+  getOrganizationAssistantName,
+  ASSISTANT_NAME_MAX_LENGTH,
+  CHAT_ORG_BRANDING_FLAG,
+} from "./config";

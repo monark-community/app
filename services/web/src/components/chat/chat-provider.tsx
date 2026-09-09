@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { trpc } from "@/lib/trpc";
 import { ChatPanel } from "./chat-panel";
 
@@ -12,9 +13,7 @@ import { ChatPanel } from "./chat-panel";
 // the launcher hides and opening is a no-op.
 
 /** What the panel is currently showing. */
-export type ChatView =
-  | { mode: "list" }
-  | { mode: "thread"; conversationId: string | null }; // null = a fresh, unsaved thread
+export type ChatView = { mode: "list" } | { mode: "thread"; conversationId: string | null }; // null = a fresh, unsaved thread
 
 export type ChatPageContext = {
   route?: string;
@@ -48,6 +47,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
   const [view, setView] = useState<ChatView>({ mode: "list" });
   const pathname = usePathname();
+  const t = useTranslations("chat");
 
   // Optimistic flag read: treat missing as ON, only disable when explicitly
   // false (the flag registry is server-only, same convention as usePrimaryNav).
@@ -58,13 +58,16 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     }).data ?? {};
   const enabled = flags["chat.enabled"] !== false;
 
-  // The assistant's (configurable) display name, e.g. "Chrysa". Falls back while
-  // loading so the UI never flashes a raw key.
+  // The assistant's display name, resolved server-side (per-org override →
+  // CHAT_ASSISTANT_NAME → the shipped default). The in-flight fallback is the
+  // generic translated noun, deliberately *not* the shipped default: hardcoding
+  // "Chrysa" here made a deploy that renamed its assistant flash the Monark
+  // brand on every first paint.
   const assistantName =
     trpc.chat.config.useQuery(undefined, {
       refetchOnWindowFocus: false,
       staleTime: Infinity,
-    }).data?.assistantName ?? "Chrysa";
+    }).data?.assistantName ?? t("assistantFallbackName");
 
   const openPanel = useCallback(() => setOpen(true), []);
   const closePanel = useCallback(() => setOpen(false), []);
@@ -92,7 +95,10 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener("keydown", onKey);
   }, [enabled, toggle]);
 
-  const pageContext = useMemo<ChatPageContext>(() => ({ route: pathname ?? undefined }), [pathname]);
+  const pageContext = useMemo<ChatPageContext>(
+    () => ({ route: pathname ?? undefined }),
+    [pathname],
+  );
 
   const value = useMemo<ChatContextValue>(
     () => ({

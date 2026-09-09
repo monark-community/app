@@ -358,6 +358,9 @@ importers:
       '@monark/db':
         specifier: workspace:*
         version: link:../db
+      '@monark/feature-flags':
+        specifier: workspace:*
+        version: link:../feature-flags
       '@monark/organizations':
         specifier: workspace:*
         version: link:../organizations
