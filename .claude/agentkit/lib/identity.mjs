@@ -60,7 +60,14 @@ export function currentBranch(cwd) {
 
 /** Authors of the commits this branch adds on top of the base branch. */
 export function branchAuthors(cfg, cwd, base = cfg.worktrees.baseBranch) {
-  const range = `${base}..HEAD`
+  // Prefer the remote tip, for the same reason `worktree.create` does: the
+  // local base branch can be stale, or carry commits that never reached the
+  // remote. Either way `local..HEAD` includes commits that are not this
+  // branch's work, and they get reported as "not authored by the machine
+  // account" — which reads as a demand to rewrite somebody else's history,
+  // on a branch that is in fact perfectly clean.
+  const remote = gitOut(['rev-parse', '--verify', '--quiet', `origin/${base}`], cwd)
+  const range = `${remote ? `origin/${base}` : base}..HEAD`
   const out = gitOut(['log', '--format=%ae', range], cwd)
   return [...new Set(out.split('\n').map((s) => s.trim()).filter(Boolean))]
 }
