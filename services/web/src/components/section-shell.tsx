@@ -170,7 +170,21 @@ export function SectionShell({
           <main
             ref={mainRef}
             className={cn(
-              "w-full min-h-0 flex-1 overflow-y-auto px-4 pb-20 sm:px-6",
+              // `overflow-x-hidden` is load-bearing, not decorative: a full-
+              // bleed hero (e.g. `UserBanner` on `/account/profile`) sizes
+              // itself off the raw viewport (`w-screen` / `50vw`), which
+              // assumes it spans the true window width. Once `<main>`'s own
+              // content is tall enough to need its `overflow-y-auto`
+              // scrollbar, that scrollbar eats a few px of `<main>`'s content
+              // box that the viewport-based bleed math doesn't know about,
+              // so the hero overshoots by exactly the scrollbar's width.
+              // Without this, that overshoot became a real horizontal
+              // scrollbar (mixed `overflow-y: auto` / `overflow-x: visible`
+              // computes the visible axis to `auto` too, per spec). Safe to
+              // clip : the one thing that's supposed to be wider than
+              // `<main>` (DataTable's tables) already scrolls in its own
+              // internal `overflow-x-auto` wrapper, not by relying on this.
+              "w-full min-h-0 flex-1 overflow-x-hidden overflow-y-auto px-4 pb-20 sm:px-6",
               // The detail bar already gives its own breathing room (padding +
               // border) below the AppBar, so `<main>` doesn't need any top
               // padding of its own on top of that — the collapsed PageHeader's
