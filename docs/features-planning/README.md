@@ -19,19 +19,49 @@ Three kinds of doc live here:
 > detail in a shipped spec here. A spec describes what was intended ; the module README and the
 > technical documentation describe what exists.
 
-## Active programs
+## The integration program
 
-The current tracks, largest first. Each links its spec ; several are one program split across
-documents.
+Five phases of one program, approved 2026-09-07 with product decisions locked 2026-09-08. The specs
+below transcribe that plan into the repo, re-verified against the code on 2026-09-10 ; the phase
+letters are the plan's own. **Decisions marked locked in a spec are not to be re-opened** without
+the operator saying so.
 
-| Program                    | Spec                                                                                         | State                                                                                 |
-| -------------------------- | -------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
-| **Workspace unification**  | [workspace-unification.md](proposed/workspace-unification.md) ; the tree and the section     | proposed ; umbrella for the two below                                                 |
-| ” views and visualizations | [views-system.md](proposed/views-system.md) ; saved views, Kanban and Calendar as view kinds | proposed ; hard dependency of the umbrella's phases 2 to 3                            |
-| **Access-control console** | [access-control-console.md](proposed/access-control-console.md)                              | **engine shipped**, authoring UI proposed ; should land before the umbrella's phase 4 |
-| **Integrations rework**    | [integrations-rework.md](proposed/integrations-rework.md) ; connections, secrets, webhooks   | proposed ; independent, closes four open security-audit items                         |
-| **Deploy pipeline**        | [deploy-pipeline-completion.md](proposed/deploy-pipeline-completion.md)                      | **mostly shipped** ; three gaps, the double-deploy one worth fixing first             |
-| **Dev overlay flag tree**  | [dev-overlay-flag-tree.md](proposed/dev-overlay-flag-tree.md)                                | proposed ; small, self-contained                                                      |
+Driving complaint, in the operator's words: _"a lot of power under the hood, but features live in
+silo."_
+
+| Phase | Spec                                                            | What it settles                                                                                         | State                                                                 |
+| ----- | --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| **A** | [access-control-console.md](proposed/access-control-console.md) | MonarkQL-scoped record RBAC, and where access is authored                                               | **engine shipped** (`2026-09-08`, PRs #64/#75/#83) ; console proposed |
+| **B** | [views-system.md](proposed/views-system.md)                     | a real View entity (`type` + `config`), a sort input on `records.list`, saved vs. session state         | proposed ; blocks C3                                                  |
+| **C** | [workspace-unification.md](proposed/workspace-unification.md)   | one core `ContentNode` tree, the `/workspace` section, kanban + calendar materialization                | proposed ; umbrella                                                   |
+| **D** | [automation-model-refs.md](proposed/automation-model-refs.md)   | a reverse index of which models an automation touches ; closes a trigger-matching fail-open             | proposed ; independent                                                |
+| **E** | [integrations-rework.md](proposed/integrations-rework.md)       | config variables, per-user credentials, the automation actor as a live principal, one integrations home | E.1 mostly shipped ; the rest proposed                                |
+
+Sequencing, shortest path first (the plan's own):
+
+```
+E.1 docs               ── landed ; blocked nothing, unblocked everyone
+A0  converge paths     ── shipped (#57)
+A1  record scopes      ──┐
+B   view entity + sort ──┼──> C2..C4  workspace tree + shell
+C1  ContentNode        ──┘
+                          C5 kanban materialize + write-back  ┐ parallel
+                          C6 calendar range + write-back      ┘ with C2..C4
+D, E.2, E.6            ── independent
+E.4 automation actor   ──> E.3 per-user secrets ──> E.5 integrations home
+```
+
+**Record RBAC leads** because every later surface (a board view, a calendar view, a tree node, a
+public form, an MCP tool) inherits whatever access model is in place ; and because the public API
+and MCP are facades over the same tRPC procedures, scoping at that seam is the only place it is done
+once.
+
+## Other active tracks
+
+| Track                     | Spec                                                                    | State                                                        |
+| ------------------------- | ----------------------------------------------------------------------- | ------------------------------------------------------------ |
+| **Deploy pipeline**       | [deploy-pipeline-completion.md](proposed/deploy-pipeline-completion.md) | **mostly shipped** ; three gaps, the double-deploy one first |
+| **Dev overlay flag tree** | [dev-overlay-flag-tree.md](proposed/dev-overlay-flag-tree.md)           | proposed ; small, self-contained                             |
 
 Recently completed and closed out of this folder:
 
@@ -84,11 +114,13 @@ Recently completed and closed out of this folder:
 | [`public-api`](phase-3/public-api.md) ; v1 REST + OpenAPI                                                                        | [`@monark/public-api`](../../packages/public-api/README.md) + [`@monark/api-keys`](../../packages/api-keys/README.md) |
 | [`public-api-service-accounts`](phase-3/public-api-service-accounts.md) ; v2 service accounts                                    | [`@monark/api-keys`](../../packages/api-keys/README.md)                                                               |
 
-> `data-models-visualizations.md` reached the opposite conclusion from the one the platform is now
-> heading toward. It concluded that Calendar and Kanban should stay separate tabled modules; the
-> [views system](proposed/views-system.md) makes them view kinds over Data Models. That is a
-> deliberate reversal on new evidence (the query compiler, record scopes and saved views all landed
-> since), not an oversight ; the old spec stays unedited, as the convention requires.
+> `data-models-visualizations.md` is the one shipped spec still partly **live**. Its verdict (keep
+> Calendar and Kanban as separate tabled modules, rather than dissolving them into Data Models) is
+> the decision [views-system.md](proposed/views-system.md) reconfirmed on 2026-09-10, and its
+> **Part B (kanban materialization) was never built and is still valid** ; Phase C5 is that work.
+> Two of its stated blockers are now false, though (it cited "no range operators" and "schema
+> fragments don't exist", both shipped since). Per the convention the spec stays unedited ; this
+> note is where the correction lives.
 
 ### From `proposed/`, now shipped (`shipped/`)
 

@@ -1,238 +1,235 @@
-# Integrations rework ; connections, secrets and webhooks in one place
+# Coherent integration and identity
+
+> Phase E of the integration program.
+>
+> **Source**: transcribes the approved program plan of 2026-09-07, re-verified against the code on
+> 2026-09-10. Where this doc goes beyond the plan it says so.
 
 ## Context
 
-Four shipped pieces cover outbound and inbound integration, and each is good on its own:
+Four shipped pieces cover integration, each good on its own and none aware of the others:
 
-- **`@monark/webhooks`** (core): operator-configured **outbound** subscriptions to domain events,
-  with a durable at-least-once outbox, retries, delivery log, and a per-endpoint signing secret
-  resolved through a pluggable resolver. Administered in `/admin/webhooks`.
-- **`@monark/secrets`** (core): per-org, AES-256-GCM encrypted `key -> value` store, write-only over
-  tRPC, consumed by `getSecretValue` and by automation's `ctx.getSecret`. Administered in
-  `/admin/secrets`.
-- **`@monark/automation`** (core): the node graph, with a `webhook` action node, an `http-trigger`
-  for inbound calls, and `ctx.getSecret`.
-- **`@monark/integration-kit`** (library) + the four integration modules (github, discord, telegram,
-  twitter): `defineInboundWebhook`, `createRestClient`, `makeConnectionSecretRouter`.
+- **`@monark/webhooks`** (core) ; operator-configured **outbound** subscriptions to domain events,
+  with a durable at-least-once outbox, retries, delivery log, and a pluggable signing-secret
+  resolver. Administered at `/admin/webhooks`.
+- **`@monark/secrets`** (core) ; per-org AES-256-GCM encrypted `key -> value`, **write-only** over
+  tRPC, read by `getSecretValue` and automation's `ctx.getSecret`. Administered at `/admin/secrets`.
+- **`@monark/automation`** (core) ; the node graph, the `webhook` action node, the `http-trigger`.
+- **`@monark/integration-kit`** plus github / discord / telegram / twitter ;
+  `defineInboundWebhook`, `createRestClient`, `makeConnectionSecretRouter`.
 
-They are good on their own and they do not compose. The seams show in concrete ways:
+An operator has to visit `/admin/webhooks`, `/admin/secrets`, `/admin/automation` and `/automation`
+to reason about one integration, and several real gaps sit between them.
 
-1. **The automation `webhook` node cannot authenticate.** Its config is `{ url, method, body }`;
-   no headers, no auth, no secret. Calling any real API from a flow is therefore impossible
-   without writing a module. `ctx.getSecret` exists but the node does not use it, and the
-   [structural rule](../../todo/backlog.md#security-audit-follow-ups) that a secret must never leave
-   a node as output is enforced only by a comment.
-2. **Secret key names are hardcoded per integration.** `TELEGRAM_BOT_TOKEN_KEY`,
-   `GITHUB_WEBHOOK_SECRET_KEY`, four `TWITTER_*` constants. One org cannot hold two GitHub
-   connections, and the name is a convention rather than a modelled thing.
-3. **Configuration is three screens away from use.** An automation author picking a secret in the
-   editor cannot create one there; they leave for `/admin/secrets` and come back. Same for a
-   webhook endpoint.
-4. **Inbound and outbound are unrelated systems.** `@monark/webhooks` sends; `defineInboundWebhook`
-   and `http-trigger` receive; neither knows the other exists, and an operator debugging "did the
-   call happen" looks in two different logs.
-5. **Open hardening items** from the `2026-07-29` audit are still open and all live at this seam:
-   HTTP-trigger replay and rate limiting (and the secret compare running _after_ `parseGraph`), the
-   default env-var webhook secret resolver, per-endpoint rate limiting, delivery-log export.
+## The locked decision
+
+**Unify the operator surface and the mental model ; keep the engines where they are.**
+`@monark/webhooks` continues to own the outbox, the delivery worker, signing and retry. **Nothing is
+rewritten.** What changes is where an operator finds it and what concepts exist.
 
 ## Goals
 
-- **A `Connection` is a first-class, named thing**: a configured link to an external service,
-  holding its base URL, its auth (by reference to a secret, never inline), its default headers, and
-  its inbound endpoint if it has one.
-- **The automation `webhook` node calls a connection**, or a raw URL, with headers and auth ; so a
-  flow can talk to any API without a module.
-- **Secrets are pickable and creatable in place**, wherever they are consumed.
-- **One integrations surface** in admin, listing connections, their inbound endpoints, and their
-  recent traffic, both directions.
-- **Secret values are structurally prevented from leaving a node**, rather than by convention.
-- **Close the audit items** listed above, since they are all this seam's hardening.
+- **A readable configuration store**, because secrets are write-only by design and configuration is
+  not.
+- **Per-user credentials**, so "my GitHub token" works per person.
+- **An automation's actor is a real, live principal**, which is the most load-bearing gap in the
+  whole integration story.
+- **One integrations home**, under `/automation` rather than scattered across `/admin`.
+- **The hardening that rides along**, closing four open backlog and audit items.
 
 ## Non-goals
 
-- **OAuth-per-connection authorization flows.** Connections hold tokens, they do not mint them. The
-  [OAuth work that shipped](../../../CHANGELOG.md) is user sign-in, a different thing. An OAuth
-  connection type is the obvious follow-up and is named under Out of scope.
-- **Replacing `@monark/webhooks`' outbox.** The delivery machinery is sound; it gains a connection
-  reference and rate limiting, not a rewrite.
-- **A visual HTTP request builder.** The node gains headers and auth, not a Postman.
+- **Rewriting the webhook outbox or the delivery worker.**
+- **OAuth authorization-code flows per connection.** Credentials are stored, not minted. The
+  [social sign-in work](../../technical-documentation/social-sign-in.md) is user sign-in, a different
+  thing.
+- **"Run as whoever triggered the event."** Deliberately excluded: it would make a flow's authority
+  vary per run and could let a low-privilege user's action execute high-privilege nodes. The owner
+  model plus service accounts covers the real need.
 
-## User stories
+## E.1 Documentation first
 
-- **As an admin**, I add a connection called _Stripe_, paste its API key (stored as a secret, never
-  shown again), set its base URL, and save.
-- **As an automation author**, I drop a Webhook node, pick _Stripe_, type `/v1/customers`, and the
-  auth header is applied without me handling the key.
-- **As an automation author**, I need a token that does not exist yet ; I create it from the node's
-  secret picker without leaving the editor.
-- **As an admin**, I open **Integrations** and see every connection, whether it is reachable, its
-  inbound endpoint URL, and its last twenty deliveries in and out.
-- **As an operator**, a receiver returning 429 slows that endpoint's queue instead of hammering it,
-  and a replayed inbound call is rejected.
-- **As a security reviewer**, I can point at the code that makes a secret value unable to appear in
-  a run's step output.
+Already **shipped**: [identity-and-integration](../../technical-documentation/identity-and-integration/_index.md)
+landed as PR #53, and the docs audit of `2026-09-08` closed the platform-overview drift. The
+remaining doc gaps the exploration found are still open and still cheap, since they document shipped
+behavior and block nothing:
 
-## Data model
+| Doc                                | Covers                                                                                  |
+| ---------------------------------- | --------------------------------------------------------------------------------------- |
+| `webhooks.md` (technical)          | models, subscriber routing, the signature scheme, retry and auto-disable, the admin UI  |
+| `api-keys-and-service-accounts.md` | `ApiKey`, the ceiling, `UserKind.SERVICE`, the `svc_` id contract, principal resolution |
+| `public-api.md` (technical)        | `V1_ROUTES`, the caller-factory facade, the `mcp` visibility decision, rate limiting    |
+| `environment-variables.md`         | the actual catalog, derived from `services/api/src/lib/env.ts`                          |
 
-One new core table, in `@monark/secrets`' banner (it is the module that already owns the
-credential relationship) or a new `@monark/connections` core module if the surface grows; start in
-secrets, since a connection is mostly "a secret with a destination".
+## E.2 Configuration variables ; the missing non-secret store
+
+Secrets are write-only _by design_, which is right for credentials and wrong for configuration. A
+sibling model in the secrets module: same package, same admin surface, different semantics.
 
 ```prisma
-model Connection {
-  id             String   @id @default(cuid())
+/// Org-scoped, readable configuration values. The non-sensitive counterpart to
+/// Secret : same shape, no encryption, and a real read path.
+model ConfigVariable {
+  id             String       @id @default(cuid())
   organizationId String
-  // Stable machine name, unique per org. Referenced by automation node config,
-  // so it is immutable after create (renaming is a `label` edit) ; the same
-  // rule DataModel.key follows.
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   key            String
-  label          String
-  // The provider this connection is for : a registered connection type
-  // ("http" for a generic API, or an integration's key like "github").
-  provider       String
-  baseUrl        String?
-  // Auth by reference. The secret's VALUE is never stored here and never
-  // crosses tRPC ; only the pointer does.
-  authKind       ConnectionAuthKind   // NONE | BEARER | HEADER | BASIC | QUERY
-  authSecretKey  String?              // -> Secret.key, same org
-  authParam      String?              // header or query-param name for HEADER/QUERY
-  defaultHeaders Json     @default("{}")
-  // Inbound half, when the provider receives : the signing secret's key and
-  // the mounted path. Null for outbound-only connections.
-  inboundSecretKey String?
-  enabled        Boolean  @default(true)
+  value          String
+  description    String?
   createdBy      String
-  …
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
   @@unique([organizationId, key])
+  @@index([organizationId])
 }
 ```
 
-The integrations' hardcoded key constants become **defaults** for a connection of that provider,
-so `@monark/github` keeps working unchanged while gaining the ability to hold two connections.
-`makeConnectionSecretRouter` in `@monark/integration-kit` becomes a thin wrapper over the
-connection surface rather than a parallel implementation.
+- New permissions `secrets.read-variables` / `secrets.manage-variables`. Reading a _value_ is a real
+  permission here, unlike secrets.
+- Automation reaches them through a new **`ctx.getVariable(name)`** on `NodeExecutionContext`, wired
+  in `engine.ts` next to `getSecret`, plus a `{{ config.<KEY> }}` interpolation namespace.
+- **Naming hazard, worth handling deliberately**: automation already has _workflow_ variables (the
+  `set-variable` node, `{{ vars }}`) which are run-scoped. These are org-scoped and persistent. The
+  UI calls them **Configuration**, not "variables", and the docs draw the line explicitly.
+- Unlike a secret, a variable's value **may** be returned as node output and logged.
 
-## The webhook node, rebuilt
+## E.3 Per-user credentials
 
-```
-url          text | connection + path
-method       GET | POST | PUT | PATCH | DELETE
-headers      key/value rows, values interpolatable
-auth         inherited from the connection, or none
-body         JSON, interpolatable (unchanged)
-```
+Widen `Secret` with a nullable owner:
 
-Auth resolution happens **inside the node's execute**, from the connection's `authSecretKey` via
-`ctx.getSecret`, and the resolved header is never part of the node's input, output, or logged step.
-`safeFetch` still guards the URL, so SSRF protection is unchanged and a connection's `baseUrl` is
-validated the same way at save time.
-
-### Making "a secret never leaves a node" structural
-
-Today `ctx.getSecret` returns a plain string and discipline keeps it out of `output`. Replace it
-with a branded wrapper:
-
-```ts
-type SecretValue = { readonly __secret: unique symbol };
-ctx.getSecret(key): Promise<SecretValue>          // not a string
-useSecret(v: SecretValue): string                  // only inside safeFetch's header builder
+```prisma
+  // Null = an org-wide secret (today's behavior). Non-null = a personal
+  // credential, resolvable only when that user is the acting principal.
+  userId String?
+  @@unique([organizationId, userId, key])
 ```
 
-and have the run-step serializer refuse to serialize one (throw, do not redact silently ; a node
-that tries is a bug to fix, not a value to mask). A node author physically cannot put it in
-`output` without an explicit unwrap that is greppable and reviewable. This closes the
-[audit item](../../todo/backlog.md#security-audit-follow-ups) that today rests on a comment in
-`registry.ts`.
+Postgres treats nulls as distinct in a unique index, so the existing `@@unique([organizationId, key])`
+must be replaced by a **partial** unique index on `(organizationId, key) WHERE "userId" IS NULL`
+alongside the three-column unique. That needs a hand-written migration (`--create-only`, then strip
+the spurious `DROP INDEX DataRecord_data_gin` the generator folds in ; see
+[schema-changes](../../agents/schema-changes.md)).
 
-## Inbound: one endpoint model
+Resolution order in `getSecretValue(organizationId, key, actorUserId?)`: the actor's own secret
+first, then the org-wide one. `ctx.getSecret` passes `ctx.actorUserId`. Every existing org secret and
+call site behaves identically.
 
-`http-trigger` and `defineInboundWebhook` converge on one receiver contract:
+**This depends on E.4**: a per-user credential is only correct if the run's actor is a real, live
+principal.
 
-- **Verify before parse.** `handleHttpTrigger` currently runs `parseGraph` _before_ the
-  constant-time secret compare, so an unauthenticated caller who guesses an automation id forces a
-  graph parse per request. Compare first. (Audit item.)
-- **Replay protection.** Accept an idempotency key or a signed timestamp, and reject a delivery
-  already seen inside the window. Without it, a captured valid request re-enqueues runs forever.
-  (Audit item.)
-- **Per-endpoint rate limiting**, using the shared Postgres token bucket
-  (`@monark/common/rate-limit`, `RateLimitBucket`) that already exists for API keys, both on
-  `/hooks/automation/:id` and, outbound, per webhook endpoint so a 429 pauses that endpoint's
-  siblings instead of retrying past it. (Two audit items, one primitive.)
-- **One delivery log** covering both directions, with the CSV/JSON export the backlog asks for.
+## E.4 Automation actor as a principal
 
-## Admin surface
+The most load-bearing gap in the integration story.
 
-`/admin/integrations` replaces `/admin/webhooks` and `/admin/secrets` as the _entry point_
-(both keep their screens as sub-tabs, since they are still distinct objects):
+1. **Liveness.** Before a run executes, resolve `actorUserId` through `getById` and fail the run with
+   a clear error if the user is `disabledAt` or `deletedAt`, mirroring exactly what
+   `authenticateApiKey` already does for keys. **Today a disabled user's automations keep running as
+   them.**
+2. **An explicit, settable owner.** Add `Automation.runAsUserId String?` (falling back to `createdBy`
+   when null) and a "Run as" control in the editor, restricted to service accounts the caller may use
+   plus the caller themselves. This is what lets an integration flow be owned by a `svc_` principal
+   that outlives any employee.
+3. **Warn at author time, not run time.** `automations.getById` returns an `ownerStatus`
+   (`ok | missing | disabled | insufficient`) so the editor shows a banner before the flow silently
+   breaks. `insufficient` re-checks the privileged nodes' permissions against the current owner.
+4. **Provenance.** Stamp emitted events with `via: { automationId, runId }` on `DomainEventBase`, so
+   an automation-caused change is distinguishable downstream. Today it is indistinguishable from a
+   human action, which makes both audit and loop detection harder ; the
+   [materialization write-back](views-system.md) makes that concrete.
 
-- **Connections** ; the list, with reachability, provider, and where each is used ("3 automations,
-  1 inbound endpoint"). Deleting a connection in use is refused with the list, not with a warning.
-- **Event subscriptions** ; today's `/admin/webhooks`, with an endpoint able to reference a
-  connection instead of restating a URL and secret.
-- **Secrets** ; today's `/admin/secrets`, unchanged in behaviour, plus a "used by" column, which is
-  the single most requested thing about a write-only store.
-- **Deliveries** ; the merged log, filterable by direction, connection and status, exportable.
+## E.5 One integrations home
 
-Plus the in-editor pickers: a connection picker and a secret picker with create-in-place, both
-gated on the same permissions as the admin screens, so an automation author without
-`secrets.write` sees the picker without the create affordance.
+`/automation` gains a secondary nav: **Flows | Connections | Webhooks | Configuration | Secrets |
+Keys**.
 
-## Default env-var secret resolver
+`services/web/src/app/(authed)/automation/layout.tsx` is currently a **bare permission gate**
+returning `<>{children}</>` ; it does not mount `SectionShell`. So this step is also where
+`/automation` adopts `SectionShell` plus an `automation-tabs.ts` mirroring `admin-tabs.ts`. Do it
+once here, and [Phase C](workspace-unification.md) inherits the pattern.
 
-The [oldest open item](../../todo/backlog.md#webhooks) here: ship a `WEBHOOK_SECRETS` JSON
-env-var-backed resolver as the **default** implementation of the webhook secret resolver contract,
-so a fresh single-tenant deploy signs its webhooks without integrating anything. With
-`@monark/secrets` shipped, the better default is arguably "resolve from the secrets store, fall
-back to the env var" ; decide and document in
-[webhook-secret-resolver.md](../../technical-documentation/webhook-secret-resolver/_index.md).
+- **Flows** ; today's `/automation` list and React Flow editor. Unchanged.
+- **Connections** ; today's `/admin/automation` (the per-provider `makeConnectionSecretRouter`
+  surfaces). Already automation-owned and mis-filed under `/admin` ; moving it is a pure route
+  change.
+- **Webhooks** ; today's `/admin/webhooks`, moved. Module, models, worker and permissions untouched.
+- **Configuration** ; E.2.
+- **Secrets** ; today's `/admin/secrets`, moved, now showing org-wide and personal scopes (E.3).
+- **Keys** ; the union of `/account/api-keys` (personal), `/admin/service-accounts`, and a **new
+  admin view of every key in the org**. Today an admin cannot enumerate or revoke a departing
+  employee's keys short of deleting the user. New permission `api-keys.manage-org-keys`.
 
-## Phasing
+The `webhooks`, `automation` and `secrets` tabs are removed from `ADMIN_TABS` ;
+`/admin/service-accounts` stays reachable from both. **Every moved route ships a redirect** so
+existing links and the docs do not rot. (Note the contrast with
+[Phase C](workspace-unification.md), where the operator's explicit call was _no_ shims ; these are
+admin routes with a much smaller external surface, and the plan calls for redirects here.)
 
-1. **Node hardening** ; headers + auth on the `webhook` node, the branded `SecretValue`, verify
-   before parse on the HTTP trigger. No schema change, immediate value, closes two audit items.
-2. **Connections** ; the table, the CRUD, the pickers, the node's connection mode. Integrations
-   keep their hardcoded keys as defaults.
-3. **Rate limiting and replay** ; the shared bucket applied to both directions, idempotency keys,
-   the merged delivery log and its export.
-4. **Admin consolidation** ; `/admin/integrations`, the "used by" columns, and retiring the
-   parallel `makeConnectionSecretRouter` implementation.
+## E.6 Hardening that rides along
 
-## Dependencies
+- **Swap the webhook delivery worker's default `fetchImpl`** (currently the global `fetch`,
+  `packages/webhooks/src/server/worker.ts:83`) for `safeFetch` from `@monark/common/http`, so the
+  DNS-resolution guard runs at **delivery** time and not only at endpoint-create time. Keep the
+  injectable parameter for tests.
+- **Ship the `WEBHOOK_SECRETS` env-var-backed resolver** already specified in
+  [webhook-secret-resolver](../../technical-documentation/webhook-secret-resolver/_index.md) and
+  already open in [the backlog](../../todo/backlog.md#webhooks), so a restart does not silently
+  un-arm signing on single-tenant deploys.
+- **A `check:` gate asserting every `ApiKey.permissions` entry and every `RolePermission` row names a
+  registered permission**, so a renamed permission surfaces at CI rather than as a silent deny.
 
-- Shipped: `@monark/secrets`, `@monark/webhooks`, `@monark/automation`, `@monark/integration-kit`,
-  `@monark/common/http` (`safeFetch`), `@monark/common/rate-limit`.
-- Independent of the workspace program ; they touch no common files beyond `server.ts`.
+## Beyond the plan: two open proposals
+
+Neither is part of the approved program ; both are recorded here so they are not re-derived.
+
+- **A generic `Connection` entity.** Today the automation `webhook` node's config is
+  `{ url, method, body }` with **no headers and no auth**, so calling any authenticated API from a
+  flow requires writing a module ; and each integration hardcodes its secret key name
+  (`TELEGRAM_BOT_TOKEN_KEY`, `GITHUB_WEBHOOK_SECRET_KEY`, four `TWITTER_*`), so one org cannot hold
+  two GitHub connections. A named `Connection` (base URL, auth by _reference_ to a secret, default
+  headers) would fix both, with the integrations' constants becoming per-provider defaults. This is
+  additive to E.5's Connections tab rather than a replacement for it.
+- **A branded `SecretValue`.** "A secret value never leaves a node as output" is enforced today only
+  by a convention comment in `registry.ts`. Returning an opaque branded type from `ctx.getSecret`,
+  unwrappable only at the header-building seam and refused by the run-step serializer, makes it
+  structural. The cost is that it breaks every current caller across four integration modules, which
+  is the point but also the schedule risk.
+
+## Open audit items this phase touches
+
+From the `2026-07-29` audit, still open:
+
+- **HTTP-trigger replay and rate limiting**, and comparing the secret **before** `parseGraph` (today
+  an unauthenticated caller who guesses an automation id forces a graph parse per request).
+- **Per-endpoint webhook rate limiting**, using the shared Postgres token bucket
+  (`@monark/common/rate-limit`, `RateLimitBucket`) that already exists for API keys.
+- **Delivery log export** (CSV or JSON), open since `2026-05-08`.
+- **Whether `automation.secrets.list` should gate on `secrets.read`.** It returns secret _names_
+  under `automation.view`, a deliberate widening. Acceptable as-is ; a "used by" column makes the
+  exposure visible rather than narrowing it.
+
+## Sequencing
+
+`E.1` is independent and mostly done. `E.2` is independent. `E.4` blocks `E.3`. `E.5` comes after
+`E.2` so the section is not half-empty. `E.6` is independent.
 
 ## Edge cases and risks
 
-- **A connection deleted while a run is in flight.** The run resolves the connection at execute
-  time and fails the step with a clear error rather than a null-deref ; the outbox retry then
-  surfaces it in the run log.
-- **Interpolated headers.** `{{ trigger.* }}` inside a header value is useful and is also an
-  injection surface (a CRLF in an interpolated value). Reject control characters at interpolation,
-  not at config save, since the value is only known at run time.
-- **`baseUrl` plus path traversal.** A node path of `../../` must not escape the connection's host.
-  Resolve with the URL constructor against the base and reject a result whose origin changed.
-- **Secret rotation.** Changing a secret's value must not require touching every connection;
-  reference by key is what makes that true, and is why the connection stores a pointer rather than
-  a copy.
-- **The branded-type migration.** Changing `ctx.getSecret`'s return type breaks every current
-  caller across four integration modules; that is the point, but it means phase 1 touches them all
-  and needs their tests green before merge.
-- **`automation.secrets.list` gating** stays as it is (names, never values, under `automation.view`)
-  ; the open question in the backlog is answered by the "used by" column making the exposure
-  visible rather than by narrowing it.
+- **The `Secret` unique-index migration** is the riskiest schema change here ; a partial unique plus
+  a three-column unique, hand-written, on a table holding credentials. Rehearse on staging.
+- **Naming collision** between run-scoped `{{ vars }}` and org-scoped `{{ config }}`. The UI naming
+  ("Configuration") is the mitigation, and it only works if the docs and the editor agree.
+- **Failing runs whose owner is disabled** is a behavior change that will surface as "my automations
+  stopped". It is correct, and it needs a changelog note and the author-time banner (E.4.3) landing
+  in the same release, not after.
+- **Moving admin routes** breaks deep links in existing notification emails and runbooks ; the
+  redirects are what make that survivable, which is why they are kept here even though Phase C drops
+  its own.
 
 ## Success metrics
 
-- A flow can call an authenticated third-party API with no new module.
-- No hardcoded secret key constant is load-bearing; each is a provider default.
-- A secret value cannot be placed in a run step's output without an explicit, greppable unwrap.
-- The four open audit items at this seam are closed.
-
-## Out of scope
-
-- **OAuth connections** (authorization-code flow, refresh handling, per-user tokens). The single
-  largest follow-up, and the one that makes "connect your Google account" possible in a flow.
-- **A connection health monitor** (scheduled reachability checks with alerting).
-- **Per-connection quotas** beyond rate limiting.
+- Configuration has a readable store with a real read permission.
+- A personal credential resolves for its owner and the org-wide one still resolves for everyone else.
+- A disabled owner's automations fail with a clear error instead of executing as them.
+- An operator reasons about an integration from one section.
+- A webhook delivery to a host that resolves privately is refused at delivery time.

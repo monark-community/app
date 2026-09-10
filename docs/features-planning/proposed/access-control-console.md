@@ -1,5 +1,16 @@
 # Access-control console ; one place to configure who sees what
 
+> The authoring half of Phase A of the integration program. The engine shipped on `2026-09-08` ;
+> the role-editor scope section shipped as PR #83.
+>
+> **One deliberate departure from the approved plan.** Plan section A.8 concluded that
+> `record-access-section.tsx` **stays on the record**, reasoning that per-record sharing ("share this
+> one page with Legal") is a genuinely different operation from authoring a role. The operator
+> reversed that on 2026-09-10: _"Remove individual access configs on data models and such,
+> everything related to access/permission is in the admin section."_ This spec follows the reversal
+> and keeps a read-only summary on the object, which is the part of A.8's reasoning that survives
+> ; see [Moving the existing editors](#moving-the-existing-editors).
+
 ## Context
 
 The authorization _engine_ is finished. Three layers of record authorization shipped in the week of
@@ -26,8 +37,10 @@ currently scattered across the surfaces the objects live on:
 
 Three consequences. An admin cannot answer "what can this role see?" without visiting every
 section. An admin cannot answer "who can see this?" at all, for anything. And the
-[workspace unification](workspace-unification.md) program deletes `/kanban` and `/calendar`, which
-would take the only editors for `KanbanBoardRoleAccess` and `CalendarRoleAccess` with them.
+[workspace unification](workspace-unification.md) program deletes `/kanban` outright (no redirect
+shim), which takes the only editor for `KanbanBoardRoleAccess` with it. Calendar keeps its own
+top-level entry, so `CalendarRoleAccess` keeps its editor either way ; that makes kanban the hard
+deadline and calendar a consistency argument.
 
 ## Goals
 
@@ -99,9 +112,12 @@ Every handler runs the module's own permission check. The console is a renderer 
 it never reads another module's tables and holds no authorization logic of its own. That is what
 keeps this from becoming the god-object that per-module screens were avoiding.
 
-**After the workspace program lands**, `kanban.board` and `calendar.calendar` disappear and their
-registrations go with them, because a board is then a view over a model whose access is the model's.
-The registry is what makes that a deletion rather than a rewrite.
+**After the workspace program lands, these registrations narrow rather than disappear.** Because the
+locked decision is [materialize and write back](views-system.md) rather than a storage migration,
+`KanbanBoard` and `Calendar` survive, and so do native (non-database-backed) boards and calendars
+with their own role tables. What changes is that a **database-backed** board or calendar derives its
+access from the source model, so its resource row renders read-only with a link to the model. The
+registry is what lets that be a per-kind change rather than a rewrite of the console.
 
 ## The console
 
@@ -161,8 +177,10 @@ post-write rollback, and the fail-closed parse.
 
 - Shipped: the three authorization layers, `QueryChipBar`, `role-scopes-section`, the admin list
   patterns.
-- Independent of [workspace-unification.md](workspace-unification.md), but should land **before**
-  its phase 4, which deletes the sections holding the last board and calendar access editors.
+- Independent of [workspace-unification.md](workspace-unification.md), but should land **before its
+  C4**, which deletes `/kanban` with no redirect shim and takes the only `KanbanBoardRoleAccess`
+  editor with it. Calendar keeps its own section, so its editor is a consistency argument rather
+  than a deadline.
 
 ## Edge cases and risks
 
@@ -174,10 +192,14 @@ post-write rollback, and the fail-closed parse.
 - **Registry handlers are a new trust boundary.** A handler that forgets its own permission check
   hands an admin-shaped UI a way into another module's data. `check:modules` should assert every
   registered resource has an integration test proving a non-admin caller is refused.
-- **Migrating `KanbanBoardRoleAccess` semantics.** These rows mean "this role may see this board".
-  Under the workspace program they become record ACLs on migrated records, which is literal but
-  verbose; converting them to one record scope per role is the better end state and should be a
-  console-assisted action ("convert 4 explicit shares into a rule"), not a silent migration.
+- **Two access models for one board.** A native board is gated by `KanbanBoardRoleAccess` ; a
+  database-backed board inherits the source model's permissions, row ACLs and record scopes. Both are
+  correct, and a console that renders them identically would be lying. Show the binding explicitly
+  ("access comes from _Projects_") rather than duplicating the model's rows onto the board.
+- **Converting explicit shares into a rule.** A model with dozens of `DataRecordRoleAccess` rows
+  usually means someone hand-shared what a single scope would express. Offering "convert 12 explicit
+  shares into a rule" as a console action is the natural payoff of having both layers in one screen ;
+  it must be an explicit, previewed action, never a silent rewrite.
 - **Two admins editing the same role.** The scope section already saves immediately rather than
   joining a dirty form; keep that, and add a version check so the second save reports a conflict
   instead of overwriting.

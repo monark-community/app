@@ -1,286 +1,228 @@
-# Views ; one saved-view system, with Kanban and Calendar as view types
+# Views ; a real View entity, with board and calendar view types
 
-> Part of the workspace unification program. The tree and the section live in
-> [workspace-unification.md](workspace-unification.md) ; read it first.
+> Phase B (and the materialization half of Phase C) of the integration program. The tree and the
+> section live in [workspace-unification.md](workspace-unification.md) ; read it first. Access is
+> [access-control-console.md](access-control-console.md).
+>
+> **Source**: this spec transcribes the approved program plan of 2026-09-07, re-verified against the
+> code on 2026-09-10. Where the plan locked a decision, this doc records it rather than re-opening
+> it.
 
 ## Context
 
-Three saved-query features shipped independently and mean nearly the same thing:
+There are **five unrelated things called "view"** today, and no view-type concept anywhere (grepping
+`viewType|ViewType|viewConfig` finds four hits, all a local `CalendarViewType` union inside
+`calendar-shell.tsx`):
 
-- **`DataRecordView`** (core, `base.prisma`): a named MonarkQL tree per Data Model, personal by
-  default, `shared = true` to publish. Loaded by the web `ViewsMenu`, which prints the tree back to
-  query text. Documented in
-  [saved-views.md](../../technical-documentation/data-model-queries/saved-views.md).
-- **`KanbanView`** (extended): the same idea per board, a straight copy of the pattern.
-- **Table layout** (`useDataTableLayout`): column order, visibility, widths and multi-column sort,
-  persisted in `localStorage` per browser. Not shareable, not part of a view, and lost on another
-  device.
+| Thing                           | Shape                                                                              | Scope             |
+| ------------------------------- | ---------------------------------------------------------------------------------- | ----------------- |
+| `DataRecordView`                | `{ name, query Json, shared, createdBy }` ; a filter tree, nothing more            | per model         |
+| `KanbanView`                    | byte-identical, keyed by `boardId`                                                 | per board         |
+| `DataTableLayout`               | `{ columnOrder, columnVisibility, columnSizing, sorting }` ; **localStorage only** | per table/browser |
+| `CalendarViewSettings`          | user-metadata sidecar                                                              | per user, global  |
+| `?view=` / `?board=` / `?date=` | ephemeral                                                                          | URL               |
 
-Meanwhile a _board_ and a _calendar_ are containers with their own storage
-(`KanbanBoard`/`KanbanColumn`/`KanbanCard`, `Calendar`/`CalendarEvent`), even though what they
-show is "records, grouped" and "records, placed in time". Calendar already half-admits this: its
+And `@monark/query` models **filtering only**: no sort spec, no group-by, no projection.
+
+Meanwhile a board and a calendar are containers with their own storage, even though what they show
+is "records, grouped" and "records, placed in time". Calendar already half-admits this: its
 `registerCalendarDataModelSubscriber` materializes a `CalendarEvent` from a `DataRecord` through
-`DataModelIntegration` slot mappings, keyed by `sourceModule` / `sourceRecordId`, so a data record
-can already appear on a calendar. That bridge is the proof of the idea and also the reason it needs
-generalizing: it is one-way, one-module, and duplicates every event row.
+`DataModelIntegration` slot mappings, keyed by `sourceModule` / `sourceRecordId`.
 
-A **view** should be the single answer: _a named, filtered, shaped presentation of one database_,
-saved and shareable, or edited locally and thrown away.
+A view should become "a saved way of looking at a database": type, filter, sort, and per-type
+configuration, shared with everyone who can read the model.
 
 ## Goals
 
-- **One `View` entity** for every presentation of a database: `TABLE`, `BOARD`, `CALENDAR`.
-- **The query is MonarkQL**, the same text the record list and
-  [record scopes](../../technical-documentation/record-scopes.md) already use, authored with the
-  same `QueryChipBar`. One language, learned once.
-- **Presentation is part of the view**, not the browser: grouping, column order, visibility,
-  widths, sort, and the per-kind field mapping all live server-side on the view.
-- **Local edits without saving.** Changing a filter or a column on someone's shared view does not
-  touch it ; the change is yours until you Save, Save as new, or Reset. Notion's model.
-- **Kanban and Calendar become view kinds** over real Data Models, with their existing data
-  migrated, not re-entered.
-- **Calendar keeps a sidecar** for what genuinely does not belong in a database (reminders,
-  recurrence), rather than bloating every model with calendar columns.
+- **One View entity** with a `type` (`TABLE` / `BOARD` / `CALENDAR`) and per-type `config`.
+- **A sort input on `records.list`**, which is the one real engine gap.
+- **Saved versus session state**: changing filter or view type mid-session is local, invisible to
+  others, and clears on navigation until saved.
+- **A permission for editing shared views**, since a shared view is configuration, not a personal
+  filter.
+- **Board and calendar views over a database**, via materialization and write-back.
+
+## Locked decisions (do not re-litigate)
+
+- **Materialize and write back.** `KanbanCard` and `CalendarEvent` typed tables **stay
+  authoritative**. A database-backed view materializes `DataRecord`s into them through a subscriber,
+  and drag or edit writes back to the mapped fields. **No storage migration.** Reconfirmed
+  2026-09-10 against the alternative (migrate records into Data Models and drop the typed tables) ;
+  the locked call stands. Native boards and calendars are unaffected at every step.
+- **Extend `DataRecordView` in place ; do not build a polymorphic view table** spanning kanban
+  boards. Kanban is extended and `DataRecordView` is core, so a core table cannot FK to
+  `KanbanBoard` ; and in the target architecture a board _is_ a view over a database, so the view
+  belongs to the `DataModel`. `KanbanView` stays untouched for native boards and is deprecated over
+  time rather than migrated.
+- **No `DataRecord.position`.** Manual row ordering is deliberately not added: materialization keeps
+  drag ordering in `KanbanCard.position`, where it already works, so the engine does not need it.
+  Revisit only if native ordering of a _table_ view is later requested.
 
 ## Non-goals
 
-- **Gallery / timeline / gantt kinds.** The registry makes them additive ; not in this program.
-- **Cross-database views.** A view has exactly one source model. Joining is what relations plus
-  traversal are for, and multi-level traversal is
+- **Gallery / timeline / gantt types.** The union makes them additive ; not in this program.
+- **Cross-database views.** One source model per view. Joining is what relations plus traversal are
+  for, and multi-level traversal is
   [already deferred](../../technical-documentation/data-model-queries/deferred.md).
-- **Per-view access control.** A view narrows what _you already may read_ ; it never widens.
-  Visibility comes from the model, the row ACL and record scopes, unchanged.
-- **Write-back semantics beyond the obvious.** Dragging a card between board columns writes the
-  group-by field. Dragging an event writes the date fields. Nothing more implicit than that.
+- **Per-view access control.** A view narrows what you already may read ; it never widens.
 
 ## User stories
 
-- **As an analyst**, I filter a database in the query bar, reorder and hide columns, then click
-  **Save as view**, name it, and it appears in the tree under the database.
-- **As a teammate**, I open that view's link and see exactly what they saw.
-- **As anyone**, I tweak a shared view's filter to answer a one-off question ; a "Modified" chip
-  appears with **Save**, **Save as new** and **Reset**, and closing the tab loses nothing but my
-  tweak.
-- **As a project lead**, I switch a database to **Board**, group by **Status**, and drag a record
-  from _In progress_ to _Done_ ; the record's Status field is now _Done_.
-- **As a scheduler**, I switch to **Calendar**, map _Start date_ and _Due date_, and drag an item
-  to next Tuesday ; the record's dates move.
-- **As a user with no database at all**, I still open Calendar and add a meeting, because the org
-  ships with an Events database provisioned for exactly that.
+- **As an analyst**, I filter a database, reorder and hide columns, save it as a view, and my
+  colleague opens the same link and sees the same thing.
+- **As anyone**, I tweak a shared view for a one-off question ; a dirty bar offers Save, Save as new
+  and Reset, and navigating away loses only my tweak.
+- **As a project lead**, I switch a database to **Board**, group by **Status**, and drag a card
+  between columns ; the record's Status field changes.
+- **As a project lead whose model has no SELECT field**, switching to Board offers to create one
+  rather than disabling the menu item.
+- **As a scheduler**, I drag a materialized event and the record's mapped date fields move.
 
 ## Data model
 
-The existing `DataRecordView` grows into the View entity, in place, under the data-models banner
-in `base.prisma`:
-
 ```prisma
-enum DataViewKind { TABLE  BOARD  CALENDAR }
+enum DataViewType { TABLE  BOARD  CALENDAR }
 
 model DataRecordView {
-  id             String       @id @default(cuid())
-  dataModelId    String
-  organizationId String
-  name           String
-  kind           DataViewKind @default(TABLE)   // NEW
-  query          Json                            // MonarkQL FilterNode tree, as today
-  // Presentation. Per-kind shape, validated by the matching zod schema
-  // (contracts/view-config.ts) exactly as DataField.config is.
-  config         Json         @default("{}")     // NEW
-  shared         Boolean      @default(false)
-  createdBy      String
-  …
+  // existing : id, dataModelId, organizationId, name, query Json, shared, createdBy, timestamps
+  type     DataViewType @default(TABLE)
+  /// Per-type configuration, validated by a discriminated zod union on write.
+  config   Json         @default("{}")
+  icon     String?
+  /// Views render as ordered tabs on the database.
+  position Int          @default(0)
 }
 ```
 
-`config` by kind, each with its own zod schema:
+`config`, a discriminated union in `packages/data-models/src/contracts/views.ts`:
 
-| Kind       | `config`                                                                                                                                     |
-| ---------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| `TABLE`    | `columns[] { fieldKey, hidden, width }`, `sort[] { fieldKey, direction }`                                                                    |
-| `BOARD`    | `groupByFieldKey` (a `SELECT` field), `columnOrder[]` (option values), `hiddenOptions[]`, `wipLimits{}`, `cardFields[]`, `swimlaneFieldKey?` |
-| `CALENDAR` | `startFieldKey`, `endFieldKey?`, `allDayFieldKey?`, `defaultRange` (`month`/`week`/`day`), `colorFieldKey?`                                  |
+- **TABLE** ; `{ columns: { key, width?, hidden? }[], sort: { field, dir }[] }`. This is where the
+  currently-localStorage-only `DataTableLayout` graduates to server state.
+- **BOARD** ; `{ groupByFieldKey (a SELECT field), cardFieldKeys[], showEmptyGroups }`.
+- **CALENDAR** ; `{ startFieldKey, endFieldKey?, allDayFieldKey? }`.
 
-**Manual ordering inside a board column** is the one thing a query cannot express, and it is
-genuinely per-view (the same record sits differently in two people's boards). It gets a sidecar:
+Existing rows migrate cleanly: `type = TABLE`, `config = {}` preserves today's behavior exactly, and
+an integration test should assert precisely that.
 
-```prisma
-// Manual card order within a BOARD view. Absent row = fall to the view's sort.
-model DataRecordViewOrder {
-  viewId   String
-  recordId String
-  // Group bucket the position is within (the group-by option value), so a
-  // record moving between columns does not have to renumber the other one.
-  bucket   String
-  position Int      // steps of 10, house convention
+## Sorting is the one real engine gap
 
-  @@id([viewId, recordId])
-  @@index([viewId, bucket, position])
-}
-```
+`records.list` has **no sort input** ; ordering is hardcoded `[{ updatedAt: "desc" }, { id: "desc" }]`
+at `data.ts:147` (structured path) and `:739` (raw path). A TABLE view's saved sort needs it.
 
-**Why not put ordering on the record.** A `position` column on `DataRecord` would make ordering
-global to the model, so two boards over the same database would fight over it, and a filtered view
-would show gaps it cannot close. Per-view is the only placement that composes.
+Add `sort?: { field, dir }[]`, compiled against the same expression indexes the filter compiler
+targets. The constraint is that **keyset pagination must stay valid**: the cursor is currently the
+last row's id resolved through a subquery on `(updatedAt, id)`, and with an arbitrary sort field it
+becomes a compound `(sortValue, id)` keyset. This is the most delicate change in the phase and
+deserves **its own PR**, with the existing pagination contract in
+`packages/data-models/tests/integration/query-language.test.ts` extended to cover sorted paging,
+ties, nulls, descending, and a sort field with and without an expression index.
 
-`KanbanView` is absorbed and dropped (its rows migrate to `DataRecordView` with `kind = BOARD`).
+## Saved versus session state
 
-## Local (unsaved) view state
+- **Saved baseline** is the `DataRecordView` row (server).
+- **Session overlay** is React state in the section, seeded from the view and reset when the active
+  view or model changes. **Not `localStorage`**, because "clears on navigation" is the stated
+  behavior and `localStorage` would survive it.
+- **`DataTableLayout`'s `localStorage` keeps a narrower job**: per-browser column **widths**, which
+  are a display preference. Column _order_ and _visibility_ move into the saved view. Say this in
+  the UI so it is not surprising.
+- A dirty view uses the existing `DirtyFormBar` pattern: "Unsaved view changes ; Save / Save as new
+  / Reset".
 
-The state a user is looking at is `saved view + local overrides`. Overrides live in the **URL**
-(query, kind, group-by) so a link reproduces what you see, with the bulkier parts (column widths)
-in `sessionStorage` keyed by view id. Never `localStorage`: a stale override that outlives the tab
-and silently reshapes a shared view next week is worse than losing it.
+## Who may save a shared view
 
-The affordance is a chip in the toolbar next to the view name:
+Today the write gate is `requireOwnedView`: **ownership only, with no permission**, so an admin
+cannot edit someone else's shared view. Once a view is shared configuration rather than a personal
+filter, that is wrong.
 
-- **unmodified**: the view's name.
-- **modified**: name + a "Modified" badge, with **Save** (owner only ; disabled with a tooltip when
-  you do not own a shared view), **Save as new** (always) and **Reset**.
-- **no view selected**: the database's default table state, with **Save as view**.
+Add **`data-models.manage-views`**: the owner may always edit their own ; a holder of
+`manage-views` may edit any **shared** view on a model they can read. Personal (unshared) views stay
+owner-only regardless.
 
-Leaving a modified view prompts once, the way `DirtyFormBar` does, and only when the change is
-saveable by that user.
+## Switching a database to a board or calendar
 
-## The kinds
+A view type is only meaningful with a compatible field mapping: BOARD needs a SELECT field to group
+by, CALENDAR needs a DATE or DATETIME.
 
-### Table
+When the model has none, **do not disable the menu item with a tooltip.** Open a short setup dialog
+offering to create the missing field (a SELECT named "Status" with `To do / In progress / Done`, or
+a DATE named "Date") and then create the view. A dead end becomes one click.
 
-Mostly a relocation: `useDataTableLayout` keeps owning the _live_ layout, but a saved view
-initializes it and **Save** writes it to `config` instead of only `localStorage`. Per-browser
-persistence remains the fallback for a database opened with no view. This is the phase that proves
-the config plumbing before either harder kind lands.
+## Materialization and write-back
 
-### Board
+The precedent exists and is shipped for Calendar ; Kanban copies it.
 
-Grouping is over a `SELECT` field: its options are the columns, in `columnOrder`. Everything the
-current Kanban UI does maps onto that ; WIP limits, colors and the collapse state come from the
-option config plus `config`, and the drag machinery (dnd-kit) is reused as is. Dragging across
-columns is a normal `records.update` on one field, so it goes through the same permission gate,
-emits the same `data-models.record-updated` event, and is scoped by record scopes for free.
+### Kanban
 
-A record whose group-by value is null renders in an **Uncategorized** column that is never a drop
-target ; dropping _out_ of it sets the field, dropping _into_ it would mean "unset this field",
-which is a data edit dressed up as a layout gesture.
+This is Part B of [`phase-3/data-models-visualizations.md`](../phase-3/data-models-visualizations.md),
+still valid and never built.
+
+- `registerKanbanModelIntegration()` calling `registerModelIntegration("kanban", { slots })`,
+  mirroring calendar's, with slots `status` (SELECT, required), `dueAt`, `priority`, `assignees`,
+  `estimate`.
+- Schema: `KanbanCard.sourceModule` / `sourceRecordId` with `@@unique([sourceModule, sourceRecordId])`
+  (mirroring `CalendarEvent`), and `KanbanBoard.dataModelId String?` where null means a native board,
+  untouched.
+- **Columns derive from the `status` field's options** (label, color, order), and column CRUD is
+  disabled on a database-backed board because the schema owns the columns. `KanbanColumn.wipLimit`
+  has no home in a SELECT option (`{ value, label, color }`), so accept that database-backed boards
+  have **no WIP limits in v1** rather than widening the option shape for one consumer.
+- A subscriber on `data-models.record-{created,updated,deleted}` upserts or soft-deletes the card
+  keyed on `("data-models", recordId)`, idempotent so replays are safe.
+- **Write-back**: a cross-column drag calls `records.update` on the mapped `status` field ;
+  mapped-field edits write back likewise ; `position` is kanban-owned and **never** writes back.
+  Loop guard by diff-check before writing, so record-update to card-update converges in one pass.
 
 ### Calendar
 
-Placement is over `DATE` / `DATETIME` fields named by `startFieldKey` / `endFieldKey`. This
-generalizes `DataModelIntegration`'s calendar slots: the mapping stops being one per model per
-module and becomes one per view, so the same database can feed two calendars keyed on different
-dates ("created" and "due"). Dragging or resizing writes those fields.
+The bridge exists but is one-way and lossy: materialized events are forced `PUNCTUAL`
+(`startAt === endAt`), so a mapped record can only ever be a point, never a range.
 
-**What Calendar keeps for itself.** Reminders and recurrence are calendar mechanics, not record
-data, and giving every model a `reminders` column to satisfy them is exactly the bloat this program
-avoids. They stay in `@monark/calendar`'s own fragment, re-keyed from a `CalendarEvent` to a
-`(viewId, recordId)` pair:
+- A **paired range slot** (`start` plus optional `end`) so a record with two date fields materializes
+  as a real `STANDARD` event and the day/week overlap fetch works.
+- **Write-back**: dragging or resizing an event whose `sourceModule` is `data-models` updates the
+  record's mapped date fields rather than the event directly.
 
-```prisma
-model CalendarRecordReminder {
-  id             String   @id @default(cuid())
-  organizationId String
-  viewId         String   // the CALENDAR view this reminder was set on
-  recordId       String   // soft reference, like CalendarEvent.sourceRecordId today
-  minutesBefore  Int
-  scheduledFor   DateTime
-  notifiedAt     DateTime?
-  @@index([scheduledFor, notifiedAt])
-}
-```
-
-The existing reminder sweep keeps working against it with a changed join. Recurrence, if it is
-built, belongs in the same sidecar for the same reason.
-
-**The out-of-the-box calendar.** Removing `Calendar`/`CalendarEvent` must not mean "you need to
-build a database before you can note a meeting". The migration provisions a system **Events**
-database per org (title, description `DOCUMENT`, start, end, all-day, location, participants) and a
-`CALENDAR` view over it, and that is what `/calendar` redirects to. Provisioning follows the
-existing convention where a model auto-creates its protected `title` field.
-
-## Server surface
-
-`dataModels.views.*` grows rather than moves:
-
-| Procedure                                     | Change                                                                             |
-| --------------------------------------------- | ---------------------------------------------------------------------------------- |
-| `views.list` / `create` / `update` / `delete` | gain `kind` + `config` ; unchanged gating (`record-read` to list, owner to edit)   |
-| `views.reorderRecords`                        | **new** ; writes `DataRecordViewOrder` for a drag within or across board buckets   |
-| `records.list`                                | accepts a `viewId` so the server resolves query + sort + manual order in one place |
-
-`config` is validated against the kind's zod schema on write, and a config naming a field the model
-does not have is rejected at save time ; the same rule record scopes adopted, for the same reason
-(a broken presentation should fail when it is authored, not when it is opened).
-
-Unlike a scope, a broken _saved_ config **degrades open**: a view whose group-by field was archived
-renders as a table with a banner, because a view is a lens, not an authorization control. That
-asymmetry is deliberate and worth stating in the module README.
-
-## Migration
-
-Both migrations are one-way data moves and get a rehearsal on staging before production.
-
-**Kanban → Data Models.** Per live `KanbanBoard`:
-
-1. Create a `DataModel` named after the board, with fields: `title` (TEXT, the protected default),
-   `description` (`DOCUMENT`, from the card's block array), `status` (`SELECT`, options seeded from
-   the board's columns in `position` order), `assignees` / `reviewers` (RELATION MANY to users),
-   `dueAt` (`DATETIME`), `priority` (`SELECT`), `estimate` (`NUMBER`).
-2. One `DataRecord` per `KanbanCard`, values mapped straight across ; `descriptionText` is
-   recomputed by the normal write path rather than copied.
-3. One `DataRecordView` with `kind = BOARD`, `groupByFieldKey = "status"`, `columnOrder` from the
-   columns, WIP limits carried into `config`.
-4. `DataRecordViewOrder` rows from each card's `position`, bucketed by its column.
-5. `KanbanBoardRoleAccess` rows become `DataRecordRoleAccess` on every migrated record, which is
-   the literal-preservation choice ; the console track can later replace them with one record scope
-   per role, which is what they actually mean.
-
-**Calendar → Data Models.** Per live `Calendar`, the same shape into an Events-style model, with
-`CalendarEvent.sourceRecordId`-materialized events **skipped** (they are already a projection of a
-record ; migrating them would duplicate their source). `CalendarEventReminder` rows become
-`CalendarRecordReminder` against the new view.
-
-The old tables are left in place, unread, for one release. A rollback in that window is a flag
-flip, not a restore.
+Reminders, recurrence and ICS stay calendar-owned. They are calendar mechanics, not record data, and
+giving every model a reminders column to satisfy them is the bloat this program avoids ; keeping
+`CalendarEvent` authoritative means they need no re-keying at all.
 
 ## Dependencies
 
-- [workspace-unification.md](workspace-unification.md) for the `view` node kind and the tree
-  placement ; views are usable without it (they would live in the database's own view menu) but the
-  program only pays off together.
-- MonarkQL and its single compiler ; the `QueryChipBar` ; `useDataTableLayout` ; dnd-kit and
-  `DragHandle` ; the block editor for `DOCUMENT` card bodies. All shipped.
+- Shipped: MonarkQL and its single compiler, `QueryChipBar`, `useDataTableLayout`, dnd-kit,
+  `DirtyFormBar`, `registerModelIntegration`, the calendar materialization subscriber.
+- Phase C (the tree) consumes views but does not block them ; the sort work blocks the TABLE view.
 
 ## Edge cases and risks
 
-- **A view over a scoped model.** The view's query is AND-ed with the caller's compiled scope, so
-  two people open the same board and see different cards. That is correct and needs saying in the
-  user guide, because "the board looks different for me" reads as a bug otherwise.
-- **Board column count.** Grouping by a `SELECT` with 200 options renders 200 columns. Cap the
-  rendered set, sort by option order, and put the tail behind a "show more" ; do not silently
-  truncate.
-- **Manual order versus sort.** A board with an explicit sort ignores `DataRecordViewOrder` ; the
-  UI must say so rather than accepting a drag that does nothing. Dragging while sorted offers to
-  clear the sort.
-- **Record count per column.** The record list is cursor-paginated ; a board is not. Paginate per
-  bucket with a "load more" per column, and count with one grouped query rather than N.
-- **Two boards, one field.** Dragging in one board changes the field for the other, which is the
-  point, but a stale open board must not silently disagree ; the existing record-watch fan-out
-  already carries the update, so the board subscribes to it.
-- **Migration idempotency.** Both migrations must be re-runnable ; key created models to their
-  source id in a scratch column (or a `DataModelIntegration` row) so a second run is a no-op.
+- **A view over a scoped model.** The view's query is AND-ed with the caller's compiled
+  [record scope](../../technical-documentation/record-scopes.md), so two people open the same board
+  and see different cards. Correct, and it needs saying in the user guide, because "the board looks
+  different for me" reads as a bug otherwise.
+- **Materialization loops.** record-update fires card-update fires record-update. The diff-check
+  before write is what makes it converge ; test it explicitly rather than trusting it.
+- **A record that leaves the view's filter.** Its materialized card must be removed, which means the
+  subscriber evaluates the view predicate, not just the model id. A card that lingers after its
+  record stops matching is the likeliest bug in the whole phase.
+- **Board column count.** Grouping by a SELECT with 200 options renders 200 columns. Cap the
+  rendered set and put the tail behind "show more" ; do not silently truncate.
+- **`showEmptyGroups` and a null group-by value.** A record whose SELECT is unset renders in an
+  Uncategorized column that is **never a drop target** ; dropping into it would mean "unset this
+  field", which is a data edit dressed up as a layout gesture.
+- **Sorted keyset paging** is the one place a subtle bug is expensive. See the sorting section.
 
 ## Success metrics
 
-- `KanbanView` deleted ; `DataRecordView` is the only saved-view table.
-- A board and a calendar are configurations, not schemas: adding a fourth kind is a zod schema, a
-  renderer and a registry entry.
-- Table layout survives a device change (the concrete user-visible win of moving it server-side).
-- Zero records lost or reassigned in migration, asserted by pre/post count and checksum tests.
+- One entity answers "how am I looking at this database", with type, filter, sort and config.
+- Table layout survives a device change (the concrete user-visible win of server-side config).
+- A database-backed board round-trips: record edit reconciles the card, cross-column drag flips the
+  record's field, within-column drag changes only `position` and leaves the record untouched.
+- Native boards and calendars are provably unaffected at every step.
 
 ## Out of scope
 
-- **Gallery, timeline, gantt** kinds.
-- **View-level default sharing policy** ("new views in this database are shared by default").
-- **Formula-driven grouping** (group by a `FORMULA` field) ; needs the formula result type pinned
-  to a finite option set first.
-- **Subscriptions per view** ("notify me when anything enters this view"), which is a real feature
-  and a real cost, since it means evaluating every view's predicate on every record write.
+- Gallery, timeline, gantt types.
+- Manual ordering of a table view (`DataRecord.position`), deliberately deferred.
+- Formula-driven grouping ; needs a formula result type pinned to a finite option set first.
+- Per-view subscriptions ("notify me when anything enters this view"), which means evaluating every
+  view's predicate on every record write.
