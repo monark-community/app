@@ -1,7 +1,7 @@
 # Block editor (BlockNote)
 
 Notion-style block editing lives alongside the older rich-text (Tiptap) editor.
-This is the internals reference ; the [design record](../features-planning/proposed/block-editor.md)
+This is the internals reference ; the [design record](../features-planning/shipped/block-editor.md)
 has the rationale, and each consuming module's README/doc has the as-built detail.
 
 ## Where it lives

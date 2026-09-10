@@ -7,7 +7,7 @@ Open follow-up items. See [README.md](README.md) for the convention. Strike item
 Two routine Dependabot majors were deferred on 2026-08-01 (the rest — @tanstack/react-query, all @trpc/\* unified at 11.18, @tailwindcss/postcss, react, @types/node 25, ESLint 10 + typescript-eslint 8.65, and the GitHub-Actions bumps — landed). Both are dev/runtime majors, **not security**, so there's no urgency.
 
 - [ ] **[2026-08-01] TypeScript 5.9 → 6.0.** Bumping `typescript` to `^6.0.3` breaks Node-global type resolution (`process`/`console`/`__dirname`/`node:*` not found) in packages that don't declare `@types/node` (e.g. `@monark/branding`, `@monark/db`) — and even in ones that do (`@monark/test-utils`). TS 6 changed automatic `@types` inclusion, so the migration needs `@types/node` added to those packages **plus** a `tsconfig.base.json` change (likely an explicit `types`/`typeRoots` or `lib` tweak), then a full re-verify that may surface more TS-6 strictness errors. Note: `typescript-eslint@8.65` already supports TS 6 (peer `<6.1.0`), so the lint side is fine. Until this lands, a `pnpm.overrides` pin (`"typescript": "5.9.3"`) keeps the whole workspace on 5.9.3 — trpc/prisma list `typescript` as an _optional peer_, and pnpm's auto-install-peers otherwise pulls TS 6.0.3 and hoists it to those packages' `tsc`. Remove that override as part of the TS-6 migration.
-- [ ] **[2026-08-01] otplib 12 → 13 (2FA).** otplib 13 is a full API redesign: the `authenticator` singleton is gone, replaced by an `OTP` class + a functional API (`generateSecret` / `generateURI` / `verify` / `verifySync`) with different secret-encoding defaults (base32-assumed) and a new default crypto plugin (`NobleCryptoPlugin`). [packages/auth/src/server/totp.ts](../../packages/auth/src/server/totp.ts) uses `authenticator.{generateSecret,keyuri,check}` + `authenticator.options`, all of which change. Because this is security-critical 2FA, the migration must be rewritten carefully and validated end-to-end against the auth TOTP integration tests (enrollment + verification codes must still match authenticator apps). Deferred rather than rushed.
+- [x] ~~**[2026-08-01] otplib 12 → 13 (2FA).**~~ shipped 2026-09-08 (CHANGELOG `2026-09-08`, PR #66). The `authenticator` singleton gave way to the `OTP` class + functional API, and the call sites in [packages/auth/src/server/totp.ts](../../packages/auth/src/server/totp.ts) were ported. Two follow-up fixes were needed and shipped: an abandoned enrollment locking the account out of its own settings (PR #84), and otplib 13's `MIN_SECRET_BYTES` guardrail throwing on **every pre-existing enrollment** (PR #90). The second is the exact risk this item was deferred over, and the TOTP suite did not catch it because every test enrolled fresh and so only ever exercised a v13-length secret ; the lesson for the next credential-format major is that a compatibility test needs a _planted_ legacy value, not a round trip.
 
 ## Prisma schema fragments
 
@@ -16,11 +16,21 @@ Per-package schema fragments landed for the extended modules (calendar + kanban 
 - [ ] **[2026-07-28] Fragment the core modules too.** Only the two extended modules moved to fragments ; all core models still live in the single [base.prisma](../../packages/db/prisma/base.prisma). Split each core module's `// ── MODULE: <name> ──` banner into its own `packages/<module>/prisma/<module>.prisma` so every module owns its schema source symmetrically. Purely mechanical (the assembler already globs all `packages/*/prisma/*.prisma`) but touches every model, so verify no migration drift (`prisma migrate diff` clean) across the whole schema.
 - [ ] **[2026-07-28] Soft-FK decouple core ↔ extended.** `base.prisma` still names the extended types via back-relations (`Organization.calendarEvents CalendarEvent[]`, `Role.kanbanBoardAccess KanbanBoardRoleAccess[]`, etc.) because Prisma requires both sides of an `@relation`. To make `base.prisma` self-contained (core compiles without any extended fragment), drop the calendar/kanban FKs to `Organization`/`Role` to plain indexed `String` ids (no `@relation`, mirroring `KanbanCard.assigneeIds`), removing the core back-relation fields. Cost: loses DB cascade + referential integrity (org/role delete must cascade in app code / a cleanup subscriber) and needs a migration dropping the FK constraints. Bigger + riskier — only worth it if we want true per-package deploy isolation.
 
+## Deployment
+
+- [ ] **[2026-09-09] Every service still deploys twice.** All six services in [render.yaml](../../render.yaml) (api + crons, both environments) carry `autoDeploy: true`, so Render's own push trigger fires **and** [deploy-api.yml](../../.github/workflows/deploy-api.yml) fires on green. The push deploy is ungated, which is the failure the deploy-on-green work existed to close ; [environments](../technical-documentation/environments/_index.md) already says to flip these to `false` once the workflow is wired, and that step was never done. The fix is a blueprint edit **plus a re-sync** (a dashboard value overrides the blueprint until then) ; staging first, verify, then production. Planned with the rest in [deploy-pipeline-completion.md](../features-planning/proposed/deploy-pipeline-completion.md).
+- [ ] **[2026-09-09] The web half is not gated on green at all.** Vercel deploys `develop` and `main` through its git integration, on push, so a red CI still ships the frontend and the two halves of one merge can land in either order. Same spec.
+
 ## GitHub integration
 
 - [ ] **[2026-08-05] Test the GitHub module against a real repo + live events.** The `@monark/github` MVP is unit + integration tested, but a real end-to-end round-trip (live webhook deliveries + real REST calls from the nodes) can't run in CI — it needs a token, a repo, and a publicly reachable API URL. Detailed manual test plan (triggers, node read/writes, signature/security, error handling, an end-to-end triage-bot scenario) in [github-integration-testing.md](github-integration-testing.md). Run before trusting it in production.
 
 ## Webhooks
+
+> All three items below are now owned by
+> [integrations-rework.md](../features-planning/proposed/integrations-rework.md), which folds them
+> into one connections-and-deliveries surface. Keep them here until it lands ; they are still
+> individually shippable.
 
 - [ ] **[2026-05-08] Default env-var secret resolver.** Ship a `WEBHOOK_SECRETS` JSON env-var backed resolver as the default so single-tenant deploys work without integrating an external secret store. See [webhook-secret-resolver.md](../technical-documentation/webhook-secret-resolver/_index.md) for the contract.
 - [ ] **[2026-05-08] Per-endpoint rate limiting.** A receiver returning 429 today retries with backoff but doesn't pause sibling deliveries to the same endpoint. A token bucket per endpoint would be kinder.
@@ -31,8 +41,8 @@ Per-package schema fragments landed for the extended modules (calendar + kanban 
 Shipped. See the CHANGELOG entry dated 2026-05-04. Out-of-scope items below remain open.
 
 - [ ] **Cross-org role templates** ("copy these permissions from Org A's Reviewer to Org B"). Operators can recreate manually for now.
-- [ ] **Permission-level audit** ("who has permission X?"). Useful but separate feature.
-- [ ] **Per-request `cache()` wrapping of `hasPermission` / `hasRoleKey`.** The new schema does a join to `Role` on every check ; once a render path exists that runs N permission checks, wrap them.
+- [ ] **Permission-level audit** ("who has permission X?"). Now specced as the Permissions tab of [access-control-console.md](../features-planning/proposed/access-control-console.md).
+- [ ] **Per-request `cache()` wrapping of `hasPermission` / `hasRoleKey`.** The new schema does a join to `Role` on every check ; once a render path exists that runs N permission checks, wrap them. The access-control console is that path, so this stops being speculative when it lands.
 
 ## Admin user management
 
@@ -47,6 +57,12 @@ Shipped. See the CHANGELOG entry dated 2026-05-04. Out-of-scope items below rema
 ## Security audit follow-ups
 
 Deferred from the 2026-07-29 full-branch security audit (the High/Medium/Low fixes that shipped are in the CHANGELOG dated 2026-07-29). Ordered roughly by severity.
+
+> Four of these live at the automation / secrets / webhooks seam and are planned together in
+> [integrations-rework.md](../features-planning/proposed/integrations-rework.md): the HTTP-trigger
+> replay + rate limiting, the structural "a secret never leaves a node" enforcement, the
+> `automation.secrets.list` gating question, and (with the two webhook items above) the shared
+> per-endpoint rate limiter.
 
 - [ ] **[2026-07-29] `FileBucket` org-scoping (Medium).** `FileBucket` ([base.prisma](../../packages/db/prisma/base.prisma)) has no `organizationId` and `name` is globally unique, so buckets are a single cross-tenant namespace: any `files.view` holder enumerates every org's bucket names + policies, any `files.upload` holder can upload into another org's bucket (objects stay key-isolated but land under a foreign — possibly public — bucket), and names can be squatted (cross-tenant `ConflictError` DoS). File _data_ isolation itself is intact (keys are org-prefixed; every by-id path is org-checked). Fix: add `organizationId` to `FileBucket`, scope `listBuckets`/`findBucketByName`/`createUpload`/`downloadUrl` by org, make `(organizationId, name)` the uniqueness key — keep the shared system-owned `data-model-files` bucket as a deliberate exception. Needs a schema migration; interacts with Supabase's global bucket naming. Mostly moot in the default single-tenant mode. ([files/server/data.ts](../../packages/files/src/server/data.ts), [index.ts](../../packages/files/src/server/index.ts)).
 - [x] ~~**[2026-07-29] Public-bucket creation should be a platform-tier capability.**~~ shipped 2026-07-29 — `buckets.create` now requires SYSADMIN (`hasSysadminAssignment`) to set `isPublic: true`; an org-tier `files.manage-buckets` holder can only create private buckets ([files/server/index.ts](../../packages/files/src/server/index.ts)). Documenting "public buckets must never hold user-uploaded content" remains as an ops note.
