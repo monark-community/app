@@ -23,7 +23,7 @@
     "@monark/feature-flags": "workspace:*",
     "@monark/rbac": "workspace:*",
     "@monark/users": "workspace:*",
-    "@supabase/supabase-js": "^2.105.3",
+    "@supabase/supabase-js": "^2.117.1",
     "bcryptjs": "^3.0.3",
     "otplib": "^13.5.0",
     "qrcode": "^1.5.4",
