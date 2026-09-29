@@ -75,6 +75,53 @@ describe("getBootstrapStatus", () => {
     expect(status.singletonPrimaryColor).toBeNull();
   });
 
+  it("returns the singleton's brand settings for the theme (tint, dark color, dark mode)", async () => {
+    const db = getDb();
+    await db.organization.create({
+      data: {
+        slug: "tinted",
+        displayName: "Tinted",
+        primaryColor: "#F88D10",
+        surfaceTint: 1.5,
+        primaryColorDark: "#FFB35C",
+        primaryColorDarkMode: "custom",
+      },
+    });
+    const status = await getBootstrapStatus();
+    expect(status.singletonSurfaceTint).toBe(1.5);
+    expect(status.singletonPrimaryColorDark).toBe("#FFB35C");
+    expect(status.singletonPrimaryColorDarkMode).toBe("custom");
+  });
+
+  it("reads the 'same' dark mode as stored", async () => {
+    const db = getDb();
+    await db.organization.create({
+      data: { slug: "same-dark", displayName: "Same", primaryColorDarkMode: "same" },
+    });
+    const status = await getBootstrapStatus();
+    expect(status.singletonPrimaryColorDarkMode).toBe("same");
+  });
+
+  it("falls back defensively on out-of-range or malformed brand settings", async () => {
+    const db = getDb();
+    await db.organization.create({
+      data: {
+        slug: "borked-brand",
+        displayName: "Borked brand",
+        surfaceTint: 7,
+        primaryColorDark: "url(javascript:alert(1))",
+        primaryColorDarkMode: "neon",
+      },
+    });
+    const status = await getBootstrapStatus();
+    // Out of the 0..2 range reads as unset, so the deployment default applies.
+    expect(status.singletonSurfaceTint).toBeNull();
+    // Only a hex color may reach the root layout's inline style.
+    expect(status.singletonPrimaryColorDark).toBeNull();
+    // An unknown mode reads as the default.
+    expect(status.singletonPrimaryColorDarkMode).toBe("adaptive");
+  });
+
   it("does not pin singletonOrganizationId when multiple orgs exist", async () => {
     const db = getDb();
     await db.organization.createMany({
