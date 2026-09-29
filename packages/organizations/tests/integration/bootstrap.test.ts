@@ -36,6 +36,9 @@ describe("getBootstrapStatus", () => {
       singletonDisplayName: null,
       singletonLogoUrl: null,
       singletonPrimaryColor: null,
+      singletonSurfaceTint: null,
+      singletonPrimaryColorDark: null,
+      singletonPrimaryColorDarkMode: "adaptive",
     });
   });
 

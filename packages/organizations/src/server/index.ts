@@ -58,6 +58,13 @@ const adminUpdateInput = z.object({
   slug: SLUG_SCHEMA.optional(),
   logoUrl: z.string().url().nullable().optional(),
   primaryColor: HEX_COLOR_SCHEMA.nullable().optional(),
+  // Exact dark-mode brand color ; null lets the theme adapt primaryColor.
+  primaryColorDark: HEX_COLOR_SCHEMA.nullable().optional(),
+  // How dark mode derives its brand color ; null reads as "adaptive".
+  primaryColorDarkMode: z.enum(["same", "adaptive", "custom"]).nullable().optional(),
+  // Brand tint multiplier for surfaces derived from primaryColor ; null
+  // clears it back to the deployment default (BRANDING_SURFACE_TINT).
+  surfaceTint: z.number().min(0).max(2).nullable().optional(),
 });
 
 export const organizationsRouter = router({
@@ -145,7 +152,7 @@ export const organizationsRouter = router({
     }),
 
   // Partial update on the org profile : displayName / slug / logoUrl /
-  // primaryColor. Slug rotations record an `OrgSlugRedirect` row on the
+  // primaryColor / primaryColorDark / surfaceTint. Slug rotations record an `OrgSlugRedirect` row on the
   // way out (90-day expiry) so existing links keep resolving. Throws
   // ValidationError when the new slug collides with another org ;
   // surfaces a clean error rather than the underlying unique-constraint
@@ -160,6 +167,9 @@ export const organizationsRouter = router({
       if (patch.slug !== undefined) changed.push("slug");
       if (patch.logoUrl !== undefined) changed.push("logoUrl");
       if (patch.primaryColor !== undefined) changed.push("primaryColor");
+      if (patch.primaryColorDark !== undefined) changed.push("primaryColorDark");
+      if (patch.primaryColorDarkMode !== undefined) changed.push("primaryColorDarkMode");
+      if (patch.surfaceTint !== undefined) changed.push("surfaceTint");
       if (changed.length > 0) {
         const event: OrganizationUpdatedEvent = {
           type: "organization.updated",

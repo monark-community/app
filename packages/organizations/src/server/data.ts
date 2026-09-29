@@ -321,6 +321,9 @@ export async function updateOrganizationForAdmin(
     slug?: string;
     logoUrl?: string | null;
     primaryColor?: string | null;
+    primaryColorDark?: string | null;
+    primaryColorDarkMode?: "same" | "adaptive" | "custom" | null;
+    surfaceTint?: number | null;
   },
 ): Promise<{ row: OrganizationRow; previousSlug?: string }> {
   const db = getDb();

@@ -56,6 +56,12 @@ export type Branding = {
   brandAccent: string;
   /** Public path to the logo SVG. Resolved relative to `services/web/public/`. */
   logoSrc: string;
+  /**
+   * How strongly backgrounds, surfaces, borders and text pick up the
+   * primary's hue, as a multiplier (string, parsed by the web layout) :
+   * "0" is plain neutral grey, "1" the default subtle tint, up to "2".
+   */
+  surfaceTint: string;
 };
 
 // Neutral, business-agnostic defaults. This is a white-label starter : the
@@ -73,6 +79,7 @@ export const DEFAULT_BRANDING: Branding = {
   brandPrimary: "#2563EB",
   brandAccent: "#4F46E5",
   logoSrc: "/logo.svg",
+  surfaceTint: "1",
 };
 
 /**
@@ -120,6 +127,7 @@ const ENV_CANDIDATES: Record<keyof Branding, ReadonlyArray<string | undefined>> 
   brandPrimary: [process.env.BRANDING_PRIMARY, process.env.NEXT_PUBLIC_BRANDING_PRIMARY],
   brandAccent: [process.env.BRANDING_ACCENT, process.env.NEXT_PUBLIC_BRANDING_ACCENT],
   logoSrc: [process.env.BRANDING_LOGO_SRC, process.env.NEXT_PUBLIC_BRANDING_LOGO_SRC],
+  surfaceTint: [process.env.BRANDING_SURFACE_TINT, process.env.NEXT_PUBLIC_BRANDING_SURFACE_TINT],
 };
 
 function resolve<K extends keyof Branding>(key: K): Branding[K] {
@@ -143,6 +151,7 @@ export const BRANDING: Branding = {
   brandPrimary: resolve("brandPrimary"),
   brandAccent: resolve("brandAccent"),
   logoSrc: resolve("logoSrc"),
+  surfaceTint: resolve("surfaceTint"),
 };
 
 /**

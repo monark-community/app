@@ -346,6 +346,16 @@ model Organization {
 
   logoUrl      String?
   primaryColor String?
+  // Optional exact brand color for dark mode ; null means the web theme
+  // adapts primaryColor automatically when it lacks contrast there.
+  primaryColorDark String?
+  // How dark mode derives its brand color : "same" (primaryColor as is),
+  // "adaptive" (adapted when it lacks contrast ; the default, also for
+  // null) or "custom" (primaryColorDark).
+  primaryColorDarkMode String?
+  // How strongly surfaces derived from `primaryColor` pick up its hue
+  // (0 neutral .. 2) ; null falls back to BRANDING_SURFACE_TINT.
+  surfaceTint  Float?
 
   memberships            OrganizationMembership[]
   invites                Invite[]
