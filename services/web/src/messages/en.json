@@ -109,7 +109,8 @@
     "continue": "Continue",
     "loading": "Loading…",
     "chooseColor": "Choose color",
-    "unsavedChanges": "Unsaved changes"
+    "unsavedChanges": "Unsaved changes",
+    "noColor": "No color"
   },
   "dataForm": {
     "attributesTitle": "Attributes",
@@ -1123,12 +1124,14 @@
         "labels": {
           "displayName": "Display name",
           "assistantName": "AI assistant name",
-          "primaryColor": "Primary brand color"
+          "primaryColor": "Primary color",
+          "surfaceTint": "Background tint",
+          "primaryColorDark": "Dark theme color"
         },
         "placeholders": {
           "displayName": "How the organization is shown across the app"
         },
-        "primaryColorHint": "Hex code like #2563EB. Leave blank to use the deployment's brand color.",
+        "primaryColorHint": "Used for primary actions and accents across the platform.",
         "assistantNameHint": "What this organization's AI assistant is called, in chat and in its own replies. Leave blank to use the deployment default ({defaultName}).",
         "logoHint": "Square crop, max 2 MB. JPEG, PNG, or WebP.",
         "logoUploadAria": "Upload an organization logo",
@@ -1144,7 +1147,14 @@
           "notAuthenticated": "Sign in again and retry.",
           "forbidden": "You no longer have permission to do that.",
           "upstream": "Upload failed. Try again."
-        }
+        },
+        "surfaceTintHint": "How much the primary color influences background surfaces. Set to 0 for neutral backgrounds.",
+        "surfaceTintReset": "Reset",
+        "brandPreviewHint": "Preview; not saved yet.",
+        "primaryColorDarkLowContrast": "Low contrast on dark backgrounds ({ratio}:1).",
+        "advancedSettings": "Advanced options",
+        "primaryAdjusted": "Your primary brand color is adjusted per theme to meet accessibility standards.",
+        "primaryColorDarkHint": "Leave empty for an automatic, accessible adjustment, or set your own value."
       }
     },
     "rbac": {

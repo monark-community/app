@@ -2519,7 +2519,35 @@ const SignInStepOneFigureStory: FC = () => (
   </AuthScreen>
 );
 
+// Brand controls on the organization page : an unset and a set ColorInput.
+const BrandControlsStory: FC = () => {
+  const [unset, setUnset] = useState("");
+  const [set, setSet] = useState("#F88D10");
+  return (
+    <div className="max-w-md space-y-6 p-6">
+      <div className="space-y-2">
+        <p className="text-sm font-medium">Dark theme color (unset)</p>
+        <ColorInput
+          value={unset}
+          onChange={setUnset}
+          placeholder="#F88D10"
+          clearable
+          aria-label="Dark theme color"
+        />
+        <p className="text-xs text-muted-foreground">
+          Leave empty for an automatic, accessible adjustment, or set your own value.
+        </p>
+      </div>
+      <div className="space-y-2">
+        <p className="text-sm font-medium">Primary color (set)</p>
+        <ColorInput value={set} onChange={setSet} clearable aria-label="Primary color" />
+      </div>
+    </div>
+  );
+};
+
 export const STORIES: Record<string, FC> = {
+  "brand-controls": BrandControlsStory,
   "auth-screen": AuthScreenStory,
   "signin-steps": SignInStepsStory,
   "signin-step-one": SignInStepOneFigureStory,

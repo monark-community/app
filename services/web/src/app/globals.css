@@ -133,6 +133,7 @@ body {
   --color-secondary: var(--secondary);
   --color-primary-foreground: var(--primary-foreground);
   --color-primary: var(--primary);
+  --color-primary-ink: var(--primary-ink);
   --color-popover-foreground: var(--popover-foreground);
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
@@ -149,83 +150,116 @@ body {
 }
 
 :root {
-  /* Base: zinc / Theme: neutral brand default — LIGHT */
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.141 0.005 285.823);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.141 0.005 285.823);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.141 0.005 285.823);
-  --primary: oklch(0.546 0.215 262.88); /* #2563EB — see DEFAULT_BRANDING in @monark/branding */
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.967 0.001 286.375);
-  --secondary-foreground: oklch(0.21 0.006 285.885);
-  --muted: oklch(0.967 0.001 286.375);
-  --muted-foreground: oklch(0.552 0.016 285.938);
-  --accent: oklch(0.967 0.001 286.375);
-  --accent-foreground: oklch(0.21 0.006 285.885);
+  /* Base: neutral surfaces tinted by the brand color — LIGHT.
+   *
+   * Every surface / text / line token is derived from `--primary` (the
+   * root layout sets it from the org's `primaryColor`, else
+   * `BRANDING_PRIMARY`) with relative color syntax : each token keeps
+   * its own fixed lightness, takes the brand's hue, and a small fraction
+   * of the brand's chroma. So an orange brand gets warm cream surfaces,
+   * a blue brand cool ones, and contrast stays put because lightness
+   * never moves. `--surface-tint` (BRANDING_SURFACE_TINT, default 1)
+   * scales every tint at once ; 0 is plain neutral grey.
+   */
+  --surface-tint: 1;
+  --background: oklch(from var(--primary) 0.985 calc(c * 0.06 * var(--surface-tint)) h);
+  --foreground: oklch(from var(--primary) 0.18 calc(c * 0.05 * var(--surface-tint)) h);
+  --card: oklch(from var(--primary) 0.998 calc(c * 0.02 * var(--surface-tint)) h);
+  --card-foreground: var(--foreground);
+  --popover: var(--card);
+  --popover-foreground: var(--foreground);
+  /* The brand, per theme. The root layout sets --brand-light / --brand-dark
+     (+ their foregrounds) from the org's primaryColor / primaryColorDark or
+     BRANDING_PRIMARY, each already adapted for contrast on its own theme
+     (see adaptBrandColor in @monark/common/color) ; every brand-colored
+     token below reads the active theme's --primary. The fallbacks are the
+     neutral starter blue, for surfaces rendered outside that layout. */
+  --primary: var(--brand-light, oklch(0.546 0.215 262.88)); /* #2563EB — see DEFAULT_BRANDING in @monark/branding */
+  --primary-foreground: var(--brand-light-foreground, oklch(0.985 0 0));
+  --brand-primary: var(--primary);
+  --brand-foreground: var(--primary-foreground);
+  --brand-accent: var(--brand-accent-light, var(--primary));
+  --secondary: oklch(from var(--primary) 0.95 calc(c * 0.09 * var(--surface-tint)) h);
+  --secondary-foreground: var(--foreground);
+  --muted: var(--secondary);
+  --muted-foreground: oklch(from var(--primary) 0.47 calc(c * 0.09 * var(--surface-tint)) h);
+  --accent: var(--secondary);
+  --accent-foreground: var(--foreground);
   --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.92 0.004 286.32);
-  --input: oklch(0.92 0.004 286.32);
-  --ring: oklch(0.546 0.215 262.88);
+  --border: oklch(from var(--primary) 0.91 calc(c * 0.09 * var(--surface-tint)) h);
+  --input: oklch(from var(--primary) 0.9 calc(c * 0.09 * var(--surface-tint)) h);
+  --ring: var(--primary);
+  /* Brand-colored TEXT on light surfaces. A light brand (orange, yellow)
+     fails AA as text on a near-white ground, so text uses the brand
+     darkened to at most L 0.55 ; fills keep `--primary` itself. */
+  --primary-ink: oklch(from var(--primary) min(l, 0.55) c h);
 
   /* Categorical chart ramp. Deliberately NOT derived from the brand
      color : `--chart-1` is overridden per-deployment by the root
      layout, and the remaining series have to stay legible next to
      whatever hue that turns out to be. Evenly spaced hues at a
      consistent lightness so no series reads as more important. */
-  --chart-1: oklch(0.546 0.215 262.88);
+  --chart-1: var(--primary);
   --chart-2: oklch(0.64 0.13 195);
   --chart-3: oklch(0.68 0.15 145);
   --chart-4: oklch(0.72 0.16 75);
   --chart-5: oklch(0.58 0.19 330);
 
   /* Sidebar — translucent, subtle accent */
-  --sidebar: oklch(0.985 0 0 / 0.85);
-  --sidebar-foreground: oklch(0.141 0.005 285.823);
-  --sidebar-primary: oklch(0.546 0.215 262.88);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.967 0.001 286.375);
-  --sidebar-accent-foreground: oklch(0.21 0.006 285.885);
-  --sidebar-border: oklch(0.92 0.004 286.32);
-  --sidebar-ring: oklch(0.546 0.215 262.88);
+  --sidebar: oklch(from var(--primary) 0.975 calc(c * 0.07 * var(--surface-tint)) h / 0.85);
+  --sidebar-foreground: var(--foreground);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: var(--secondary);
+  --sidebar-accent-foreground: var(--foreground);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--primary);
 }
 
 .dark {
-  /* Base: zinc / Theme: neutral brand default — DARK */
-  --background: oklch(0.141 0.005 285.823);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.21 0.006 285.885);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.21 0.006 285.885);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.546 0.215 262.88);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.274 0.006 286.033);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.274 0.006 286.033);
-  --muted-foreground: oklch(0.705 0.015 286.067);
-  --accent: oklch(0.274 0.006 286.033);
-  --accent-foreground: oklch(0.985 0 0);
+  /* Base: brand-tinted surfaces — DARK. Same derivation as light ; dark
+     grounds carry proportionally more chroma, since a small tint on a
+     near-black reads as grey (an orange brand lands on espresso). */
+  --background: oklch(from var(--primary) 0.17 calc(c * 0.2 * var(--surface-tint)) h);
+  --foreground: oklch(from var(--primary) 0.965 calc(c * 0.14 * var(--surface-tint)) h);
+  --card: oklch(from var(--primary) 0.22 calc(c * 0.19 * var(--surface-tint)) h);
+  --card-foreground: var(--foreground);
+  --popover: var(--card);
+  --popover-foreground: var(--foreground);
+  --primary: var(--brand-dark, oklch(0.546 0.215 262.88));
+  --primary-foreground: var(--brand-dark-foreground, oklch(0.985 0 0));
+  --brand-accent: var(--brand-accent-dark, var(--primary));
+  --secondary: oklch(from var(--primary) 0.29 calc(c * 0.17 * var(--surface-tint)) h);
+  --secondary-foreground: var(--foreground);
+  --muted: var(--secondary);
+  --muted-foreground: oklch(from var(--primary) 0.74 calc(c * 0.16 * var(--surface-tint)) h);
+  --accent: var(--secondary);
+  --accent-foreground: var(--foreground);
   --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 0.1);
-  --input: oklch(1 0 0 / 0.15);
-  --ring: oklch(0.546 0.215 262.88);
+  --border: oklch(from var(--primary) 0.34 calc(c * 0.17 * var(--surface-tint)) h);
+  --input: oklch(from var(--primary) 0.38 calc(c * 0.16 * var(--surface-tint)) h);
+  /* Brand-colored TEXT on dark surfaces : a dark brand (black, navy)
+     vanishes on a near-black ground, so text uses the brand lightened to
+     at least L 0.7 ; a brand already lighter than that is unchanged. */
+  --primary-ink: oklch(from var(--primary) max(l, 0.7) c h);
 
-  --chart-1: oklch(0.546 0.215 262.88);
   --chart-2: oklch(0.64 0.13 195);
   --chart-3: oklch(0.68 0.15 145);
   --chart-4: oklch(0.72 0.16 75);
   --chart-5: oklch(0.58 0.19 330);
 
-  --sidebar: oklch(0.21 0.006 285.885 / 0.85);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.546 0.215 262.88);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.274 0.006 286.033);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 0.1);
-  --sidebar-ring: oklch(0.546 0.215 262.88);
+  --sidebar: oklch(from var(--primary) 0.22 calc(c * 0.19 * var(--surface-tint)) h / 0.85);
+  --sidebar-foreground: var(--foreground);
+  --sidebar-accent: var(--secondary);
+  --sidebar-accent-foreground: var(--foreground);
+  --sidebar-border: var(--border);
+}
+
+/* `text-primary` renders as the contrast-safe ink in both themes (a no-op
+   for mid-lightness brands like the default blue in light mode or Monark
+   orange in dark mode). */
+:root .text-primary {
+  color: var(--primary-ink);
 }
 
 h1,

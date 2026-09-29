@@ -3,76 +3,60 @@ import type { Metadata } from "next";
 import { Nunito_Sans } from "next/font/google";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages, getTranslations } from "next-intl/server";
-import { BRANDING, isBrandingConfigured } from "@monark/branding";
+import { BRANDING } from "@monark/branding";
 import { ThemeProvider } from "@/lib/theme-provider";
 import { TrpcProvider } from "@/lib/trpc-provider";
 import { DevOverlay } from "@/components/dev-overlay/dev-overlay";
 import { RouteProgress } from "@/components/route-progress";
 import { Toaster } from "@/components/ui/sonner";
 import { getBootstrapStatus } from "@/lib/bootstrap-gate";
-import { pickContrastForeground } from "@/lib/color-contrast";
+import { brandThemeVars, type DarkColorMode } from "@/lib/brand-theme";
 import "./globals.css";
 
-// CSS variables that the whole UI keys off the primary brand color :
-//   - `--primary` : shadcn primary buttons + `text-primary` / `bg-primary`
-//   - `--primary-foreground` : text painted on top of `--primary`
-//   - `--ring`    : focus rings on form controls
-//   - `--sidebar-primary` / `--sidebar-ring` : drawer accents
-//   - `--chart-1` : default first-series chart color
-//   - `--brand-primary` / `--brand-accent` : gradient surfaces
-//     (user-avatar fallback gradient, NProgress bar trailing edge,
-//     notifications-bell count pill, etc.)
-//   - `--brand-foreground` : text + icons painted on top of
-//     `--brand-primary` / `--brand-accent` (avatar initials, count
-//     badge digits, etc.). Always contrast-correct for the active
-//     brand color.
-// Overriding all of them at the root `<html>` makes the whole app
-// follow the deployment's brand color without each component having to
-// know about branding. The values in globals.css are the neutral
-// fallback for surfaces rendered outside this layout (the component
-// screenshot harness, for instance) ; the app itself always gets the
-// tokens below.
-function brandStyle(orgPrimaryColor: string | null): React.CSSProperties {
+// The brand CSS variables, set on <html> so the whole app follows the
+// deployment's brand without each component knowing about branding. The
+// root layout only supplies the per-theme brand inputs (`brandThemeVars` :
+// `--brand-light` / `--brand-dark` + foregrounds + accents) and the surface
+// tint ; globals.css maps them onto `--primary`, `--primary-foreground`,
+// `--ring`, the sidebar, `--chart-1`, `--brand-primary` / `--brand-accent`
+// / `--brand-foreground` (gradients, the avatar fallback, the notification
+// badge) for the active theme, and derives every surface from `--primary`.
+function brandStyle(
+  orgPrimaryColor: string | null,
+  orgPrimaryColorDark: string | null,
+  orgPrimaryColorDarkMode: DarkColorMode,
+  orgSurfaceTint: number | null,
+): React.CSSProperties {
   // Two sources, one token set. The singleton org's `primaryColor` wins
-  // when it's set ; otherwise the deployment's `BRANDING_PRIMARY`. Both
-  // drive EVERY token below — previously the `--primary` family sat
-  // behind an `if (orgPrimaryColor)`, so a deploy that set only
-  // `BRANDING_PRIMARY` still rendered every button, focus ring, sidebar
-  // accent and first chart series in the starter's own CSS color.
-  const primary = orgPrimaryColor ?? BRANDING.brandPrimary;
-
-  // The accent is the second stop of the gradient surfaces (NProgress,
-  // the avatar fallback). The org record carries a primary only, so when
-  // the deployment hasn't configured its own accent we let the org color
-  // stand in for both stops rather than pairing the brand with the
-  // starter's unrelated placeholder. A deployment that DID set
-  // `BRANDING_ACCENT` gets it honoured — that used to be discarded the
-  // moment an org existed, flattening every gradient to one flat color.
-  const accent =
-    orgPrimaryColor && !isBrandingConfigured("brandAccent")
-      ? orgPrimaryColor
-      : BRANDING.brandAccent;
-
-  // Contrast-correct foreground (black or white) via WCAG relative
-  // luminance, so primary buttons + brand-painted chrome (avatar
-  // initials, badge digits) stay legible whatever color the operator
-  // picked — a yellow or pastel brand would render white-on-light
-  // otherwise.
-  const onPrimary = pickContrastForeground(primary);
-
+  // when it's set ; otherwise the deployment's `BRANDING_PRIMARY`. Each
+  // theme gets it adapted for contrast on its own background (a black
+  // brand is lifted for dark mode, a white one darkened for light mode),
+  // unless the org chose otherwise for dark mode (`primaryColorDarkMode` :
+  // keep the primary as is, or use its exact `primaryColorDark`).
+  //
+  // `BRANDING_ACCENT` is chosen to pair with `BRANDING_PRIMARY`, so it is
+  // honoured only while that primary is in use ; once the org sets its own
+  // color, that color stands in as the accent (gradients, badge) too.
   const style: Record<string, string> = {
-    "--brand-primary": primary,
-    "--brand-accent": accent,
-    "--brand-foreground": onPrimary,
-    "--primary": primary,
-    "--primary-foreground": onPrimary,
-    "--ring": primary,
-    "--sidebar-primary": primary,
-    "--sidebar-primary-foreground": onPrimary,
-    "--sidebar-ring": primary,
-    "--chart-1": primary,
+    ...brandThemeVars({
+      primary: orgPrimaryColor ?? BRANDING.brandPrimary,
+      darkMode: orgPrimaryColor ? orgPrimaryColorDarkMode : "adaptive",
+      primaryDark: orgPrimaryColor ? orgPrimaryColorDark : null,
+      accent: orgPrimaryColor ? null : BRANDING.brandAccent,
+    }),
+    // Scales the brand tint globals.css derives every surface from.
+    "--surface-tint": String(surfaceTint(orgSurfaceTint)),
   };
   return style as React.CSSProperties;
+}
+
+// The org's own tint wins (set on the organization page), else the
+// deployment's `BRANDING_SURFACE_TINT` ; clamped to 0..2, and anything
+// unparseable falls back to the default subtle tint rather than breaking
+// every surface.
+function surfaceTint(orgSurfaceTint: number | null): number {
+  const value = orgSurfaceTint ?? Number.parseFloat(BRANDING.surfaceTint);
+  return Number.isFinite(value) ? Math.min(2, Math.max(0, value)) : 1;
 }
 
 const nunitoSans = Nunito_Sans({
@@ -102,6 +86,9 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   // root layout.
   const status = await getBootstrapStatus();
   const orgPrimaryColor = status?.singletonPrimaryColor ?? null;
+  const orgPrimaryColorDark = status?.singletonPrimaryColorDark ?? null;
+  const orgPrimaryColorDarkMode = status?.singletonPrimaryColorDarkMode ?? "adaptive";
+  const orgSurfaceTint = status?.singletonSurfaceTint ?? null;
 
   return (
     <html
@@ -110,7 +97,17 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
       // Inline `style` for the brand CSS variables : simplest path that
       // keeps SSR + client in sync without an extra render cycle, and
       // takes precedence over the `:root` rules in globals.css.
-      style={brandStyle(orgPrimaryColor)}
+      style={brandStyle(
+        orgPrimaryColor,
+        orgPrimaryColorDark,
+        orgPrimaryColorDarkMode,
+        orgSurfaceTint,
+      )}
+      // Which org the brand tokens above come from, so the organization
+      // page only live-previews edits to the org that actually themes the app.
+      data-brand-org={status?.singletonOrganizationId ?? undefined}
+      // The deployment's tint, for previewing "reset to default" there.
+      data-brand-default-tint={String(surfaceTint(null))}
       suppressHydrationWarning
     >
       <body className="font-sans antialiased overflow-y-hidden">

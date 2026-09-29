@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Eraser, Pipette } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
@@ -21,6 +22,12 @@ export function isHexColor(value: string): boolean {
  * is the raw hex string (`""` = unset), and `onChange` fires on both a picker
  * save and a text edit. The parent decides how to validate / normalize on save.
  *
+ * An unset (or not yet valid) value shows as a pipette ("pick a color")
+ * rather than a fake
+ * color, so "no color" never reads as white. `clearable` adds a "No color"
+ * action to the picker for fields where unset is a meaningful choice (it
+ * falls back to a default, or means "automatic").
+ *
  * Use this for every "pick a color" affordance (Calendars, Roles, Organizations)
  * so they share one look and behaviour.
  */
@@ -32,6 +39,7 @@ export function ColorInput({
   disabled = false,
   defaultColor = "#6366f1",
   swatchOnly = false,
+  clearable = false,
   className,
   "aria-label": ariaLabel,
 }: {
@@ -44,6 +52,8 @@ export function ColorInput({
   defaultColor?: string;
   /** Hide the hex text field (swatch + picker only). */
   swatchOnly?: boolean;
+  /** Offer a "No color" action in the picker that sets the value to `""`. */
+  clearable?: boolean;
   className?: string;
   "aria-label"?: string;
 }) {
@@ -55,14 +65,29 @@ export function ColorInput({
     <div className={cn("flex items-center gap-3", className)}>
       <Popover open={open} onOpenChange={(next) => !disabled && setOpen(next)}>
         <PopoverTrigger asChild>
-          <ColorSwatch
-            hex={valid ? value : "#ffffff"}
-            size="h-9 w-9"
-            disabled={disabled}
-            aria-label={ariaLabel ?? tc("chooseColor")}
-            aria-haspopup="dialog"
-            className={cn(!valid && "border-dashed", disabled && "cursor-not-allowed opacity-50")}
-          />
+          {valid ? (
+            <ColorSwatch
+              hex={value}
+              size="h-9 w-9"
+              disabled={disabled}
+              aria-label={ariaLabel ?? tc("chooseColor")}
+              aria-haspopup="dialog"
+              className={cn(disabled && "cursor-not-allowed opacity-50")}
+            />
+          ) : (
+            <button
+              type="button"
+              disabled={disabled}
+              aria-label={`${ariaLabel ?? tc("chooseColor")} (${tc("noColor")})`}
+              aria-haspopup="dialog"
+              className={cn(
+                "flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded border border-dashed border-input bg-muted text-muted-foreground",
+                disabled && "cursor-not-allowed opacity-50",
+              )}
+            >
+              <Pipette aria-hidden className="size-4" />
+            </button>
+          )}
         </PopoverTrigger>
         <PopoverContent className="w-auto p-3" align="start">
           <ColorPicker
@@ -75,6 +100,20 @@ export function ColorInput({
             }}
             onCancel={() => setOpen(false)}
           />
+          {clearable && (
+            <button
+              type="button"
+              disabled={!valid}
+              onClick={() => {
+                onChange("");
+                setOpen(false);
+              }}
+              className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-md py-1.5 text-xs text-muted-foreground hover:bg-accent hover:text-accent-foreground disabled:pointer-events-none disabled:opacity-50"
+            >
+              <Eraser aria-hidden className="size-3.5" />
+              {tc("noColor")}
+            </button>
+          )}
         </PopoverContent>
       </Popover>
       {!swatchOnly && (
