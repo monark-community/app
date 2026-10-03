@@ -165,20 +165,21 @@ function lint(file) {
   }
 
   // Budget
-  const budget = BUDGETS[type ?? (isIndex ? "landing" : "")];
+  const budgetType = type ?? (isIndex ? "landing" : "");
+  const budget = BUDGETS[budgetType];
   if (budget) {
     const [min, max] = budget;
     if (doc.words > max)
       add(
         "warn",
         "budget",
-        `${doc.words} words; ${type} budget is ${min}–${max}. Split by job or move detail to reference/concept`,
+        `${doc.words} words; ${budgetType} budget is ${min}–${max}. Split by job or move detail to reference/concept`,
       );
     if (doc.words < min)
       add(
         "warn",
         "budget",
-        `${doc.words} words; under the ${min}-word floor for a ${type}. Merge into the page that owns the topic?`,
+        `${doc.words} words; under the ${min}-word floor for a ${budgetType}. Merge into the page that owns the topic?`,
       );
   } else if (!isIndex && doc.words < 80) {
     add(
@@ -187,6 +188,20 @@ function lint(file) {
       `${doc.words} words; likely a fragment from a heading split. Merge it into its owner page`,
     );
   }
+
+  // Links : every relative link must land on a file that exists. Moving pages
+  // is the main way docs rot, and a dead link is invisible until a reader
+  // hits it.
+  doc.proseLines.forEach((line, i) => {
+    // `](<path (with) parens>)` or `](path)`, either with an optional #hash.
+    for (const m of line.matchAll(/\]\((?:<([^>]+)>|([^)\s]+))\)/g)) {
+      const target = (m[1] ?? m[2] ?? "").replace(/#.*$/, "");
+      if (!target) continue;
+      if (/^(https?:|mailto:|#|\/)/.test(target)) continue;
+      const resolved = path.resolve(path.dirname(file), decodeURI(target));
+      if (!fs.existsSync(resolved)) add("error", "link", `broken link: ${target}`, i + 1);
+    }
+  });
 
   // Title
   if (!doc.title) add("error", "title", "no H1 title");
