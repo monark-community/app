@@ -34,7 +34,7 @@ const FIGURES = [
     name: "records-table",
     story: "fields-table",
     viewport: { width: 1360, height: 420 },
-    doc: "docs/user-guide/data/the-records-table.md",
+    doc: "docs/use/data/find-records.md",
   },
   {
     name: "navigation-rail",
@@ -49,13 +49,13 @@ const FIGURES = [
     name: "record-form",
     story: "fields-form",
     viewport: { width: 760, height: 900 },
-    doc: "docs/user-guide/data/creating-a-record.md",
+    doc: "docs/use/data/create-a-record.md",
   },
   {
     name: "kanban-board",
     story: "kanban-board",
     viewport: { width: 1400, height: 560 },
-    doc: "packages/kanban/docs/user-guide.md",
+    doc: "packages/kanban/docs/use/add-a-card.md",
   },
   {
     name: "signin-step-one",
