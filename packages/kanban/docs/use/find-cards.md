@@ -15,7 +15,7 @@ You can filter on title, description, status (the column), assignee, reviewer, p
 
 ## Save a filter as a view
 
-1. With a filter applied, open **Views** and choose **Save current query…**.
+1. With a filter applied, open **Views** and choose **Save current query…**
 2. Name the view. Turn on **Share with everyone** to let everyone who can see the board use it.
 3. Click **Save**.
 

@@ -7,7 +7,7 @@ type: how-to
 Save a query you run often so you can reapply it in one click. Views are available where your model has the query bar.
 
 1. Type your query in the query bar, for example `status:open assignee:@me`.
-2. Open **Views** and choose **Save current query…**.
+2. Open **Views** and choose **Save current query…**
 3. Name the view. To let everyone with access to the model use it, turn on **Share with everyone**.
 4. Click **Save**.
 
