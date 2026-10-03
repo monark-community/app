@@ -36,7 +36,7 @@ const BUDGETS = {
   reference: [0, Infinity],
   concept: [300, 900],
   runbook: [150, 700],
-  decision: [300, 800],
+  decision: [150, 800],
   landing: [20, 200],
 };
 

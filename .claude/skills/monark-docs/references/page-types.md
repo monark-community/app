@@ -9,7 +9,7 @@ Seven types. Each has one job, a template, and a word budget (body words, exclud
 | reference | let someone look up a fact                    | no cap; no prose beyond one intro line per table | reference                  |
 | concept   | build a mental model                          | 300–900                                          | concepts                   |
 | runbook   | perform an operation safely                   | 150–700 per page                                 | operate                    |
-| decision  | record why an option was chosen               | 300–800                                          | decisions                  |
+| decision  | record why an option was chosen               | 150–800                                          | decisions                  |
 | landing   | orient and order a folder                     | 40–200                                           | every folder's `_index.md` |
 
 Every page starts with frontmatter declaring its type; the linter reads it.
