@@ -9,7 +9,7 @@ The guide is grouped below ; each page is structured top-to-bottom in the order 
 - **[Signing in and your account](account/_index.md)** ; anyone with a Monark account. Covers the sign-up + sign-in flows, password resets, two-factor authentication, profile editing, notification preferences, personal API keys, and how to delete (or rescue) your account.
 - **[Navigating the app](navigation/_index.md)** ; anyone, again. Covers the navigation rail, the app bar (breadcrumb, global search, the assistant launcher, and your avatar ; which now holds your notifications), the drawers, and the keyboard / touch affordances around them.
 - **[The assistant](assistant.md)** ; the built-in AI assistant (where enabled) : opening it, chatting about your data, and confirming the changes it proposes.
-- **[Working with data (records)](data/_index.md)** ; the custom record databases (Data Models) your admins set up : finding a model, the records table, filtering + saved views, creating / editing records, and following changes.
+- **[Working with data (records)](../use/data/_index.md)** ; moved to the new **Use Monark** section : finding, filtering, creating and following records.
 - **[Automations](automations.md)** ; building a flow (triggers, actions, wiring), running and testing it, run history + logs, and what a flow is allowed to do.
 - **[Using values in an automation](automation-variables/_index.md)** ; the companion to the above : how a step reuses values from the trigger, earlier steps, and workflow variables (the variable picker, the value/variable toggle, reference names, the Set Variable step).
 - **[Using the public API](public-api/_index.md)** ; for developers integrating with Monark (where the feature is enabled). Covers creating an API key (full or limited to a subset of your permissions), authenticating, the `/api/v1` endpoints + OpenAPI spec, rate limits, errors, and service accounts for shared integrations.
@@ -24,7 +24,7 @@ The guide is grouped below ; each page is structured top-to-bottom in the order 
 Optional modules : each keeps its user guide **with the module** (so removing the module removes its docs), and only applies where the module is enabled.
 
 - **[Calendar](../../packages/calendar/docs/user-guide.md)** ; Day / Week / Month / Agenda views, creating and moving events, reminders, conflict warnings, ICS import/export, and managing calendars.
-- **[Kanban](../../packages/kanban/docs/user-guide.md)** ; boards, columns, and cards ; drag-and-drop, assignees / reviewers, priority / due / subtasks, and filtering + saved views.
+- **[Kanban](../../packages/kanban/docs/use/_index.md)** ; moved to the new **Use Monark** section : boards, columns, cards, and filtering.
 - **[Wiki](../../packages/wiki/docs/user-guide.md)** ; a nested tree of pages, each with an icon, title, and rich-text content ; creating sub-pages, moving pages around the tree, duplicating, and search.
 
 ## What's _not_ documented here

@@ -2,6 +2,8 @@
 
 Internal documentation for the Monark App monorepo.
 
+Published docs are moving to eight reader-facing sections : `get-started/`, `use/`, `administer/`, `build/`, `reference/`, `concepts/`, `operate/` and `decisions/`. [use/data](use/data/_index.md) and Kanban ([packages/kanban/docs/use](../packages/kanban/docs/use/_index.md)) are migrated ; the folders below follow area by area. Write and place pages with the `monark-docs` skill ([.claude/skills/monark-docs](../.claude/skills/monark-docs/SKILL.md)).
+
 - [user-guide/](user-guide/) ; what the app does, written for the people using it. Covers signing in, your account, navigating the chrome, everything under `/admin`, the public API, and automation variables. No code, no scripts.
 - [features-planning/](features-planning/) ; per-feature implementation specs. **Shipped** specs stay in the `phase-0`…`phase-3` folders as immutable historical records (each links to its live module README) ; **[proposed/](features-planning/proposed/)** holds designed-but-unbuilt features. See the [folder README](features-planning/README.md) for the shipped-vs-proposed index.
 

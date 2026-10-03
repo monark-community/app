@@ -47,7 +47,7 @@ Wired pages live in `services/web/src/app/(authed)/<area>/` and import the modul
 
 ## 5. Docs + tests
 
-- **README** — follow the shape the other packages use (What's here / Key concepts / Public API / Data model / Events / tRPC surface). For an **extended** module, keep the _user_ guide in `packages/<name>/docs/user-guide.md` and link it from the [user-guide index](../user-guide/_index.md) — see [user-doc.md](user-doc.md).
+- **README** — follow the shape the other packages use (What's here / Key concepts / Public API / Data model / Events / tRPC surface). For an **extended** module, keep its published docs under `packages/<name>/docs/<section>/` (usually `use/`, one how-to per job) and link the folder from the section's landing page ; the `monark-docs` skill ([.claude/skills/monark-docs](../../.claude/skills/monark-docs/SKILL.md)) covers where pages go and how they read.
 - **Tests** — at least one integration suite (required by `check:modules`) ; see [testing.md](testing.md). Add a `THRESHOLDS` entry in `tools/merge-coverage.ts` for the new package.
 - **CHANGELOG** — one dated entry under `[Unreleased]`.
 

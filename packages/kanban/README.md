@@ -1,6 +1,6 @@
 # @monark/kanban
 
-> **User guide:** [docs/user-guide.md](docs/user-guide.md) — how to use the boards (this README is the developer reference).
+> **User guide:** [docs/use/](docs/use/_index.md) — how to use the boards (this README is the developer reference).
 
 A configurable **Kanban board** view (a sibling to `@monark/calendar`). An
 organization owns multiple named boards ; each board owns an ordered list of
