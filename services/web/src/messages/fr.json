@@ -109,7 +109,8 @@
     "continue": "Continuer",
     "loading": "Chargement…",
     "chooseColor": "Choisir une couleur",
-    "unsavedChanges": "Modifications non enregistrées"
+    "unsavedChanges": "Modifications non enregistrées",
+    "noColor": "Aucune couleur"
   },
   "dataForm": {
     "attributesTitle": "Attributs",
@@ -1123,12 +1124,14 @@
         "labels": {
           "displayName": "Nom affiché",
           "assistantName": "Nom de l'assistant IA",
-          "primaryColor": "Couleur de marque principale"
+          "primaryColor": "Couleur principale",
+          "surfaceTint": "Teinte de fond",
+          "primaryColorDark": "Couleur en thème sombre"
         },
         "placeholders": {
           "displayName": "Le nom affiché de l'organisation"
         },
-        "primaryColorHint": "Code hexadécimal comme #2563EB. Laissez vide pour utiliser la couleur de marque du déploiement.",
+        "primaryColorHint": "Couleur utilisée pour les actions principales et les différents accents de la plateforme.",
         "assistantNameHint": "Le nom de l'assistant IA de cette organisation, dans le clavardage et dans ses propres réponses. Laissez vide pour utiliser la valeur par défaut du déploiement ({defaultName}).",
         "logoHint": "Recadrage carré, max 2 Mo. JPEG, PNG ou WebP.",
         "logoUploadAria": "Téléverser un logo d'organisation",
@@ -1144,7 +1147,14 @@
           "notAuthenticated": "Reconnectez-vous puis réessayez.",
           "forbidden": "Vous n'avez plus la permission de faire ceci.",
           "upstream": "Le téléversement a échoué. Réessayez."
-        }
+        },
+        "surfaceTintHint": "Ajustez l’influence de la couleur principale sur les surfaces de fond. Réglez à 0 pour des fonds neutres.",
+        "surfaceTintReset": "Réinitialiser",
+        "brandPreviewHint": "Aperçu ; pas encore enregistré.",
+        "primaryColorDarkLowContrast": "Contraste faible sur fond sombre ({ratio}:1).",
+        "advancedSettings": "Options avancées",
+        "primaryAdjusted": "Votre couleur de marque principale sera ajustée selon le thème pour respecter les standards d’accessibilité.",
+        "primaryColorDarkHint": "Laissez vide pour un ajustement automatique respectant l’accessibilité, ou configurez votre propre valeur."
       }
     },
     "rbac": {

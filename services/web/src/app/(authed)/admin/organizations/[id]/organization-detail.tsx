@@ -5,12 +5,18 @@ import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { ColorInput } from "@/components/ui/color-input";
 import { Input } from "@/components/ui/input";
+import { Slider } from "@/components/ui/slider";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FieldRow } from "@/components/patterns";
 import { DirtyFormBar } from "@/components/dirty-form-bar";
 import { OrganizationLogoEditor } from "@/components/organization-logo-editor";
 import { PageHeader } from "@/components/page-header";
 import { trpc } from "@/lib/trpc";
+import { useBrandPreview, validHex } from "@/lib/brand-preview";
+import { brandThemeColors, type DarkColorMode } from "@/lib/brand-theme";
+import { BRAND_ADAPT_BELOW, contrastOnTheme } from "@monark/common/color";
+import { ChevronRight, TriangleAlert } from "lucide-react";
 
 export function OrganizationDetail({
   orgId,
@@ -28,7 +34,19 @@ export function OrganizationDetail({
     { refetchOnWindowFocus: false },
   );
   const update = trpc.organizations.adminUpdate.useMutation({
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
+      // A saved brand change on the org that themes this deployment is
+      // painted by the server-rendered root layout, so reload to pick it
+      // up everywhere ; the preview already showed it, so nothing jumps.
+      const brandChanged =
+        variables.primaryColor !== undefined ||
+        variables.primaryColorDark !== undefined ||
+        variables.primaryColorDarkMode !== undefined ||
+        variables.surfaceTint !== undefined;
+      if (brandChanged && isBrandOrg()) {
+        window.location.reload();
+        return;
+      }
       void utils.organizations.adminGet.invalidate({ id: orgId });
       void utils.organizations.adminList.invalidate();
       toast.success(t("saved"));
@@ -66,12 +84,19 @@ export function OrganizationDetail({
   // leave the form pointing at stale values.
   const [displayName, setDisplayName] = useState("");
   const [primaryColor, setPrimaryColor] = useState("");
+  // Dark theme color : blank = adapted automatically, a color = used as is.
+  const [primaryColorDark, setPrimaryColorDark] = useState("");
+  const primaryColorDarkMode: DarkColorMode = primaryColorDark.trim() ? "custom" : "adaptive";
+  // Null = unset on the org, so the deployment's BRANDING_SURFACE_TINT applies.
+  const [surfaceTint, setSurfaceTint] = useState<number | null>(null);
   const [assistantName, setAssistantName] = useState("");
 
   useEffect(() => {
     if (!query.data) return;
     setDisplayName(query.data.displayName);
     setPrimaryColor(query.data.primaryColor ?? "");
+    setPrimaryColorDark(query.data.primaryColorDark ?? "");
+    setSurfaceTint(query.data.surfaceTint);
   }, [query.data]);
 
   useEffect(() => {
@@ -86,6 +111,9 @@ export function OrganizationDetail({
     return {
       displayName: query.data.displayName,
       primaryColor: query.data.primaryColor ?? "",
+      primaryColorDarkMode: darkModeOf(query.data.primaryColorDarkMode),
+      primaryColorDark: query.data.primaryColorDark ?? "",
+      surfaceTint: query.data.surfaceTint,
     };
   }, [query.data]);
 
@@ -94,11 +122,66 @@ export function OrganizationDetail({
   // half-loaded form never shows the save bar.
   const assistantBaseline = brandingEnabled ? (branding.data?.assistantName ?? "") : null;
 
+  const brandDirty = Boolean(
+    baseline &&
+    (primaryColor.trim() !== baseline.primaryColor ||
+      primaryColorDarkMode !== baseline.primaryColorDarkMode ||
+      primaryColorDark.trim() !== baseline.primaryColorDark ||
+      surfaceTint !== baseline.surfaceTint),
+  );
   const dirty = Boolean(
-    (baseline &&
-      (displayName.trim() !== baseline.displayName ||
-        primaryColor.trim() !== baseline.primaryColor)) ||
+    brandDirty ||
+    (baseline && displayName.trim() !== baseline.displayName) ||
     (assistantBaseline !== null && assistantName.trim() !== assistantBaseline),
+  );
+
+  // What each theme will actually use. Light mode always adapts a primary
+  // that barely differs from its background (white, pale yellow) ; dark
+  // mode follows the chosen behaviour. Adaptations show as info notes ; a
+  // dark-mode color that is used as is ("same" or "custom") warns when it
+  // lacks contrast on the dark background.
+  const editedPrimary = validHex(primaryColor);
+  const editedDark = validHex(primaryColorDark);
+  const themeColors = editedPrimary
+    ? brandThemeColors({
+        primary: editedPrimary,
+        darkMode: primaryColorDarkMode,
+        primaryDark: editedDark,
+        accent: null,
+      })
+    : null;
+  const adaptedLight =
+    editedPrimary && themeColors && themeColors.light !== editedPrimary ? themeColors.light : null;
+  const adaptedDark =
+    primaryColorDarkMode === "adaptive" &&
+    editedPrimary &&
+    themeColors &&
+    themeColors.dark !== editedPrimary
+      ? themeColors.dark
+      : null;
+  // A dark theme color the org set is used as is, so warn when it lacks contrast.
+  const darkCustomContrast = editedDark ? contrastOnTheme(editedDark, "dark") : null;
+  const darkLowContrast =
+    darkCustomContrast !== null && darkCustomContrast < BRAND_ADAPT_BELOW
+      ? darkCustomContrast
+      : null;
+
+  // Advanced settings start open when they hold a non-default choice, so
+  // nothing that affects the theme is hidden behind a closed section.
+  const [advancedOpen, setAdvancedOpen] = useState(false);
+  const advancedCustomized = Boolean(
+    baseline && (baseline.primaryColorDarkMode !== "adaptive" || baseline.surfaceTint !== null),
+  );
+  useEffect(() => {
+    if (advancedCustomized) setAdvancedOpen(true);
+  }, [advancedCustomized]);
+
+  // Unsaved color / tint edits re-theme the whole app live (only when this
+  // org is the one theming the deployment) ; cancel or leaving reverts.
+  const { isBrandOrg, defaultTint } = useBrandPreview(
+    orgId,
+    { primaryColor, primaryColorDarkMode, primaryColorDark, surfaceTint },
+    brandDirty,
   );
 
   function onCancel() {
@@ -106,19 +189,25 @@ export function OrganizationDetail({
     if (!baseline) return;
     setDisplayName(baseline.displayName);
     setPrimaryColor(baseline.primaryColor);
+    setPrimaryColorDark(baseline.primaryColorDark);
+    setSurfaceTint(baseline.surfaceTint);
   }
 
   function onSave() {
     if (!baseline) return;
     const nextDisplayName = displayName.trim();
     const nextColor = primaryColor.trim();
+    const nextColorDark = primaryColorDark.trim();
     const nextAssistantName = assistantName.trim();
 
     if (nextDisplayName.length < 1 || nextDisplayName.length > 120) {
       toast.error(t("saveError"));
       return;
     }
-    if (nextColor !== "" && !/^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(nextColor)) {
+    if (
+      (nextColor !== "" && !validHex(nextColor)) ||
+      (nextColorDark !== "" && !validHex(nextColorDark))
+    ) {
       toast.error(t("invalidColor"));
       return;
     }
@@ -129,6 +218,9 @@ export function OrganizationDetail({
       id: string;
       displayName?: string;
       primaryColor?: string | null;
+      primaryColorDark?: string | null;
+      primaryColorDarkMode?: DarkColorMode;
+      surfaceTint?: number | null;
     } = { id: orgId };
     if (nextDisplayName !== baseline.displayName) {
       payload.displayName = nextDisplayName;
@@ -136,7 +228,21 @@ export function OrganizationDetail({
     if (nextColor !== baseline.primaryColor) {
       payload.primaryColor = nextColor === "" ? null : nextColor;
     }
-    const orgChanged = payload.displayName !== undefined || payload.primaryColor !== undefined;
+    if (primaryColorDarkMode !== baseline.primaryColorDarkMode) {
+      payload.primaryColorDarkMode = primaryColorDarkMode;
+    }
+    if (nextColorDark !== baseline.primaryColorDark) {
+      payload.primaryColorDark = nextColorDark === "" ? null : nextColorDark;
+    }
+    if (surfaceTint !== baseline.surfaceTint) {
+      payload.surfaceTint = surfaceTint;
+    }
+    const orgChanged =
+      payload.displayName !== undefined ||
+      payload.primaryColor !== undefined ||
+      payload.primaryColorDark !== undefined ||
+      payload.primaryColorDarkMode !== undefined ||
+      payload.surfaceTint !== undefined;
     const assistantChanged = assistantBaseline !== null && nextAssistantName !== assistantBaseline;
 
     // Two backing stores (the org row, and chat's metadata sidecar), one save
@@ -225,9 +331,19 @@ export function OrganizationDetail({
               onChange={setPrimaryColor}
               placeholder="#2563EB"
               defaultColor="#ffffff"
+              clearable
               aria-label={t("labels.primaryColor")}
             />
             <p className="text-xs text-muted-foreground">{t("primaryColorHint")}</p>
+            {(adaptedLight || adaptedDark) && (
+              <p
+                role="status"
+                className="flex items-start gap-1.5 text-xs font-medium text-amber-700 dark:text-amber-400"
+              >
+                <TriangleAlert aria-hidden className="mt-px size-3.5 shrink-0" />
+                {t("primaryAdjusted")}
+              </p>
+            )}
           </FieldRow>
 
           {/* Assistant branding. Rendered only when `chat.org-branding` is on
@@ -249,6 +365,69 @@ export function OrganizationDetail({
             </FieldRow>
           )}
         </div>
+
+        <Collapsible open={advancedOpen} onOpenChange={setAdvancedOpen} className="space-y-5">
+          <CollapsibleTrigger className="group flex cursor-pointer items-center gap-1.5 text-sm font-semibold">
+            <ChevronRight
+              aria-hidden
+              className="size-4 transition-transform group-data-[state=open]:rotate-90"
+            />
+            {t("advancedSettings")}
+          </CollapsibleTrigger>
+          <CollapsibleContent className="@container space-y-5">
+            <FieldRow label={t("labels.primaryColorDark")} htmlFor="org-primary-color-dark">
+              <ColorInput
+                id="org-primary-color-dark"
+                value={primaryColorDark}
+                onChange={setPrimaryColorDark}
+                placeholder={adaptBrandPlaceholder(editedPrimary)}
+                defaultColor={adaptBrandPlaceholder(editedPrimary) || "#ffffff"}
+                clearable
+                aria-label={t("labels.primaryColorDark")}
+              />
+              <p className="text-xs text-muted-foreground">{t("primaryColorDarkHint")}</p>
+              {darkLowContrast !== null && (
+                <p
+                  role="status"
+                  className="flex items-start gap-1.5 text-xs font-medium text-amber-700 dark:text-amber-400"
+                >
+                  <TriangleAlert aria-hidden className="mt-px size-3.5 shrink-0" />
+                  {t("primaryColorDarkLowContrast", { ratio: darkLowContrast.toFixed(1) })}
+                </p>
+              )}
+            </FieldRow>
+
+            <FieldRow label={t("labels.surfaceTint")} htmlFor="org-surface-tint">
+              <div className="flex items-center gap-3">
+                <Slider
+                  id="org-surface-tint"
+                  aria-label={t("labels.surfaceTint")}
+                  min={0}
+                  max={2}
+                  step={0.05}
+                  value={[surfaceTint ?? defaultTint()]}
+                  onValueChange={([value]) => {
+                    if (value !== undefined) setSurfaceTint(Math.round(value * 100) / 100);
+                  }}
+                  className="max-w-xs"
+                />
+                <span className="w-12 text-sm tabular-nums">
+                  {(surfaceTint ?? defaultTint()).toFixed(2)}
+                </span>
+                {surfaceTint !== null && (
+                  <button
+                    type="button"
+                    className="text-xs text-primary underline underline-offset-2"
+                    onClick={() => setSurfaceTint(null)}
+                  >
+                    {t("surfaceTintReset")}
+                  </button>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground">{t("surfaceTintHint")}</p>
+            </FieldRow>
+          </CollapsibleContent>
+        </Collapsible>
       </div>
 
       <DirtyFormBar
@@ -264,4 +443,16 @@ export function OrganizationDetail({
       />
     </section>
   );
+}
+
+// The stored mode, defaulting anything unset or unknown to "adaptive".
+function darkModeOf(value: string | null | undefined): DarkColorMode {
+  return value === "same" || value === "custom" ? value : "adaptive";
+}
+
+// The automatic dark-mode color, suggested as the starting point for "custom".
+function adaptBrandPlaceholder(primary: string | null): string {
+  return primary
+    ? brandThemeColors({ primary, darkMode: "adaptive", primaryDark: null, accent: null }).dark
+    : "";
 }

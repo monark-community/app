@@ -37,6 +37,25 @@ export type BootstrapStatus = {
   singletonDisplayName: string | null;
   singletonLogoUrl: string | null;
   singletonPrimaryColor: string | null;
+  /**
+   * The singleton org's surface tint (0..2), the multiplier the root
+   * layout hands the theme for deriving surfaces from the primary color.
+   * Null when unset, so the deployment's `BRANDING_SURFACE_TINT` applies.
+   */
+  singletonSurfaceTint: number | null;
+  /**
+   * The singleton org's explicit dark-mode brand color, same hex gate as
+   * `singletonPrimaryColor`. Null when unset, so the root layout adapts
+   * the primary for dark mode itself.
+   */
+  singletonPrimaryColorDark: string | null;
+  /**
+   * How dark mode derives the singleton org's brand color : "same" (the
+   * primary as is), "adaptive" (adapted when it lacks contrast ; also what
+   * an unset or unknown stored value reads as) or "custom"
+   * (`singletonPrimaryColorDark`).
+   */
+  singletonPrimaryColorDarkMode: "same" | "adaptive" | "custom";
 };
 
 export async function getBootstrapStatus(): Promise<BootstrapStatus> {
@@ -49,6 +68,9 @@ export async function getBootstrapStatus(): Promise<BootstrapStatus> {
   let singletonDisplayName: string | null = null;
   let singletonLogoUrl: string | null = null;
   let singletonPrimaryColor: string | null = null;
+  let singletonSurfaceTint: number | null = null;
+  let singletonPrimaryColorDark: string | null = null;
+  let singletonPrimaryColorDarkMode: "same" | "adaptive" | "custom" = "adaptive";
   if (organizationCount === 1) {
     const singleton = await findOnlyActiveOrganization();
     singletonOrganizationId = singleton?.id ?? null;
@@ -62,6 +84,17 @@ export async function getBootstrapStatus(): Promise<BootstrapStatus> {
     if (typeof raw === "string" && /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(raw)) {
       singletonPrimaryColor = raw;
     }
+    const rawMode = singleton?.primaryColorDarkMode;
+    if (rawMode === "same" || rawMode === "custom") singletonPrimaryColorDarkMode = rawMode;
+    const rawDark = singleton?.primaryColorDark;
+    if (typeof rawDark === "string" && HEX_RE.test(rawDark)) {
+      singletonPrimaryColorDark = rawDark;
+    }
+    // Same defensive stance as the color : an out-of-range value reads as unset.
+    const tint = singleton?.surfaceTint;
+    if (typeof tint === "number" && Number.isFinite(tint) && tint >= 0 && tint <= 2) {
+      singletonSurfaceTint = tint;
+    }
   }
   return {
     bootstrapped: organizationCount >= 1,
@@ -70,6 +103,9 @@ export async function getBootstrapStatus(): Promise<BootstrapStatus> {
     singletonDisplayName,
     singletonLogoUrl,
     singletonPrimaryColor,
+    singletonSurfaceTint,
+    singletonPrimaryColorDark,
+    singletonPrimaryColorDarkMode,
   };
 }
 

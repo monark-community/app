@@ -7,14 +7,22 @@ export type OrganizationCreatedEvent = DomainEventBase & {
 };
 
 // Emitted when an admin updates an organization profile (displayName, slug,
-// logoUrl, primaryColor). The `changed` array carries which fields rotated
+// logoUrl, primaryColor, primaryColorDark, primaryColorDarkMode, surfaceTint). The `changed` array carries which fields rotated
 // so subscribers can branch (e.g. invalidate slug-keyed caches when slug
 // changed). Actor is the rbac-gated admin who triggered the mutation.
 export type OrganizationUpdatedEvent = DomainEventBase & {
   type: "organization.updated";
   organizationId: string;
   actorId: string;
-  changed: Array<"displayName" | "slug" | "logoUrl" | "primaryColor">;
+  changed: Array<
+    | "displayName"
+    | "slug"
+    | "logoUrl"
+    | "primaryColor"
+    | "primaryColorDark"
+    | "primaryColorDarkMode"
+    | "surfaceTint"
+  >;
   previousSlug?: string;
 };
 

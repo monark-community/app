@@ -52,21 +52,21 @@ const mine = trpc.organizations.mine.useQuery(); // Organization[]
 
 tRPC procedures under `organizations.*`:
 
-| Procedure                                      | Input                                                      | Output                 |
-| ---------------------------------------------- | ---------------------------------------------------------- | ---------------------- |
-| `organizations.current`                        | —                                                          | `Organization \| null` |
-| `organizations.mine`                           | —                                                          | `Organization[]`       |
-| `organizations.bootstrapStatus`                | —                                                          | `BootstrapStatus`      |
-| `organizations.ensureBootstrap`                | `{ slug?, displayName?, primaryColor?, logoUrl? }?`        | bootstrap result       |
-| `organizations.adminList`                      | `{ search?, cursor?, limit? }`                             | paged org list         |
-| `organizations.adminGet`                       | `{ id }`                                                   | `Organization`         |
-| `organizations.adminUpdate`                    | `{ id, displayName?, slug?, logoUrl?, primaryColor? }`     | `Organization`         |
-| `organizations.invites.adminList`              | `{ organizationId }`                                       | pending invites        |
-| `organizations.invites.adminListAll`           | `{ search?, roleIds? }?`                                   | pending invites        |
-| `organizations.invites.adminCreate`            | `{ organizationId, email, displayName?, roleId, appUrl? }` | invite + token         |
-| `organizations.invites.adminRevoke`            | `{ inviteId }`                                             | void                   |
-| `organizations.invites.consumePending`         | —                                                          | `{ accepted }`         |
-| `organizations.metadata.{list,get,set,delete}` | org-scoped metadata inputs                                 | metadata rows          |
+| Procedure                                      | Input                                                                                                          | Output                 |
+| ---------------------------------------------- | -------------------------------------------------------------------------------------------------------------- | ---------------------- |
+| `organizations.current`                        | —                                                                                                              | `Organization \| null` |
+| `organizations.mine`                           | —                                                                                                              | `Organization[]`       |
+| `organizations.bootstrapStatus`                | —                                                                                                              | `BootstrapStatus`      |
+| `organizations.ensureBootstrap`                | `{ slug?, displayName?, primaryColor?, logoUrl? }?`                                                            | bootstrap result       |
+| `organizations.adminList`                      | `{ search?, cursor?, limit? }`                                                                                 | paged org list         |
+| `organizations.adminGet`                       | `{ id }`                                                                                                       | `Organization`         |
+| `organizations.adminUpdate`                    | `{ id, displayName?, slug?, logoUrl?, primaryColor?, primaryColorDark?, primaryColorDarkMode?, surfaceTint? }` | `Organization`         |
+| `organizations.invites.adminList`              | `{ organizationId }`                                                                                           | pending invites        |
+| `organizations.invites.adminListAll`           | `{ search?, roleIds? }?`                                                                                       | pending invites        |
+| `organizations.invites.adminCreate`            | `{ organizationId, email, displayName?, roleId, appUrl? }`                                                     | invite + token         |
+| `organizations.invites.adminRevoke`            | `{ inviteId }`                                                                                                 | void                   |
+| `organizations.invites.consumePending`         | —                                                                                                              | `{ accepted }`         |
+| `organizations.metadata.{list,get,set,delete}` | org-scoped metadata inputs                                                                                     | metadata rows          |
 
 ## Dependencies
 
@@ -106,5 +106,5 @@ Full scope from the planning doc; every item below ships once the dependent piec
 - **Member management** (`listMembers`, `removeMember`) — admin-guarded; ships after rbac.
 - **`switchActiveOrg`** — mutates the Supabase session claim; requires the JWT claim plumbing from `@monark/auth`.
 - **Slug-redirect middleware** — the `adminUpdate` rename flow already records `OrgSlugRedirect` rows (90-day TTL) ; only the resolving middleware + cleanup cron are still deferred.
-- **White-label** (primary color, logo upload) — `primaryColor` + `logoUrl` are editable via `adminUpdate` (validated as hex ; note the column, not oklch) ; the Supabase Storage bucket (`org-logos`) for logo upload comes with the Branding tab.
+- **White-label** (primary color, surface tint, logo upload) — `primaryColor` + `primaryColorDark` + `surfaceTint` + `logoUrl` are editable via `adminUpdate` (`primaryColor` / `primaryColorDark` validated as hex, note the column, not oklch ; `primaryColorDarkMode` (`"same"` / `"adaptive"` / `"custom"`, null = adaptive) says how dark mode derives its color and `primaryColorDark` holds the `"custom"` one, migrations `20260928130000_add_organization_primary_color_dark` + `20260928140000_add_organization_primary_color_dark_mode` ; `surfaceTint` a number in 0..2 or null for the `BRANDING_SURFACE_TINT` default, migration `20260928120000_add_organization_surface_tint`) ; the Supabase Storage bucket (`org-logos`) for logo upload comes with the Branding tab.
 - **Org switcher UI** + `/onboarding/create-org` + `/invite/<token>` pages — depend on `@monark/components` shadcn form primitives.
