@@ -1,7 +1,7 @@
 {
   "registryDir": "../.agentkit",
   "worktrees": {
-    "dir": "../app-worktrees",
+    "dir": "../_worktrees/app",
     "baseBranch": "develop",
     "branchPrefixes": ["feat", "fix", "docs", "test", "chore", "refactor", "tooling"],
     "postCreate": ["pnpm install --prefer-offline"]
