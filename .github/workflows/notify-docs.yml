@@ -18,8 +18,15 @@ on:
   push:
     branches: [develop]
     paths:
-      - "docs/user-guide/**"
-      - "docs/technical-documentation/**"
+      - "docs/get-started/**"
+      - "docs/use/**"
+      - "docs/administer/**"
+      - "docs/build/**"
+      - "docs/reference/**"
+      - "docs/concepts/**"
+      - "docs/operate/**"
+      - "docs/decisions/**"
+      - "docs/assets/**"
       - "packages/*/docs/**"
   workflow_dispatch:
 

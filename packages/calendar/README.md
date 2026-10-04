@@ -1,6 +1,6 @@
 # @monark/calendar
 
-> **User guide:** [docs/user-guide.md](docs/user-guide.md) — how to use the calendar (this README is the developer reference).
+> **User guide:** [docs/use/](docs/use/_index.md) ; how to use the calendar (this README is the developer reference).
 
 Extended calendar module. Org-scoped, role-access-controlled calendars with **Day, Week, Month, and Agenda** views ; event CRUD with reminders and conflict detection ; ICS import/export ; and materialization of Data Records into calendar events. The package ships the framework-pure Day-View primitives (vertical timeline, per-column schedules, a real-time current-time indicator, click-to-create/edit) plus the week/month date helpers ; the wired multi-view shell and sidebar live in `services/web`. Full persistence via Prisma + tRPC.
 

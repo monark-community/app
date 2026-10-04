@@ -4,8 +4,8 @@ Rules for every change in this monorepo. They encode conventions the codebase al
 
 Companion docs, read them before large work:
 
-- [docs/technical-documentation/extensibility-contract.md](docs/technical-documentation/extensibility-contract.md) — the canonical "can a feature ship without touching core?" reference. Every integration point below is spelled out there in full.
-- [docs/technical-documentation/architecture.md](docs/technical-documentation/architecture.md) — module system, boundaries, event bus, monorepo layout & tooling.
+- [docs/concepts/architecture/extensibility-contract.md](docs/concepts/architecture/extensibility-contract.md) — the canonical "can a feature ship without touching core?" reference. Every integration point below is spelled out there in full.
+- [docs/concepts/architecture/\_index.md](docs/concepts/architecture/_index.md) — module system, boundaries, event bus, monorepo layout & tooling.
 - [modules.manifest.ts](modules.manifest.ts) — the core / extended tier registry.
 
 ## Parallel work: worktrees, branches, PRs
@@ -74,7 +74,7 @@ If a feature ships incrementally, or wants an org / role / user / global kill-sw
 
 - Register once at boot: `registerFlags("<module>", { "<key>": { description, defaultOn } })`.
 - Check at the call site with the dotted form: `isEnabled("<module>.<key>", { userId, organizationId })`.
-- Overrides (org, role, user, global) resolve through the same path as core flags and surface in `/admin/feature-flags` automatically.
+- Overrides (org, role, user, global) resolve through the same path as core flags. There is no admin page for them yet : set them with `pnpm enable:dev-flags` in dev, or through the `featureFlags.setOverride` procedure (see [docs/reference/feature-flags.md](docs/reference/feature-flags.md)).
 
 ### Data that doesn't fit core — the metadata sidecar
 
@@ -87,9 +87,9 @@ Two tiers, declared in [modules.manifest.ts](modules.manifest.ts) and enforced b
 - Extended modules **MUST NOT** depend on another extended module. Compose via core packages, the event bus, or the metadata sidecar.
 - Extended modules **MUST NOT** touch `base.prisma` (the core schema, owned by `@monark/db`) or the generated `schema.prisma`. A module that needs relational / indexed tables owns **its own fragment** `packages/<module>/prisma/<module>.prisma` under its `// ── MODULE: <name> ──` banner (as `@monark/calendar` / `@monark/kanban` do), which `pnpm gen:schema` assembles into `schema.prisma` ; it owns the migration. `pnpm check:tiers` rejects an extended-module banner found in `base.prisma`. For lightweight per-user / per-org data, prefer the metadata sidecar. (Core-model back-relations to a fragment's tables still live in `base.prisma` — full core↔extended FK decoupling is a tracked follow-up.)
 - Extended modules **MUST NOT** mutate core registries directly — only call the `register*` APIs. Reaching into a registry's in-memory map bypasses validation and breaks boot ordering.
-- Never rename or repurpose an existing domain event, flag, permission, or notification kind ; add new ones under your own module's namespace. Collisions across namespaces are a deploy-time error.
+- Never rename or repurpose an existing domain event, flag, permission, or notification kind ; add new ones under your own module's namespace. Registries don't detect duplicate keys (the later registration silently wins), so the namespace is the only guard.
 
-Full detail: [docs/technical-documentation/extensibility-contract.md](docs/technical-documentation/extensibility-contract.md).
+Full detail: [docs/concepts/architecture/extensibility-contract.md](docs/concepts/architecture/extensibility-contract.md).
 
 ## Codegen — never hand-edit generated files
 
@@ -166,10 +166,7 @@ Each package owns a `README.md` following the shape already used across `package
 - **Data model** — the Prisma models the module owns, under its `// ── MODULE: <name> ──` banner in its schema source ([base.prisma](packages/db/prisma/base.prisma) for core ; `packages/<module>/prisma/<module>.prisma` for extended), plus the migration id.
 - **Events emitted / consumed** and **tRPC surface**.
 
-Two documentation audiences, both required when the change reaches them:
-
-- **User docs** — [docs/user-guide](docs/user-guide) for anything user-facing. No code, written for the person using the app. **Extended modules** keep their user guide _with the package_ (`packages/<module>/docs/user-guide.md`, as `@monark/calendar` and `@monark/kanban` do) so it travels with the module ; link it from the [user-guide index](docs/user-guide/_index.md) under "Extensions".
-- **Developer docs** — [docs/technical-documentation](docs/technical-documentation) for internals (architecture, data models, extension points, runbooks). Add a new file per topic and cross-link ; update [docs/README.md](docs/README.md) if you add one.
+Published docs (docs.monark.io) are required when a change reaches a user, admin, developer, or operator. **Use the `monark-docs` skill** ([.claude/skills/monark-docs](.claude/skills/monark-docs/SKILL.md)) for any page you add or change : it decides the section (`docs/get-started`, `use`, `administer`, `build`, `reference`, `concepts`, `operate`, `decisions`), the page type and template, and the house style, and ships a linter (`node .claude/skills/monark-docs/scripts/docs-lint.mjs <paths>`). **Extended modules** keep their docs _with the package_ under the same section folders (`packages/<module>/docs/use/`, …) so they travel with the module.
 
 All user-facing strings go through i18n in both `en` and `fr` — never hardcode visible text. `pnpm check:i18n` (a CI gate) enforces that every locale catalog under [services/web/src/messages](services/web/src/messages) carries the exact same key set as `en` ; add a key to one locale and you must add it to all. Before touching i18n keys, read [docs/agents/i18n.md](docs/agents/i18n.md) : what to translate vs. keep as canonical English registry strings (event / permission / flag / node descriptions are NOT localized), and the parity gate's blind spot (a key missing from _both_ locales still passes `check:i18n` but renders a raw key path at runtime).
 

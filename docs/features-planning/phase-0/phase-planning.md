@@ -1,4 +1,4 @@
-> **Status: Shipped.** Phase 0 is complete. These documents are retained as historical specifications. For current developer documentation, see [technical-documentation/](../../technical-documentation/).
+> **Status: Shipped.** Phase 0 is complete. These documents are retained as historical specifications. For current developer documentation, see [Concepts](../../concepts/_index.md) and [Build on Monark](../../build/_index.md).
 
 # Phase 0 — Implementation order
 

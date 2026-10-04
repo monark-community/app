@@ -1,5 +1,7 @@
 # @monark/wiki
 
+> **User guide:** [docs/use/](docs/use/_index.md) ; how to use the wiki ; internals in [docs/concepts/](docs/concepts/_index.md) (this README is the developer reference).
+
 A Notion-like nested wiki : a tree of pages per organization, each with an icon,
 a title, and a block-editor body (BlockNote, stored as a JSON block array).
 Pages nest arbitrarily deep via

@@ -66,7 +66,7 @@ pnpm bootstrap
 
 This runs : Node + pnpm + Docker preflight → copies `.env.example` → `.env` in every service that ships one (never overwrites operator-set values) → `pnpm install --frozen-lockfile` → `supabase start` → wires the copied `.env` files to the stack that just started (DB URL + Supabase keys read back from `supabase status` ; the three at-rest dev keys generated locally) → `pnpm db:migrate`. Idempotent ; safe to re-run on a healthy install, and it only ever fills values that are still blank.
 
-After it finishes, `pnpm dev` works. The values it can't know — SMTP credentials, a Sentry DSN, your [branding](docs/technical-documentation/white-label.md) — stay blank and fall back to documented defaults ; each `.env.example` describes them inline.
+After it finishes, `pnpm dev` works. The values it can't know — SMTP credentials, a Sentry DSN, your [branding](docs/operate/rebrand-an-instance.md) — stay blank and fall back to documented defaults ; each `.env.example` describes them inline.
 
 If Docker isn't available and you want to bring your own Postgres :
 
@@ -98,7 +98,7 @@ If `pnpm dev` fails with `Can't reach database server at localhost:54322`, the s
 
 ### Services point at each other
 
-`NEXT_PUBLIC_API_URL` and `WEB_ORIGIN` cross-wire the two services. The default `.env.example` values target the local stack ; production values for both flow through Vercel + Render's dashboards (see [docs/technical-documentation/deploy-checklist.md](docs/technical-documentation/deploy-checklist.md)).
+`NEXT_PUBLIC_API_URL` and `WEB_ORIGIN` cross-wire the two services. The default `.env.example` values target the local stack ; production values for both flow through Vercel + Render's dashboards (see [docs/operate/deploy-checklist/\_index.md](docs/operate/deploy-checklist/_index.md)).
 
 See [docs/features-planning/phase-0/scaffolding-status.md](docs/features-planning/phase-0/scaffolding-status.md) for the Phase 0 scaffolding record and known follow-ups.
 
@@ -142,7 +142,7 @@ Single-tenant production deploys target **Vercel** (web) + **Render** (api + sch
 - [render.yaml](render.yaml) — Render Blueprint : `monark-api` Web Service + `monark-cron-deletions` + `monark-cron-webhook-sweep` + shared env-var group.
 - [services/web/vercel.json](services/web/vercel.json) + [services/web/DEPLOY.md](services/web/DEPLOY.md) — Vercel project config + manual UI steps.
 
-Step-by-step walkthrough for a fresh deploy : [docs/technical-documentation/deploy-checklist.md](docs/technical-documentation/deploy-checklist.md). Allow ~60 min the first time ; re-deploys take ~5 min.
+Step-by-step walkthrough for a fresh deploy : [docs/operate/deploy-checklist/\_index.md](docs/operate/deploy-checklist/_index.md). Allow ~60 min the first time ; re-deploys take ~5 min.
 
 ## Contributing
 

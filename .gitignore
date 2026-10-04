@@ -36,6 +36,8 @@ Thumbs.db
 # Build
 dist/
 build/
+# …except the published "Build on Monark" docs section.
+!docs/build/
 coverage/
 *.tsbuildinfo
 

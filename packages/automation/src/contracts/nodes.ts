@@ -103,7 +103,7 @@ export interface AutomationNodeDescriptor {
    * The fields this node's output object carries, for the editor's variable
    * picker. Optional ; a node that emits nothing useful (or hasn't declared it
    * yet) simply offers no downstream fields. See
-   * [automation-data-flow.md](../../../../docs/technical-documentation/automation-data-flow.md).
+   * [0008. Pass automation data by reference](../../../../docs/decisions/0008-pass-automation-data-by-reference.md).
    */
   outputFields?: AutomationOutputField[];
   configFields: AutomationNodeConfigField[];

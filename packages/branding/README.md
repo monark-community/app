@@ -1,6 +1,6 @@
 # @monark/branding
 
-Single source of truth for app brand identity. Every other package reads `BRANDING` from here ; downstream teams retarget the starter to a new product by setting the `BRANDING_*` env vars per deployment (the shipped defaults are neutral placeholders — do not hardcode a business into them). Full guide: [white-label.md](../../docs/technical-documentation/white-label.md).
+Single source of truth for app brand identity. Every other package reads `BRANDING` from here ; downstream teams retarget the starter to a new product by setting the `BRANDING_*` env vars per deployment (the shipped defaults are neutral placeholders — do not hardcode a business into them). Full guide: [Rebrand an instance](../../docs/operate/rebrand-an-instance.md).
 
 ## What's inside
 
@@ -50,7 +50,7 @@ Both `BRANDING_*` and `NEXT_PUBLIC_BRANDING_*` are honoured. Next.js only inline
 
 The shipped `DEFAULT_BRANDING` is intentionally generic — **do not edit it to a specific business**. Retarget per deployment via env vars:
 
-1. Set the `BRANDING_*` env vars (and their `NEXT_PUBLIC_BRANDING_*` duplicates) to your product values — see the field table above and [white-label.md](../../docs/technical-documentation/white-label.md).
+1. Set the `BRANDING_*` env vars (and their `NEXT_PUBLIC_BRANDING_*` duplicates) to your product values — see the field table above and [Rebrand an instance](../../docs/operate/rebrand-an-instance.md).
 2. **Upload the org logo** at `/admin/organizations/<id>` — for a single-tenant deploy that is the logo that actually renders, and it is what app-sent emails embed. Square **JPEG / PNG / WebP**, max 2 MB ; the uploader rejects SVG. `BRANDING_LOGO_SRC` (a file you drop in `services/web/public/`) is the fallback for surfaces rendered before an org logo exists.
 3. Set `BRANDING_PRIMARY` + `BRANDING_ACCENT` (quoted). `BRANDING_PRIMARY` themes the whole running UI when the singleton org has no `primaryColor` of its own ; the org color wins when it does. Email is the exception — see the note under Usage.
 4. **Choose `BRANDING_TOTP_ISSUER` carefully**: it's what users see in their authenticator app, and changing it later requires every TOTP-enrolled user to re-enroll.

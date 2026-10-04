@@ -181,7 +181,7 @@ Pull all four values from `pnpm supabase status`. The server-only `SUPABASE_SECR
 
 ### Social sign-in setup
 
-Registering the OAuth apps, where the credentials go, and the two traps that don't fail loudly all live in one operator runbook: [docs/technical-documentation/social-sign-in.md](../../docs/technical-documentation/social-sign-in.md). It carries the per-provider sections and a troubleshooting table keyed on the actual symptoms.
+Registering the OAuth apps, where the credentials go, and the two traps that don't fail loudly all live in one operator runbook: [docs/operate/set-up-social-sign-in.md](../../docs/operate/set-up-social-sign-in.md). It carries the per-provider sections and a troubleshooting table keyed on the actual symptoms.
 
 The short version, because it's the part people get wrong: three things have to agree ; the **vendor** (redirect URI registered against _Supabase's_ callback, not ours), **Supabase** (`[auth.external.*]` in [supabase/config.toml](../../supabase/config.toml), credentials resolved by the CLI from a **root `.env`**, never `services/api/.env`), and **the api** (`AUTH_OAUTH_PROVIDERS` listing the slug). All providers ship disabled.
 

@@ -395,7 +395,7 @@ email_optional = false
 # off the page to match.
 #
 # Full setup runbook, per provider + troubleshooting by symptom :
-#   docs/technical-documentation/social-sign-in.md
+#   docs/operate/set-up-social-sign-in.md
 #
 # To turn one on locally : register the OAuth app with the vendor, set
 # its callback URL to

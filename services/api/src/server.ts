@@ -348,7 +348,7 @@ function startBackgroundWork(): void {
   // — if neither env var is set, the resolver returns null and
   // deliveries record the "no plaintext secret available" error in
   // the admin UI, which is exactly the right surface for the misconfig.
-  // See [docs/technical-documentation/webhook-secret-resolver.md](../../docs/technical-documentation/webhook-secret-resolver.md).
+  // See [docs/operate/choose-a-webhook-secret-store.md](../../../docs/operate/choose-a-webhook-secret-store.md).
   setWebhookSecretResolver(makeEnvVarSecretResolver());
 
   // Webhook delivery worker drains the outbox on a setInterval. The

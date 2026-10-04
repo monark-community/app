@@ -328,7 +328,7 @@ function checkBranding(api: EnvFile, web: EnvFile): CheckGroup {
     optionalVar(api, "BRANDING_APP_NAME", {
       title: "Product name",
       whenMissing: 'BRANDING_APP_NAME is unset, so the app calls itself "App".',
-      fix: "Set BRANDING_APP_NAME in services/api/.env and NEXT_PUBLIC_BRANDING_APP_NAME in services/web/.env. See docs/technical-documentation/white-label.md.",
+      fix: "Set BRANDING_APP_NAME in services/api/.env and NEXT_PUBLIC_BRANDING_APP_NAME in services/web/.env. See docs/operate/rebrand-an-instance.md.",
     }),
     optionalVar(api, "BRANDING_PRIMARY", {
       title: "Brand colour",

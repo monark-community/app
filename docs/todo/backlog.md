@@ -22,7 +22,7 @@ Per-package schema fragments landed for the extended modules (calendar + kanban 
 
 ## Webhooks
 
-- [ ] **[2026-05-08] Default env-var secret resolver.** Ship a `WEBHOOK_SECRETS` JSON env-var backed resolver as the default so single-tenant deploys work without integrating an external secret store. See [webhook-secret-resolver.md](../technical-documentation/webhook-secret-resolver/_index.md) for the contract.
+- [x] ~~**[2026-05-08] Default env-var secret resolver.**~~ shipped ; `makeEnvVarSecretResolver` is wired in [server.ts](../../services/api/src/server.ts) and reads `WEBHOOK_SECRETS_JSON` / `WEBHOOK_SECRET_<id>`. See [Choose a webhook secret store](../operate/choose-a-webhook-secret-store.md).
 - [ ] **[2026-05-08] Per-endpoint rate limiting.** A receiver returning 429 today retries with backoff but doesn't pause sibling deliveries to the same endpoint. A token bucket per endpoint would be kinder.
 - [ ] **[2026-05-08] Delivery log export.** No CSV or JSON download of delivery history from the admin UI. Operators who need bulk audit data rely on the database directly.
 
@@ -95,13 +95,13 @@ Deferred from the 2026-07-29 full-branch security audit (the High/Medium/Low fix
 
 ## Test coverage rollout
 
-Driven by [test-plan.md](../technical-documentation/test-plan/_index.md). Items below are land-time gates for phase-2 work.
+Driven by [test-plan.md](../features-planning/test-plan.md). Items below are land-time gates for phase-2 work.
 
 - [x] ~~**[2026-05-05] Wire vitest coverage thresholds in every package + service.**~~ shipped 2026-05-05 ; per-package `vitest.config.ts` files extend the shared root [vitest.shared.ts](../../vitest.shared.ts), `@vitest/coverage-v8` is wired across the workspace, and `pnpm test:coverage` runs end-to-end. Thresholds are commented out for the moment — flip them on per package as gaps below close.
 - [ ] **[2026-05-05] Backfill missing-tests gaps to clear the 75 % bar** : `@monark/users`, `@monark/organizations`, `@monark/rbac` integration suites against a Postgres testcontainer. `@monark/common` (errors / events / logger). `services/api` server + cron + bootstrap.
 - [ ] **[2026-05-05] Server-action test suites** for every `services/web/src/app/.../actions.ts` file (security-sensitive surface, 80 % bar). Covers happy path + every documented error code, with stubbed `@monark/*/server` calls + Supabase admin client.
-- [ ] **[2026-05-05] Component tests for the interactive islands** ; the breadcrumb walker, the notifications drawer, the role editor's tri-state checkboxes, the email-change modal's two-stage dance. List in [test-plan.md § Per-service plan](../technical-documentation/test-plan/per-service-plan.md#servicesweb).
-- [ ] **[2026-05-05] e2e spec backfill** ; the existing two specs (`auth-routing`, `signup-happy-path`) cover smoke. Add the eight in [test-plan.md § End-to-end plan](../technical-documentation/test-plan/end-to-end-plan.md) to cover signup-confirm, signin-totp, forgot-password, email-change, password-change, totp-lifecycle, account-deletion, admin-bootstrap + admin-invite + admin-rbac. Cross-browser (Chromium / Firefox / WebKit) at the same pass.
+- [ ] **[2026-05-05] Component tests for the interactive islands** ; the breadcrumb walker, the notifications drawer, the role editor's tri-state checkboxes, the email-change modal's two-stage dance. List in [test-plan.md](../features-planning/test-plan.md).
+- [ ] **[2026-05-05] e2e spec backfill** ; the existing two specs (`auth-routing`, `signup-happy-path`) cover smoke. Add the eight in [test-plan.md](../features-planning/test-plan.md) to cover signup-confirm, signin-totp, forgot-password, email-change, password-change, totp-lifecycle, account-deletion, admin-bootstrap + admin-invite + admin-rbac. Cross-browser (Chromium / Firefox / WebKit) at the same pass.
 - [x] ~~**[2026-05-05] CI workflow split into `verify` + `e2e` jobs**~~ shipped 2026-05-05 ; [.github/workflows/ci.yml](../../.github/workflows/ci.yml) now has the two-job split. `verify` runs lint + typecheck + `pnpm test:coverage` ; `e2e` boots the Supabase local stack + Playwright across Chromium / Firefox / WebKit and depends on `verify` passing.
 - [x] ~~**[2026-05-05] Codecov upload step.**~~ shipped 2026-05-05 ; the `verify` job hands every package's `coverage/lcov.info` to `codecov/codecov-action@v4`. Token reads from `secrets.CODECOV_TOKEN` ; `fail_ci_if_error: false` so a missing token (forks) doesn't block the build.
 
@@ -118,3 +118,83 @@ Driven by [test-plan.md](../technical-documentation/test-plan/_index.md). Items 
 - [ ] **shadcn registry URL `ui.monark.io` in `services/web/components.json`.** Should read from an env var so a downstream team can point at their own registry mirror.
 
 - [ ] **Test fixtures hardcode `monark.app` + `noreply@monark.io`.** [packages/notifications/tests/enrich.test.ts](../../packages/notifications/tests/enrich.test.ts) + [email.test.ts](../../packages/notifications/tests/email.test.ts). Should derive from `BRANDING` constants so a downstream team's test suite stays meaningful after retargeting.
+
+## Found during the 2026-10-03 docs migration
+
+Plans, deferred work and known gaps that the old docs published as if they were documentation. The reader-facing pages now describe only what ships ; these are what was cut.
+
+### Platform
+
+- [ ] **[2026-10-03] No admin page for feature flags.** `/admin/feature-flags` is referenced by `tools/enable-dev-flags.ts`, a `server.ts` comment and `packages/chat/src/server/feature-flags.ts`, but no such route exists. Operators set flags by SQL or the `featureFlags.setOverride` procedure. The en.json string `account.apiKeys.apiDisabled` tells users to use "Admin → Feature flags". Build the page, or fix every pointer.
+- [ ] **[2026-10-03] Generate the boot wiring** (`pnpm gen:boot`) so the hand-kept `register*` list in [server.ts](../../services/api/src/server.ts) goes away.
+- [ ] **[2026-10-03] Registry collisions are silent.** Every `register*` registry calls `Map.set` with no duplicate check, so a clashing key silently replaces the earlier one. Fail boot on a duplicate.
+- [ ] **[2026-10-03] Nothing keeps the `DomainEvent` union and the event-type registry aligned.**
+- [ ] **[2026-10-03] Persisted event bus.** An event emitted before its subscribers run is lost if the process dies.
+- [ ] **[2026-10-03] Receiver-side webhook verifier package** (`@monark/webhooks/verifier`).
+- [ ] **[2026-10-03] Disabled people keep browser sessions.** `disabledAt` revokes API-key access only ; disabling is reachable only through an automation node, with no admin UI.
+- [ ] **[2026-10-03] The `DIGEST` notification category is defined but unused.**
+- [ ] **[2026-10-03] Comment fixes:** `packages/webhooks/src/server/subscribers.ts:64-68` says operators can opt into `webhook.*` events, but the code always returns early. `packages/chat/src/server/agent.ts` `AdvanceOptions.context` JSDoc says "folded into the system prompt" (it goes into the user message). The `tool-call-card.tsx` `LABELLED_TOOLS` comment lists only two tool files. The `monark_whoami` description says "this API key".
+
+### Deploy and operations
+
+- [ ] **[2026-10-03] `EMAIL_ACTION_SECRET` missing from `render.yaml`.** Add it (`sync: false`) to both api services ; production otherwise signs "revoke this device" links with the public dev default. Also consider `ANTHROPIC_API_KEY` and `AUTH_OAUTH_PROVIDERS`, and add the `BRANDING_*` keys to `monark-api-staging`.
+- [ ] **[2026-10-03] `services/api/.env.example` is incomplete:** add `EMAIL_ACTION_SECRET`, `AUTH_OAUTH_PROVIDERS`, `PUBLIC_API_RATE_PER_SECOND`, `PUBLIC_API_BURST`, `ANTHROPIC_API_KEY` and the `CHAT_*` vars.
+- [ ] **[2026-10-03] No operator tool to reset a user's two-factor.** SQL today, with no notification email.
+- [ ] **[2026-10-03] Account recovery, deferred:** an out-of-band support address and an `/account/recovery-help` page ; a backup email ; passkeys or trusted-device attestation ; time-delayed self-service recovery.
+- [ ] **[2026-10-03] Apple social sign-in** is not wired (paid account, JWT client secret rotated every 6 months, name only on first auth).
+- [ ] **[2026-10-03] Self-hosted web container** (Next standalone) not built ; the api image is the unpruned ~1 GB build.
+- [ ] **[2026-10-03] Deploy gaps:** verify the Supabase backup schedule ; log retention (Render ~7d, Vercel ~3d) ; uptime monitoring on `/health` ; no CDN in front of the api.
+
+### Admin
+
+- [ ] **[2026-10-03] Missing admin screens:** bulk operations (assign a role, delete, invite) ; an audit or activity screen (a webhook sink is the only route today) ; suspend or re-enable an account (neither users nor service accounts can be re-enabled) ; platform-wide webhook endpoints (the webhooks manager comment still mentions a "Platform" slot).
+- [ ] **[2026-10-03] Registered permissions nothing checks:** `rbac.manage-roles`, `rbac.assign-admin-role`, `organizations.invite-member`, `organizations.remove-member`, `chat.manage`. Admin's user, role, org and invite actions check the built-in Administrator role instead. (`users.*-metadata-for-module-calendar` is deliberately unchecked.)
+- [ ] **[2026-10-03] Per-model read permissions alone don't open Data:** the Data pages also require the generic record-read and read-schema permissions, which cover every model.
+- [ ] **[2026-10-03] Public boards can only be switched on when creating a form,** not added to an existing one.
+- [ ] **[2026-10-03] Enabling a calendar integration doesn't backfill:** existing records appear only once edited.
+- [ ] **[2026-10-03] en.json `admin.webhooks.editor.statusHint` is wrong:** it says "queued events resume on re-enable", but events during a disable are never queued, and already-queued deliveries keep draining during the pause. [packages/webhooks/README.md](../../packages/webhooks/README.md) also still describes a "copy-once banner" and a synchronous Retry now.
+
+### Identity, secrets and API keys
+
+- [ ] **[2026-10-03] Secrets are per organization only.** Two managers silently overwrite each other ; fixed-name integrations (Telegram bot, Twitter app, GitHub/Telegram signing secrets) get one connection per org ; no per-user credentials.
+- [ ] **[2026-10-03] `ctx.getSecret` is org-scoped, not actor-scoped:** any node in any flow can read any org secret.
+- [ ] **[2026-10-03] The automation actor is a snapshot of the author** (`Automation.createdBy`), with no FK or liveness check ; a flow whose author is gone fails at run time, and a service account can't own an automation.
+- [ ] **[2026-10-03] Webhook signing secrets default to an in-memory store in production.** They survive a restart only via `WEBHOOK_SECRETS_JSON` / `WEBHOOK_SECRET_<id>` or a custom store ; otherwise endpoints auto-disable after 5 failures.
+- [ ] **[2026-10-03] No in-app store for non-sensitive settings** (env vars are deploy-time ; Secrets is write-only).
+- [ ] **[2026-10-03] No `/admin/api-keys`:** admins can't list or revoke personal keys.
+- [ ] **[2026-10-03] Webhook delivery uses raw `fetch`;** the SSRF check runs only at endpoint creation, not at delivery.
+- [ ] **[2026-10-03] API-key permission ceilings aren't linked to the permission registry,** so a renamed permission silently denies.
+- [ ] **[2026-10-03] Secrets key rotation:** versioned `SECRETS_ENCRYPTION_KEY` plus re-encryption.
+
+### Chat assistant
+
+- [ ] **[2026-10-03] Chat follow-ups:** a resizable panel ; stream the post-confirm/reject reply (needs an SSE confirm endpoint) ; UI for person-to-person conversations (the schema has DIRECT and GROUP) ; a connections/OAuth story for tools acting on third-party accounts ; `chat.manage` is registered but unused.
+
+### Data models, queries and automation
+
+- [ ] **[2026-10-03] MonarkQL:** relation traversal deeper than one level ; traversal into SYSTEM_MODEL relation targets ; relevance ranking for text search.
+- [ ] **[2026-10-03] Record scopes:** enforce WRITE and DELETE (re-check after the write, in the transaction) ; relation traversal inside scopes.
+- [ ] **[2026-10-03] Automation:** make `feature-flag.flipped` a trigger again by routing on its nested scope ; an expression language inside `{{ }}` ; static type-checking of references ; per-branch workflow-variable scoping ; delay or suspend inside For Each, and nested For Each ; expressions in Set Variable.
+- [ ] **[2026-10-03] Automation UI gaps:** no way to restore a deleted automation (the server has a restore ; the delete dialog says it can't be undone) ; run history shows only per-step status and the error, never a past step's input, output or logs. The For Each "List" placeholder uses `{{ steps.find-records.records }}`, but reference names can't contain hyphens ([for-each.ts](../../packages/automation/src/server/nodes/for-each.ts)).
+- [ ] **[2026-10-03] Export `requireOwnerPermission`** from `@monark/automation/server` so other modules' nodes stop copying it (wiki copies it).
+- [ ] **[2026-10-03] Files:** remove objects left behind by a failed storage delete ; image transforms and thumbnails ; resumable or multipart uploads ; per-file ACL and sharing ; storage quotas.
+- [ ] **[2026-10-03] Block editor:** upgrading to Next 16 would remove the Ariakit-only constraint.
+
+### Extended modules
+
+- [ ] **[2026-10-03] Kanban:** card labels ; a list view of cards ; records as cards (follow calendar's model-integration pattern) ; no restore control for deleted boards (the server's `boards.restore` exists) and none at all for cards ; column card limits are advisory only. [packages/kanban/README.md](../../packages/kanban/README.md) says `cards.search` is a title match (it's trigram over title and description) and lists board filtering as "not yet" (it shipped).
+- [ ] **[2026-10-03] Wiki:** no restore control (the server's `pages.restore` exists) ; per-page access control ; notifications on page changes ; duplicate a subtree ; reorder siblings (the Move dialog always appends) ; drag to reparent ; a recursive query if a wiki grows very large.
+- [ ] **[2026-10-03] Calendar:** the "Accessible to" picker lists only the editor's own roles ; hiding a calendar resets on view switch or reload ; ICS import silently drops events past 500, and recurring events lose their repeats.
+
+### Public API, MCP and testing
+
+- [ ] **[2026-10-03] MCP server:** publish to a registry (not runnable as `npx @monark/mcp` today) ; MCP resources and prompts ; a remote HTTP/SSE transport (stdio only today).
+- [ ] **[2026-10-03] Tests still to write:** e2e specs for signin-totp, email-change, totp-lifecycle, admin-bootstrap and one per extended module, on Firefox and WebKit too ; suites for server actions and stateful components ; api integration tests for cron endpoints and first-boot provisioning.
+
+### Docs still to write
+
+- [ ] **[2026-10-03] Concept page for white-label branding:** the `@monark/branding` seam, env vars per field, the literal `process.env` rule, i18n tokens, theming precedence, and what is deliberately not white-labeled.
+- [ ] **[2026-10-03] Account-recovery design rules** in the users-and-authentication concept (TOTP survives password reset, recovery-code regen needs TOTP, notify on every recovery event).
+- [ ] **[2026-10-03] Calendar internals** (model-integration materialization, views, ICS import cap) in `packages/calendar/docs/concepts/`.
+- [ ] **[2026-10-03] Candidate `reference/notification-kinds.md`** (14 core kinds plus module kinds).
+- [ ] **[2026-10-03] Block-editor shortcuts** (the BlockNote slash menu and friends) are unverified and missing from `reference/keyboard-shortcuts.md`.

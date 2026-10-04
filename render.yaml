@@ -14,7 +14,7 @@
 # env-var values, so staging must point at a SEPARATE Supabase project —
 # never share the production database. Full setup + the matching Vercel /
 # Supabase steps live in
-# docs/technical-documentation/environments.md.
+# docs/operate/add-a-staging-environment.md.
 #
 # Architecture (per environment) :
 #   - One Web Service runs the api (Express + tRPC) on port 4000.

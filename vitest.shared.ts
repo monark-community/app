@@ -23,7 +23,7 @@ import { defineConfig } from "vitest/config";
  * threshold lives next to the package so the floor is obvious when
  * editing it.
  *
- * Everything below the package threshold goes in [test-plan.md](docs/technical-documentation/test-plan.md).
+ * Everything below the package threshold goes in [test-plan.md](docs/features-planning/test-plan.md).
  */
 export default defineConfig({
   test: {

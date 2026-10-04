@@ -34,7 +34,7 @@ export type ResetPasswordResult = { ok: true } | { ok: false; errorCode: ResetPa
 // the recovery session for enrolled users, mirroring the in-account
 // `changePasswordAction` pattern. Users who lost both authenticator
 // AND recovery codes go through the out-of-band support path
-// documented in [docs/technical-documentation/account-recovery.md].
+// documented in [docs/operate/recover-a-locked-out-user.md].
 //
 // We deliberately do not require the current password here ; the user
 // landed on this page because they don't know it. The recovery-token

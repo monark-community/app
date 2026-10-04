@@ -34,7 +34,7 @@ const FIGURES = [
     name: "records-table",
     story: "fields-table",
     viewport: { width: 1360, height: 420 },
-    doc: "docs/user-guide/data/the-records-table.md",
+    doc: "docs/use/data/find-records.md",
   },
   {
     name: "navigation-rail",
@@ -43,37 +43,37 @@ const FIGURES = [
     // an element clip would cut it off : shoot the viewport instead.
     mode: "viewport",
     viewport: { width: 900, height: 420 },
-    doc: "docs/user-guide/navigation/the-navigation-rail.md",
+    doc: "docs/use/search-and-navigation/move-around-the-app.md",
   },
   {
     name: "record-form",
     story: "fields-form",
     viewport: { width: 760, height: 900 },
-    doc: "docs/user-guide/data/creating-a-record.md",
+    doc: "docs/use/data/create-a-record.md",
   },
   {
     name: "kanban-board",
     story: "kanban-board",
     viewport: { width: 1400, height: 560 },
-    doc: "packages/kanban/docs/user-guide.md",
+    doc: "packages/kanban/docs/use/add-a-card.md",
   },
   {
     name: "signin-step-one",
     story: "signin-step-one",
     viewport: { width: 900, height: 780 },
-    doc: "docs/user-guide/account.md",
+    doc: "docs/use/account/sign-in.md",
   },
   {
     name: "connected-accounts",
     story: "connected-accounts-figure",
     viewport: { width: 760, height: 360 },
-    doc: "docs/technical-documentation/social-sign-in.md",
+    doc: "docs/use/account/connect-a-sign-in-provider.md",
   },
   {
     name: "connected-accounts-only-method",
     story: "connected-accounts-only-method",
     viewport: { width: 760, height: 360 },
-    doc: "docs/technical-documentation/social-sign-in.md",
+    doc: "docs/use/account/connect-a-sign-in-provider.md",
   },
 ];
 

@@ -61,7 +61,7 @@ export type Branding = {
 // Neutral, business-agnostic defaults. This is a white-label starter : the
 // shipped values are generic placeholders, and a real deployment sets its own
 // identity via the `BRANDING_*` env vars below (see `.env.example` +
-// docs/technical-documentation/white-label.md). Do NOT hardcode a specific
+// docs/operate/rebrand-an-instance.md). Do NOT hardcode a specific
 // business's name/colors/logo here — that's what the env overrides are for.
 export const DEFAULT_BRANDING: Branding = {
   appName: "App",
