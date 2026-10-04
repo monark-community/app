@@ -4,6 +4,8 @@ type: how-to
 
 # Find cards
 
+Filtering and views need the query bar on boards. If you don't see **Filter cards** on a board, it isn't enabled for your organization; ask your admin. Searching every board works either way.
+
 ## Filter a board
 
 Filtering hides the cards that don't match, without moving anything.

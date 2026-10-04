@@ -20,6 +20,6 @@ Good to know: on a board limited to certain roles, only people with one of those
 1. Open the board and click **Edit board**.
 2. Change its details, including **Visible to roles**, and click **Save**. Or click **Delete board** and confirm.
 
-Deleting a board archives it with all its cards, so it can be restored later.
+Deleting a board removes it and all its cards from the app. There is no way to bring it back from the app, so check before you confirm.
 
 Next: [Set up columns](set-up-columns.md)

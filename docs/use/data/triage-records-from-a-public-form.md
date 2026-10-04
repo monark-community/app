@@ -12,4 +12,4 @@ Some models collect submissions from people outside the app, through a shared fo
 
 A saved view such as `status:empty` keeps a ready-made triage queue; see [Save a view](save-a-view.md).
 
-Good to know: if the form also publishes a public board, approved submissions are visible outside the app, and outside visitors can vote and comment on them. Setting up forms and moderating boards is done by admins; see [Data Models in the admin guide](../../user-guide/admin/data-models.md).
+Good to know: if the form also publishes a public board, approved submissions are visible outside the app, and outside visitors can vote and comment on them. Setting up forms and moderating boards is done by admins; see [Publish a public form](../../administer/data-models/publish-a-public-form.md) and [Moderate a public board](../../administer/data-models/moderate-a-public-board.md).

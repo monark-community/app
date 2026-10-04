@@ -23,6 +23,6 @@ You're notified whenever any record in the model is created, changed or deleted.
 Good to know:
 
 - You're never notified about your own edits, or about records you can't see.
-- To get these by email as well, or to turn them off, change your [notification preferences](../../user-guide/account/the-account-section-account/notifications.md).
+- To get these by email as well, [choose your email notifications](../account/choose-your-email-notifications.md). In-app notifications are always on.
 
 Next: [Restrict who can see a record](restrict-who-can-see-a-record.md)
