@@ -43,7 +43,7 @@ const FIGURES = [
     // an element clip would cut it off : shoot the viewport instead.
     mode: "viewport",
     viewport: { width: 900, height: 420 },
-    doc: "docs/user-guide/navigation/the-navigation-rail.md",
+    doc: "docs/use/search-and-navigation/move-around-the-app.md",
   },
   {
     name: "record-form",
@@ -61,19 +61,19 @@ const FIGURES = [
     name: "signin-step-one",
     story: "signin-step-one",
     viewport: { width: 900, height: 780 },
-    doc: "docs/user-guide/account.md",
+    doc: "docs/use/account/sign-in.md",
   },
   {
     name: "connected-accounts",
     story: "connected-accounts-figure",
     viewport: { width: 760, height: 360 },
-    doc: "docs/technical-documentation/social-sign-in.md",
+    doc: "docs/use/account/connect-a-sign-in-provider.md",
   },
   {
     name: "connected-accounts-only-method",
     story: "connected-accounts-only-method",
     viewport: { width: 760, height: 360 },
-    doc: "docs/technical-documentation/social-sign-in.md",
+    doc: "docs/use/account/connect-a-sign-in-provider.md",
   },
 ];
 

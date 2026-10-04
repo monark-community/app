@@ -28,7 +28,7 @@ Eight top-level sections. Each is a folder under `docs/`; extended modules mirro
 | Operate         | `operate/`     | How do I run, deploy, or recover it?      | runbook           |
 | Decisions       | `decisions/`   | Why was it built this way?                | decision          |
 
-Full placement rules, folder layout, naming, and the old→new migration map: **read [references/information-architecture.md](references/information-architecture.md) before creating, moving, or renaming any page.**
+Full placement rules, folder layout and naming: **read [references/information-architecture.md](references/information-architecture.md) before creating, moving, or renaming any page.**
 
 ## Workflows
 

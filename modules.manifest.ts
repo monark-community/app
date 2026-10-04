@@ -20,7 +20,7 @@ export const MODULES = {
   // (here, the automation engine): it plugs a third-party service in via that
   // module's extension APIs. Grouping + a `check:tiers` rule (the integration
   // must actually depend on its target) live on this metadata, not the folder
-  // tree — see docs/technical-documentation/extensibility-contract.md.
+  // tree — see docs/concepts/architecture/extensibility-contract.md.
   "@monark/github": { tier: "extended", integrates: "@monark/automation" },
   "@monark/discord": { tier: "extended", integrates: "@monark/automation" },
   "@monark/telegram": { tier: "extended", integrates: "@monark/automation" },

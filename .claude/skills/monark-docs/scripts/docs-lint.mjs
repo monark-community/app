@@ -27,8 +27,9 @@ const NEW_SECTIONS = [
   "operate",
   "decisions",
 ];
+// Retired on 2026-10-03; a page found there is an error.
 const LEGACY_SECTIONS = ["user-guide", "technical-documentation"];
-const USER_FACING = ["get-started", "use", "administer", "user-guide"];
+const USER_FACING = ["get-started", "use", "administer"];
 
 const BUDGETS = {
   tutorial: [400, 900],
@@ -154,6 +155,14 @@ function lint(file) {
   const isNew = NEW_SECTIONS.includes(section);
   const isIndex = path.basename(file) === "_index.md";
   const type = doc.front.type;
+
+  if (LEGACY_SECTIONS.includes(section)) {
+    add(
+      "error",
+      "retired",
+      `${section}/ was retired; place this page in one of the eight sections (information-architecture.md §3)`,
+    );
+  }
 
   // Type
   if (!type) {

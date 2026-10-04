@@ -43,7 +43,7 @@ The proposal conflates two separate goals ; split them.
 
 ## Part A — Governance : sanction typed tables for extended modules
 
-The written rule says extended modules use the metadata sidecar or "wait for the per-module-fragment story." That story is **unbuilt Phase-2 roadmap** (`docs/technical-documentation/extensibility-contract.md`, "Per-module schema fragments" : concatenate `prisma/<module>.prisma` files before `prisma generate`). Two ways to make calendar/kanban legitimate ; pick one :
+The written rule says extended modules use the metadata sidecar or "wait for the per-module-fragment story." That story is **unbuilt Phase-2 roadmap** (`docs/concepts/architecture/extensibility-contract.md`, "Per-module schema fragments" : concatenate `prisma/<module>.prisma` files before `prisma generate`). Two ways to make calendar/kanban legitimate ; pick one :
 
 - **Recommended : build per-module schema fragments.** A wrapper around `prisma generate` that merges `packages/<module>/prisma/*.prisma` into the root schema. Lets _any_ extended module own indexed columns + FK relations without editing the core file, and retroactively legitimizes calendar/kanban. Then add a real `check:tiers` rule : an extended module may only define models in _its own_ fragment, never the core `schema.prisma`.
 - **Cheap interim : reclassify** `@monark/calendar` and `@monark/kanban` as `core` in `modules.manifest.ts`. Zero code ; it just admits they are core-tier data primitives. Reversible once fragments land.

@@ -81,7 +81,7 @@ Every outgoing request carries five headers :
 
 Receivers verify by recomputing the HMAC over `<timestamp>.<body>` using their stored copy of the shared secret and a constant-time compare. Including the timestamp in the signed payload defeats replay attacks outside a tolerance window (suggested ±5 minutes). The `Webhook-Delivery-Idempotency-Key` lets a receiver dedupe retries without parsing the body.
 
-The DB only persists the SHA-256 hash of the secret. Production deploys MUST register a plaintext-secret resolver via `setWebhookSecretResolver()` before the worker starts ; otherwise deliveries are recorded with a "no plaintext secret available" error on every attempt. The resolver is the integration seam for AWS Secrets Manager / Vault / sidecar-env-var deployments. **Step-by-step wiring with three concrete backing-store recipes (env-var JSON, per-endpoint env vars, AWS Secrets Manager) is in [docs/technical-documentation/webhook-secret-resolver.md](../../docs/technical-documentation/webhook-secret-resolver.md).**
+The DB only persists the SHA-256 hash of the secret. The api wires `makeEnvVarSecretResolver` at boot ([server.ts](../../services/api/src/server.ts)) : it reads `WEBHOOK_SECRETS_JSON` and per-endpoint `WEBHOOK_SECRET_<id>`, behind an in-memory cache of secrets minted since boot. Without one of those (or a custom store via `setWebhookSecretStore()`), a restart loses the plaintext and deliveries fail with "no plaintext secret available" until the endpoint auto-disables. **Choosing and wiring a backing store is in [docs/operate/choose-a-webhook-secret-store.md](../../docs/operate/choose-a-webhook-secret-store.md).**
 
 ## Permissions
 

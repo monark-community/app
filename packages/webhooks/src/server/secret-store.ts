@@ -149,7 +149,7 @@ export function setWebhookSecretStore(store: SecretStore): void {
  * dev's file-backed flow or in-memory just-rotated secrets.
  *
  * Backing-store choices + the operator rotation flow are documented
- * in [docs/technical-documentation/webhook-secret-resolver.md](../../../docs/technical-documentation/webhook-secret-resolver.md).
+ * in [docs/operate/choose-a-webhook-secret-store.md](../../../../docs/operate/choose-a-webhook-secret-store.md).
  */
 export type WebhookSecretResolver = (endpointId: string) => Promise<string | null>;
 

@@ -39,7 +39,7 @@ export type ConnectedAccountsViewProps = {
  * Split out of the container for the same reason `NavRailView` and
  * `BrandedAppLogoView` are: with no tRPC and no server actions in its
  * import graph, the screenshot harness can mount it, which is how the
- * figure in [docs/technical-documentation/social-sign-in.md] is
+ * figure in [docs/use/account/connect-a-sign-in-provider.md] is
  * generated. It also means the states that are awkward to reach in a
  * live app — a provider-only account, the undeletable last method — can
  * be reviewed without provisioning accounts to match.

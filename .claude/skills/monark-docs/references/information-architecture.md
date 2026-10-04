@@ -10,7 +10,7 @@ Where every page lives, how folders are laid out, and how the current docs map o
 4. Naming
 5. Landing pages and the storyline
 6. What is not published
-7. Migration map (old → new)
+7. Retired folders
 8. Site sync
 
 ## 1. Source layout
@@ -105,7 +105,7 @@ Runbooks for whoever runs a Monark deployment: environments, deploy, multi-insta
 
 ### Decisions (`decisions/`)
 
-Architecture decision records: one decision per file, `NNNN-short-slug.md`, never rewritten after acceptance (supersede with a new record instead). Today's candidates: automation data flow, in-process chat tools vs a self-hosted MCP server, adjacency-list wiki tree, raw-SQL query compiler, durable outbox for automation, secrets as the credential substrate.
+Architecture decision records: one decision per file, `NNNN-short-slug.md`, never rewritten after acceptance (supersede with a new record instead). The number is the next free one across `docs/decisions/` and every `packages/*/docs/decisions/` (one shared sequence); add the record to `docs/decisions/_index.md` too.
 
 Plans, follow-up lists, "not yet / deferred" lists and test plans are **not** decisions and are not published: move them to `docs/features-planning/` or `docs/todo/backlog.md`.
 
@@ -161,48 +161,10 @@ Order is the storyline. Put the job a new reader needs first at the top, and the
 
 Package READMEs stay the developer's API reference for that package (what's exported, data model, events). Concepts pages explain; READMEs enumerate. Don't copy one into the other.
 
-## 7. Migration map (old → new)
+## 7. Retired folders
 
-Migrate one area per PR. The legacy folders keep syncing until they are empty, so the site never breaks mid-migration.
-
-### `docs/user-guide/`
-
-| Old                                        | New                                                                                                                                                                                                                              |
-| ------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `_index.md`                                | split: `get-started/_index.md` + `use/_index.md` + `administer/_index.md`                                                                                                                                                        |
-| `navigation/*`                             | `get-started/first-steps.md` (finding your way around) + `use/search-and-navigation/` (search, shortcuts) + `reference/keyboard-shortcuts.md`; "routes worth knowing" → drop or `reference/routes.md`                            |
-| `account/*`                                | `use/account/` (sign in, reset password, two-factor, notification preferences, API keys, delete your account); "after-hours edge cases" folds into the pages each case belongs to                                                |
-| `data/*`                                   | `use/data/` (pilot: see `docs/use/data/`) + `reference/query-syntax.md`                                                                                                                                                          |
-| `automations.md`, `automation-variables/*` | `use/automations/` one how-to per job (build a flow, choose a trigger, use values from earlier steps, test a flow, read run history) + `reference/automation-nodes.md` + `concepts/automations.md` (runs as owner, retries)      |
-| `assistant.md`                             | `use/assistant/`                                                                                                                                                                                                                 |
-| `achievements.md`                          | `use/achievements.md`; admin side → `administer/organization/`                                                                                                                                                                   |
-| `admin/*`                                  | `administer/` per §2; `a-note-on-tenancy`/`one-organization` → `concepts/platform-overview.md`; `what-admins-cant-do-today` → `reference/system-administrator-actions.md`; `reaching-admin` → one line on `administer/_index.md` |
-| `admin/webhooks/*`                         | `administer/integrations/webhooks.md` (create, edit, routing, auto-disable as `##` tasks) + `build/webhooks/verify-signatures.md` + delivery history in the same admin page                                                      |
-| `public-api/*`                             | `build/public-api/` (tutorial + how-tos) + `reference/public-api.md` (endpoints, errors, rate limits)                                                                                                                            |
-
-### `packages/<module>/docs/user-guide.md`
-
-Split into `packages/<module>/docs/use/` how-tos (pilot: Kanban). Developer detail at the top of today's guides ("lives with the package on purpose") is removed; it belongs in the README.
-
-### `docs/technical-documentation/`
-
-| Old                                                                                                                    | New                                                                                                                                                                            |
-| ---------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `platform-overview/_index`, `1-tech-stack`, `4-extensions`, `5-reference`                                              | `concepts/platform-overview.md` (+ `reference/tech-stack.md`, `reference/modules.md`)                                                                                          |
-| `platform-overview/2-architecture/*`, `architecture/*`, `extensibility-contract/*`                                     | merge into `concepts/architecture/` (concept) + `build/extend/` (the how-to parts) + `reference/` (scripts, codegen commands, boot order)                                      |
-| `platform-overview/3-core-capabilities/*`                                                                              | one `concepts/<subsystem>.md` each, merged with the matching deep-dive below                                                                                                   |
-| `automation/*`                                                                                                         | `concepts/automations/` + `build/extend/add-an-automation-node.md`                                                                                                             |
-| `automation-data-flow/*`                                                                                               | `decisions/NNNN-automation-data-flow.md` (one record; `phased-implementation` → features-planning)                                                                             |
-| `chat-agent/*`                                                                                                         | `concepts/chat-agent.md` + `decisions/` for "in-process tools, not MCP" and "injection, not a dependency"; `not-yet-deferred` → backlog                                        |
-| `data-model-queries/*`, `record-scopes.md`                                                                             | `concepts/data-models-and-queries.md` + `reference/query-syntax.md` + `decisions/NNNN-raw-sql-query-compiler.md`; `tests`, `feature-flag`, `deferred` fold in or go to backlog |
-| `identity-and-integration/*`, `secrets/*`, `webhook-secret-resolver/*`                                                 | `concepts/identity-and-integration.md`, `concepts/secrets.md`, `operate/choose-a-webhook-secret-store.md`; `known-gaps` → backlog                                              |
-| `kanban/*`, `wiki/*`                                                                                                   | `packages/<m>/docs/concepts/` (+ decisions such as the adjacency-list tree)                                                                                                    |
-| `block-editor.md`, `files.md`, `achievements.md`, `observability.md`                                                   | `concepts/` (observability setup → `operate/`)                                                                                                                                 |
-| `development/*`                                                                                                        | `get-started/set-up-a-development-environment.md` + `reference/scripts.md` + `build/extend/change-the-database-schema.md`                                                      |
-| `test-plan/*`                                                                                                          | `build/extend/write-tests.md` (how-to) + `reference/test-layers.md`; the plan itself → features-planning                                                                       |
-| `ci/*`                                                                                                                 | `operate/ci.md` + `reference/ci-jobs.md`                                                                                                                                       |
-| `deploy-checklist/*`, `environments/*`, `multi-instance/*`, `white-label/*`, `social-sign-in.md`, `account-recovery/*` | `operate/` runbooks (deploy checklist stays a folder: its phases are separate sittings)                                                                                        |
+`docs/user-guide/`, `docs/technical-documentation/` and `packages/<module>/docs/user-guide.md` were migrated into the eight sections on 2026-10-03 and no longer exist. The site no longer syncs them. Don't recreate them: a page that seems to belong there belongs in one of the sections above (use §3 to place it).
 
 ## 8. Site sync
 
-`monark-community/app-docs` (`scripts/sync-docs.ts`, `MAPPINGS`) decides which folders publish and as which section, and `docs.config.ts` lists the header tabs. When a new top-level section gets its first pages, add its mapping (core folder plus the `packages/*/docs/<section>/` mirror) and its tab there. The `notify-docs.yml` workflow in this repo must list the same folders so a merge triggers a sync.
+`monark-community/app-docs` (`scripts/sync-docs.ts`, `MAPPINGS`) publishes the eight sections, each merged with its `packages/*/docs/<section>/` mirror, and `docs.config.ts` lists their header tabs. A new top-level section would need a mapping and a tab there. The `notify-docs.yml` workflow in this repo must list the same folders so a merge triggers a sync.

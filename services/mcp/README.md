@@ -17,7 +17,7 @@ The server holds no logic of its own : every tool is one HTTP call to a v1
 endpoint. Whatever the key can do over `curl`, the agent can do — and nothing
 more. Least-privilege is set where it belongs (a limited key, or a
 service-account key), not here. See
-[docs/user-guide/public-api.md](../../docs/user-guide/public-api.md).
+[Connect an agent through MCP](../../docs/build/agents-and-mcp/connect-an-agent-through-mcp.md).
 
 ## Configuration
 

@@ -18,8 +18,6 @@ on:
   push:
     branches: [develop]
     paths:
-      - "docs/user-guide/**"
-      - "docs/technical-documentation/**"
       - "docs/get-started/**"
       - "docs/use/**"
       - "docs/administer/**"

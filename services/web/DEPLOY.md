@@ -28,7 +28,7 @@ In the Vercel dashboard :
      Render, so page titles, the wordmark and the brand colour match on the
      browser side. **Quote any hex value** (`NEXT_PUBLIC_BRANDING_PRIMARY="#2563EB"`) —
      an unquoted leading `#` is read as a comment and resolves to an empty
-     string. See [white-label.md](../../docs/technical-documentation/white-label.md).
+     string. See [Rebrand an instance](../../docs/operate/rebrand-an-instance.md).
 
 ## What's encoded in vercel.json
 

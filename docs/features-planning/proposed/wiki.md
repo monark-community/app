@@ -121,7 +121,7 @@ Reused wholesale: `RichTextEditor` / `RichTextView`, `DragHandle`, `ConfirmDialo
 
 - **Nav**: a `PRIMARY_NAV` entry (`{ id: "wiki", href: "/wiki", icon: BookText }`) — auto-adds it to the ⌘K "Go to" list. **Search**: a `SEARCH_PROVIDERS` entry backed by the gated `wiki.pages.search`.
 - **i18n**: a `wiki.*` namespace, en + fr (nav label, empty states, action + dialog copy, search heading). Event / permission / flag _descriptions_ stay canonical English per `docs/agents/i18n.md`.
-- **Docs**: `packages/wiki/README.md` (What's here / Key concepts / Public API / Data model / Events / tRPC), a `docs/user-guide/wiki` page, and `docs/technical-documentation/wiki.md` (tree model + move/delete semantics).
+- **Docs**: `packages/wiki/README.md` (What's here / Key concepts / Public API / Data model / Events / tRPC), a `docs/user-guide/wiki` page, and `packages/wiki/docs/concepts/_index.md` (tree model + move/delete semantics).
 - **Tests**: `tests/integration/pages.test.ts` — CRUD, **move cycle-guard rejection**, **subtree soft-delete + restore**, RBAC deny-without-permission, search org-scoping. (`check:modules` requires this suite for a module with a router.)
 
 ## Build order
