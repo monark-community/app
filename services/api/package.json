@@ -42,15 +42,15 @@
     "@monark/webhooks": "workspace:*",
     "@monark/wiki": "workspace:*",
     "@sentry/node": "^10.69.0",
-    "@supabase/supabase-js": "^2.105.3",
-    "@trpc/server": "^11.18.0",
+    "@supabase/supabase-js": "^2.117.2",
+    "@trpc/server": "^11.19.0",
     "cors": "^2.8.5",
     "express": "^5.0.0",
     "pino-http": "^10.3.0",
     "zod": "^3.23.0"
   },
   "devDependencies": {
-    "@modelcontextprotocol/sdk": "^1.30.0",
+    "@modelcontextprotocol/sdk": "^1.31.0",
     "@monark/mcp": "workspace:*",
     "@monark/test-utils": "workspace:*",
     "@types/cors": "^2.8.17",
