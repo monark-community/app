@@ -50,7 +50,7 @@
     "zod": "^3.23.0"
   },
   "devDependencies": {
-    "@modelcontextprotocol/sdk": "^1.30.0",
+    "@modelcontextprotocol/sdk": "^1.32.0",
     "@monark/mcp": "workspace:*",
     "@monark/test-utils": "workspace:*",
     "@types/cors": "^2.8.17",
