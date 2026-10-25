@@ -14,7 +14,7 @@
   },
   "dependencies": {
     "@monark/db": "workspace:*",
-    "@testcontainers/postgresql": "^10.13.0",
+    "@testcontainers/postgresql": "^12.1.0",
     "testcontainers": "^10.13.0"
   },
   "devDependencies": {
