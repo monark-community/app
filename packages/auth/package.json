@@ -28,7 +28,7 @@
     "otplib": "^13.5.0",
     "qrcode": "^1.5.4",
     "ua-parser-js": "^2.0.9",
-    "zod": "^3.23.0"
+    "zod": "^4.6.6"
   },
   "devDependencies": {
     "@monark/test-utils": "workspace:*",

@@ -47,7 +47,7 @@
     "cors": "^2.8.5",
     "express": "^5.0.0",
     "pino-http": "^10.3.0",
-    "zod": "^3.23.0"
+    "zod": "^4.6.6"
   },
   "devDependencies": {
     "@modelcontextprotocol/sdk": "^1.30.0",
