@@ -22,7 +22,7 @@
     "@monark/feature-flags": "workspace:*",
     "@monark/organizations": "workspace:*",
     "@monark/rbac": "workspace:*",
-    "zod": "^3.23.0"
+    "zod": "^4.6.6"
   },
   "devDependencies": {
     "@monark/test-utils": "workspace:*",

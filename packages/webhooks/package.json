@@ -20,7 +20,7 @@
     "@monark/common": "workspace:*",
     "@monark/db": "workspace:*",
     "@monark/rbac": "workspace:*",
-    "zod": "^3.25.76"
+    "zod": "^4.6.6"
   },
   "peerDependencies": {
     "react": "^19.1.0"
